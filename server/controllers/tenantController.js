@@ -199,6 +199,12 @@ const updateTenant = async (req, res) => {
         password: process.env.DB_PASSWORD
       });
       try {
+        // Garantir colunas ausentes antes de inserir
+        await migrarSchemaUsuarios(tenant.schema, pool);
+
+        // Email placeholder para evitar violação de NOT NULL em schemas antigos
+        const emailFinal = adminEmail || `admin_${adminCpf}@noemail.local`;
+
         if (adminSenha) {
           // Criar novo ou atualizar tudo (incluindo senha)
           const senhaHash = await bcrypt.hash(adminSenha, 10);
@@ -207,17 +213,17 @@ const updateTenant = async (req, res) => {
             VALUES ($1, $2, $3, $4, 'admin', true)
             ON CONFLICT (cpf) DO UPDATE SET
               nome = EXCLUDED.nome,
-              email = COALESCE(EXCLUDED.email, usuarios.email),
+              email = CASE WHEN EXCLUDED.email NOT LIKE '%@noemail.local' THEN EXCLUDED.email ELSE usuarios.email END,
               senha = EXCLUDED.senha,
               tipo = 'admin',
               ativo = true
-          `, [adminNome, adminEmail || null, adminCpf, senhaHash]);
+          `, [adminNome, emailFinal, adminCpf, senhaHash]);
         } else {
           // Atualizar apenas nome/email de usuário existente (sem alterar senha)
           await pool.query(`
             UPDATE ${tenant.schema}.usuarios SET
               nome = $1,
-              email = COALESCE($2, email),
+              email = CASE WHEN $2 IS NOT NULL THEN $2 ELSE email END,
               tipo = 'admin',
               ativo = true
             WHERE cpf = $3
@@ -225,6 +231,7 @@ const updateTenant = async (req, res) => {
         }
         adminCriado = true;
       } catch (adminError) {
+        console.error('Erro ao salvar admin:', adminError.message);
         aviso = 'Município salvo, mas houve erro ao atualizar o administrador. Verifique se o e-mail já está em uso.';
       } finally {
         await pool.end();
@@ -286,6 +293,39 @@ const deleteTenant = async (req, res) => {
   }
 };
 
+// Migração automática: adiciona colunas ausentes em schemas já existentes
+async function migrarSchemaUsuarios(schema, pool) {
+  await pool.query(`
+    ALTER TABLE IF EXISTS ${schema}.usuarios
+      ADD COLUMN IF NOT EXISTS nome_reduzido VARCHAR(60),
+      ADD COLUMN IF NOT EXISTS permissoes JSONB NOT NULL DEFAULT '{"criar_processo":true,"editar_processo":true,"excluir_processo":false,"tramitar_processo":true,"acessar_almoxarifado":false,"acessar_financeiro":false,"acessar_contratos":false,"visualizar_relatorios":false,"gerenciar_usuarios":false,"gerenciar_secretarias":false,"gerenciar_configuracoes":false}'::jsonb;
+    ALTER TABLE IF EXISTS ${schema}.usuarios ALTER COLUMN email DROP NOT NULL;
+  `);
+}
+
+// Executar migração em todos os tenants ativos (chamado no startup do servidor)
+const migrarTodosOsSchemas = async () => {
+  const pool = new Pool({
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
+    database: process.env.DB_NAME,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD
+  });
+  try {
+    const tenants = await Tenant.findAll({ where: { ativo: true }, attributes: ['schema'] });
+    for (const tenant of tenants) {
+      try {
+        await migrarSchemaUsuarios(tenant.schema, pool);
+      } catch (_) {
+        // schema pode não ter sido criado ainda
+      }
+    }
+  } finally {
+    await pool.end();
+  }
+};
+
 // Função auxiliar para criar estrutura isolada do tenant
 async function criarEstruturaIsolada(schema, tenant, usuarioAdmin) {
   const pool = new Pool({
@@ -329,15 +369,17 @@ async function criarEstruturaIsolada(schema, tenant, usuarioAdmin) {
       CREATE TABLE IF NOT EXISTS ${schema}.usuarios (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         nome VARCHAR(255) NOT NULL,
-        email VARCHAR(255) NOT NULL UNIQUE,
+        nome_reduzido VARCHAR(60),
+        email VARCHAR(255) UNIQUE,
         cpf VARCHAR(11) NOT NULL UNIQUE,
         senha VARCHAR(255) NOT NULL,
         telefone VARCHAR(11),
-        tipo VARCHAR(20) NOT NULL DEFAULT 'operacional' 
+        tipo VARCHAR(20) NOT NULL DEFAULT 'operacional'
           CHECK (tipo IN ('admin', 'gestor', 'operacional')),
         ativo BOOLEAN DEFAULT TRUE,
         secretaria_id UUID REFERENCES ${schema}.secretarias(id),
         setor_id UUID REFERENCES ${schema}.setores(id),
+        permissoes JSONB NOT NULL DEFAULT '{"criar_processo":true,"editar_processo":true,"excluir_processo":false,"tramitar_processo":true,"acessar_almoxarifado":false,"acessar_financeiro":false,"acessar_contratos":false,"visualizar_relatorios":false,"gerenciar_usuarios":false,"gerenciar_secretarias":false,"gerenciar_configuracoes":false}'::jsonb,
         ultimo_acesso TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -546,5 +588,6 @@ module.exports = {
   updateTenant,
   updateTenantConfiguracoes,
   deleteTenant,
-  getStatistics
+  getStatistics,
+  migrarTodosOsSchemas
 };

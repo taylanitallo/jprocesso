@@ -7,6 +7,7 @@ require('dotenv').config();
 
 const { masterDb } = require('./config/database');
 const Tenant = require('./models/Tenant');
+const { migrarTodosOsSchemas } = require('./controllers/tenantController');
 const routes = require('./routes');
 
 const app = express();
@@ -66,6 +67,10 @@ const initDatabase = async () => {
   try {
     await masterDb.authenticate();
     console.log('✅ Conectado ao banco de dados PostgreSQL');
+
+    // Migração automática: garantir colunas ausentes em todos os schemas
+    await migrarTodosOsSchemas();
+
     console.log('✅ Banco de dados pronto para uso');
   } catch (error) {
     console.error('Erro ao conectar ao banco de dados');
