@@ -50,8 +50,10 @@ export default function Layout() {
 
   const modHabilitados = tenant?.configuracoes?.modulos_habilitados
   const isModuloHabilitado = (modulo) => {
-    if (!modHabilitados) return true // backward compat: sem configuração = tudo habilitado
-    return modHabilitados.includes(modulo)
+    // undefined = campo nunca foi configurado = tenant antigo = liberar tudo (backward compat)
+    if (modHabilitados === undefined) return true
+    // null ou [] = explicitamente sem módulos habilitados = bloquear
+    return Array.isArray(modHabilitados) && modHabilitados.includes(modulo)
   }
 
   const menuItems = [

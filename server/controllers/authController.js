@@ -175,8 +175,9 @@ const login = async (req, res) => {
       token,
       tenant: {
         id: tenant.id,
-        nome: tenant.nome,
-        subdominio: tenant.subdominio
+        nome: tenant.nome_municipio,
+        subdominio: tenant.subdominio,
+        configuracoes: tenant.configuracoes || {}
       }
     });
   } catch (error) {
