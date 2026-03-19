@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Tenant = require('../models/Tenant');
-const { getTenantConnection } = require('../config/database');
+const { getTenantConnection, masterDb } = require('../config/database');
 const initTenantModels = require('../models');
 
 const register = async (req, res) => {
@@ -85,27 +85,18 @@ const login = async (req, res) => {
     
     // Se o subdomain for 'admin', fazer login na tabela global de admins
     if (subdomain === 'admin') {
-      const { Pool } = require('pg');
-      const pool = new Pool({
-        host: process.env.DB_HOST,
-        port: process.env.DB_PORT,
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        database: process.env.DB_NAME
-      });
-
-      const result = await pool.query(
-        'SELECT * FROM public.admins WHERE cpf = $1',
-        [cpf]
+      const result = await masterDb.query(
+        'SELECT * FROM public.admins WHERE cpf = :cpf',
+        { replacements: { cpf }, type: masterDb.QueryTypes.SELECT }
       );
 
-      await pool.end();
+      const rows = result;
 
-      if (result.rows.length === 0) {
+      if (rows.length === 0) {
         return res.status(401).json({ error: 'Credenciais inválidas' });
       }
 
-      const admin = result.rows[0];
+      const admin = rows[0];
       const validPassword = await bcrypt.compare(senha, admin.senha);
 
       if (!validPassword) {

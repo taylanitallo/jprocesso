@@ -13,8 +13,14 @@ const app = express();
 
 // Configurações atualizadas
 app.use(helmet());
+const allowedOrigins = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : null;
 app.use(cors({
-  origin: process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : '*',
+  origin: allowedOrigins
+    ? (origin, cb) => {
+        if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+        return cb(new Error('Not allowed by CORS'));
+      }
+    : true,
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
