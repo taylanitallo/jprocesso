@@ -41,6 +41,11 @@ const tenantMiddleware = async (req, res, next) => {
       return res.status(400).json({ error: 'Subdomínio não fornecido' });
     }
 
+    // Admin global não tem tenant — apenas autentica e segue
+    if (subdomain === 'admin') {
+      return next();
+    }
+
     // Busca tenant com cache
     const tenant = await getCachedTenant(subdomain);
 

@@ -202,6 +202,16 @@ const login = async (req, res) => {
 
 const getProfile = async (req, res) => {
   try {
+    // Admin global: busca na tabela public.admins
+    if (req.user.isAdmin) {
+      const rows = await masterDb.query(
+        'SELECT id, nome, cpf, email FROM public.admins WHERE id = :id',
+        { replacements: { id: req.user.id }, type: masterDb.QueryTypes.SELECT }
+      );
+      if (rows.length === 0) return res.status(404).json({ error: 'Admin não encontrado' });
+      return res.json({ user: { ...rows[0], papel: 'admin', tipo: 'admin' } });
+    }
+
     const { User, Secretaria, Setor } = req.models;
 
     const user = await User.findByPk(req.user.id, {
