@@ -1,0 +1,163 @@
+✅ Conectado ao banco de dados PostgreSQL
+📊 Database: jprocesso_global
+🔐 Schema: tenant_teste
+✅ Banco de dados pronto para uso
+Servidor rodando na porta 5000
+Ambiente: development
+[SchemaContext] Cache invalidado para schema: tenant_iraucuba
+[0mGET /api/auth/profile [32m200[0m 1283.213 ms - 913[0m
+[0mGET /api/auth/profile [32m200[0m 27.547 ms - 913[0m
+[0mGET /api/processos/dashboard [36m304[0m 105.289 ms - -[0m
+[0mGET /api/organizacao/entidade [36m304[0m 22.432 ms - -[0m
+[0mGET /api/organizacao/entidade [32m200[0m 18.239 ms - 541[0m
+[0mGET /api/schema-context [32m200[0m 321.520 ms - 67773[0m
+[0mGET /api/schema-context [32m200[0m 372.035 ms - 67773[0m
+[0mGET /api/organizacao/secretarias [36m304[0m 42.026 ms - -[0m
+[0mGET /api/organizacao/setores [32m200[0m 24.062 ms - 14739[0m
+[0mGET /api/organizacao/secretarias [36m304[0m 15.143 ms - -[0m
+[0mGET /api/auth/users [32m200[0m 27.753 ms - 8986[0m
+[0mGET /api/organizacao/setores [36m304[0m 26.888 ms - -[0m
+[0mGET /api/auth/users [32m200[0m 18.998 ms - 8986[0m
+[0mPUT /api/auth/users/149b546e-5fea-42ac-b3d6-214d48fd8dfa [32m200[0m 104.299 ms - 847[0m
+[0mGET /api/auth/users [32m200[0m 5.641 ms - 8997[0m
+[0mGET /api/auth/profile [32m200[0m 5.454 ms - 924[0m
+[0mGET /api/auth/users [36m304[0m 8.253 ms - -[0m
+[0mGET /api/organizacao/setores [36m304[0m 9.277 ms - -[0m
+[0mGET /api/organizacao/secretarias [36m304[0m 7.743 ms - -[0m
+[0mGET /api/organizacao/secretarias [32m200[0m 9.564 ms - 9474[0m
+[0mGET /api/organizacao/setores [32m200[0m 9.741 ms - 14739[0m
+[0mGET /api/auth/users [32m200[0m 9.675 ms - 8997[0m
+[0mGET /api/organizacao/secretarias [36m304[0m 267.623 ms - -[0m
+[0mGET /api/auth/users [36m304[0m 624.995 ms - -[0m
+[0mGET /api/organizacao/setores [36m304[0m 756.428 ms - -[0m
+[0mGET /api/organizacao/secretarias [36m304[0m 55.771 ms - -[0m
+[0mGET /api/organizacao/setores [36m304[0m 90.948 ms - -[0m
+[0mGET /api/auth/users [36m304[0m 147.011 ms - -[0m
+[0mPUT /api/auth/users/149b546e-5fea-42ac-b3d6-214d48fd8dfa [32m200[0m 398.159 ms - 779[0m
+[0mGET /api/auth/users [32m200[0m 23.047 ms - 8768[0m
+[0mGET /api/auth/profile [32m200[0m 15.968 ms - 695[0m
+[0mGET /api/processos/dashboard [36m304[0m 70.055 ms - -[0m
+[0mGET /api/tenants/info?subdomain=iraucuba [36m304[0m 56.713 ms - -[0m
+[0mGET /api/tenants/info?subdomain=iraucuba [36m304[0m 34.430 ms - -[0m
+[0mGET /api/tenants/info?subdomain=iraucuba [36m304[0m 2837.717 ms - -[0m
+[0mGET /api/tenants/info?subdomain=iraucuba [36m304[0m 81.238 ms - -[0m
+🔐 Tentativa de login:
+   CPF: 04335471386
+   Subdomain: iraucuba
+✅ Tenant encontrado: Prefeitura Municipal de Irauçba
+   Schema: tenant_iraucuba
+🔍 Buscando usuário...
+✅ Usuário encontrado: Taylan Itallo Vasconcelos Barbosa
+   Email: admin@admin.com
+🔐 Senha válida: true
+[0mPOST /api/auth/login [32m200[0m 591.095 ms - 669[0m
+[0mGET /api/processos/dashboard [36m304[0m 240.218 ms - -[0m
+[0mGET /api/organizacao/entidade [36m304[0m 147.466 ms - -[0m
+[0mGET /api/organizacao/entidade [32m200[0m 235.492 ms - 541[0m
+[0mGET /api/schema-context [32m200[0m 383.625 ms - 67773[0m
+[0mGET /api/schema-context [32m200[0m 395.381 ms - 67773[0m
+[0mPUT /api/tenants/configuracoes [32m200[0m 226.264 ms - 1189167[0m
+[0mGET /api/tenants/info?subdomain=iraucuba [32m200[0m 125.264 ms - 1189333[0m
+[0mGET /api/tenants/info?subdomain=iraucuba [36m304[0m 79.058 ms - -[0m
+🔐 Tentativa de login:
+   CPF: 04335471386
+   Subdomain: iraucuba
+✅ Tenant encontrado: Prefeitura Municipal de Irauçba
+   Schema: tenant_iraucuba
+🔍 Buscando usuário...
+✅ Usuário encontrado: Taylan Itallo Vasconcelos Barbosa
+   Email: admin@admin.com
+🔐 Senha válida: true
+[0mPOST /api/auth/login [32m200[0m 772.458 ms - 669[0m
+[0mGET /api/schema-context [32m200[0m 8.189 ms - 67772[0m
+[0mGET /api/schema-context [32m200[0m 16.180 ms - 67772[0m
+[0mGET /api/processos/dashboard [36m304[0m 219.189 ms - -[0m
+[0mGET /api/organizacao/entidade [32m200[0m 59.120 ms - 541[0m
+[0mGET /api/organizacao/entidade [36m304[0m 127.896 ms - -[0m
+[0mPUT /api/tenants/configuracoes [32m200[0m 395.458 ms - 518987[0m
+[0mGET /api/tenants/info?subdomain=iraucuba [32m200[0m 29.100 ms - 519153[0m
+[0mGET /api/tenants/info?subdomain=iraucuba [36m304[0m 35.376 ms - -[0m
+[0mGET /api/tenants/info?subdomain=iraucuba [36m304[0m 581.775 ms - -[0m
+[0mGET /api/tenants/info?subdomain=iraucuba [36m304[0m 273.512 ms - -[0m
+[0mGET /api/tenants/info?subdomain=iraucuba [36m304[0m 37.371 ms - -[0m
+[0mGET /api/tenants/info?subdomain=iraucuba [36m304[0m 1742.113 ms - -[0m
+[0mGET /api/tenants/info?subdomain=iraucuba [36m304[0m 70.241 ms - -[0m
+[0mGET /api/tenants/info?subdomain=iraucuba [36m304[0m 35.155 ms - -[0m
+🔐 Tentativa de login:
+   CPF: 04335471386
+   Subdomain: iraucuba
+✅ Tenant encontrado: Prefeitura Municipal de Irauçba
+   Schema: tenant_iraucuba
+🔍 Buscando usuário...
+✅ Usuário encontrado: Taylan Itallo Vasconcelos Barbosa
+   Email: admin@admin.com
+🔐 Senha válida: true
+[0mPOST /api/auth/login [32m200[0m 964.102 ms - 669[0m
+[0mGET /api/processos/dashboard [36m304[0m 214.913 ms - -[0m
+[0mGET /api/organizacao/entidade [36m304[0m 126.933 ms - -[0m
+[0mGET /api/organizacao/entidade [32m200[0m 166.297 ms - 541[0m
+[0mGET /api/schema-context [32m200[0m 1355.981 ms - 67773[0m
+[0mGET /api/schema-context [32m200[0m 1743.136 ms - 67773[0m
+[0mGET /api/tenants/info?subdomain=iraucuba [36m304[0m 59.985 ms - -[0m
+[0mGET /api/tenants/info?subdomain=iraucuba [36m304[0m 48.896 ms - -[0m
+[0mPUT /api/tenants/configuracoes [32m200[0m 606.463 ms - 1538422[0m
+[0mGET /api/tenants/info?subdomain=iraucuba [32m200[0m 88.662 ms - 1538588[0m
+[0mGET /api/tenants/info?subdomain=iraucuba [36m304[0m 55.186 ms - -[0m
+[0mGET /api/tenants/info?subdomain=iraucuba [36m304[0m 753.784 ms - -[0m
+[0mGET /api/tenants/info?subdomain=iraucuba [36m304[0m 97.625 ms - -[0m
+[0mGET /api/tenants/info?subdomain=iraucuba [36m304[0m 225.701 ms - -[0m
+[0mGET /api/tenants/info?subdomain=iraucuba [36m304[0m 57.598 ms - -[0m
+[0mGET /api/tenants/info?subdomain=iraucuba [36m304[0m 1175.301 ms - -[0m
+[0mGET /api/tenants/info?subdomain=iraucuba [36m304[0m 273.877 ms - -[0m
+🔐 Tentativa de login:
+   CPF: 04335471386
+   Subdomain: iraucuba
+✅ Tenant encontrado: Prefeitura Municipal de Irauçba
+   Schema: tenant_iraucuba
+🔍 Buscando usuário...
+✅ Usuário encontrado: Taylan Itallo Vasconcelos Barbosa
+   Email: admin@admin.com
+🔐 Senha válida: true
+[0mPOST /api/auth/login [32m200[0m 905.642 ms - 669[0m
+[0mGET /api/processos/dashboard [36m304[0m 508.525 ms - -[0m
+[0mGET /api/organizacao/entidade [36m304[0m 507.340 ms - -[0m
+[0mGET /api/organizacao/entidade [32m200[0m 588.901 ms - 541[0m
+[0mGET /api/schema-context [32m200[0m 1546.457 ms - 67773[0m
+[0mGET /api/schema-context [32m200[0m 1731.747 ms - 67773[0m
+[0mGET /api/processos?page=1&limit=10 [32m200[0m 233.562 ms - 28637[0m
+[0mGET /api/processos/enviados [32m200[0m 723.584 ms - 13512[0m
+[0mPOST /api/processos [32m201[0m 348.249 ms - 2105[0m
+[0mGET /api/processos/e00a0e17-40a1-45c8-ac26-9ec7e11ca46c [32m200[0m 41.565 ms - 3511[0m
+[0mGET /api/did/processo/e00a0e17-40a1-45c8-ac26-9ec7e11ca46c [33m404[0m 38.902 ms - 31[0m
+[0mGET /api/organizacao/secretarias [32m200[0m 52.626 ms - 9474[0m
+[0mGET /api/organizacao/secretarias [36m304[0m 54.713 ms - -[0m
+[0mGET /api/did/processo/e00a0e17-40a1-45c8-ac26-9ec7e11ca46c [33m404[0m 55.630 ms - 31[0m
+[0mGET /api/organizacao/secretarias [32m200[0m 68.396 ms - 9474[0m
+[0mGET /api/organizacao/secretarias [36m304[0m 101.849 ms - -[0m
+[0mGET /api/processos/e00a0e17-40a1-45c8-ac26-9ec7e11ca46c [36m304[0m 117.727 ms - -[0m
+[0mGET /api/organizacao/secretarias/fa004034-477a-4593-bfac-25ef4f76a2f0/setores [32m200[0m 14.033 ms - 266[0m
+[0mGET /api/organizacao/setores/6ba9b4a5-8faf-4f59-bb95-7c9bd4033d1a/usuarios [32m200[0m 13.684 ms - 15[0m
+[0mGET /api/financeiro/dashboard/options?ano=2026 [32m200[0m 338.393 ms - 112[0m
+[0mGET /api/financeiro/dashboard/options?ano=2026 [36m304[0m 257.121 ms - -[0m
+[0mGET /api/financeiro/processos-did?page=1&limit=20&ano=2026 [32m200[0m 692.048 ms - 11752[0m
+[0mGET /api/financeiro/processos-did?page=1&limit=20&ano=2026 [32m200[0m 903.886 ms - 11752[0m
+[0mGET /api/financeiro/dashboard?ano=2026 [32m200[0m 1777.690 ms - 2761[0m
+[0mGET /api/financeiro/dashboard?ano=2026 [32m200[0m 1854.350 ms - 2761[0m
+[0mGET /api/financeiro/processos-did?page=1&limit=15 [32m200[0m 109.411 ms - 11752[0m
+[0mGET /api/processos/6030e39f-f78b-42fa-bc51-c6fd2cf6e7b8 [32m200[0m 75.988 ms - 4695[0m
+[0mGET /api/financeiro/dashboard/options?ano=2026 [36m304[0m 64.383 ms - -[0m
+[0mGET /api/financeiro/dashboard/options?ano=2026 [32m200[0m 29.931 ms - 112[0m
+[0mGET /api/financeiro/processos-did?page=1&limit=20&ano=2026 [36m304[0m 125.956 ms - -[0m
+[0mGET /api/financeiro/processos-did?page=1&limit=20&ano=2026 [32m200[0m 108.469 ms - 11752[0m
+[0mGET /api/financeiro/dashboard?ano=2026 [36m304[0m 283.392 ms - -[0m
+[0mGET /api/financeiro/dashboard?ano=2026 [32m200[0m 259.661 ms - 2761[0m
+[0mGET /api/did/processo/97e94266-ad37-4401-b96c-154fb307a938 [32m200[0m 70.432 ms - 7382[0m
+[0mGET /api/did/processo/97e94266-ad37-4401-b96c-154fb307a938 [32m200[0m 50.128 ms - 7382[0m
+[0mGET /api/financeiro/relatorio? [36m304[0m 42.090 ms - -[0m
+[0mGET /api/contratos/itens [33m404[0m 207.364 ms - 158[0m
+[0mGET /api/contratos/itens [33m404[0m 6.759 ms - 158[0m
+[0mGET /api/contratos/itens [33m404[0m 1.221 ms - 158[0m
+[0mGET /api/contratos/itens [33m404[0m 2.875 ms - 158[0m
+[0mGET /api/processos/dashboard [32m200[0m 187.775 ms - 13290[0m
+[0mGET /api/tenants/info?subdomain=iraucuba [36m304[0m 423.586 ms - -[0m
+[0mGET /api/tenants/info?subdomain=iraucuba [36m304[0m 130.409 ms - -[0m

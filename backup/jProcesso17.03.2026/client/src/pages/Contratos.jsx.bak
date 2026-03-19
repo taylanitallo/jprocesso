@@ -1,0 +1,166 @@
+import { useState } from 'react'
+import { FileText, ShoppingBag, User, PackageOpen } from 'lucide-react'
+
+const TABS = [
+  { key: 'itens',      label: 'Itens',      icon: ShoppingBag,  emoji: '📦' },
+  { key: 'credor',     label: 'Credor',     icon: User,         emoji: '🏢' },
+  { key: 'contratos',  label: 'Contratos',  icon: FileText,     emoji: '📋' },
+]
+
+function TabItens() {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">📦 Itens</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Catálogo de itens contratáveis</p>
+        </div>
+        <button className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium shadow transition-colors">
+          + Novo Item
+        </button>
+      </div>
+
+      <div className="card overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600 text-xs">
+              <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300">#</th>
+              <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300">Descrição</th>
+              <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300">Unidade</th>
+              <th className="text-right px-4 py-3 font-semibold text-gray-600 dark:text-gray-300">Valor Unit.</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colSpan={4} className="text-center py-12 text-gray-400 dark:text-gray-500">
+                <PackageOpen className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                Nenhum item cadastrado
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function TabCredor() {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">🏢 Credores</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Empresas e fornecedores credenciados</p>
+        </div>
+        <button className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium shadow transition-colors">
+          + Novo Credor
+        </button>
+      </div>
+
+      <div className="card overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600 text-xs">
+              <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300">Razão Social</th>
+              <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300">CNPJ / CPF</th>
+              <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300">Contato</th>
+              <th className="text-center px-4 py-3 font-semibold text-gray-600 dark:text-gray-300">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colSpan={4} className="text-center py-12 text-gray-400 dark:text-gray-500">
+                <User className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                Nenhum credor cadastrado
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function TabContratos() {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">📋 Contratos</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Contratos e atas de registro de preço</p>
+        </div>
+        <button className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium shadow transition-colors">
+          + Novo Contrato
+        </button>
+      </div>
+
+      <div className="card overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600 text-xs">
+              <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300">N° Contrato</th>
+              <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300">Credor</th>
+              <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300">Objeto</th>
+              <th className="text-right px-4 py-3 font-semibold text-gray-600 dark:text-gray-300">Valor</th>
+              <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-300">Vigência</th>
+              <th className="text-center px-4 py-3 font-semibold text-gray-600 dark:text-gray-300">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colSpan={6} className="text-center py-12 text-gray-400 dark:text-gray-500">
+                <FileText className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                Nenhum contrato cadastrado
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+export default function Contratos() {
+  const [tab, setTab] = useState('itens')
+
+  return (
+    <div className="space-y-5 animate-fade-in">
+      {/* Header */}
+      <div>
+        <h1 className="page-title flex items-center gap-2">📝 Contratos</h1>
+        <p className="page-subtitle">Gestão de itens, credores e contratos</p>
+      </div>
+
+      {/* Tabs */}
+      <div className="border-b border-gray-200 dark:border-gray-700">
+        <nav className="flex gap-1">
+          {TABS.map(t => {
+            const Icon = t.icon
+            const active = tab === t.key
+            return (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                  active
+                    ? 'border-blue-600 text-blue-700 dark:text-blue-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-500'
+                }`}
+              >
+                <span>{t.emoji}</span>
+                {t.label}
+              </button>
+            )
+          })}
+        </nav>
+      </div>
+
+      {/* Content */}
+      <div>
+        {tab === 'itens'     && <TabItens />}
+        {tab === 'credor'    && <TabCredor />}
+        {tab === 'contratos' && <TabContratos />}
+      </div>
+    </div>
+  )
+}
