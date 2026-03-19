@@ -141,7 +141,7 @@ export default function LoginAdmin() {
                 <p className="font-medium text-gray-900 dark:text-white mb-1">Apenas para Administradores</p>
                 <p className="text-xs leading-relaxed">
                   Esta área é restrita para gerenciamento de municípios, configurações e dados do sistema.
-                  Para acessar como município, utilize: <span className="font-mono text-blue-600">http://localhost:3000/nome-municipio</span>
+                  Para acessar como município, utilize: <span className="font-mono text-blue-600">https://jprocesso.vercel.app/nome-municipio</span>
                 </p>
               </div>
             </div>
