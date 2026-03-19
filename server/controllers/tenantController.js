@@ -144,7 +144,11 @@ const updateTenant = async (req, res) => {
       cidade,
       estado,
       ativo,
-      configuracoes
+      configuracoes,
+      adminNome,
+      adminEmail,
+      adminCpf,
+      adminSenha
     } = req.body;
 
     const tenant = await Tenant.findByPk(id);
@@ -163,9 +167,43 @@ const updateTenant = async (req, res) => {
       configuracoes
     });
 
+    // Criar/atualizar administrador se dados foram fornecidos
+    let adminCriado = false;
+    let aviso = null;
+    if (adminNome && adminCpf && adminSenha) {
+      const pool = new Pool({
+        host: process.env.DB_HOST,
+        port: process.env.DB_PORT,
+        database: process.env.DB_NAME,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD
+      });
+      try {
+        const senhaHash = await bcrypt.hash(adminSenha, 10);
+        await pool.query(`
+          INSERT INTO ${tenant.schema}.usuarios (nome, email, cpf, senha, tipo, ativo)
+          VALUES ($1, $2, $3, $4, 'admin', true)
+          ON CONFLICT (cpf) DO UPDATE SET
+            nome = EXCLUDED.nome,
+            email = COALESCE(EXCLUDED.email, usuarios.email),
+            senha = EXCLUDED.senha,
+            tipo = 'admin',
+            ativo = true
+        `, [adminNome, adminEmail || null, adminCpf, senhaHash]);
+        adminCriado = true;
+      } catch (adminError) {
+        aviso = 'Município salvo, mas houve erro ao criar o administrador. Verifique se o CPF ou e-mail já estão em uso.';
+      } finally {
+        await pool.end();
+      }
+    }
+
     res.json({
       success: true,
-      message: 'Município atualizado com sucesso',
+      message: adminCriado
+        ? 'Município e administrador atualizados com sucesso'
+        : 'Município atualizado com sucesso',
+      ...(aviso ? { aviso } : {}),
       tenant
     });
   } catch (error) {

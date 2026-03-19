@@ -91,11 +91,16 @@ export default function AdminTenants() {
       return response.data;
     },
     {
-      onSuccess: () => {
+      onSuccess: (data) => {
         setShowEditModal(false);
         setSelectedTenant(null);
+        setBrasaoPreview(null);
         refetch();
-        alert('Município atualizado com sucesso!');
+        if (data.aviso) {
+          alert(`Município atualizado com sucesso!\n\nAviso: ${data.aviso}`);
+        } else {
+          alert(data.message || 'Município atualizado com sucesso!');
+        }
       },
       onError: (error) => {
         alert(error.response?.data?.error || 'Erro ao atualizar município');
@@ -153,13 +158,35 @@ export default function AdminTenants() {
   const handleEdit = (tenant) => {
     setSelectedTenant(tenant);
     setModulosHabilitados(tenant.configuracoes?.modulos_habilitados || []);
+    setBrasaoPreview(null);
     setShowEditModal(true);
   };
 
   const handleUpdateSubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    
+
+    // Validar dados do administrador (todos ou nenhum)
+    const adminNome = formData.get('adminNome')?.trim();
+    const adminCpf = formData.get('adminCpf')?.trim();
+    const adminEmail = formData.get('adminEmail')?.trim();
+    const adminSenha = formData.get('adminSenha');
+    if ((adminNome || adminCpf || adminEmail || adminSenha) && (!adminNome || !adminCpf || !adminSenha)) {
+      alert('Para cadastrar um administrador, preencha: Nome, CPF e Senha.');
+      return;
+    }
+
+    // Converter brasão para base64 se um novo arquivo foi selecionado
+    let brasaoUrl = selectedTenant.configuracoes?.brasao_url || null;
+    const brasaoFile = formData.get('brasao');
+    if (brasaoFile && brasaoFile.size > 0) {
+      brasaoUrl = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(brasaoFile);
+      });
+    }
+
     const data = {
       nome: formData.get('nome'),
       cnpj: formData.get('cnpj'),
@@ -171,7 +198,11 @@ export default function AdminTenants() {
         cor_primaria: formData.get('cor_primaria'),
         cor_secundaria: formData.get('cor_secundaria'),
         modulos_habilitados: modulosHabilitados,
-      }
+        brasao_url: brasaoUrl,
+      },
+      ...(adminNome && adminCpf && adminSenha
+        ? { adminNome, adminCpf, adminEmail: adminEmail || null, adminSenha }
+        : {})
     };
 
     updateMutation.mutate({ id: selectedTenant.id, data });
@@ -750,9 +781,9 @@ export default function AdminTenants() {
                   {/* Preview */}
                   <div className="flex-shrink-0">
                     <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
-                      {brasaoPreview || selectedTenant.brasao_url ? (
+                      {brasaoPreview || selectedTenant.configuracoes?.brasao_url ? (
                         <img 
-                          src={brasaoPreview || selectedTenant.brasao_url} 
+                          src={brasaoPreview || selectedTenant.configuracoes?.brasao_url} 
                           alt="Brasão" 
                           className="max-w-full max-h-full object-contain"
                         />
@@ -774,6 +805,11 @@ export default function AdminTenants() {
                       onChange={(e) => {
                         const file = e.target.files[0];
                         if (file) {
+                          if (file.size > 2 * 1024 * 1024) {
+                            alert('O brasão deve ter no máximo 2MB.');
+                            e.target.value = '';
+                            return;
+                          }
                           const reader = new FileReader();
                           reader.onloadend = () => setBrasaoPreview(reader.result);
                           reader.readAsDataURL(file);
