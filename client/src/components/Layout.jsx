@@ -65,7 +65,7 @@ export default function Layout() {
   ]
 
   const adminMenuItems = [
-    { path: `/${subdomain}/secretarias`, icon: Building2, emoji: '🏛️', label: 'Organização' },
+    { path: `/${subdomain}/organizacao`, icon: Building2, emoji: '🏛️', label: 'Organização' },
     { path: `/${subdomain}/usuarios`,    icon: Users,     emoji: '👥', label: 'Usuários' },
     { path: `/${subdomain}/relatorios`,  icon: BarChart3, emoji: '📊', label: 'Relatórios' },
     { path: `/${subdomain}/configuracoes`, icon: Settings, emoji: '⚙️', label: 'Configurações' },

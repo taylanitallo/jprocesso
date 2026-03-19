@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { 
   Plus, 
@@ -19,6 +20,8 @@ import {
 } from 'lucide-react';
 
 export default function Secretarias() {
+  const { subdomain, tab: tabParam } = useParams();
+  const navigate = useNavigate();
   const [showModalSecretaria, setShowModalSecretaria] = useState(false);
   const [showModalSetor, setShowModalSetor] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -72,12 +75,14 @@ export default function Secretarias() {
   });
 
   // ── Tabs ──────────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState('secretarias');
+  const VALID_TABS = ['entidade', 'secretarias', 'agentes', 'responsaveis'];
+  const activeTab = VALID_TABS.includes(tabParam) ? tabParam : 'entidade';
+  const setActiveTab = (key) => navigate(`/${subdomain}/organizacao/${key}`, { replace: false });
 
   // ── Agentes (localStorage) ────────────────────────────────────────────────
   const [agentes, setAgentes] = useState([]);
   useEffect(() => {
-    api.get('/organizacao/agentes').then(r => setAgentes(r.data)).catch(() => {});
+    api.get('/organizacao/agentes').then(r => setAgentes(r.data?.agentes || r.data || [])).catch(() => {});
   }, []);
   const [showModalAgente,       setShowModalAgente]       = useState(false);
   const [editingAgente,         setEditingAgente]         = useState(null);
@@ -214,6 +219,7 @@ export default function Secretarias() {
 
   useEffect(() => {
     if (activeTab === 'entidade') { setEntidadeEditing(false); fetchEntidade(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   const fetchEntidade = async () => {
@@ -512,10 +518,10 @@ export default function Secretarias() {
       let atualizado;
       if (editingAgente) {
         const { data } = await api.put(`/organizacao/agentes/${editingAgente.id}`, formAgente);
-        atualizado = agentes.map(a => a.id === editingAgente.id ? data : a);
+        atualizado = agentes.map(a => a.id === editingAgente.id ? (data.agente || data) : a);
       } else {
         const { data } = await api.post('/organizacao/agentes', formAgente);
-        atualizado = [...agentes, data];
+        atualizado = [...agentes, data.agente || data];
       }
       setAgentes(atualizado);
       setShowModalAgente(false);

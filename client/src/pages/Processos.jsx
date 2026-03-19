@@ -1,5 +1,5 @@
 import { useQuery } from 'react-query'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useState } from 'react'
 import api from '../services/api'
 import { Plus, ChevronLeft, ChevronRight, ArrowRight, Inbox, Send } from 'lucide-react'
@@ -31,13 +31,15 @@ const PRIO_INFO = {
 
 export default function Processos() {
   const { subdomain } = useParams()
+  const navigate = useNavigate()
+  const location = useLocation()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
   const [statusEnv, setStatusEnv] = useState('')
-  const [searchParams, setSearchParams] = useSearchParams()
-  const aba = searchParams.get('aba') || 'entrada'
-  const setAba = (v) => setSearchParams(v === 'entrada' ? {} : { aba: v }, { replace: true })
+  const lastSeg = location.pathname.split('/').pop()
+  const aba = ['entrada', 'enviados'].includes(lastSeg) ? lastSeg : 'entrada'
+  const setAba = (v) => navigate(`/${subdomain}/processos${v === 'entrada' ? '' : '/' + v}`)
 
   const { data: dataEnviados, isLoading: loadEnv } = useQuery(
     ['processos-enviados', statusEnv],

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import { Package, BarChart2, List, ArrowDownCircle, ArrowUpCircle, ClipboardList, Shield, ClipboardCheck, CalendarRange, Lock, Phone } from 'lucide-react'
 // Módulo desativado — imports mantidos para reativação futura
 // import AlmoxPainel from '../almoxarifado/AlmoxPainel'
@@ -24,7 +25,11 @@ const TABS = [
 ]
 
 export default function Almoxarifado() {
-  const [activeTab, setActiveTab] = useState('painel')
+  const { subdomain, tab: tabParam } = useParams()
+  const navigate = useNavigate()
+  const VALID_TABS = TABS.map(t => t.id)
+  const activeTab = VALID_TABS.includes(tabParam) ? tabParam : 'painel'
+  const setActiveTab = (key) => navigate(`/${subdomain}/almoxarifado/${key}`)
 
   if (!MODULO_ATIVO) {
     return (

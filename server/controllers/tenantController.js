@@ -293,6 +293,25 @@ const deleteTenant = async (req, res) => {
   }
 };
 
+// Migração automática: cria tabela agentes se não existir
+async function migrarAgentes(schema, pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ${schema}.agentes (
+      id            UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+      nome          VARCHAR(500)  NOT NULL,
+      cargo         VARCHAR(300),
+      matricula     VARCHAR(50),
+      cpf           VARCHAR(14),
+      email         VARCHAR(255),
+      telefone      VARCHAR(20),
+      secretaria_id UUID          REFERENCES ${schema}.secretarias(id) ON DELETE SET NULL,
+      ativo         BOOLEAN       NOT NULL DEFAULT TRUE,
+      created_at    TIMESTAMP     NOT NULL DEFAULT NOW(),
+      updated_at    TIMESTAMP     NOT NULL DEFAULT NOW()
+    );
+  `);
+}
+
 // Migração automática: adiciona colunas ausentes em schemas já existentes
 async function migrarSchemaUsuarios(schema, pool) {
   await pool.query(`
@@ -317,6 +336,7 @@ const migrarTodosOsSchemas = async () => {
     for (const tenant of tenants) {
       try {
         await migrarSchemaUsuarios(tenant.schema, pool);
+        await migrarAgentes(tenant.schema, pool);
       } catch (_) {
         // schema pode não ter sido criado ainda
       }
@@ -445,6 +465,21 @@ async function criarEstruturaIsolada(schema, tenant, usuarioAdmin) {
         descricao TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Agentes
+      CREATE TABLE IF NOT EXISTS ${schema}.agentes (
+        id            UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+        nome          VARCHAR(500)  NOT NULL,
+        cargo         VARCHAR(300),
+        matricula     VARCHAR(50),
+        cpf           VARCHAR(14),
+        email         VARCHAR(255),
+        telefone      VARCHAR(20),
+        secretaria_id UUID          REFERENCES ${schema}.secretarias(id) ON DELETE SET NULL,
+        ativo         BOOLEAN       NOT NULL DEFAULT TRUE,
+        created_at    TIMESTAMP     NOT NULL DEFAULT NOW(),
+        updated_at    TIMESTAMP     NOT NULL DEFAULT NOW()
       );
     `;
 

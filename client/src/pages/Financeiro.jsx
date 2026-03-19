@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import { gerarPainelPDF } from './financeiro/gerarPainelPDF'
 import { gerarDidPDF } from './did/gerarDidPDF'
@@ -574,8 +574,11 @@ function ModalVerDid({ processoId, tenant, onClose }) {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function Financeiro() {
-  const { subdomain } = useParams()
-  const [tab, setTab] = useState('painel')
+  const { subdomain, tab: tabParam } = useParams()
+  const navigate = useNavigate()
+  const VALID_TABS_FIN = TABS.map(t => t.id)
+  const tab = VALID_TABS_FIN.includes(tabParam) ? tabParam : 'painel'
+  const setTab = (key) => navigate(`/${subdomain}/financeiro/${key}`)
 
   // ── Painel state
   const [painel, setPainel] = useState(null)

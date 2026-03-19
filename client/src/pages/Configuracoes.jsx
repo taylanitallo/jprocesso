@@ -1,4 +1,5 @@
 ﻿import { useState, useRef, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { Save, Upload, X, ImageIcon, Download, FileDown, FileUp, Database, Key, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
@@ -68,7 +69,11 @@ const ImageUpload = ({ label, value, onChange, hint, disabled }) => {
 export default function Configuracoes() {
   const { user, tenant, updateTenantConfig } = useAuth();
   const { isDark, toggleTheme } = useTheme();
-  const [activeTab, setActiveTab] = useState('gerais');
+  const { subdomain, tab: tabParam } = useParams();
+  const navigate = useNavigate();
+  const VALID_TABS_CONF = ['gerais', 'notificacoes', 'tema', 'importexport'];
+  const activeTab = VALID_TABS_CONF.includes(tabParam) ? tabParam : 'gerais';
+  const setActiveTab = (key) => navigate(`/${subdomain}/configuracoes/${key}`);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');

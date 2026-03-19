@@ -54,7 +54,12 @@ function LoginRoute() {
 
 function EnviadosRedirect() {
   const { subdomain } = useParams()
-  return <Navigate to={`/${subdomain}/processos?aba=enviados`} replace />
+  return <Navigate to={`/${subdomain}/processos/enviados`} replace />
+}
+
+function OrganizacaoRedirect() {
+  const { subdomain } = useParams()
+  return <Navigate to={`/${subdomain}/organizacao`} replace />
 }
 
 function App() {
@@ -76,17 +81,25 @@ function App() {
           <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="processos" element={<Processos />} />
+            <Route path="processos/entrada" element={<Processos />} />
+            <Route path="processos/enviados" element={<Processos />} />
             <Route path="processos/novo" element={<NovoProcesso />} />
             <Route path="processos/:id" element={<DetalhesProcesso />} />
             <Route path="processos/:id/did" element={<FormularioDid />} />
             <Route path="enviados" element={<EnviadosRedirect />} />
-            <Route path="secretarias" element={<Secretarias />} />
+            <Route path="organizacao" element={<Secretarias />} />
+            <Route path="organizacao/:tab" element={<Secretarias />} />
+            <Route path="secretarias" element={<OrganizacaoRedirect />} />
             <Route path="usuarios" element={<Usuarios />} />
             <Route path="almoxarifado" element={<Almoxarifado />} />
+            <Route path="almoxarifado/:tab" element={<Almoxarifado />} />
             <Route path="financeiro" element={<Financeiro />} />
+            <Route path="financeiro/:tab" element={<Financeiro />} />
             <Route path="contratos" element={<Contratos />} />
+            <Route path="contratos/:tab" element={<Contratos />} />
             <Route path="relatorios" element={<Relatorios />} />
             <Route path="configuracoes" element={<Configuracoes />} />
+            <Route path="configuracoes/:tab" element={<Configuracoes />} />
           </Route>
         </Route>
 

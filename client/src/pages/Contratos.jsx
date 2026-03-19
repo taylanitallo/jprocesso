@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import {
   FileText, ShoppingBag, User, PackageOpen, Search, X, Plus, Edit3,
   Trash2, Eye, BarChart2, List, Check, AlertTriangle, Printer, ChevronUp, ChevronDown,
@@ -2730,7 +2731,11 @@ function TabContratos() {
 //  PÁGINA CONTRATOS
 // ══════════════════════════════════════════════════════════════════════════════
 export default function Contratos() {
-  const [tab, setTab] = useState('itens')
+  const { subdomain, tab: tabParam } = useParams()
+  const navigate = useNavigate()
+  const VALID_TABS_CTR = TABS.map(t => t.key)
+  const tab = VALID_TABS_CTR.includes(tabParam) ? tabParam : 'itens'
+  const setTab = (key) => navigate(`/${subdomain}/contratos/${key}`)
 
   return (
     <div className="space-y-4 animate-fade-in">

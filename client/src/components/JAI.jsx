@@ -67,6 +67,7 @@ function detectarPagina(pathname) {
   if (pathname.includes('/almoxarifado'))   return 'almoxarifado'
   if (pathname.includes('/financeiro'))     return 'financeiro'
   if (pathname.includes('/contratos'))      return 'contratos'
+  if (pathname.includes('/organizacao'))     return 'secretarias'
   if (pathname.includes('/secretarias'))    return 'secretarias'
   if (pathname.includes('/usuarios'))       return 'usuarios'
   if (pathname.includes('/relatorios'))     return 'relatorios'
