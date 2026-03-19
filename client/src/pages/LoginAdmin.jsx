@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Lock, User } from 'lucide-react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function LoginAdmin() {
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
   const [formData, setFormData] = useState({
     cpf: '',
     senha: ''
@@ -32,6 +34,9 @@ export default function LoginAdmin() {
       // Configurar header de autenticação
       api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
       api.defaults.headers.common['x-tenant-subdomain'] = 'admin';
+
+      // Atualizar contexto com dados do admin antes de navegar
+      await refreshUser();
 
       // Redirecionar para área de gestão
       navigate('/admin');
