@@ -75,6 +75,84 @@ function detectarPagina(pathname) {
   return 'dashboard'
 }
 
+// Detecta a aba ativa a partir do pathname (/:subdomain/modulo/:tab)
+function detectarAba(pathname) {
+  const segs = pathname.split('/').filter(Boolean) // ['subdomain','modulo','tab',...]
+  if (segs.length < 3) return null
+  const modulo = segs[1]
+  const tab    = segs[2]
+  // Evita confundir com sub-rotas de processo (ID ou 'novo' ou 'did')
+  if (modulo === 'processos') {
+    if (tab === 'enviados') return 'enviados'
+    if (tab === 'entrada')  return 'entrada'
+    return null // 'novo', UUID, etc.
+  }
+  return tab || null
+}
+
+// Contexto textual da aba para exibição no header e mensagens
+const ABA_LABEL = {
+  // Processos
+  entrada:      { label: 'Entrada',           icone: '📥' },
+  enviados:     { label: 'Enviados',           icone: '📤' },
+  // Organização
+  entidade:     { label: 'Entidade',           icone: '🏢' },
+  secretarias:  { label: 'Secretarias e Setores', icone: '🏛️' },
+  agentes:      { label: 'Cadastro de Agentes',icone: '🪪' },
+  responsaveis: { label: 'Responsáveis',       icone: '👤' },
+  // Almoxarifado
+  painel:       { label: 'Painel',             icone: '📊' },
+  itens:        { label: 'Itens',              icone: '📦' },
+  lotes:        { label: 'Entradas',           icone: '⬇️' },
+  saidas:       { label: 'Saídas',             icone: '⬆️' },
+  requisicoes:  { label: 'Requisições',        icone: '📋' },
+  cotas:        { label: 'Cotas',              icone: '📅' },
+  inventario:   { label: 'Inventário',         icone: '🗂️' },
+  auditoria:    { label: 'Auditoria',          icone: '🔍' },
+  // Financeiro
+  processos:    { label: 'Processos DID',      icone: '📋' },
+  relatorio:    { label: 'Relatório',          icone: '📊' },
+  // Contratos
+  credor:       { label: 'Credor',             icone: '🏢' },
+  contratos:    { label: 'Contratos',          icone: '📋' },
+  // Configurações
+  gerais:       { label: 'Configurações Gerais',icone: '⚙️' },
+  notificacoes: { label: 'Notificações',       icone: '🔔' },
+  tema:         { label: 'Tema',               icone: '🎨' },
+  importexport: { label: 'Importações/Exportações', icone: '🔄' },
+}
+
+// Dicas específicas por aba
+const DICAS_ABA = {
+  // Processos
+  entrada:      ['Estes são processos recebidos no seu setor', 'Dê duplo clique para ver os detalhes', 'Use a busca para localizar por número ou interessado'],
+  enviados:     ['Processos que você já encaminhou para outro setor', 'Você pode acompanhar o status de cada processo aqui'],
+  // Organização
+  entidade:     ['Cadastre os dados do município aqui', 'Informe CNPJ, endereço, brasão e informações da prefeitura', 'Esses dados aparecem nos documentos oficiais'],
+  secretarias:  ['Crie secretarias com sigla e nome completo', 'Cada secretaria pode ter setores vinculados', 'Selecione uma secretaria e clique em "Setores" para gerenciar'],
+  agentes:      ['Agentes são servidores públicos do município', 'Vincule o agente a uma secretaria', 'Esses agentes aparecem como responsáveis nos documentos'],
+  responsaveis: ['Defina quem é responsável por cada secretaria', 'Informe cargo, período e amparo legal', 'Um agente pode ser responsável por períodos diferentes'],
+  // Almoxarifado
+  painel:       ['Veja o resumo do estoque no painel', 'Monitore entradas, saídas e saldo disponível'],
+  itens_alm:    ['Cadastre materiais e produtos aqui', 'Use a busca para localizar itens pelo nome'],
+  lotes:        ['Registre entradas de materiais no estoque', 'Informe nota fiscal e fornecedor'],
+  saidas:       ['Registre saídas de materiais do estoque', 'Relacione cada saída a uma secretaria/setor'],
+  requisicoes:  ['Solicitações de material entre setores', 'Aprove ou reprove requisições pendentes'],
+  // Financeiro
+  painel_fin:   ['Veja o resumo financeiro por período', 'Filtre por secretaria, credor e mês de referência'],
+  processos_fin:['Lista de processos DID com lançamentos', 'Clique para ver detalhes do processo'],
+  relatorio:    ['Gere relatórios financeiros aqui', 'Filtre por período e exporte em PDF'],
+  // Contratos
+  itens:        ['Cadastre itens com código sequencial automático', 'Use palavras-chave para facilitar buscas'],
+  credor:       ['Cadastre empresas fornecedoras (credores)', 'Informe CNPJ, razão social e dados bancários'],
+  contratos_aba:['Registre contratos e atas de registro de preço', 'Vincule contratos a credores e itens'],
+  // Configurações
+  gerais:       ['Configure nome, logo e brasão do município', 'Esses dados aparecem no sistema e nos documentos'],
+  notificacoes: ['Defina quando receber e-mails do sistema', 'Ative notificações push para alertas em tempo real'],
+  tema:         ['Alterne entre tema claro e escuro', 'Personalize as cores do sistema'],
+  importexport: ['Exporte dados do sistema em JSON', 'Use para backup ou migração de dados'],
+}
+
 const BASE = {
   saudacoes:    ['oi','olá','ola','hey','e aí','eaí','bom dia','boa tarde','boa noite','oi tudo','oi ayla'],
   identificacao: ['quem é você','quem és','você é','qual seu nome','como se chama','me apresente'],
@@ -102,19 +180,23 @@ function classificar(texto) {
   return 'geral'
 }
 
-function gerarResposta(texto, pagKey, schemaCtx) {
-  const pag = PAGINAS[pagKey] || PAGINAS.dashboard
-  const cat = classificar(texto)
-  const t   = texto.toLowerCase()
+function gerarResposta(texto, pagKey, schemaCtx, abaKey) {
+  const pag    = PAGINAS[pagKey] || PAGINAS.dashboard
+  const abaInf = abaKey ? ABA_LABEL[abaKey] : null
+  const cat    = classificar(texto)
+  const t      = texto.toLowerCase()
+  const localCtx = abaInf ? `**${pag.nome}** ${pag.icone} › **${abaInf.label}** ${abaInf.icone}` : `**${pag.nome}** ${pag.icone}`
 
-  if (cat === 'saudacoes') return `Olá! 👋 Sou a **Ayla**, assistente inteligente do **jProcesso**.\n\nVocê está em **${pag.nome}** ${pag.icone}.\n\nPosso te ajudar com:\n• Navegar pelo sistema\n• Preencher formulários\n• Explicar funcionalidades\n• Sugerir textos e descrições\n\nO que precisa?`
+  if (cat === 'saudacoes') return `Olá! 👋 Sou a **Ayla**, assistente inteligente do **jProcesso**.\n\nVocê está em ${localCtx}.\n\nPosso te ajudar com:\n• Navegar pelo sistema\n• Preencher formulários\n• Explicar funcionalidades\n• Sugerir textos e descrições\n\nO que precisa?`
 
   if (cat === 'navegar' || cat === 'ajuda') {
     if (pagKey === 'almoxarifado') return `**Módulo Almoxarifado** 🔒\n\nEste módulo **não está liberado** para este cliente.\n\nPara contratar, entre em contato com o comercial:\n\n📞 **WhatsApp:** [(88) 99722-4066](https://wa.me/5588997224066)`
     if (pagKey === 'contratos') return `**Módulo Contratos** 📝\n\n**Aba Itens:**\n• Cadastre itens com código automático (00001, 00002...)\n• Filtre por descrição, catálogo, categoria ou status\n• Selecione um item e use os botões: Incluir, Alterar, Excluir, Visualizar\n\n**Formulário do item:**\n• Descrição: nome/nomenclatura do produto\n• Categoria: COMPRAS ou SERVIÇOS\n• Catálogo: código CNBS do PNCP\n• Palavras-chave: para facilitar busca`
     if (pagKey === 'did') return `**Formulário DID** 📋\n\n**Seção I — Dados Gerais:**\n• Objeto: descrição do bem/serviço\n• Período: mês e ano de referência\n• Fornecedor: empresa contratada\n• Modalidade: forma de contratação\n\n**Seções II a VI:** tramitação entre setores (CI, Compras, Contabilidade, Finanças, Tesouraria)\n\nSalve cada seção após preencher.`
     if (pagKey === 'novo') return `**Abrindo um Processo** 📄\n\n1. Escolha o **tipo**: Despacho, DID, Pauta ou Requisição\n2. Preencha os **dados principais**\n3. Para DID: escolha entre **Contas Fixas** ou **Contas Variadas**\n4. Clique em **"Criar Processo"**\n\nO número é gerado automaticamente pelo sistema.`
-    return `**${pag.nome}** ${pag.icone}\n\n💡 **Dicas:**\n${pag.dicas.map(d => `• ${d}`).join('\n')}\n\nTem alguma dúvida específica?`
+    // Dicas da aba específica ou do módulo
+    const dicas = (abaKey && DICAS_ABA[abaKey]) || pag.dicas
+    return `**${localCtx}**\n\n💡 **Dicas:**\n${dicas.map(d => `• ${d}`).join('\n')}\n\nTem alguma dúvida específica?`
   }
 
   if (cat === 'processos') {
@@ -210,7 +292,7 @@ function gerarResposta(texto, pagKey, schemaCtx) {
     return resp
   }
 
-  return `Entendi sua pergunta sobre **"${texto}"**! 🤔\n\nPosso te ajudar melhor se você especificar o que precisa:\n\n• 🧭 **Navegar** no sistema\n• 📋 **Preencher** um formulário\n• 💡 **Entender** uma funcionalidade\n• ✍️ **Sugestões** de texto para campos\n• 🗄️ **Banco de dados** — pergunte _"quais tabelas existem"_\n\nTente reformular sua pergunta!`
+  return `Entendi sua pergunta sobre **"${texto}"**! 🤔\n\nVocê está em ${localCtx}.\n\nPosso te ajudar melhor se você especificar o que precisa:\n\n• 🧭 **Navegar** no sistema\n• 📋 **Preencher** um formulário\n• 💡 **Entender** uma funcionalidade\n• ✍️ **Sugestões** de texto para campos\n• 🗄️ **Banco de dados** — pergunte _"quais tabelas existem"_\n\nTente reformular sua pergunta!`
 }
 
 const RAPIDAS_POR_PAGINA = {
@@ -226,6 +308,29 @@ const RAPIDAS_POR_PAGINA = {
   usuarios:     ['Como criar usuário?', 'Quais os perfis?', 'Colunas da tabela usuarios'],
   relatorios:   ['Que relatórios existem?', 'Como exportar PDF?'],
   configuracoes:['O que posso configurar?'],
+}
+
+// Perguntas rápidas refinadas por aba
+const RAPIDAS_POR_ABA = {
+  entrada:      ['Como tramitar um processo?', 'Como abrir novo processo?', 'O que é DID?'],
+  enviados:     ['O que são processos enviados?', 'Como ver histórico de tramitações?'],
+  entidade:     ['O que preencher aqui?', 'Para que serve o brasão?'],
+  secretarias:  ['Como criar uma secretaria?', 'Como adicionar setores?'],
+  agentes:      ['O que é um agente?', 'Como vincular a uma secretaria?'],
+  responsaveis: ['Como cadastrar um responsável?', 'O que é amparo legal?'],
+  painel:       ['O que vejo no painel?', 'Como filtrar por período?'],
+  itens:        ['Como cadastrar um item?', 'O que é catálogo CNBS?', 'Como usar palavras-chave?'],
+  credor:       ['Como cadastrar credor?', 'O que é credor?'],
+  contratos:    ['Como criar um contrato?', 'Como vincular itens?'],
+  gerais:       ['O que posso configurar?', 'Como alterar o logo?'],
+  notificacoes: ['Como ativar e-mail?', 'O que são notificações push?'],
+  tema:         ['Como mudar o tema?', 'Como ativar modo escuro?'],
+  importexport: ['Como exportar dados?', 'Como fazer backup?'],
+  relatorio:    ['Como gerar relatório?', 'Como exportar PDF?'],
+  processos:    ['Como ver os processos DID?', 'Como filtrar por período?'],
+  lotes:        ['Como registrar entrada?', 'O que informar na nota fiscal?'],
+  saidas:       ['Como registrar saída?', 'Como vincular ao setor?'],
+  requisicoes:  ['Como aprovar uma requisição?', 'Como criar nova requisição?'],
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -293,7 +398,13 @@ function MsgBolha({ msg }) {
 export default function JAI() {
   const location = useLocation()
   const pagKey   = detectarPagina(location.pathname)
+  const abaKey   = detectarAba(location.pathname)
   const pag      = PAGINAS[pagKey] || PAGINAS.dashboard
+  const abaInfo  = abaKey ? ABA_LABEL[abaKey] : null
+  const abaDicas = abaKey ? (DICAS_ABA[abaKey] || []) : []
+  // Label exibido no header: "Módulo > Aba" ou só "Módulo"
+  const headerLabel = abaInfo ? `${pag.nome} › ${abaInfo.label}` : pag.nome
+  const headerIcone = abaInfo ? abaInfo.icone : pag.icone
 
   const [aberto,    setAberto]    = useState(false)
   const [input,     setInput]     = useState('')
@@ -316,7 +427,8 @@ export default function JAI() {
   // Mensagem de boas-vindas ao abrir pela 1ª vez
   useEffect(() => {
     if (aberto && msgs.length === 0) {
-      addResposta(`Olá! 👋 Sou a **Ayla**, assistente inteligente do **jProcesso**.\n\nVocê está em **${pag.nome}** ${pag.icone}.\n\nComo posso te ajudar?`)
+      const abaCtx = abaInfo ? ` — aba **${abaInfo.label}** ${abaInfo.icone}` : ''
+      addResposta(`Olá! 👋 Sou a **Ayla**, assistente inteligente do **jProcesso**.\n\nVocê está em **${pag.nome}** ${pag.icone}${abaCtx}.\n\nComo posso te ajudar?`)
     }
     if (aberto) {
       setPulsar(false)
@@ -324,10 +436,12 @@ export default function JAI() {
     }
   }, [aberto])
 
-  // Atualiza contexto ao mudar de página
+  // Atualiza contexto ao mudar de página ou aba
   useEffect(() => {
     if (aberto && msgs.length > 0) {
-      addResposta(`📍 Você foi para **${pag.nome}** ${pag.icone}.\n\n${pag.dicas[0]}`)
+      const abaCtx = abaInfo ? ` — **${abaInfo.label}** ${abaInfo.icone}` : ''
+      const dicaFinal = (abaDicas.length > 0 ? abaDicas : pag.dicas)[0]
+      addResposta(`📍 Você foi para **${pag.nome}** ${pag.icone}${abaCtx}.\n\n${dicaFinal}`)
     }
   }, [location.pathname])
 
@@ -349,16 +463,17 @@ export default function JAI() {
     setMsgs(p => [...p, { id: Date.now(), role: 'user', texto }])
     setInput('')
     scrollBottom()
-    const resposta = gerarResposta(texto, pagKey, schemaCtx)
+    const resposta = gerarResposta(texto, pagKey, schemaCtx, abaKey)
     addResposta(resposta)
   }
 
   const limpar = () => {
     setMsgs([])
-    addResposta(`Histórico limpo! 🧹\n\nEstou aqui se precisar de ajuda com **${pag.nome}** ${pag.icone}.`)
+    const abaCtx = abaInfo ? ` — ${abaInfo.label} ${abaInfo.icone}` : ''
+    addResposta(`Histórico limpo! 🧹\n\nEstou aqui se precisar de ajuda com **${pag.nome}** ${pag.icone}${abaCtx}.`)
   }
 
-  const rapidas = RAPIDAS_POR_PAGINA[pagKey] || RAPIDAS_POR_PAGINA.dashboard
+  const rapidas = (abaKey && RAPIDAS_POR_ABA[abaKey]) || RAPIDAS_POR_PAGINA[pagKey] || RAPIDAS_POR_PAGINA.dashboard
 
   return (
     <>
@@ -409,7 +524,7 @@ export default function JAI() {
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <span className="text-[10px] text-violet-200">{pag.icone} {pag.nome}</span>
+              <span className="text-[10px] text-violet-200">{headerIcone} {headerLabel}</span>
               <button onClick={limpar} title="Limpar conversa" className="p-1 rounded hover:bg-white/20 text-white/70 hover:text-white transition-colors">
                 <RotateCcw className="w-3 h-3" />
               </button>
