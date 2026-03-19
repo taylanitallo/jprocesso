@@ -46,6 +46,9 @@ export default function AdminTenants() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [modulosHabilitados, setModulosHabilitados] = useState([]);
+  const [adminForm, setAdminForm] = useState({ nome: '', cpf: '', email: '', senha: '' });
+
+  const resetAdminForm = () => setAdminForm({ nome: '', cpf: '', email: '', senha: '' });
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -95,6 +98,8 @@ export default function AdminTenants() {
         setShowEditModal(false);
         setSelectedTenant(null);
         setBrasaoPreview(null);
+        setShowAdminForm(false);
+        resetAdminForm();
         refetch();
         if (data.aviso) {
           alert(`Município atualizado com sucesso!\n\nAviso: ${data.aviso}`);
@@ -159,6 +164,8 @@ export default function AdminTenants() {
     setSelectedTenant(tenant);
     setModulosHabilitados(tenant.configuracoes?.modulos_habilitados || []);
     setBrasaoPreview(null);
+    setShowAdminForm(false);
+    resetAdminForm();
     setShowEditModal(true);
   };
 
@@ -166,11 +173,11 @@ export default function AdminTenants() {
     e.preventDefault();
     const formData = new FormData(e.target);
 
-    // Validar dados do administrador (todos ou nenhum)
-    const adminNome = formData.get('adminNome')?.trim();
-    const adminCpf = formData.get('adminCpf')?.trim();
-    const adminEmail = formData.get('adminEmail')?.trim();
-    const adminSenha = formData.get('adminSenha');
+    // Usar estado controlado para campos do admin
+    const adminNome = adminForm.nome.trim();
+    const adminCpf = adminForm.cpf.trim();
+    const adminEmail = adminForm.email.trim();
+    const adminSenha = adminForm.senha;
     if ((adminNome || adminCpf || adminEmail || adminSenha) && (!adminNome || !adminCpf || !adminSenha)) {
       alert('Para cadastrar um administrador, preencha: Nome, CPF e Senha.');
       return;
@@ -909,7 +916,9 @@ export default function AdminTenants() {
                         </label>
                         <input
                           type="text"
-                          name="adminNome"
+                          autoComplete="off"
+                          value={adminForm.nome}
+                          onChange={(e) => setAdminForm(f => ({ ...f, nome: e.target.value }))}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                           placeholder="Nome do administrador"
                         />
@@ -921,8 +930,10 @@ export default function AdminTenants() {
                         </label>
                         <input
                           type="text"
-                          name="adminCpf"
+                          autoComplete="off"
                           maxLength="11"
+                          value={adminForm.cpf}
+                          onChange={(e) => setAdminForm(f => ({ ...f, cpf: e.target.value.replace(/\D/g, '') }))}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                           placeholder="Apenas números"
                         />
@@ -933,8 +944,10 @@ export default function AdminTenants() {
                           E-mail
                         </label>
                         <input
-                          type="email"
-                          name="adminEmail"
+                          type="text"
+                          autoComplete="off"
+                          value={adminForm.email}
+                          onChange={(e) => setAdminForm(f => ({ ...f, email: e.target.value }))}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                           placeholder="email@exemplo.com"
                         />
@@ -946,8 +959,10 @@ export default function AdminTenants() {
                         </label>
                         <input
                           type="password"
-                          name="adminSenha"
+                          autoComplete="new-password"
                           minLength="6"
+                          value={adminForm.senha}
+                          onChange={(e) => setAdminForm(f => ({ ...f, senha: e.target.value }))}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                           placeholder="Mínimo 6 caracteres"
                         />
@@ -969,6 +984,7 @@ export default function AdminTenants() {
                     setSelectedTenant(null);
                     setBrasaoPreview(null);
                     setShowAdminForm(false);
+                    resetAdminForm();
                     setModulosHabilitados([]);
                   }}
                   className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
