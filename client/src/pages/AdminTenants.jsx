@@ -46,9 +46,9 @@ export default function AdminTenants() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [modulosHabilitados, setModulosHabilitados] = useState([]);
-  const [adminForm, setAdminForm] = useState({ nome: '', cpf: '', email: '', senha: '' });
+  const [adminForm, setAdminForm] = useState({ nome: '', cpf: '', email: '', senha: '', confirmaSenha: '' });
 
-  const resetAdminForm = () => setAdminForm({ nome: '', cpf: '', email: '', senha: '' });
+  const resetAdminForm = () => setAdminForm({ nome: '', cpf: '', email: '', senha: '', confirmaSenha: '' });
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -160,13 +160,30 @@ export default function AdminTenants() {
     );
   };
 
-  const handleEdit = (tenant) => {
+  const handleEdit = async (tenant) => {
     setSelectedTenant(tenant);
     setModulosHabilitados(tenant.configuracoes?.modulos_habilitados || []);
     setBrasaoPreview(null);
     setShowAdminForm(false);
     resetAdminForm();
     setShowEditModal(true);
+
+    // Buscar admin existente do tenant em background
+    try {
+      const { data } = await api.get(`/tenants/${tenant.id}`);
+      if (data.adminPrincipal) {
+        setAdminForm({
+          nome: data.adminPrincipal.nome || '',
+          cpf: data.adminPrincipal.cpf || '',
+          email: data.adminPrincipal.email || '',
+          senha: '',
+          confirmaSenha: ''
+        });
+        setShowAdminForm(true);
+      }
+    } catch (_) {
+      // manter formulário vazio se falhar
+    }
   };
 
   const handleUpdateSubmit = async (e) => {
@@ -178,9 +195,22 @@ export default function AdminTenants() {
     const adminCpf = adminForm.cpf.trim();
     const adminEmail = adminForm.email.trim();
     const adminSenha = adminForm.senha;
-    if ((adminNome || adminCpf || adminEmail || adminSenha) && (!adminNome || !adminCpf || !adminSenha)) {
-      alert('Para cadastrar um administrador, preencha: Nome, CPF e Senha.');
-      return;
+    const adminConfirmaSenha = adminForm.confirmaSenha;
+
+    const hasAdminData = adminNome || adminCpf || adminEmail || adminSenha || adminConfirmaSenha;
+    if (hasAdminData) {
+      if (!adminNome || !adminCpf) {
+        alert('Para criar/editar o administrador, preencha Nome e CPF.');
+        return;
+      }
+      if (adminSenha && adminSenha !== adminConfirmaSenha) {
+        alert('As senhas não conferem. Verifique a Confirmação de Senha.');
+        return;
+      }
+      if (!adminSenha && adminConfirmaSenha) {
+        alert('Preencha o campo Senha antes da Confirmação.');
+        return;
+      }
     }
 
     // Converter brasão para base64 se um novo arquivo foi selecionado
@@ -207,8 +237,8 @@ export default function AdminTenants() {
         modulos_habilitados: modulosHabilitados,
         brasao_url: brasaoUrl,
       },
-      ...(adminNome && adminCpf && adminSenha
-        ? { adminNome, adminCpf, adminEmail: adminEmail || null, adminSenha }
+      ...(adminNome && adminCpf
+        ? { adminNome, adminCpf, adminEmail: adminEmail || null, adminSenha: adminSenha || null }
         : {})
     };
 
@@ -956,6 +986,7 @@ export default function AdminTenants() {
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Senha
+                          {adminForm.nome && <span className="text-gray-400 font-normal ml-1">(deixe em branco para não alterar)</span>}
                         </label>
                         <input
                           type="password"
@@ -966,6 +997,28 @@ export default function AdminTenants() {
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                           placeholder="Mínimo 6 caracteres"
                         />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Confirmação de Senha
+                        </label>
+                        <input
+                          type="password"
+                          autoComplete="new-password"
+                          minLength="6"
+                          value={adminForm.confirmaSenha}
+                          onChange={(e) => setAdminForm(f => ({ ...f, confirmaSenha: e.target.value }))}
+                          className={`w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 ${
+                            adminForm.confirmaSenha && adminForm.senha !== adminForm.confirmaSenha
+                              ? 'border-red-400 bg-red-50'
+                              : 'border-gray-300'
+                          }`}
+                          placeholder="Repita a senha"
+                        />
+                        {adminForm.confirmaSenha && adminForm.senha !== adminForm.confirmaSenha && (
+                          <p className="text-xs text-red-500 mt-1">As senhas não conferem</p>
+                        )}
                       </div>
                     </div>
                     <p className="text-sm text-gray-600">

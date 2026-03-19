@@ -28,16 +28,36 @@ const listTenants = async (req, res) => {
 const getTenantById = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const tenant = await Tenant.findByPk(id);
-    
+
     if (!tenant) {
       return res.status(404).json({ error: 'Município não encontrado' });
     }
 
-    res.json({ success: true, tenant });
+    // Buscar administrador principal do schema isolado
+    let adminPrincipal = null;
+    const pool = new Pool({
+      host: process.env.DB_HOST,
+      port: process.env.DB_PORT,
+      database: process.env.DB_NAME,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD
+    });
+    try {
+      const result = await pool.query(
+        `SELECT nome, email, cpf FROM ${tenant.schema}.usuarios WHERE tipo = 'admin' AND ativo = true ORDER BY created_at ASC LIMIT 1`
+      );
+      if (result.rows.length > 0) adminPrincipal = result.rows[0];
+    } catch (_) {
+      // schema pode não existir ainda
+    } finally {
+      await pool.end();
+    }
+
+    res.json({ success: true, tenant, adminPrincipal });
   } catch (error) {
-    console.error('❌ Erro ao buscar tenant:', error);
+    console.error('Erro ao buscar município');
     res.status(500).json({ error: 'Erro ao buscar município' });
   }
 };
@@ -170,7 +190,7 @@ const updateTenant = async (req, res) => {
     // Criar/atualizar administrador se dados foram fornecidos
     let adminCriado = false;
     let aviso = null;
-    if (adminNome && adminCpf && adminSenha) {
+    if (adminNome && adminCpf) {
       const pool = new Pool({
         host: process.env.DB_HOST,
         port: process.env.DB_PORT,
@@ -179,20 +199,33 @@ const updateTenant = async (req, res) => {
         password: process.env.DB_PASSWORD
       });
       try {
-        const senhaHash = await bcrypt.hash(adminSenha, 10);
-        await pool.query(`
-          INSERT INTO ${tenant.schema}.usuarios (nome, email, cpf, senha, tipo, ativo)
-          VALUES ($1, $2, $3, $4, 'admin', true)
-          ON CONFLICT (cpf) DO UPDATE SET
-            nome = EXCLUDED.nome,
-            email = COALESCE(EXCLUDED.email, usuarios.email),
-            senha = EXCLUDED.senha,
-            tipo = 'admin',
-            ativo = true
-        `, [adminNome, adminEmail || null, adminCpf, senhaHash]);
+        if (adminSenha) {
+          // Criar novo ou atualizar tudo (incluindo senha)
+          const senhaHash = await bcrypt.hash(adminSenha, 10);
+          await pool.query(`
+            INSERT INTO ${tenant.schema}.usuarios (nome, email, cpf, senha, tipo, ativo)
+            VALUES ($1, $2, $3, $4, 'admin', true)
+            ON CONFLICT (cpf) DO UPDATE SET
+              nome = EXCLUDED.nome,
+              email = COALESCE(EXCLUDED.email, usuarios.email),
+              senha = EXCLUDED.senha,
+              tipo = 'admin',
+              ativo = true
+          `, [adminNome, adminEmail || null, adminCpf, senhaHash]);
+        } else {
+          // Atualizar apenas nome/email de usuário existente (sem alterar senha)
+          await pool.query(`
+            UPDATE ${tenant.schema}.usuarios SET
+              nome = $1,
+              email = COALESCE($2, email),
+              tipo = 'admin',
+              ativo = true
+            WHERE cpf = $3
+          `, [adminNome, adminEmail || null, adminCpf]);
+        }
         adminCriado = true;
       } catch (adminError) {
-        aviso = 'Município salvo, mas houve erro ao criar o administrador. Verifique se o CPF ou e-mail já estão em uso.';
+        aviso = 'Município salvo, mas houve erro ao atualizar o administrador. Verifique se o e-mail já está em uso.';
       } finally {
         await pool.end();
       }
