@@ -35,9 +35,6 @@ export default function LoginAdmin() {
       api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
       api.defaults.headers.common['x-tenant-subdomain'] = 'admin';
 
-      // Atualizar contexto com dados do admin antes de navegar
-      await refreshUser();
-
       // Redirecionar para área de gestão
       navigate('/admin');
     } catch (err) {

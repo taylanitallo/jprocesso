@@ -25,17 +25,18 @@ import Layout from './components/Layout'
 function PrivateRoute({ children, requireAdmin = false }) {
   const { user, loading } = useAuth()
   const isAdmin = localStorage.getItem('isAdmin') === 'true'
+  const token = localStorage.getItem('token')
   const subdomain = window.location.pathname.split('/')[1]
 
   if (loading) return null
 
-  if (!user) {
-    return requireAdmin
-      ? <Navigate to="/" replace />
-      : <Navigate to={`/${subdomain}/login`} replace />
+  // Rotas de admin: verifica apenas localStorage (sem depender do contexto)
+  if (requireAdmin) {
+    if (!token || !isAdmin) return <Navigate to="/" replace />
+    return children
   }
 
-  if (requireAdmin && !isAdmin) return <Navigate to="/" replace />
+  if (!user) return <Navigate to={`/${subdomain}/login`} replace />
 
   return children
 }
