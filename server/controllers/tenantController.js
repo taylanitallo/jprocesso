@@ -85,10 +85,6 @@ const createTenant = async (req, res) => {
     // Gerar nome do schema isolado
     const schema = `tenant_${subdominio.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
 
-    console.log(`🏗️  Criando novo tenant: ${nome}`);
-    console.log(`   - Subdomínio: ${subdominio}`);
-    console.log(`   - Schema: ${schema}`);
-
     // Criar tenant no banco master
     const tenant = await Tenant.create({
       nome_municipio: nome,
@@ -105,8 +101,6 @@ const createTenant = async (req, res) => {
       }
     });
 
-    console.log(`✅ Tenant registrado no banco master`);
-
     // Criar schema e estrutura isolada do banco
     try {
       await criarEstruturaIsolada(schema, tenant, {
@@ -115,10 +109,8 @@ const createTenant = async (req, res) => {
         cpf: adminCpf,
         senha: adminSenha
       });
-      
-      console.log(`✅ Estrutura isolada criada para: ${schema}`);
     } catch (schemaError) {
-      console.error('❌ Erro ao criar estrutura isolada:', schemaError);
+      console.error('Erro ao criar estrutura isolada');
       // Rollback: deletar tenant
       await tenant.destroy();
       throw new Error('Erro ao criar banco de dados isolado');
@@ -131,14 +123,13 @@ const createTenant = async (req, res) => {
         id: tenant.id,
         nome_municipio: tenant.nome_municipio,
         subdominio: tenant.subdominio,
-        schema: tenant.schema,
         cidade: tenant.cidade,
         estado: tenant.estado,
         url_acesso: `${subdominio}.jprocesso.gov.br`
       }
     });
   } catch (error) {
-    console.error('❌ Erro ao criar tenant:', error);
+    console.error('Erro ao criar município');
     res.status(500).json({ error: error.message || 'Erro ao criar município' });
   }
 };
@@ -172,15 +163,13 @@ const updateTenant = async (req, res) => {
       configuracoes
     });
 
-    console.log(`✅ Tenant atualizado: ${tenant.nome_municipio}`);
-
     res.json({
       success: true,
       message: 'Município atualizado com sucesso',
       tenant
     });
   } catch (error) {
-    console.error('❌ Erro ao atualizar tenant:', error);
+    console.error('Erro ao atualizar município');
     res.status(500).json({ error: 'Erro ao atualizar município' });
   }
 };
@@ -204,23 +193,16 @@ const deleteTenant = async (req, res) => {
       
       // Deletar schema do banco
       await masterDb.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
-      
-      // Deletar registro do tenant
       await tenant.destroy();
-      
-      console.log(`🗑️  Tenant DELETADO PERMANENTEMENTE: ${tenant.nome_municipio}`);
-      
+
       res.json({
         success: true,
         message: 'Município e todos os seus dados foram deletados permanentemente',
         tenant_deletado: tenant.nome_municipio
       });
     } else {
-      // Apenas desativar
       await tenant.update({ ativo: false });
-      
-      console.log(`⏸️  Tenant desativado: ${tenant.nome_municipio}`);
-      
+
       res.json({
         success: true,
         message: 'Município desativado com sucesso',
@@ -228,8 +210,8 @@ const deleteTenant = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('❌ Erro ao deletar tenant:', error);
-    res.status(500).json({ error: 'Erro ao deletar município' });
+    console.error('Erro ao processar operação no município');
+    res.status(500).json({ error: 'Erro ao processar operação' });
   }
 };
 
@@ -244,8 +226,6 @@ async function criarEstruturaIsolada(schema, tenant, usuarioAdmin) {
   });
 
   try {
-    console.log(`📦 Criando schema isolado: ${schema}`);
-    
     // Criar schema isolado
     await pool.query(`CREATE SCHEMA IF NOT EXISTS ${schema}`);
 
@@ -356,7 +336,6 @@ async function criarEstruturaIsolada(schema, tenant, usuarioAdmin) {
     `;
 
     await pool.query(createTables);
-    console.log(`✅ Tabelas criadas no schema ${schema}`);
 
     // Inserir secretaria padrão
     const secretariaResult = await pool.query(`
@@ -366,7 +345,6 @@ async function criarEstruturaIsolada(schema, tenant, usuarioAdmin) {
     `);
 
     const secretariaId = secretariaResult.rows[0].id;
-    console.log(`✅ Secretaria padrão criada`);
 
     // Inserir setor padrão
     const setorResult = await pool.query(`
@@ -376,7 +354,6 @@ async function criarEstruturaIsolada(schema, tenant, usuarioAdmin) {
     `, [secretariaId]);
 
     const setorId = setorResult.rows[0].id;
-    console.log(`✅ Setor padrão criado`);
 
     // Criar usuário administrador
     const senhaHash = await bcrypt.hash(usuarioAdmin.senha, 10);
@@ -393,11 +370,8 @@ async function criarEstruturaIsolada(schema, tenant, usuarioAdmin) {
       setorId
     ]);
 
-    console.log(`✅ Usuário administrador criado: ${usuarioAdmin.email}`);
-    console.log(`🎉 Estrutura isolada completa para ${schema}`);
-
   } catch (error) {
-    console.error(`❌ Erro ao criar estrutura isolada:`, error);
+    console.error('Erro ao criar estrutura isolada');
     throw error;
   } finally {
     await pool.end();
@@ -437,12 +411,11 @@ const getStatistics = async (req, res) => {
       isolamento: {
         tipo: 'Schema-based isolation',
         descricao: 'Cada município possui um schema PostgreSQL isolado',
-        seguranca: 'Zero risco de vazamento de dados entre municípios',
-        banco: process.env.DB_NAME
+        seguranca: 'Zero risco de vazamento de dados entre municípios'
       }
     });
   } catch (error) {
-    console.error('❌ Erro ao buscar estatísticas:', error);
+    console.error('Erro ao buscar estatísticas');
     res.status(500).json({ error: 'Erro ao buscar estatísticas' });
   }
 };

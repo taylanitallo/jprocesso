@@ -142,8 +142,6 @@ const mockLogin = async (req, res) => {
   try {
     const { cpf, senha, subdomain } = req.body;
 
-    console.log('Mock Login - CPF:', cpf, 'Subdomain:', subdomain);
-
     // Se for login de admin (área restrita)
     if (subdomain === 'admin') {
       if (mockAdmin.cpf !== cpf) {

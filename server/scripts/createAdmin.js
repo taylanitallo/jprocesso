@@ -50,11 +50,7 @@ async function createAdmin() {
     ]);
 
     console.log('\n✅ Admin criado/atualizado com sucesso!\n');
-    console.log('📋 Credenciais de acesso:');
-    console.log('   URL: http://localhost:3000/');
-    console.log('   CPF: 00000000191');
-    console.log('   Senha: admin123');
-    console.log('\n🔐 Dados do admin:');
+    console.log(' Dados do admin:');
     console.log('   ID:', result.rows[0].id);
     console.log('   Nome:', result.rows[0].nome);
     console.log('   Email:', result.rows[0].email);

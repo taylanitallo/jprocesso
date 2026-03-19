@@ -79,10 +79,6 @@ const login = async (req, res) => {
   try {
     const { cpf, senha, subdomain } = req.body;
 
-    console.log('🔐 Tentativa de login:');
-    console.log('   CPF:', cpf);
-    console.log('   Subdomain:', subdomain || 'teste');
-    
     // Se o subdomain for 'admin', fazer login na tabela global de admins
     if (subdomain === 'admin') {
       const result = await masterDb.query(
@@ -128,19 +124,13 @@ const login = async (req, res) => {
     
     const tenant = await Tenant.findOne({ where: { subdominio: subdomain || 'teste', ativo: true } });
     if (!tenant) {
-      console.log('❌ Tenant não encontrado');
       return res.status(404).json({ error: 'Cliente não encontrado' });
     }
-
-    console.log('✅ Tenant encontrado:', tenant.nome_municipio);
-    console.log('   Schema:', tenant.schema);
 
     const tenantDb = await getTenantConnection(tenant.schema);
     const models = initTenantModels(tenantDb);
     const { User } = models;
 
-    console.log('🔍 Buscando usuário...');
-    
     const user = await User.findOne({ 
       where: { cpf, ativo: true },
       include: [
@@ -150,16 +140,11 @@ const login = async (req, res) => {
     });
 
     if (!user) {
-      console.log('❌ Usuário não encontrado');
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
 
-    console.log('✅ Usuário encontrado:', user.nome);
-    console.log('   Email:', user.email);
-
     const validPassword = await bcrypt.compare(senha, user.senha);
-    console.log('🔐 Senha válida:', validPassword);
-    
+
     if (!validPassword) {
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }

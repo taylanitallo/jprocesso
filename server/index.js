@@ -25,15 +25,28 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(morgan('dev'));
+if (process.env.NODE_ENV !== 'production') {
+  app.use(morgan('dev'));
+}
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 2000,
-  message: 'Muitas requisições deste IP, tente novamente mais tarde.'
+  max: 500,
+  message: 'Muitas requisições deste IP, tente novamente mais tarde.',
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: 'Muitas tentativas de login. Tente novamente em 15 minutos.',
+  standardHeaders: true,
+  legacyHeaders: false
 });
 
 app.use('/api/', limiter);
+app.use('/api/auth/login', authLimiter);
 
 routes(app);
 
@@ -47,21 +60,15 @@ const USE_MOCK = process.env.USE_MOCK_AUTH === 'true';
 const initDatabase = async () => {
   if (USE_MOCK) {
     console.log('⚠️  Modo MOCK ativado - rodando sem banco de dados');
-    console.log('📋 Use: CPF: 00000000000 | Senha: 123456 | Prefeitura: teste');
     return;
   }
   
   try {
     await masterDb.authenticate();
     console.log('✅ Conectado ao banco de dados PostgreSQL');
-    console.log('📊 Database:', process.env.DB_NAME);
-    console.log('🔐 Schema:', process.env.DB_SCHEMA);
-    
-    // Não sincronizar - usamos as tabelas que já existem
-    // await masterDb.sync({ alter: false });
     console.log('✅ Banco de dados pronto para uso');
   } catch (error) {
-    console.error('Erro ao conectar ao banco de dados:', error);
+    console.error('Erro ao conectar ao banco de dados');
     console.log('\n⚠️  Para rodar sem banco, adicione USE_MOCK_AUTH=true no .env\n');
     process.exit(1);
   }

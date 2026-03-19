@@ -19,8 +19,21 @@ import {
   Upload,
   UserPlus,
   Image,
-  AlertTriangle
+  AlertTriangle,
+  Lock,
+  Unlock,
+  Package,
+  Inbox,
+  DollarSign,
+  ScrollText
 } from 'lucide-react';
+
+const SYSTEM_MODULES = [
+  { id: 'processos',    label: 'Processos',    emoji: '📋', descricao: 'Gestão de protocolos e processos administrativos', Icon: Inbox },
+  { id: 'almoxarifado', label: 'Almoxarifado', emoji: '📦', descricao: 'Controle de estoque e materiais', Icon: Package },
+  { id: 'financeiro',   label: 'Financeiro',   emoji: '💵', descricao: 'Gestão financeira e DIDs', Icon: DollarSign },
+  { id: 'contratos',    label: 'Contratos',    emoji: '📝', descricao: 'Gestão de contratos', Icon: ScrollText },
+];
 
 export default function AdminTenants() {
   const navigate = useNavigate();
@@ -32,6 +45,7 @@ export default function AdminTenants() {
   const [showAdminForm, setShowAdminForm] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [modulosHabilitados, setModulosHabilitados] = useState([]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -122,15 +136,23 @@ export default function AdminTenants() {
       adminSenha: formData.get('adminSenha'),
       configuracoes: {
         cor_primaria: formData.get('cor_primaria') || '#0066CC',
-        cor_secundaria: formData.get('cor_secundaria') || '#004C99'
+        cor_secundaria: formData.get('cor_secundaria') || '#004C99',
+        modulos_habilitados: modulosHabilitados,
       }
     };
 
     createMutation.mutate(data);
   };
 
+  const toggleModulo = (id) => {
+    setModulosHabilitados(prev =>
+      prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]
+    );
+  };
+
   const handleEdit = (tenant) => {
     setSelectedTenant(tenant);
+    setModulosHabilitados(tenant.configuracoes?.modulos_habilitados || []);
     setShowEditModal(true);
   };
 
@@ -145,8 +167,10 @@ export default function AdminTenants() {
       estado: formData.get('estado'),
       ativo: formData.get('ativo') === 'true',
       configuracoes: {
+        ...(selectedTenant.configuracoes || {}),
         cor_primaria: formData.get('cor_primaria'),
-        cor_secundaria: formData.get('cor_secundaria')
+        cor_secundaria: formData.get('cor_secundaria'),
+        modulos_habilitados: modulosHabilitados,
       }
     };
 
@@ -206,7 +230,7 @@ export default function AdminTenants() {
             <span>{showStats ? 'Ocultar' : 'Mostrar'} Estatísticas</span>
           </button>
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => { setModulosHabilitados([]); setShowModal(true); }}
             className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 flex items-center gap-2 shadow-lg"
           >
             <Plus className="h-5 w-5" />
@@ -553,6 +577,44 @@ export default function AdminTenants() {
                 </div>
               </div>
 
+              {/* Módulos do Sistema */}
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-1 flex items-center gap-2">
+                  <Lock className="h-5 w-5 text-gray-700" />
+                  Módulos Habilitados
+                </h3>
+                <p className="text-sm text-gray-500 mb-4">Selecione quais módulos serão liberados para este município. Módulos não selecionados exibirão uma tela de bloqueio ao serem acessados.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {SYSTEM_MODULES.map(({ id, label, emoji, descricao, Icon }) => {
+                    const ativo = modulosHabilitados.includes(id);
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => toggleModulo(id)}
+                        className={`flex items-center gap-3 p-3 rounded-lg border-2 text-left transition-all ${
+                          ativo
+                            ? 'border-green-500 bg-green-50 text-green-800'
+                            : 'border-gray-200 bg-gray-50 text-gray-500'
+                        }`}
+                      >
+                        <div className={`flex-shrink-0 p-1.5 rounded-lg ${ativo ? 'bg-green-100' : 'bg-gray-200'}`}>
+                          <Icon className={`h-5 w-5 ${ativo ? 'text-green-600' : 'text-gray-400'}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">{emoji} {label}</p>
+                          <p className="text-xs text-gray-400 truncate">{descricao}</p>
+                        </div>
+                        {ativo
+                          ? <Unlock className="h-4 w-4 text-green-500 flex-shrink-0" />
+                          : <Lock className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        }
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Informação de Isolamento */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex items-start space-x-3">
@@ -752,6 +814,44 @@ export default function AdminTenants() {
                 </div>
               </div>
 
+              {/* Módulos do Sistema */}
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-1 flex items-center gap-2">
+                  <Lock className="h-5 w-5 text-gray-700" />
+                  Módulos Habilitados
+                </h3>
+                <p className="text-sm text-gray-500 mb-4">Módulos não selecionados exibirão uma tela de bloqueio ao serem acessados pelo cliente.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {SYSTEM_MODULES.map(({ id, label, emoji, descricao, Icon }) => {
+                    const ativo = modulosHabilitados.includes(id);
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => toggleModulo(id)}
+                        className={`flex items-center gap-3 p-3 rounded-lg border-2 text-left transition-all ${
+                          ativo
+                            ? 'border-green-500 bg-green-50 text-green-800'
+                            : 'border-gray-200 bg-gray-50 text-gray-500'
+                        }`}
+                      >
+                        <div className={`flex-shrink-0 p-1.5 rounded-lg ${ativo ? 'bg-green-100' : 'bg-gray-200'}`}>
+                          <Icon className={`h-5 w-5 ${ativo ? 'text-green-600' : 'text-gray-400'}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">{emoji} {label}</p>
+                          <p className="text-xs text-gray-400 truncate">{descricao}</p>
+                        </div>
+                        {ativo
+                          ? <Unlock className="h-4 w-4 text-green-500 flex-shrink-0" />
+                          : <Lock className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        }
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Cadastrar Novo Admin */}
               <div className="border-t pt-6">
                 <button
@@ -833,6 +933,7 @@ export default function AdminTenants() {
                     setSelectedTenant(null);
                     setBrasaoPreview(null);
                     setShowAdminForm(false);
+                    setModulosHabilitados([]);
                   }}
                   className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                 >

@@ -1,7 +1,7 @@
 import { Outlet, Link, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
-import { FileText, Home, Building2, LogOut, Menu, X, Inbox, BarChart3, Settings, Users, Package, Sun, Moon, ChevronRight, DollarSign, ScrollText } from 'lucide-react'
+import { FileText, Home, Building2, LogOut, Menu, X, Inbox, BarChart3, Settings, Users, Package, Sun, Moon, ChevronRight, DollarSign, ScrollText, Lock } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import JAI from './JAI'
 import api from '../services/api'
@@ -16,6 +16,7 @@ export default function Layout() {
   const [now, setNow] = useState(new Date())
   const [ipInfo, setIpInfo] = useState({ ip: '...', city: '...', region: '' })
   const [nomeEntidade, setNomeEntidade] = useState('')
+  const [moduloBloqueado, setModuloBloqueado] = useState(null) // { label, emoji }
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000)
@@ -47,12 +48,18 @@ export default function Layout() {
     navigate(`/${subdomain}/login`)
   }
 
+  const modHabilitados = tenant?.configuracoes?.modulos_habilitados
+  const isModuloHabilitado = (modulo) => {
+    if (!modHabilitados) return true // backward compat: sem configuração = tudo habilitado
+    return modHabilitados.includes(modulo)
+  }
+
   const menuItems = [
     { path: `/${subdomain}`,              icon: Home,      emoji: '🏠', label: 'Dashboard',   exact: true },
-    { path: `/${subdomain}/processos`,    icon: Inbox,     emoji: '📋', label: 'Processos' },
-    { path: `/${subdomain}/almoxarifado`, icon: Package,    emoji: '📦', label: 'Almoxarifado' },
-    { path: `/${subdomain}/financeiro`,   icon: DollarSign, emoji: '💵', label: 'Financeiro'   },
-    { path: `/${subdomain}/contratos`,    icon: ScrollText, emoji: '📝', label: 'Contratos'    },
+    { path: `/${subdomain}/processos`,    icon: Inbox,     emoji: '📋', label: 'Processos',    modulo: 'processos' },
+    { path: `/${subdomain}/almoxarifado`, icon: Package,    emoji: '📦', label: 'Almoxarifado', modulo: 'almoxarifado' },
+    { path: `/${subdomain}/financeiro`,   icon: DollarSign, emoji: '💵', label: 'Financeiro',   modulo: 'financeiro' },
+    { path: `/${subdomain}/contratos`,    icon: ScrollText, emoji: '📝', label: 'Contratos',    modulo: 'contratos' },
   ]
 
   const adminMenuItems = [
@@ -113,6 +120,25 @@ export default function Layout() {
             <div className="space-y-0.5 mb-1">
               {menuItems.map((item) => {
                 const active = isActive(item.path, item.exact)
+                const habilitado = item.modulo ? isModuloHabilitado(item.modulo) : true
+
+                if (!habilitado) {
+                  return (
+                    <button
+                      key={item.path}
+                      type="button"
+                      onClick={() => { setSidebarOpen(false); setModuloBloqueado({ label: item.label, emoji: item.emoji }) }}
+                      className="w-full group flex items-center justify-between px-2.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 text-gray-400 dark:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+                    >
+                      <div className="flex items-center space-x-2.5">
+                        <span className="text-base leading-none opacity-50">{item.emoji}</span>
+                        <span className="opacity-60">{item.label}</span>
+                      </div>
+                      <Lock className="h-3.5 w-3.5 text-gray-400 dark:text-gray-600 flex-shrink-0" />
+                    </button>
+                  )
+                }
+
                 return (
                   <Link
                     key={item.path}
@@ -292,6 +318,56 @@ export default function Layout() {
           </div>
         </footer>
       </div>
+
+      {/* Modal: Módulo Bloqueado */}
+      {moduloBloqueado && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4" onClick={() => setModuloBloqueado(null)}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            {/* Header vermelho */}
+            <div className="bg-gradient-to-r from-red-500 to-rose-600 p-6 text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-full mb-3">
+                <Lock className="h-8 w-8 text-white" />
+              </div>
+              <h2 className="text-xl font-bold text-white">Módulo não disponível</h2>
+              <p className="text-red-100 text-sm mt-1">
+                {moduloBloqueado.emoji} {moduloBloqueado.label}
+              </p>
+            </div>
+
+            {/* Corpo */}
+            <div className="p-6 text-center space-y-4">
+              <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
+                O módulo <strong className="text-gray-900 dark:text-white">{moduloBloqueado.label}</strong> não está habilitado para o seu município.
+              </p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">
+                Para liberar o acesso, entre em contato com nosso comercial:
+              </p>
+
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 space-y-2 text-sm">
+                <div className="flex items-center justify-center gap-2 text-gray-700 dark:text-gray-300">
+                  <span>📞</span>
+                  <a href="tel:+5585999999999" className="font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors">(85) 9 9999-9999</a>
+                </div>
+                <div className="flex items-center justify-center gap-2 text-gray-700 dark:text-gray-300">
+                  <span>📧</span>
+                  <a href="mailto:comercial@jeossistemas.com.br" className="font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors">comercial@jeossistemas.com.br</a>
+                </div>
+                <div className="flex items-center justify-center gap-2 text-gray-700 dark:text-gray-300">
+                  <span>🌐</span>
+                  <a href="https://jeossistemas.com" target="_blank" rel="noopener noreferrer" className="font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors">jeossistemas.com</a>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setModuloBloqueado(null)}
+                className="w-full mt-2 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium text-sm transition-colors"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

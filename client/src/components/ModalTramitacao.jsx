@@ -22,13 +22,10 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
   useEffect(() => {
     const fetchSecretarias = async () => {
       try {
-        console.log('🔍 Buscando secretarias...')
         const { data } = await api.get('/organizacao/secretarias')
-        console.log('✅ Secretarias recebidas:', data)
         setSecretarias(data.secretarias.sort((a, b) => a.nome.localeCompare(b.nome)))
       } catch (err) {
-        console.error('❌ Erro ao carregar secretarias:', err)
-        console.error('Response:', err.response?.data)
+        // erro silencioso no ambiente de produção
       }
     }
     fetchSecretarias()
@@ -42,13 +39,10 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
         return
       }
       try {
-        console.log('🔍 Buscando setores da secretaria:', formData.destinoSecretariaId)
         const { data } = await api.get(`/organizacao/secretarias/${formData.destinoSecretariaId}/setores`)
-        console.log('✅ Setores recebidos:', data)
         setSetores(data.setores.sort((a, b) => a.nome.localeCompare(b.nome)))
       } catch (err) {
-        console.error('❌ Erro ao carregar setores:', err)
-        console.error('Response:', err.response?.data)
+        // erro silencioso no ambiente de produção
       }
     }
     fetchSetores()
@@ -62,13 +56,10 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
         return
       }
       try {
-        console.log('🔍 Buscando usuários do setor:', formData.destinoSetorId)
         const { data } = await api.get(`/organizacao/setores/${formData.destinoSetorId}/usuarios`)
-        console.log('✅ Usuários recebidos:', data)
         setUsuarios(data.usuarios.sort((a, b) => a.nome.localeCompare(b.nome)))
       } catch (err) {
-        console.error('❌ Erro ao carregar usuários:', err)
-        console.error('Response:', err.response?.data)
+        // erro silencioso no ambiente de produção
       }
     }
     fetchUsuarios()
