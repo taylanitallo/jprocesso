@@ -85,10 +85,10 @@ export default function Login() {
             <div className="lg:col-span-2">
               <div className="mb-4">
                 <img src="/logo jprocessos 2.png" alt="jProcesso" className="h-40 object-contain mb-3" />
-                {tenantInfo?.nome && (
+                {tenantInfo?.tenant?.nome_municipio && (
                   <div className="mt-3 inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
                     <span className="text-sm">📍</span>
-                    <span className="text-white text-sm font-semibold">{tenantInfo.nome}</span>
+                    <span className="text-white text-sm font-semibold">{tenantInfo.tenant.nome_municipio}</span>
                   </div>
                 )}
               </div>
