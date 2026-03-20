@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useParams, useLocation } from 'react-router-dom'
-import { Search, FileText, AlertCircle, ArrowLeft, Share2, Printer, ChevronLeft, Facebook, Twitter, Instagram, Sun, Moon } from 'lucide-react'
+import { Search, FileText, AlertCircle, ArrowLeft, Share2, Printer, ChevronLeft, Facebook, Twitter, Instagram, Sun, Moon, SlidersHorizontal, X } from 'lucide-react'
 import api from '../services/api'
 import { useTheme } from '../context/ThemeContext'
 
@@ -14,10 +14,23 @@ export default function ConsultaPublica() {
   const [showSugestoes, setShowSugestoes] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [searched, setSearched] = useState(false)
-  const [searchType, setSearchType] = useState('suite')
 
-  // Não carregar sugestões automaticamente - apenas buscar quando usuário pesquisar
-  // useEffect removido para evitar erro 400 em rota protegida
+  // Filtros avançados
+  const [showFiltros, setShowFiltros] = useState(false)
+  const [filtroSecretaria, setFiltroSecretaria] = useState('')
+  const [filtroCredor, setFiltroCredor] = useState('')
+  const [filtroNumeroDid, setFiltroNumeroDid] = useState('')
+  const [filtroDescricao, setFiltroDescricao] = useState('')
+  const [secretariasList, setSecretariasList] = useState([])
+
+  // Carregar secretarias cadastradas para o dropdown público
+  useEffect(() => {
+    api.get('/organizacao/secretarias/publico', {
+      headers: { 'x-tenant-subdomain': subdomain }
+    })
+      .then(({ data }) => setSecretariasList(data.secretarias || []))
+      .catch(() => setSecretariasList([]))
+  }, [subdomain])
 
   const tipoTramitacaoLabels = {
     abertura: 'Abertura',
@@ -39,16 +52,33 @@ export default function ConsultaPublica() {
     }
   }, [])
 
+  // Filtros ativos como array de chips
+  const filtrosAtivos = [
+    filtroSecretaria && { key: 'secretaria', label: `Secretaria: ${filtroSecretaria}`, clear: () => setFiltroSecretaria('') },
+    filtroCredor     && { key: 'credor',     label: `Credor: ${filtroCredor}`,         clear: () => setFiltroCredor('') },
+    filtroNumeroDid  && { key: 'numero_did', label: `Nº DID: ${filtroNumeroDid}`,       clear: () => setFiltroNumeroDid('') },
+    filtroDescricao  && { key: 'descricao',  label: `Descrição: ${filtroDescricao}`,   clear: () => setFiltroDescricao('') },
+  ].filter(Boolean)
+
+  const temFiltroAtivo = filtrosAtivos.length > 0 || numeroProcesso.trim()
+
   const buscarProcesso = async (termo) => {
-    const valor = (termo ?? numeroProcesso).trim()
-    if (!valor) return
+    const temFiltroCampo = filtroSecretaria || filtroCredor || filtroNumeroDid || filtroDescricao
+    const valorTexto = (termo ?? numeroProcesso).trim()
+
+    // Se tem filtros de campo ou não tem texto, usa o endpoint de busca por filtros
+    if (temFiltroCampo || (!valorTexto && temFiltroCampo)) {
+      return buscarComFiltros(valorTexto)
+    }
+
+    if (!valorTexto) return
     setIsLoading(true)
     setSearched(true)
     setProcesso(null)
     setProcessosSugestoes([])
     setShowSugestoes(false)
     try {
-      const { data } = await api.get(`/processos/publico/${encodeURIComponent(valor)}`, {
+      const { data } = await api.get(`/processos/publico/${encodeURIComponent(valorTexto)}`, {
         headers: { 'x-tenant-subdomain': subdomain }
       })
       if (data.multiple) {
@@ -70,10 +100,46 @@ export default function ConsultaPublica() {
     }
   }
 
+  const buscarComFiltros = async (textoLivre = '') => {
+    setIsLoading(true)
+    setSearched(true)
+    setProcesso(null)
+    setProcessosSugestoes([])
+    setShowSugestoes(false)
+    try {
+      const params = new URLSearchParams()
+      if (textoLivre)       params.set('q',          textoLivre)
+      if (filtroSecretaria) params.set('secretaria',  filtroSecretaria)
+      if (filtroCredor)     params.set('credor',      filtroCredor)
+      if (filtroNumeroDid)  params.set('numero_did',  filtroNumeroDid)
+      if (filtroDescricao)  params.set('descricao',   filtroDescricao)
+      const { data } = await api.get(`/processos/publico/busca?${params.toString()}`, {
+        headers: { 'x-tenant-subdomain': subdomain }
+      })
+      const lista = data.processos || []
+      if (lista.length === 1) {
+        setProcesso(lista[0])
+        setNumeroProcesso(lista[0].numero)
+      } else if (lista.length > 1) {
+        setProcessosSugestoes(lista)
+        setShowSugestoes(true)
+      }
+    } catch (err) {
+      console.error('Erro na busca por filtros:', err)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const handleConsulta = async (e) => {
     if (e) e.preventDefault()
-    if (!numeroProcesso.trim()) return
-    await buscarProcesso()
+    const temFiltroCampo = filtroSecretaria || filtroCredor || filtroNumeroDid || filtroDescricao
+    if (!numeroProcesso.trim() && !temFiltroCampo) return
+    if (temFiltroCampo) {
+      await buscarComFiltros(numeroProcesso.trim())
+    } else {
+      await buscarProcesso()
+    }
   }
 
   const handleSelecionarProcesso = async (proc) => {
@@ -347,8 +413,8 @@ export default function ConsultaPublica() {
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-3xl mx-auto px-6 py-6">
 
-            {/* Barra: form + compartilhar + voltar */}
-            <div className="flex items-center gap-3 mb-2">
+            {/* Barra: form + filtros + compartilhar */}
+            <div className="flex items-start gap-3 mb-2">
             <div className="flex-1">
               <form onSubmit={handleConsulta} className="flex items-center gap-2">
                 <div className="flex-1 relative">
@@ -361,19 +427,116 @@ export default function ConsultaPublica() {
                     placeholder="Digite o número do processo (Ex: Proc.2026.0000001 - SEMAD)"
                   />
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setShowFiltros(v => !v)}
+                  title="Filtros avançados"
+                  className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
+                    showFiltros || filtrosAtivos.length > 0
+                      ? 'bg-teal-50 dark:bg-teal-900/30 border-teal-400 text-teal-700 dark:text-teal-300'
+                      : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-teal-400 hover:text-teal-600'
+                  }`}
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                  <span className="hidden sm:inline">Filtros</span>
+                  {filtrosAtivos.length > 0 && (
+                    <span className="bg-teal-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                      {filtrosAtivos.length}
+                    </span>
+                  )}
+                </button>
                 <button type="submit" className="btn-primary px-5 py-2.5 whitespace-nowrap">Buscar</button>
               </form>
-              <div className="flex items-center space-x-4 mt-2 text-sm">
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <input type="radio" checked={searchType === 'suite'} onChange={() => setSearchType('suite')} className="w-4 h-4 text-teal-600 focus:ring-teal-500" />
-                  <span className="text-gray-600 dark:text-gray-300">jProcesso <span className="text-gray-400">(Ex: Proc.2026.0000001 - SEMAD)</span></span>
-                </label>
-              </div>
+
+              {/* Painel de filtros avançados */}
+              {showFiltros && (
+                <div className="mt-2 p-3 rounded-xl border border-teal-200 dark:border-teal-700 bg-teal-50/60 dark:bg-teal-900/20 space-y-2">
+                  <p className="text-xs font-semibold text-teal-700 dark:text-teal-300 uppercase tracking-wide mb-1">🔎 Filtros avançados</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">🏛️ Secretaria</label>
+                      <select
+                        value={filtroSecretaria}
+                        onChange={e => setFiltroSecretaria(e.target.value)}
+                        className="input-field text-sm"
+                      >
+                        <option value="">Todas as secretarias</option>
+                        {secretariasList.map(s => (
+                          <option key={s.id} value={s.nome}>{s.sigla ? `${s.sigla} – ` : ''}{s.nome}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">🏢 Credor / Interessado</label>
+                      <input
+                        type="text"
+                        value={filtroCredor}
+                        onChange={e => setFiltroCredor(e.target.value)}
+                        placeholder="Nome, CPF ou CNPJ (mín. 4 dígitos)..."
+                        className="input-field text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">📄 Número DID</label>
+                      <input
+                        type="text"
+                        value={filtroNumeroDid}
+                        onChange={e => setFiltroNumeroDid(e.target.value)}
+                        placeholder="Ex: DID-2026/0001..."
+                        className="input-field text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">📝 Descrição / Assunto</label>
+                      <input
+                        type="text"
+                        value={filtroDescricao}
+                        onChange={e => setFiltroDescricao(e.target.value)}
+                        placeholder="Palavra-chave no assunto..."
+                        className="input-field text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => { setFiltroSecretaria(''); setFiltroCredor(''); setFiltroNumeroDid(''); setFiltroDescricao('') }}
+                      className="text-xs text-red-500 dark:text-red-400 hover:underline"
+                    >
+                      Limpar filtros
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleConsulta()}
+                      className="ml-auto btn-primary text-xs px-4 py-1.5"
+                    >
+                      Aplicar filtros
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Chips dos filtros ativos */}
+              {filtrosAtivos.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {filtrosAtivos.map(f => (
+                    <span
+                      key={f.key}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-teal-100 dark:bg-teal-900/40 text-teal-800 dark:text-teal-200 text-xs font-medium rounded-full border border-teal-200 dark:border-teal-700"
+                    >
+                      {f.label}
+                      <button onClick={f.clear} className="hover:text-red-500 transition-colors ml-0.5">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
             {/* Compartilhar + Voltar */}
             <div className="flex flex-col items-end gap-2 flex-shrink-0">
               <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                <span>Compartilhe:</span>
+                <span className="hidden sm:inline">Compartilhe:</span>
                 <button onClick={handleCompartilhar} title="Compartilhar link" className="hover:text-blue-500 transition-colors"><Share2 className="h-4 w-4" /></button>
                 <button onClick={handleImprimir} title="Imprimir" className="hover:text-blue-500 transition-colors"><Printer className="h-4 w-4" /></button>
               </div>
@@ -392,7 +555,8 @@ export default function ConsultaPublica() {
           {/* Estado inicial */}
           {!searched && (
             <div className="text-center py-10">
-              <p className="text-gray-500 dark:text-gray-400 mb-3">Pesquise pelo número do protocolo para acompanhar a tramitação.</p>
+              <p className="text-gray-500 dark:text-gray-400 mb-2">Pesquise pelo número do protocolo ou use os filtros avançados para acompanhar a tramitação.</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">Você pode combinar secretaria, credor, número e descrição ao mesmo tempo.</p>
               <Link
                 to={`/${subdomain}/login`}
                 className="inline-flex items-center gap-2 text-teal-600 dark:text-teal-400 hover:text-teal-700 font-medium text-sm"
@@ -411,14 +575,46 @@ export default function ConsultaPublica() {
             </div>
           )}
 
+          {/* Múltiplos resultados */}
+          {searched && !processo && !isLoading && showSugestoes && processosSugestoes.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                {processosSugestoes.length} resultado(s) encontrado(s). Selecione para ver os detalhes:
+              </p>
+              <div className="space-y-2">
+                {processosSugestoes.map(proc => (
+                  <button
+                    key={proc.id}
+                    onClick={() => handleSelecionarProcesso(proc)}
+                    className="w-full text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 hover:border-teal-400 hover:bg-teal-50/30 dark:hover:bg-teal-900/20 transition-all group"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">{proc.numero}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{proc.assunto}</p>
+                        {proc.interessado_nome && (
+                          <p className="text-xs text-teal-600 dark:text-teal-400 truncate">{proc.interessado_nome}</p>
+                        )}
+                      </div>
+                      <div className="flex-shrink-0 text-xs text-gray-400 dark:text-gray-500 text-right">
+                        <p>{proc.setorAtual?.secretaria?.sigla || proc.setorAtual?.sigla || ''}</p>
+                        <p>{new Date(proc.data_abertura || proc.created_at).toLocaleDateString('pt-BR')}</p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Não encontrado */}
-          {searched && !processo && !isLoading && (
+          {searched && !processo && !isLoading && !showSugestoes && (
             <div className="card p-12 text-center mt-4">
               <AlertCircle className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">Processo não encontrado</h3>
-              <p className="text-gray-500 dark:text-gray-400 mb-4">Não foi possível encontrar um processo com o número informado.</p>
+              <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">Nenhum resultado encontrado</h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-4">Tente ajustar os filtros ou o número do processo.</p>
               <button
-                onClick={() => { setSearched(false); setNumeroProcesso('') }}
+                onClick={() => { setSearched(false); setNumeroProcesso(''); setShowSugestoes(false); setProcessosSugestoes([]) }}
                 className="text-teal-600 dark:text-teal-400 hover:text-teal-700 font-medium"
               >
                 Fazer nova busca

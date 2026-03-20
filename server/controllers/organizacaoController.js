@@ -405,6 +405,21 @@ const deleteAgente = async (req, res) => {
   }
 };
 
+const listSecretariasPublico = async (req, res) => {
+  try {
+    const { Secretaria } = req.models;
+    const secretarias = await Secretaria.findAll({
+      where: { ativo: true },
+      attributes: ['id', 'nome', 'sigla'],
+      order: [['nome', 'ASC']]
+    });
+    res.json({ secretarias });
+  } catch (error) {
+    console.error('Erro ao listar secretarias públicas:', error);
+    res.status(500).json({ error: 'Erro ao listar secretarias' });
+  }
+};
+
 module.exports = {
   createSecretaria,
   listSecretarias,
@@ -421,4 +436,6 @@ module.exports = {
   listAgentes,
   createAgente,
   updateAgente,
-  deleteAgente,};
+  deleteAgente,
+  listSecretariasPublico,
+};

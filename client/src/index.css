@@ -31,6 +31,15 @@ code {
     monospace;
 }
 
+/* Scrollbar oculta para navs horizontais */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* Scrollbar customizada */
 ::-webkit-scrollbar {
   width: 6px;

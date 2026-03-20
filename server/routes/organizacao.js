@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   createSecretaria,
   listSecretarias,
+  listSecretariasPublico,
   updateSecretaria,
   deleteSecretaria,
   createSetor,
@@ -20,6 +21,7 @@ const {
 } = require('../controllers/organizacaoController');
 const { authenticate, tenantMiddleware, authorize } = require('../middleware/auth');
 
+router.get('/secretarias/publico', tenantMiddleware, listSecretariasPublico);
 router.post('/secretarias', tenantMiddleware, authenticate, authorize('admin', 'gestor'), createSecretaria);
 router.get('/secretarias', tenantMiddleware, authenticate, listSecretarias);
 router.get('/secretarias/:secretariaId/setores', tenantMiddleware, authenticate, getSetoresBySecretaria);

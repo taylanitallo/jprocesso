@@ -9,6 +9,7 @@ const {
   devolverProcesso,
   concluirProcesso,
   listProcessosEnviados,
+  buscarProcessosPublico,
   consultarProcessoPublico,
   deleteProcesso
 } = require('../controllers/processoController');
@@ -24,6 +25,8 @@ router.post('/:id/devolver', tenantMiddleware, authenticate, devolverProcesso);
 router.post('/:id/concluir', tenantMiddleware, authenticate, concluirProcesso);
 router.delete('/:id', tenantMiddleware, authenticate, authorize('admin'), deleteProcesso);
 
+// Rotas públicas (sem autenticação)
+router.get('/publico/busca', tenantMiddleware, buscarProcessosPublico);
 router.get('/publico/:numero', tenantMiddleware, consultarProcessoPublico);
 
 module.exports = router;

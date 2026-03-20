@@ -667,7 +667,7 @@ export default function Secretarias() {
 
       {/* Abas do módulo */}
       <div className="border-b border-gray-200 dark:border-gray-700 -mt-1">
-        <nav className="flex">
+        <nav className="flex overflow-x-auto scrollbar-none -mb-px">
           {[
             { key: 'entidade',     label: 'Entidade',              icon: '🏢'  },
             { key: 'secretarias',  label: 'Secretarias e Setores', icon: '🏛️' },
@@ -675,7 +675,7 @@ export default function Secretarias() {
             { key: 'responsaveis', label: 'Responsáveis',          icon: '👤'  },
           ].map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-              className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+              className={`flex-shrink-0 px-3 sm:px-5 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab.key
                   ? 'border-blue-600 text-blue-600 dark:text-blue-400'
                   : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
@@ -1178,8 +1178,8 @@ export default function Secretarias() {
               </div>
               <div className="p-6 space-y-4">
 
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 text-right">Nome completo</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:text-right">Nome completo</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.nome}
                       onChange={e => setFormEntidade(p => ({...p, nome: e.target.value}))}
@@ -1188,8 +1188,8 @@ export default function Secretarias() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 text-right">Nome abreviado</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:text-right">Nome abreviado</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.nome_abreviado}
                       onChange={e => setFormEntidade(p => ({...p, nome_abreviado: e.target.value}))}
@@ -1198,8 +1198,8 @@ export default function Secretarias() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 text-right">CNPJ</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:text-right">CNPJ</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.cnpj}
                       onChange={e => setFormEntidade(p => ({...p, cnpj: formatCNPJ(e.target.value)}))}
@@ -1208,8 +1208,8 @@ export default function Secretarias() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 text-right">Razão social</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:text-right">Razão social</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.razao_social}
                       onChange={e => setFormEntidade(p => ({...p, razao_social: e.target.value}))}
@@ -1218,8 +1218,8 @@ export default function Secretarias() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 text-right">Código unidade</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:text-right">Código unidade</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.codigo_unidade}
                       onChange={e => setFormEntidade(p => ({...p, codigo_unidade: e.target.value}))}
@@ -1228,8 +1228,8 @@ export default function Secretarias() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 text-right">Esfera</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:text-right">Esfera</label>
                   <div className="col-span-2">
                     <select value={formEntidade.esfera}
                       onChange={e => setFormEntidade(p => ({...p, esfera: e.target.value}))}
@@ -1243,8 +1243,8 @@ export default function Secretarias() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 text-right">Poder</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:text-right">Poder</label>
                   <div className="col-span-2">
                     <select value={formEntidade.poder}
                       onChange={e => setFormEntidade(p => ({...p, poder: e.target.value}))}
@@ -1259,8 +1259,8 @@ export default function Secretarias() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 text-right">E-mail</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:text-right">E-mail</label>
                   <div className="col-span-2">
                     <input type="email" value={formEntidade.email}
                       onChange={e => setFormEntidade(p => ({...p, email: e.target.value}))}
@@ -1269,8 +1269,8 @@ export default function Secretarias() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 text-right">Telefone</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:text-right">Telefone</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.telefone}
                       onChange={e => setFormEntidade(p => ({...p, telefone: formatTelefone(e.target.value)}))}
@@ -1279,8 +1279,8 @@ export default function Secretarias() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 text-right">Whatsapp notificação</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:text-right">Whatsapp notificação</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.whatsapp}
                       onChange={e => setFormEntidade(p => ({...p, whatsapp: formatTelefone(e.target.value)}))}
@@ -1299,8 +1299,8 @@ export default function Secretarias() {
               </div>
               <div className="p-6 space-y-4">
 
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 text-right">CEP</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:text-right">CEP</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.cep}
                       onChange={e => {
@@ -1313,8 +1313,8 @@ export default function Secretarias() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 text-right">Logradouro</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:text-right">Logradouro</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.logradouro}
                       onChange={e => setFormEntidade(p => ({...p, logradouro: e.target.value}))}
@@ -1323,8 +1323,8 @@ export default function Secretarias() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 text-right">Número</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:text-right">Número</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.numero}
                       onChange={e => setFormEntidade(p => ({...p, numero: e.target.value}))}
@@ -1333,8 +1333,8 @@ export default function Secretarias() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 text-right">Complemento</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:text-right">Complemento</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.complemento}
                       onChange={e => setFormEntidade(p => ({...p, complemento: e.target.value}))}
@@ -1343,8 +1343,8 @@ export default function Secretarias() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 text-right">Bairro</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:text-right">Bairro</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.bairro}
                       onChange={e => setFormEntidade(p => ({...p, bairro: e.target.value}))}
@@ -1353,8 +1353,8 @@ export default function Secretarias() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 text-right">Cidade</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:text-right">Cidade</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.cidade}
                       onChange={e => setFormEntidade(p => ({...p, cidade: e.target.value}))}
@@ -1363,8 +1363,8 @@ export default function Secretarias() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 text-right">UF</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 sm:text-right">UF</label>
                   <div className="col-span-2">
                     <select value={formEntidade.uf}
                       onChange={e => setFormEntidade(p => ({...p, uf: e.target.value}))}

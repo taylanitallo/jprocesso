@@ -630,6 +630,93 @@ const listProcessosEnviados = async (req, res) => {
   }
 };
 
+// ── BUSCA PÚBLICA COM FILTROS MÚLTIPLOS ─────────────────────────────────────
+const buscarProcessosPublico = async (req, res) => {
+  try {
+    const { Processo, Tramitacao, Setor, User, Secretaria, Did } = req.models;
+    const { q, secretaria, credor, numero_did, descricao } = req.query;
+
+    const include = [
+      {
+        model: Setor,
+        as: 'setorAtual',
+        required: !!secretaria,
+        attributes: ['id', 'nome', 'sigla'],
+        include: [
+          {
+            model: Secretaria,
+            as: 'secretaria',
+            attributes: ['id', 'nome', 'sigla'],
+            ...(secretaria ? { where: { nome: { [Op.iLike]: `%${secretaria}%` } } } : {})
+          }
+        ]
+      },
+      {
+        model: Did,
+        as: 'did',
+        required: !!(numero_did && numero_did.trim()),
+        attributes: ['id', 'numero_did'],
+        ...(numero_did && numero_did.trim() ? { where: { numero_did: { [Op.iLike]: `%${numero_did.trim()}%` } } } : {})
+      },
+      {
+        model: Tramitacao,
+        as: 'tramitacoes',
+        attributes: ['id', 'tipo_acao', 'data_hora', 'despacho'],
+        separate: true,
+        order: [['data_hora', 'DESC']],
+        include: [
+          { model: Setor, as: 'origemSetor', attributes: ['id', 'nome', 'sigla'] },
+          { model: Setor, as: 'destinoSetor', attributes: ['id', 'nome', 'sigla'] },
+          { model: User, as: 'origemUsuario', attributes: ['id', 'nome'] }
+        ]
+      }
+    ];
+
+    const whereConditions = [];
+
+    // Filtro texto livre (número, assunto, interessado)
+    if (q && q.trim()) {
+      const termo = q.trim();
+      whereConditions.push({
+        [Op.or]: [
+          { numero: { [Op.iLike]: `%${termo}%` } },
+          { assunto: { [Op.iLike]: `%${termo}%` } },
+          { interessado_nome: { [Op.iLike]: `%${termo}%` } }
+        ]
+      });
+    }
+
+    // Filtro por credor / interessado
+    if (credor && credor.trim()) {
+      whereConditions.push({
+        [Op.or]: [
+          { interessado_nome: { [Op.iLike]: `%${credor.trim()}%` } },
+          { interessado_cpf_cnpj: { [Op.iLike]: `%${credor.trim()}%` } }
+        ]
+      });
+    }
+
+    // Filtro por descrição / assunto
+    if (descricao && descricao.trim()) {
+      whereConditions.push({ assunto: { [Op.iLike]: `%${descricao.trim()}%` } });
+    }
+
+    const where = whereConditions.length > 0 ? { [Op.and]: whereConditions } : {};
+
+    const processos = await Processo.findAll({
+      where,
+      include,
+      order: [['created_at', 'DESC']],
+      limit: 50
+    });
+
+    res.json({ processos, total: processos.length });
+  } catch (error) {
+    console.error('Erro na busca pública com filtros:', error);
+    res.status(500).json({ error: 'Erro ao buscar processos' });
+  }
+};
+
 const consultarProcessoPublico = async (req, res) => {
   try {
     const { numero } = req.params;
@@ -760,6 +847,7 @@ module.exports = {
   devolverProcesso,
   concluirProcesso,
   listProcessosEnviados,
+  buscarProcessosPublico,
   consultarProcessoPublico,
   deleteProcesso
 };

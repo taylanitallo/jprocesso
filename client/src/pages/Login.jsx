@@ -57,12 +57,12 @@ export default function Login() {
   ]
 
   return (
-    <div className="h-screen overflow-hidden">
+    <div className="min-h-screen lg:h-screen lg:overflow-hidden">
 
       {/* Hero — ocupa tela toda */}
       {(() => { return (
       <div
-        className="relative overflow-hidden h-full"
+        className="relative overflow-x-hidden min-h-screen lg:h-full"
         style={{ backgroundImage: "url('/tela de login.png')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}
       >
         <div
@@ -70,7 +70,7 @@ export default function Login() {
           style={{ backgroundColor: 'rgba(10, 20, 40, 0.70)' }}
         />
         {/* Botão de tema — canto superior direito */}
-        <div className="absolute top-4 right-4 z-10">
+        <div className="absolute top-4 right-4 z-50">
           <button
             onClick={toggleTheme}
             className="p-2 rounded-xl bg-white/15 hover:bg-white/25 text-white transition-all"
@@ -79,12 +79,12 @@ export default function Login() {
             {theme === 'dark' ? <Sun className="h-5 w-5 text-yellow-400" /> : <Moon className="h-5 w-5" />}
           </button>
         </div>
-        <div className="relative max-w-7xl mx-auto px-6 h-full flex flex-col justify-center">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 items-center">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-14 pb-6 lg:py-0 lg:h-full lg:flex lg:flex-col lg:justify-center">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-10 items-start lg:items-center">
             {/* Left: branding + search */}
-            <div className="lg:col-span-2">
-              <div className="mb-4">
-                <img src="/logo jprocessos 2.png" alt="jProcesso" className="h-40 object-contain mb-3" />
+            <div className="lg:col-span-2 order-2 lg:order-1">
+              <div className="mb-3 hidden sm:block">
+                <img src="/logo jprocessos 2.png" alt="jProcesso" className="h-20 sm:h-28 lg:h-40 object-contain mb-2" />
               </div>
 
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
@@ -109,7 +109,7 @@ export default function Login() {
               </div>
 
               {/* Diferenciais institucionais */}
-              <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
                   { icon: '⚡', label: 'Tramitação Instantânea' },
                   { icon: '🔏', label: 'Assinatura Digital' },
@@ -125,15 +125,15 @@ export default function Login() {
             </div>
 
             {/* Right: Login card */}
-            <div className="lg:col-span-1">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 border border-gray-100 dark:border-gray-700 animate-bounce-in">
-                <div className="text-center mb-3">
+            <div className="lg:col-span-1 order-1 lg:order-2">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-4 sm:p-5 border border-gray-100 dark:border-gray-700 animate-bounce-in">
+                <div className="text-center mb-2">
                   {tenantInfo?.tenant?.configuracoes?.brasao_url
-                    ? <img src={tenantInfo.tenant.configuracoes.brasao_url} alt="Brasão do município" className="w-16 h-16 object-contain mx-auto mb-2" />
-                    : <div className="text-4xl mb-2">🏢</div>
+                    ? <img src={tenantInfo.tenant.configuracoes.brasao_url} alt="Brasão do município" className="w-12 h-12 sm:w-16 sm:h-16 object-contain mx-auto mb-1" />
+                    : <div className="text-3xl mb-1">🏢</div>
                   }
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">{tenantInfo?.tenant?.nome_municipio || 'Área Restrita'}</h2>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Acesse com suas credenciais</p>
+                  <h2 className="text-base sm:text-xl font-bold text-gray-900 dark:text-white">{tenantInfo?.tenant?.nome_municipio || 'Área Restrita'}</h2>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">Acesse com suas credenciais</p>
                 </div>
                 
                 {error && (
@@ -143,12 +143,12 @@ export default function Login() {
                   </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-2">
+                <form onSubmit={handleSubmit} className="space-y-1.5">
                   <div>
                     <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
                       🏙️ Município
                     </label>
-                    <div className="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl text-sm text-blue-800 dark:text-blue-300 font-semibold">
+                    <div className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl text-sm text-blue-800 dark:text-blue-300 font-semibold">
                       {subdomain || 'Não identificado'}
                     </div>
                   </div>
@@ -206,7 +206,7 @@ export default function Login() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white py-3 px-4 rounded-xl font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 text-sm"
+                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white py-2.5 px-4 rounded-xl font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 text-sm"
                   >
                     {loading ? '⏳ Entrando...' : '🚀 Acessar jProcesso'}
                   </button>
@@ -225,7 +225,7 @@ export default function Login() {
           </div>
         </div>
         {/* Copyright */}
-        <p className="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs text-white/40 whitespace-nowrap">
+        <p className="relative lg:absolute lg:bottom-3 lg:left-1/2 lg:-translate-x-1/2 text-center pb-4 pt-2 text-xs text-white/40 whitespace-nowrap">
           🏢 © JEOS Sistemas de Governo
         </p>
       </div>

@@ -264,10 +264,10 @@ export default function Layout() {
                   </div>
                 </button>
                 <div className="flex items-center gap-1.5 text-[11px] text-gray-600 dark:text-gray-300">
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white text-[10px] font-bold">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
                     {user?.nome?.charAt(0)?.toUpperCase() || '?'}
                   </div>
-                  <span className="hidden sm:inline font-medium">{user?.nomeReduzido || user?.nome?.split(' ')[0]}</span>
+                  <span className="font-medium max-w-[100px] truncate">{user?.nomeReduzido || user?.nome?.split(' ')[0]}</span>
                   <span className="hidden md:inline text-gray-400 dark:text-gray-500">· {tipoLabel[user?.tipo] || user?.tipo}</span>
                 </div>
               </div>
@@ -275,7 +275,7 @@ export default function Layout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto pb-8">
+        <main className="flex-1 overflow-auto pb-16">
           <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-full animate-fade-in">
             <Outlet />
           </div>
@@ -285,8 +285,25 @@ export default function Layout() {
         <JAI />
 
         {/* Status bar */}
-        <footer className="fixed bottom-0 left-0 right-0 z-[60] bg-gray-100 dark:bg-gray-950 border-t border-gray-300 dark:border-gray-800 px-4 py-1.5 transition-colors duration-200">
-          <div className="flex items-center justify-between gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+        <footer className="fixed bottom-0 left-0 right-0 z-[60] bg-gray-100 dark:bg-gray-950 border-t border-gray-300 dark:border-gray-800 px-3 py-1 transition-colors duration-200">
+          {/* Mobile: linha única compacta */}
+          <div className="flex sm:hidden items-center justify-between gap-1 text-[10px] text-gray-500 dark:text-gray-400">
+            <a
+              href="https://jeossistemas.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-blue-600 dark:text-blue-400 font-semibold whitespace-nowrap"
+            >
+              <span>🏛️</span>
+              <span>JEOS Sistemas</span>
+            </a>
+            <div className="flex items-center gap-1 text-gray-700 dark:text-gray-300">
+              <span>🕐</span>
+              <span className="font-mono tabular-nums">{fmtHora(now)}</span>
+            </div>
+          </div>
+          {/* Desktop: layout completo */}
+          <div className="hidden sm:flex items-center justify-between gap-2 text-[11px] text-gray-500 dark:text-gray-400">
             {/* Esquerda: localização + IP */}
             <div className="flex items-center gap-2 min-w-0">
               <span title="Localização">📍</span>
@@ -295,7 +312,6 @@ export default function Layout() {
               <span title="Endereço IP">🖥️</span>
               <span className="font-mono text-gray-700 dark:text-gray-300">{ipInfo.ip}</span>
             </div>
-
             {/* Centro: marca */}
             <div className="flex-shrink-0">
               <a
@@ -309,14 +325,13 @@ export default function Layout() {
                 <span className="text-gray-400 dark:text-gray-600 font-normal text-[10px]">↗</span>
               </a>
             </div>
-
             {/* Direita: hora e data */}
             <div className="flex items-center gap-2 min-w-0 justify-end">
               <span>🕐</span>
               <span className="font-mono text-gray-700 dark:text-gray-300 tabular-nums">{fmtHora(now)}</span>
               <span className="text-gray-300 dark:text-gray-600">|</span>
               <span>📅</span>
-              <span className="text-gray-700 dark:text-gray-300 capitalize hidden sm:inline">{fmtData(now)}</span>
+              <span className="text-gray-700 dark:text-gray-300 capitalize">{fmtData(now)}</span>
             </div>
           </div>
         </footer>
