@@ -305,13 +305,7 @@ export default function Configuracoes() {
                     hint="Substitui o ícone padrão no canto inferior esquerdo do menu lateral."
                     disabled={!editandoGerais}
                   />
-                  <ImageUpload
-                    label="Imagem de Fundo — Tela de Login"
-                    value={geraisData.imagem_fundo_login}
-                    onChange={(v) => handleLogoChange('imagem_fundo_login', v)}
-                    hint="Foto ou imagem institucional exibida como fundo na tela de acesso ao sistema. JPG/PNG recomendado (máx. 2 MB)."
-                    disabled={!editandoGerais}
-                  />
+
                 </div>
               </div>
 

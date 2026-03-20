@@ -57,46 +57,34 @@ export default function Login() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
-      {/* Top bar */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <span className="text-2xl">📋</span>
-            <span className="text-lg font-bold text-gray-900 dark:text-white">jProcesso</span>
-          </div>
+    <div className="h-screen overflow-hidden">
+
+      {/* Hero — ocupa tela toda */}
+      {(() => { return (
+      <div
+        className="relative overflow-hidden h-full"
+        style={{ backgroundImage: "url('/tela de login.png')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}
+      >
+        <div
+          className="absolute inset-0"
+          style={{ backgroundColor: 'rgba(10, 20, 40, 0.70)' }}
+        />
+        {/* Botão de tema — canto superior direito */}
+        <div className="absolute top-4 right-4 z-10">
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-all"
+            className="p-2 rounded-xl bg-white/15 hover:bg-white/25 text-white transition-all"
             title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
           >
             {theme === 'dark' ? <Sun className="h-5 w-5 text-yellow-400" /> : <Moon className="h-5 w-5" />}
           </button>
         </div>
-      </div>
-
-      {/* Hero */}
-      {(() => { var _loginBg = tenantInfo?.tenant?.configuracoes?.imagem_fundo_login || null; return (
-      <div
-        className="relative overflow-hidden"
-        style={_loginBg ? { backgroundImage: `url(${_loginBg})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}}
-      >
-        <div
-          className="absolute inset-0"
-          style={_loginBg
-            ? { backgroundColor: 'rgba(10, 20, 40, 0.70)' }
-            : { background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #1e1b4b 100%)' }
-          }
-        />
-        <div className="relative max-w-7xl mx-auto px-6 py-14">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 items-start">
+        <div className="relative max-w-7xl mx-auto px-6 h-full flex flex-col justify-center">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 items-center">
             {/* Left: branding + search */}
             <div className="lg:col-span-2">
-              <div className="mb-8">
-                <h1 className="text-5xl font-black text-white tracking-tight mb-3">
-                  j<span className="text-blue-400">Processo</span>
-                </h1>
-                <p className="text-blue-200 text-base font-medium tracking-wide">Sistema de Tramitação de Processos e Controle de Despesas</p>
+              <div className="mb-4">
+                <img src="/logo jprocessos 2.png" alt="jProcesso" className="h-40 object-contain mb-3" />
                 {tenantInfo?.nome && (
                   <div className="mt-3 inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
                     <span className="text-sm">📍</span>
@@ -105,7 +93,7 @@ export default function Login() {
                 )}
               </div>
 
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
                 <p className="text-white font-semibold mb-3 tracking-wide uppercase text-xs">🔍 Consultar Processo</p>
                 <div className="flex gap-2">
                   <input
@@ -127,7 +115,7 @@ export default function Login() {
               </div>
 
               {/* Diferenciais institucionais */}
-              <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
                   { icon: '⚡', label: 'Tramitação Instantânea' },
                   { icon: '🔏', label: 'Assinatura Digital' },
@@ -144,10 +132,13 @@ export default function Login() {
 
             {/* Right: Login card */}
             <div className="lg:col-span-1">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-7 border border-gray-100 dark:border-gray-700 animate-bounce-in">
-                <div className="text-center mb-6">
-                  <div className="text-4xl mb-2">🏢</div>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Área Restrita</h2>
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 border border-gray-100 dark:border-gray-700 animate-bounce-in">
+                <div className="text-center mb-3">
+                  {tenantInfo?.tenant?.configuracoes?.brasao_url
+                    ? <img src={tenantInfo.tenant.configuracoes.brasao_url} alt="Brasão do município" className="w-16 h-16 object-contain mx-auto mb-2" />
+                    : <div className="text-4xl mb-2">🏢</div>
+                  }
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">{tenantInfo?.tenant?.nome_municipio || 'Área Restrita'}</h2>
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Acesse com suas credenciais</p>
                 </div>
                 
@@ -158,7 +149,7 @@ export default function Login() {
                   </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-2">
                   <div>
                     <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
                       🏙️ Município
@@ -227,7 +218,7 @@ export default function Login() {
                   </button>
                 </form>
 
-                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 text-center">
+                <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 text-center">
                   <button
                     onClick={() => window.location.href = '/'}
                     className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
@@ -239,57 +230,12 @@ export default function Login() {
             </div>
           </div>
         </div>
-      </div>
-      );})()}
-
-      {/* FAQs */}
-      <div className="bg-white dark:bg-gray-800 py-14">
-        <div className="max-w-4xl mx-auto px-6">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">❓ Perguntas Frequentes</h2>
-            <div className="w-16 h-1 bg-yellow-400 mx-auto" />
-          </div>
-          <div className="space-y-3">
-            {faqs.map((faq, i) => (
-              <div key={i} className="p-4 bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-700 rounded-xl">
-                <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm mb-1">{faq.q}</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{faq.a}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Support channels */}
-      <div className="bg-gray-50 dark:bg-gray-900 py-14 border-t border-gray-200 dark:border-gray-700">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">📞 Canais de Atendimento</h2>
-            <div className="w-16 h-1 bg-yellow-400 mx-auto" />
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { emoji: '🆘', title: 'Central de Ajuda', sub: 'Suporte técnico' },
-              { emoji: '📞', title: '(85) 3125-8056', sub: 'Telefone' },
-              { emoji: '💬', title: 'WhatsApp', sub: 'Atendimento rápido' },
-              { emoji: '📧', title: 'E-mail', sub: 'suporte@jeos.com.br' },
-            ].map((ch, i) => (
-              <div key={i} className="card p-5 text-center hover:shadow-card-hover hover:-translate-y-0.5 transition-all cursor-pointer">
-                <div className="text-3xl mb-3">{ch.emoji}</div>
-                <p className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{ch.title}</p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{ch.sub}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-5 text-center">
-        <p className="text-xs text-gray-400 dark:text-gray-500">
-          🏢 JEOS Ecossistema © {new Date().getFullYear()} — Sistema de Tramitação Eletrônica
+        {/* Copyright */}
+        <p className="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs text-white/40 whitespace-nowrap">
+          🏢 © JEOS Sistemas de Governo
         </p>
       </div>
+      );})()}
     </div>
   )
 }
