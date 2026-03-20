@@ -1,17 +1,14 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Package, BarChart2, List, ArrowDownCircle, ArrowUpCircle, ClipboardList, Shield, ClipboardCheck, CalendarRange, Lock, Phone } from 'lucide-react'
-// Módulo desativado — imports mantidos para reativação futura
-// import AlmoxPainel from '../almoxarifado/AlmoxPainel'
-// import AlmoxItens from '../almoxarifado/AlmoxItens'
-// import AlmoxLotes from '../almoxarifado/AlmoxLotes'
-// import { AlmoxSaidas } from '../almoxarifado/AlmoxMovimentacoes'
-// import AlmoxRequisicoes from '../almoxarifado/AlmoxRequisicoes'
-// import AlmoxAuditLog from '../almoxarifado/AlmoxAuditLog'
-// import AlmoxInventario from '../almoxarifado/AlmoxInventario'
-// import AlmoxCotas from '../almoxarifado/AlmoxCotas'
-
-const MODULO_ATIVO = false
+import { Package, BarChart2, List, ArrowDownCircle, ArrowUpCircle, ClipboardList, Shield, ClipboardCheck, CalendarRange } from 'lucide-react'
+import AlmoxPainel from '../almoxarifado/AlmoxPainel'
+import AlmoxItens from '../almoxarifado/AlmoxItens'
+import AlmoxLotes from '../almoxarifado/AlmoxLotes'
+import { AlmoxSaidas } from '../almoxarifado/AlmoxMovimentacoes'
+import AlmoxRequisicoes from '../almoxarifado/AlmoxRequisicoes'
+import AlmoxAuditLog from '../almoxarifado/AlmoxAuditLog'
+import AlmoxInventario from '../almoxarifado/AlmoxInventario'
+import AlmoxCotas from '../almoxarifado/AlmoxCotas'
 
 const TABS = [
   { id: 'painel',      label: 'Painel',        icon: BarChart2       },
@@ -31,44 +28,18 @@ export default function Almoxarifado() {
   const activeTab = VALID_TABS.includes(tabParam) ? tabParam : 'painel'
   const setActiveTab = (key) => navigate(`/${subdomain}/almoxarifado/${key}`)
 
-  if (!MODULO_ATIVO) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 animate-fade-in">
-        <div className="bg-gray-100 dark:bg-gray-800 rounded-full p-6">
-          <Lock className="h-14 w-14 text-gray-400 dark:text-gray-500" />
-        </div>
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold text-gray-700 dark:text-gray-200">Módulo não liberado</h2>
-          <p className="text-gray-500 dark:text-gray-400 max-w-sm">
-            Módulo não liberado para esse cliente. Entre em contato com o comercial.
-          </p>
-        </div>
-        <a
-          href="https://wa.me/5588997224066"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors"
-        >
-          <Phone className="h-4 w-4" />
-          Falar com o Comercial
-        </a>
-      </div>
-    )
-  }
-
   const renderTab = () => {
-    // switch (activeTab) {
-    //   case 'painel':      return <AlmoxPainel />
-    //   case 'itens':       return <AlmoxItens />
-    //   case 'lotes':       return <AlmoxLotes />
-    //   case 'saidas':      return <AlmoxSaidas />
-    //   case 'requisicoes': return <AlmoxRequisicoes />
-    //   case 'cotas':       return <AlmoxCotas />
-    //   case 'inventario':  return <AlmoxInventario />
-    //   case 'auditoria':   return <AlmoxAuditLog />
-    //   default:            return null
-    // }
-    return null
+    switch (activeTab) {
+      case 'painel':      return <AlmoxPainel />
+      case 'itens':       return <AlmoxItens />
+      case 'lotes':       return <AlmoxLotes />
+      case 'saidas':      return <AlmoxSaidas />
+      case 'requisicoes': return <AlmoxRequisicoes />
+      case 'cotas':       return <AlmoxCotas />
+      case 'inventario':  return <AlmoxInventario />
+      case 'auditoria':   return <AlmoxAuditLog />
+      default:            return null
+    }
   }
 
   return (

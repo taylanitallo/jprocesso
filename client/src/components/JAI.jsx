@@ -50,7 +50,7 @@ const PAGINAS = {
   novo:         { nome: 'Novo Processo', icone: '📄', dicas: ['Escolha o tipo de processo antes de preencher', 'Para DID, informe objeto e período de referência', 'O número do processo é gerado automaticamente'] },
   enviados:     { nome: 'Enviados',      icone: '📤', dicas: ['Processos enviados ficam aqui até serem respondidos', 'Você pode visualizar o histórico de tramitações'] },
   did:          { nome: 'DID',           icone: '📋', dicas: ['Preencha as seções do DID na ordem apresentada', 'A Seção I contém os dados gerais do documento', 'Salve cada seção separadamente'] },
-  almoxarifado: { nome: 'Almoxarifado',  icone: '📦', dicas: ['Este módulo não está liberado para este cliente', 'Entre em contato com o comercial para contratar', 'WhatsApp: (88) 99722-4066'] },
+  almoxarifado: { nome: 'Almoxarifado',  icone: '📦', dicas: ['Gerencie itens, entradas e saídas de materiais', 'Use requisições para solicitar materiais por setor', 'Acompanhe o estoque pelo painel de controle'] },
   financeiro:   { nome: 'Financeiro',    icone: '💵', dicas: ['Registre lançamentos de receitas e despesas', 'Filtre por período para relatórios mensais'] },
   contratos:    { nome: 'Contratos',     icone: '📝', dicas: ['Cadastre itens com código sequencial automático', 'Use palavras-chave para facilitar a busca', 'Classifique entre COMPRAS e SERVIÇOS'] },
   secretarias:  { nome: 'Organização',   icone: '🏛️', dicas: ['Gerencie secretarias e setores', 'Defina a estrutura organizacional aqui'] },
@@ -190,7 +190,7 @@ function gerarResposta(texto, pagKey, schemaCtx, abaKey) {
   if (cat === 'saudacoes') return `Olá! 👋 Sou a **Ayla**, assistente inteligente do **jProcesso**.\n\nVocê está em ${localCtx}.\n\nPosso te ajudar com:\n• Navegar pelo sistema\n• Preencher formulários\n• Explicar funcionalidades\n• Sugerir textos e descrições\n\nO que precisa?`
 
   if (cat === 'navegar' || cat === 'ajuda') {
-    if (pagKey === 'almoxarifado') return `**Módulo Almoxarifado** 🔒\n\nEste módulo **não está liberado** para este cliente.\n\nPara contratar, entre em contato com o comercial:\n\n📞 **WhatsApp:** [(88) 99722-4066](https://wa.me/5588997224066)`
+    if (pagKey === 'almoxarifado') return `**Módulo Almoxarifado** �\n\nVocê está no controle de estoque e materiais.\n\n**Abas disponíveis:**\n• 📊 **Painel** — Visão geral do estoque\n• 📋 **Itens** — Catálogo de materiais\n• 📥 **Entradas** — Registro de lotes/empenhos\n• 📤 **Saídas** — Baixas de estoque\n• 📝 **Requisições** — Solicitações por setor\n• 📅 **Cotas** — Limites mensais por setor\n• 🗂️ **Inventário** — Conferência do estoque\n• 🔍 **Auditoria** — Log de movimentações\n\nTem alguma dúvida específica?`
     if (pagKey === 'contratos') return `**Módulo Contratos** 📝\n\n**Aba Itens:**\n• Cadastre itens com código automático (00001, 00002...)\n• Filtre por descrição, catálogo, categoria ou status\n• Selecione um item e use os botões: Incluir, Alterar, Excluir, Visualizar\n\n**Formulário do item:**\n• Descrição: nome/nomenclatura do produto\n• Categoria: COMPRAS ou SERVIÇOS\n• Catálogo: código CNBS do PNCP\n• Palavras-chave: para facilitar busca`
     if (pagKey === 'did') return `**Formulário DID** 📋\n\n**Seção I — Dados Gerais:**\n• Objeto: descrição do bem/serviço\n• Período: mês e ano de referência\n• Fornecedor: empresa contratada\n• Modalidade: forma de contratação\n\n**Seções II a VI:** tramitação entre setores (CI, Compras, Contabilidade, Finanças, Tesouraria)\n\nSalve cada seção após preencher.`
     if (pagKey === 'novo') return `**Abrindo um Processo** 📄\n\n1. Escolha o **tipo**: Despacho, DID, Pauta ou Requisição\n2. Preencha os **dados principais**\n3. Para DID: escolha entre **Contas Fixas** ou **Contas Variadas**\n4. Clique em **"Criar Processo"**\n\nO número é gerado automaticamente pelo sistema.`
@@ -219,7 +219,7 @@ function gerarResposta(texto, pagKey, schemaCtx, abaKey) {
     return `**Módulo Contratos** 📝\n\n**Aba Itens:** Cadastro de produtos e serviços\n**Aba Credor:** Empresas fornecedoras\n**Aba Contratos:** Contratos e atas de registro de preço\n\nCódigos de itens são sequenciais (00001, 00002...)\nCategorias: COMPRAS ou SERVIÇOS`
   }
 
-  if (cat === 'almoxarifado') return `**Módulo Almoxarifado** 🔒\n\nEste módulo **não está liberado** para este cliente.\n\nPara contratar o módulo de Almoxarifado, entre em contato com o comercial:\n\n📞 **WhatsApp:** [(88) 99722-4066](https://wa.me/5588997224066)\n\nNosso time ficará feliz em apresentar o módulo completo!`
+  if (cat === 'almoxarifado') return `**Almoxarifado** 📦\n\nO módulo de Almoxarifado gerencia todo o controle de materiais:\n\n• **Itens:** Catálogo com código, categoria, estoque mínimo/máximo\n• **Entradas (Lotes):** Registro por empenho e nota fiscal — controle FIFO\n• **Saídas:** Baixas manuais ou vinculadas a requisições\n• **Requisições:** Solicitações de materiais por setor com fluxo de autorização\n• **Cotas:** Limite de consumo mensal por setor/item\n• **Inventário:** Contagem periódica e ajuste de estoque\n• **Auditoria:** Histórico completo de todas as movimentações`
 
   if (cat === 'financeiro') return `**Financeiro** 💵\n\n• **Lançamentos:** Registre receitas e despesas\n• **Dotação:** Controle de dotações orçamentárias\n• **Empenhos:** Acompanhe empenhos por secretaria\n\nFiltros disponíveis: período, secretaria, tipo de lançamento`
 
