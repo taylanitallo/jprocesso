@@ -2,11 +2,11 @@ const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
 const POOL_CONFIG = {
-  max: 20,          // mais conexões simultâneas
-  min: 2,           // manter 2 conexões sempre aquecidas
+  max: 5,           // Supabase free tier: limite de ~10 conexões no session mode
+  min: 1,           // manter 1 conexão aquecida (economiza conexões)
   acquire: 60000,   // tempo máximo para obter conexão
-  idle: 30000,      // manter conexões ociosas por 30s
-  evict: 5000,      // verificar conexões ociosas a cada 5s
+  idle: 10000,      // liberar conexões ociosas em 10s (libera para outros processos)
+  evict: 3000,      // verificar conexões ociosas a cada 3s
 };
 
 const IS_SUPABASE = process.env.DB_HOST && process.env.DB_HOST.includes('supabase.co');

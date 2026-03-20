@@ -314,11 +314,75 @@ async function migrarAgentes(schema, pool) {
 
 // Migração automática: adiciona colunas ausentes em schemas já existentes
 async function migrarSchemaUsuarios(schema, pool) {
+  // usuarios
   await pool.query(`
     ALTER TABLE IF EXISTS ${schema}.usuarios
       ADD COLUMN IF NOT EXISTS nome_reduzido VARCHAR(60),
       ADD COLUMN IF NOT EXISTS permissoes JSONB NOT NULL DEFAULT '{"criar_processo":true,"editar_processo":true,"excluir_processo":false,"tramitar_processo":true,"acessar_almoxarifado":false,"acessar_financeiro":false,"acessar_contratos":false,"visualizar_relatorios":false,"gerenciar_usuarios":false,"gerenciar_secretarias":false,"gerenciar_configuracoes":false}'::jsonb;
     ALTER TABLE IF EXISTS ${schema}.usuarios ALTER COLUMN email DROP NOT NULL;
+  `);
+
+  // processos
+  await pool.query(`
+    ALTER TABLE IF EXISTS ${schema}.processos
+      ADD COLUMN IF NOT EXISTS tipo_processo VARCHAR(30);
+  `);
+
+  // tramitacoes: renomear coluna 'tipo' para 'tipo_acao' se necessário e adicionar colunas ausentes
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = '${schema}' AND table_name = 'tramitacoes' AND column_name = 'tipo'
+      ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = '${schema}' AND table_name = 'tramitacoes' AND column_name = 'tipo_acao'
+      ) THEN
+        ALTER TABLE ${schema}.tramitacoes RENAME COLUMN tipo TO tipo_acao;
+      END IF;
+    END$$;
+    ALTER TABLE IF EXISTS ${schema}.tramitacoes
+      ADD COLUMN IF NOT EXISTS tipo_acao VARCHAR(30),
+      ADD COLUMN IF NOT EXISTS justificativa_devolucao TEXT,
+      ADD COLUMN IF NOT EXISTS assinatura_digital VARCHAR(255);
+  `);
+
+  // secretarias: adicionar colunas extras do modelo
+  await pool.query(`
+    ALTER TABLE IF EXISTS ${schema}.secretarias
+      ADD COLUMN IF NOT EXISTS data_inicio DATE,
+      ADD COLUMN IF NOT EXISTS data_fim DATE,
+      ADD COLUMN IF NOT EXISTS email VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS whatsapp VARCHAR(20),
+      ADD COLUMN IF NOT EXISTS outros_sistemas BOOLEAN DEFAULT false,
+      ADD COLUMN IF NOT EXISTS cnpj VARCHAR(18),
+      ADD COLUMN IF NOT EXISTS razao_social VARCHAR(500),
+      ADD COLUMN IF NOT EXISTS codigo_unidade VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS responsaveis JSONB DEFAULT '[]',
+      ADD COLUMN IF NOT EXISTS orcamento JSONB DEFAULT '{}',
+      ADD COLUMN IF NOT EXISTS dotacoes JSONB DEFAULT '[]';
+  `);
+
+  // anexos: criar tabela se não existir (modelo Documento usa tableName 'anexos')
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ${schema}.anexos (
+      id            UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+      processo_id   UUID          NOT NULL REFERENCES ${schema}.processos(id) ON DELETE CASCADE,
+      nome_arquivo  VARCHAR(255)  NOT NULL,
+      nome_sistema  VARCHAR(255)  NOT NULL,
+      url_arquivo   VARCHAR(500)  NOT NULL,
+      tipo_mime     VARCHAR(100)  NOT NULL,
+      tamanho_bytes INTEGER       NOT NULL DEFAULT 0,
+      hash_md5      VARCHAR(64)   NOT NULL DEFAULT '',
+      hash_sha256   VARCHAR(64)   NOT NULL DEFAULT '',
+      upload_por_id UUID          NOT NULL REFERENCES ${schema}.usuarios(id),
+      data_upload   TIMESTAMP     DEFAULT NOW(),
+      descricao     TEXT,
+      versao        INTEGER       DEFAULT 1,
+      created_at    TIMESTAMP     DEFAULT NOW(),
+      updated_at    TIMESTAMP     DEFAULT NOW()
+    );
   `);
 }
 
