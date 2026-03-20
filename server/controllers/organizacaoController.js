@@ -203,7 +203,7 @@ const updateSecretaria = async (req, res) => {
       nome, sigla, descricao, ativo, responsaveis,
       data_inicio, data_fim, email, whatsapp,
       outros_sistemas, cnpj, razao_social, codigo_unidade,
-      orcamento, dotacoes
+      orcamento, dotacoes, logo
     } = req.body;
     const { Secretaria } = req.models;
 
@@ -224,6 +224,7 @@ const updateSecretaria = async (req, res) => {
     if (codigo_unidade  !== undefined) updateData.codigo_unidade  = codigo_unidade || null;
     if (orcamento       !== undefined) updateData.orcamento       = orcamento;
     if (dotacoes        !== undefined) updateData.dotacoes        = dotacoes;
+    if (logo            !== undefined) updateData.logo            = logo          || null;
 
     await secretaria.update(updateData);
 
@@ -562,10 +563,37 @@ const listSecretariasPublico = async (req, res) => {
   }
 };
 
+// Endpoint dedicado para gestor atualizar logo da própria secretaria
+const updateSecretariaLogo = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { logo } = req.body;
+    const { Secretaria } = req.models;
+
+    const secretaria = await Secretaria.findByPk(id);
+    if (!secretaria) {
+      return res.status(404).json({ error: 'Secretaria não encontrada' });
+    }
+
+    // Gestores só podem alterar a logo da própria secretaria
+    if (req.user.tipo === 'gestor' && req.user.secretariaId !== id) {
+      return res.status(403).json({ error: 'Sem permissão para alterar outra secretaria' });
+    }
+
+    await secretaria.update({ logo: logo || null });
+
+    res.json({ message: 'Logo da secretaria atualizada', logo: secretaria.logo });
+  } catch (error) {
+    console.error('Erro ao atualizar logo da secretaria:', error);
+    res.status(500).json({ error: 'Erro ao atualizar logo da secretaria' });
+  }
+};
+
 module.exports = {
   createSecretaria,
   listSecretarias,
   updateSecretaria,
+  updateSecretariaLogo,
   deleteSecretaria,
   createSetor,
   listSetores,

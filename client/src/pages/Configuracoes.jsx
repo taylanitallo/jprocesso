@@ -79,10 +79,9 @@ export default function Configuracoes() {
   const [error, setError] = useState('');
   const [editandoGerais, setEditandoGerais] = useState(false);
 
-  // Estado da aba Gerais — inicializa com valores salvos do tenant
+  // Estado da aba Gerais — configurações GLOBAIS do tenant (sem logo_secretaria)
   const conf = tenant?.configuracoes || {};
   const [geraisData, setGeraisData] = useState({
-    logo_secretaria:   conf.logo_secretaria   || null,
     logo_prefeitura:   conf.logo_prefeitura   || null,
     logo_sidebar:      conf.logo_sidebar      || null,
     imagem_fundo_login: conf.imagem_fundo_login || null,
@@ -91,7 +90,12 @@ export default function Configuracoes() {
     cor_relatorio_texto:      conf.cor_relatorio_texto      || '#111827',
   });
 
-  // Busca configurações diretamente do banco ao montar (garante imagens mesmo após reload)
+  // Logo da secretaria do usuário — armazenada na tabela secretarias (por secretaria)
+  const [logoSecretaria, setLogoSecretaria] = useState(null);
+  const [savingSecretariaLogo, setSavingSecretariaLogo] = useState(false);
+  const secretariaId = user?.secretariaId || user?.secretaria?.id;
+
+  // Busca configurações globais diretamente do banco ao montar
   useEffect(() => {
     if (!tenant?.subdominio) return;
     fetch(`/api/tenants/info?subdomain=${tenant.subdominio}`)
@@ -100,7 +104,6 @@ export default function Configuracoes() {
         const c = data?.tenant?.configuracoes;
         if (!c) return;
         setGeraisData({
-          logo_secretaria:          c.logo_secretaria          ?? null,
           logo_prefeitura:          c.logo_prefeitura          ?? null,
           logo_sidebar:             c.logo_sidebar             ?? null,
           imagem_fundo_login:       c.imagem_fundo_login       ?? null,
@@ -112,6 +115,38 @@ export default function Configuracoes() {
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenant?.subdominio]);
+
+  // Busca logo da secretaria do usuário logado
+  useEffect(() => {
+    if (!secretariaId || !tenant?.subdominio) return;
+    import('../services/api').then(({ default: api }) => {
+      api.get('/organizacao/secretarias', {
+        headers: { 'x-tenant-subdomain': tenant.subdominio },
+      }).then(r => {
+        const sec = r.data?.secretarias?.find(s => s.id === secretariaId);
+        if (sec?.logo) setLogoSecretaria(sec.logo);
+      }).catch(() => {});
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secretariaId, tenant?.subdominio]);
+
+  const handleLogoSecretaria = async (value) => {
+    setLogoSecretaria(value);
+    setSavingSecretariaLogo(true);
+    try {
+      const api = (await import('../services/api')).default;
+      await api.patch(
+        `/organizacao/secretarias/${secretariaId}/logo`,
+        { logo: value },
+        { headers: { 'x-tenant-subdomain': tenant?.subdominio } }
+      );
+      feedback('✅ Logo da secretaria salva!');
+    } catch (err) {
+      feedback(err.response?.data?.error || 'Erro ao salvar logo da secretaria', true);
+    } finally {
+      setSavingSecretariaLogo(false);
+    }
+  };
 
   const [notificacoesData, setNotificacoesData] = useState({
     emailProcesso: true,
@@ -141,6 +176,7 @@ export default function Configuracoes() {
       feedback(err.response?.data?.error || 'Erro ao salvar imagem', true);
     }
   };
+
 
   const handleGeraisSubmit = async (e) => {
     e.preventDefault(); setLoading(true);
@@ -280,17 +316,33 @@ export default function Configuracoes() {
           {activeTab === 'gerais' && (
             <form onSubmit={handleGeraisSubmit} className="space-y-8">
 
-              {/* Logos */}
+              {/* Logo da Secretaria — por secretaria, editável pelo gestor da secretaria */}
+              {secretariaId && (
+                <div>
+                  <h3 className="section-header mb-1">🏢 Logo da Secretaria</h3>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-5">Cada secretaria configura sua própria logo. Aparece no cabeçalho dos relatórios desta secretaria.</p>
+                  <div className="flex items-start gap-8">
+                    <ImageUpload
+                      label="Logo da Sua Secretaria"
+                      value={logoSecretaria}
+                      onChange={handleLogoSecretaria}
+                      hint="PNG/SVG recomendado. Salvo automaticamente ao selecionar."
+                      disabled={savingSecretariaLogo}
+                    />
+                    {savingSecretariaLogo && (
+                      <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 mt-8">
+                        <span className="animate-spin">⏳</span> Salvando...
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Logos Globais — visíveis para admin */}
               <div>
-                <h3 className="section-header mb-5">🖼️ Identidade Visual</h3>
+                <h3 className="section-header mb-1">🖼️ Identidade Visual do Sistema</h3>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mb-5">Configurações globais aplicadas a todo o sistema. Requer permissão de administrador.</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <ImageUpload
-                    label="Logo da Secretaria"
-                    value={geraisData.logo_secretaria}
-                    onChange={(v) => handleLogoChange('logo_secretaria', v)}
-                    hint="Aparece no cabeçalho dos relatórios da secretaria. PNG/SVG recomendado."
-                    disabled={!editandoGerais}
-                  />
                   <ImageUpload
                     label="Logo da Prefeitura / Brasão"
                     value={geraisData.logo_prefeitura}
@@ -305,7 +357,6 @@ export default function Configuracoes() {
                     hint="Substitui o ícone padrão no canto inferior esquerdo do menu lateral."
                     disabled={!editandoGerais}
                   />
-
                 </div>
               </div>
 

@@ -61,6 +61,11 @@ const defineSecretariaModel = (sequelize) => {
       type: DataTypes.JSONB,
       defaultValue: [],
       comment: 'Lista de dotações orçamentárias: [{id, codigo, descricao, elemento_despesa, fonte_recurso, valor_previsto}]'
+    },
+    logo: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Logo da secretaria em base64 — configurada pelo gestor da secretaria'
     }
   }, {
     tableName: 'secretarias',

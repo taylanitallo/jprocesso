@@ -71,7 +71,8 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
         ADD COLUMN IF NOT EXISTS razao_social    VARCHAR(500),
         ADD COLUMN IF NOT EXISTS codigo_unidade  VARCHAR(50),
         ADD COLUMN IF NOT EXISTS orcamento       JSONB        NOT NULL DEFAULT '{}'::jsonb,
-        ADD COLUMN IF NOT EXISTS dotacoes        JSONB        NOT NULL DEFAULT '[]'::jsonb
+        ADD COLUMN IF NOT EXISTS dotacoes        JSONB        NOT NULL DEFAULT '[]'::jsonb,
+        ADD COLUMN IF NOT EXISTS logo            TEXT
     `),
 
     // 2. Entidade

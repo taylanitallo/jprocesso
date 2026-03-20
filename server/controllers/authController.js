@@ -203,7 +203,7 @@ const getProfile = async (req, res) => {
     const user = await User.findByPk(req.user.id, {
       attributes: { exclude: ['senha'] },
       include: [
-        { model: Secretaria, as: 'secretaria', attributes: ['id', 'nome', 'sigla'] },
+        { model: Secretaria, as: 'secretaria', attributes: ['id', 'nome', 'sigla', 'logo'] },
         { model: Setor,      as: 'setor',      attributes: ['id', 'nome'] }
       ]
     });

@@ -5,6 +5,7 @@ const {
   listSecretarias,
   listSecretariasPublico,
   updateSecretaria,
+  updateSecretariaLogo,
   deleteSecretaria,
   createSetor,
   listSetores,
@@ -27,6 +28,7 @@ router.post('/secretarias', tenantMiddleware, authenticate, authorize('admin', '
 router.get('/secretarias', tenantMiddleware, authenticate, listSecretarias);
 router.get('/secretarias/:secretariaId/setores', tenantMiddleware, authenticate, getSetoresBySecretaria);
 router.put('/secretarias/:id', tenantMiddleware, authenticate, authorize('admin', 'gestor'), updateSecretaria);
+router.patch('/secretarias/:id/logo', tenantMiddleware, authenticate, authorize('admin', 'gestor'), updateSecretariaLogo);
 router.delete('/secretarias/:id', tenantMiddleware, authenticate, authorize('admin'), deleteSecretaria);
 
 router.post('/setores', tenantMiddleware, authenticate, authorize('admin', 'gestor'), createSetor);
