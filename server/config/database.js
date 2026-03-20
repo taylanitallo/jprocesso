@@ -51,6 +51,13 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
     // 0. Usuários — coluna nome_reduzido
     run(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS nome_reduzido VARCHAR(60)`),
 
+    // 0b. Contratos — colunas fontes_recurso e dotacoes (adicionadas no modelo mas não estavam na migration inicial)
+    run(`
+      ALTER TABLE contratos
+        ADD COLUMN IF NOT EXISTS fontes_recurso TEXT[] NOT NULL DEFAULT '{}',
+        ADD COLUMN IF NOT EXISTS dotacoes TEXT[] NOT NULL DEFAULT '{}'
+    `),
+
     // 1. Secretarias — colunas extras
     run(`
       ALTER TABLE secretarias
@@ -153,6 +160,8 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
         data_assinatura  DATE,
         secretaria       VARCHAR(200),
         fiscal           VARCHAR(500),
+        fontes_recurso   TEXT[]        NOT NULL DEFAULT '{}',
+        dotacoes         TEXT[]        NOT NULL DEFAULT '{}',
         observacoes      TEXT,
         status           VARCHAR(20)   NOT NULL DEFAULT 'ATIVO',
         dias_alerta      INTEGER       NOT NULL DEFAULT 30,

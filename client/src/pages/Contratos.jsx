@@ -1837,39 +1837,47 @@ function TabCredor() {
 // ══════════════════════════════════════════════════════════════════════════════
 function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
   const [busca, setBusca] = useState('')
+  const [catFiltro, setCatFiltro] = useState('')
+  const [expId, setExpId] = useState(null)
+
   const todos = catalogoItens.filter(i => i.status !== 'INATIVO')
-  const filtrados = busca.trim()
-    ? todos.filter(i =>
-        (i.descricao || '').toLowerCase().includes(busca.trim().toLowerCase()) ||
-        (i.codigo    || '').toLowerCase().includes(busca.trim().toLowerCase()) ||
-        (i.categoria || '').toLowerCase().includes(busca.trim().toLowerCase())
-      )
-    : todos
+  const categorias = [...new Set(todos.map(i => (i.categoria || '').toUpperCase()).filter(Boolean))].sort()
+
+  const filtrados = todos.filter(i => {
+    const q = busca.trim().toLowerCase()
+    const matchBusca = !q ||
+      (i.descricao     || '').toLowerCase().includes(q) ||
+      (i.codigo        || '').toLowerCase().includes(q) ||
+      (i.especificacao || '').toLowerCase().includes(q)
+    const matchCat = !catFiltro || (i.categoria || '').toUpperCase() === catFiltro
+    return matchBusca && matchCat
+  })
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl flex flex-col" style={{ maxHeight: '80vh' }}>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl flex flex-col" style={{ maxHeight: '86vh' }}>
 
         {/* Cabeçalho */}
-        <div className="flex items-center justify-between bg-indigo-700 px-4 py-3 rounded-t-xl shrink-0">
+        <div className="flex items-center justify-between bg-indigo-700 px-5 py-3 rounded-t-xl shrink-0">
           <div className="flex items-center gap-2">
             <Search className="w-4 h-4 text-white/80" />
-            <span className="text-sm font-semibold text-white">Buscar Item do Catálogo</span>
+            <span className="text-sm font-semibold text-white">Selecionar Item do Catálogo</span>
           </div>
           <button onClick={onClose} className="p-0.5 rounded hover:bg-indigo-600 text-white/80 hover:text-white">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Campo de busca */}
-        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0">
+        {/* Filtros + Busca */}
+        <div className="px-5 pt-3 pb-2.5 border-b border-gray-200 dark:border-gray-700 shrink-0 space-y-2">
+          {/* Campo de busca */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               autoFocus
               value={busca}
               onChange={e => setBusca(e.target.value)}
-              placeholder="Buscar por código, descrição ou categoria..."
+              placeholder="Buscar por código, descrição ou especificação..."
               className="input-field pl-9 text-sm w-full"
             />
             {busca && (
@@ -1878,7 +1886,20 @@ function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
               </button>
             )}
           </div>
-          <p className="text-xs text-gray-400 mt-1.5">{filtrados.length} item(ns) encontrado(s)</p>
+          {/* Filtros de categoria */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {['', ...categorias].map(cat => (
+              <button key={cat} onClick={() => setCatFiltro(cat)}
+                className={`px-3 py-0.5 text-xs font-semibold rounded-full border transition-colors ${
+                  catFiltro === cat
+                    ? 'bg-indigo-600 border-indigo-600 text-white'
+                    : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400'
+                }`}>
+                {cat || 'Todos'}
+              </button>
+            ))}
+            <span className="text-xs text-gray-400 ml-auto">{filtrados.length} item(ns) encontrado(s)</span>
+          </div>
         </div>
 
         {/* Lista */}
@@ -1890,25 +1911,52 @@ function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
             </div>
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-700/50 sticky top-0">
+              <thead className="bg-gray-50 dark:bg-gray-700/50 sticky top-0 z-10">
                 <tr>
                   <th className="text-left px-4 py-2.5 font-semibold text-gray-500 text-xs w-24">Código</th>
-                  <th className="text-left px-4 py-2.5 font-semibold text-gray-500 text-xs">Descrição</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-gray-500 text-xs">Descrição / Especificação</th>
                   <th className="text-left px-4 py-2.5 font-semibold text-gray-500 text-xs w-28">Unidade</th>
                   <th className="text-left px-4 py-2.5 font-semibold text-gray-500 text-xs w-28">Categoria</th>
-                  <th className="w-20"></th>
+                  <th className="w-24"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {filtrados.map(item => (
-                  <tr key={item.id} className="hover:bg-indigo-50 dark:hover:bg-indigo-900/20 cursor-pointer"
+                  <tr key={item.id}
+                    className="hover:bg-indigo-50 dark:hover:bg-indigo-900/20 cursor-pointer group"
                     onClick={() => { onSelect(item); onClose() }}>
-                    <td className="px-4 py-2.5 font-mono text-xs text-indigo-600 dark:text-indigo-400 font-bold">{item.codigo}</td>
-                    <td className="px-4 py-2.5 text-gray-800 dark:text-gray-200">{item.descricao}</td>
-                    <td className="px-4 py-2.5 text-gray-500 text-xs">{item.unidade_medida}</td>
-                    <td className="px-4 py-2.5 text-gray-500 text-xs">{item.categoria}</td>
-                    <td className="px-4 py-2.5 text-right">
-                      <span className="text-xs px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded font-medium">Selecionar</span>
+                    <td className="px-4 py-2.5 font-mono text-xs text-indigo-600 dark:text-indigo-400 font-bold align-top">{item.codigo}</td>
+                    <td className="px-4 py-2.5 align-top max-w-xs">
+                      <p className="text-gray-800 dark:text-gray-200 font-medium leading-snug">{item.descricao}</p>
+                      {item.especificacao && (
+                        <>
+                          <p className={`text-xs text-gray-400 dark:text-gray-500 mt-0.5 leading-snug ${expId === item.id ? '' : 'line-clamp-2'}`}>
+                            {item.especificacao}
+                          </p>
+                          {item.especificacao.length > 100 && (
+                            <button type="button"
+                              onClick={e => { e.stopPropagation(); setExpId(p => p === item.id ? null : item.id) }}
+                              className="text-xs text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300 mt-0.5 font-medium">
+                              {expId === item.id ? 'ver menos ▲' : 'ver mais ▼'}
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-gray-500 text-xs align-top whitespace-nowrap">{item.unidade_medida || '—'}</td>
+                    <td className="px-4 py-2.5 align-top">
+                      <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${
+                        (item.categoria || '').toUpperCase() === 'COMPRAS'
+                          ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                          : (item.categoria || '').toUpperCase() === 'SERVIÇOS'
+                          ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-500'
+                      }`}>{item.categoria || '—'}</span>
+                    </td>
+                    <td className="px-4 py-2.5 text-right align-top">
+                      <span className="text-xs px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                        Selecionar
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -1918,7 +1966,8 @@ function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
         </div>
 
         {/* Rodapé */}
-        <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-2.5 shrink-0">
+        <div className="border-t border-gray-200 dark:border-gray-700 px-5 py-2.5 shrink-0 flex items-center justify-between">
+          <p className="text-xs text-gray-400">Clique em um item para selecioná-lo</p>
           <button onClick={onClose}
             className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded text-sm font-medium transition-colors">
             Fechar
@@ -1983,6 +2032,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
   const [itemBusca, setItemBusca] = useState({})   // { [idx]: string }
   const [itemDrop,  setItemDrop]  = useState(null)  // idx com dropdown aberto
   const [itemModalIdx, setItemModalIdx] = useState(null) // idx para modal de busca
+  const [showAddPicker, setShowAddPicker] = useState(false) // modal de seleção ao clicar + Adicionar Item
 
   // Credor
   const [credorSel, setCredorSel] = useState(credorInicial)
@@ -2135,7 +2185,17 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
     valor_total: '',
   })
 
-  const adicionarItem = () => setItensContrato(p => [...p, novoItemRow()])
+  const adicionarItem = () => setShowAddPicker(true)
+
+  const selecionarItemParaAdicionar = (item) => {
+    setItensContrato(p => [...p, {
+      ...novoItemRow(),
+      item_id:   item.id,
+      descricao: item.descricao,
+      unidade:   item.unidade_medida || '',
+    }])
+    setShowAddPicker(false)
+  }
 
   const removerItem = (idx) => {
     setItensContrato(p => p.filter((_, i) => i !== idx))
@@ -2721,6 +2781,15 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
               setItemModalIdx(null)
             }}
             onClose={() => setItemModalIdx(null)}
+          />
+        )}
+
+        {/* Modal de seleção de item ao clicar "+ Adicionar Item" */}
+        {showAddPicker && (
+          <BuscarItemModal
+            catalogoItens={catalogoItens}
+            onSelect={selecionarItemParaAdicionar}
+            onClose={() => setShowAddPicker(false)}
           />
         )}
 

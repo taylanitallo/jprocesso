@@ -565,7 +565,9 @@ const importarContratosIraucuba = async (req, res) => {
         criados++;
       } catch (err) {
         erros++;
-        console.error(`importarContratosIraucuba linha=${i}:`, err.message);
+        const errMsg = err.message || String(err);
+        console.error(`importarContratosIraucuba linha=${i}:`, errMsg);
+        sse({ tipo: 'detalhe', msg: `❌ ${ct.numero || '?'}: ${errMsg}` });
       }
     }
     sse({ tipo: 'concluido', msg: 'Importação concluída!', criados, duplicados, erros, total: linhas.length });
