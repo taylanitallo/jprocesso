@@ -5,7 +5,7 @@ module.exports = (sequelize) => {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
     codigo: { type: DataTypes.STRING(10) },
     descricao: { type: DataTypes.STRING(500), allowNull: false },
-    categoria: { type: DataTypes.STRING(20) },
+    categoria: { type: DataTypes.STRING(100) },
     unidade_medida: { type: DataTypes.STRING(50) },
     catalogo: { type: DataTypes.STRING(50) },
     classificacao: { type: DataTypes.STRING(200) },

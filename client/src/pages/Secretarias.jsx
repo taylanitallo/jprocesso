@@ -16,8 +16,136 @@ import {
   X,
   UserCog,
   Users,
-  Search
+  Search,
+  Download
 } from 'lucide-react';
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  MODAL: IMPORTAR SECRETARIAS DO PORTAL DE IRAUÇUBA
+// ══════════════════════════════════════════════════════════════════════════════
+function ImportarSecretariasModal({ onClose, onConcluido }) {
+  const [status, setStatus] = useState('idle') // idle | running | done | error
+  const [log, setLog] = useState([])
+  const [progress, setProgress] = useState({ atual: 0, total: 0 })
+  const [resumo, setResumo] = useState(null)
+  const logRef = useState(null)[1]
+  const logBoxRef = useState(null)
+
+  const iniciar = async () => {
+    setStatus('running')
+    setLog([])
+    setProgress({ atual: 0, total: 0 })
+    setResumo(null)
+    try {
+      const token      = localStorage.getItem('token')
+      const subdomain  = localStorage.getItem('subdomain')
+      const baseUrl    = import.meta.env.VITE_API_URL || '/api'
+      const response = await fetch(`${baseUrl}/organizacao/importar-iraucuba`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'x-tenant-subdomain': subdomain,
+          Accept: 'text/event-stream',
+        },
+      })
+      if (!response.ok || !response.body) { setStatus('error'); setLog(p => [...p, '❌ Erro ao conectar ao servidor.']); return }
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buf = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buf += decoder.decode(value, { stream: true })
+        const lines = buf.split('\n')
+        buf = lines.pop()
+        for (const line of lines) {
+          if (!line.startsWith('data:')) continue
+          try {
+            const ev = JSON.parse(line.slice(5).trim())
+            if (ev.tipo === 'progresso') setProgress({ atual: ev.atual, total: ev.total })
+            if (ev.tipo === 'concluido') { setStatus('done'); setResumo(ev); setLog(p => [...p, `✅ ${ev.msg}`]) }
+            if (ev.tipo === 'erro')      { setStatus('error'); setLog(p => [...p, `❌ ${ev.msg}`]) }
+            if (ev.msg) setLog(p => [...p, ev.msg])
+          } catch {}
+        }
+      }
+      if (status === 'running') setStatus('done')
+    } catch (err) {
+      setStatus('error')
+      setLog(p => [...p, `❌ ${err.message}`])
+    }
+  }
+
+  const pct = progress.total ? Math.round((progress.atual / progress.total) * 100) : 0
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl max-w-lg w-full shadow-xl">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <Download className="w-5 h-5 text-teal-600" /> Importar do Portal de Irauçuba
+            </h2>
+            <p className="text-xs text-gray-500 mt-0.5">Cria secretarias e agentes ordenadores a partir de iraucuba.ce.gov.br</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-6 space-y-4">
+          {status === 'idle' && (
+            <div className="text-sm text-gray-600 dark:text-gray-300 space-y-2">
+              <p>Esta operação irá:</p>
+              <ul className="list-disc ml-5 space-y-1">
+                <li>Importar <strong>15 secretarias</strong> do site da Prefeitura de Irauçuba</li>
+                <li>Cadastrar o <strong>secretário(a) atual</strong> de cada secretaria como agente ordenador</li>
+                <li>Registros já existentes <strong>não serão duplicados</strong></li>
+              </ul>
+            </div>
+          )}
+          {(status === 'running' || status === 'done') && (
+            <>
+              <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2.5">
+                <div className="bg-teal-500 h-2.5 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+              </div>
+              <p className="text-xs text-gray-500 text-center">
+                {progress.total ? `${progress.atual} / ${progress.total} secretarias` : 'Aguardando...'}
+              </p>
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 max-h-40 overflow-y-auto text-xs text-gray-600 dark:text-gray-300 space-y-0.5 font-mono">
+                {log.map((l, i) => <div key={i}>{l}</div>)}
+              </div>
+            </>
+          )}
+          {status === 'error' && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-3 text-sm text-red-700 dark:text-red-400">
+              {log[log.length - 1] || 'Erro desconhecido'}
+            </div>
+          )}
+          {resumo && (
+            <div className="bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-700 rounded-lg p-3 text-sm text-teal-800 dark:text-teal-300 space-y-0.5">
+              <div>✅ <strong>{resumo.secCriadas}</strong> secretaria(s) criada(s) · {resumo.secDuplic} já existia(m)</div>
+              <div>👤 <strong>{resumo.agenteCriados}</strong> agente(s) criado(s) · {resumo.agentesDuplic} já existia(m)</div>
+              {resumo.erros > 0 && <div>⚠️ {resumo.erros} erro(s) durante a importação</div>}
+            </div>
+          )}
+          <div className="flex justify-end gap-2 pt-2">
+            {status === 'done' ? (
+              <button onClick={onConcluido} className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold">
+                Fechar e Recarregar
+              </button>
+            ) : status === 'running' ? (
+              <div className="flex items-center gap-2 text-sm text-gray-500"><Loader2 className="w-4 h-4 animate-spin" /> Importando...</div>
+            ) : (
+              <>
+                <button onClick={onClose} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50">Cancelar</button>
+                <button onClick={iniciar} className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+                  <Download className="w-4 h-4" /> Iniciar Importação
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function Secretarias() {
   const { subdomain, tab: tabParam } = useParams();
@@ -96,6 +224,7 @@ export default function Secretarias() {
 
   // ── Responsáveis ──────────────────────────────────────────────────────────
   const [showModalResp,  setShowModalResp]  = useState(false);
+  const [showImportarSec, setShowImportarSec] = useState(false);
   const [editingResp,    setEditingResp]    = useState(null); // { secId, index }
   const [selectedResp,   setSelectedResp]   = useState(null);
   const [respFiltroVigor,   setRespFiltroVigor]   = useState(new Date().toISOString().slice(0,10));
@@ -848,6 +977,12 @@ export default function Secretarias() {
                 >
                   📊 Dotações
                 </button>
+                <button
+                  onClick={() => setShowImportarSec(true)}
+                  className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border border-teal-500 text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-colors"
+                >
+                  <Download className="h-4 w-4" /> Importar do Portal
+                </button>
               </div>
             </div>
           </div>
@@ -1418,6 +1553,14 @@ export default function Secretarias() {
 
           </form>
         </div>
+      )}
+
+      {/* Modal Importar do Portal de Irauçuba */}
+      {showImportarSec && (
+        <ImportarSecretariasModal
+          onClose={() => setShowImportarSec(false)}
+          onConcluido={() => { setShowImportarSec(false); fetchSecretarias(); }}
+        />
       )}
 
       {/* Modal Criar/Editar Secretaria */}

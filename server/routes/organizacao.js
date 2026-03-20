@@ -18,6 +18,7 @@ const {
   createAgente,
   updateAgente,
   deleteAgente,
+  importarSecretariasAgentes,
 } = require('../controllers/organizacaoController');
 const { authenticate, tenantMiddleware, authorize } = require('../middleware/auth');
 
@@ -41,5 +42,8 @@ router.get('/agentes', tenantMiddleware, authenticate, listAgentes);
 router.post('/agentes', tenantMiddleware, authenticate, createAgente);
 router.put('/agentes/:id', tenantMiddleware, authenticate, updateAgente);
 router.delete('/agentes/:id', tenantMiddleware, authenticate, deleteAgente);
+
+// SSE — importar secretarias + agentes do site de Irauçuba
+router.get('/importar-iraucuba', tenantMiddleware, authenticate, importarSecretariasAgentes);
 
 module.exports = router;

@@ -1,3 +1,145 @@
+const { Op } = require('sequelize');
+const https = require('https');
+const http  = require('http');
+
+// ── IMPORTAÇÃO SECRETARIAS/AGENTES – iraucuba.ce.gov.br ─────────────────────
+
+function _httpGetIraucuba(url) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const mod = u.protocol === 'https:' ? https : http;
+    mod.get({ hostname: u.hostname, path: u.pathname + (u.search || ''), headers: { 'User-Agent': 'Mozilla/5.0' } }, (r) => {
+      if (r.statusCode >= 300 && r.statusCode < 400 && r.headers.location) {
+        return _httpGetIraucuba(new URL(r.headers.location, url).href).then(resolve).catch(reject);
+      }
+      const ch = []; r.on('data', c => ch.push(c)); r.on('end', () => resolve(Buffer.concat(ch).toString('utf8')));
+    }).on('error', reject).setTimeout(20000, function () { this.destroy(new Error('timeout')); });
+  });
+}
+
+function _cleanHtml(s) {
+  return (s || '').replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').replace(/&#\d+;/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function _parseDateBR(s) {
+  const m = (s || '').match(/(\d{2})\/(\d{2})\/(\d{4})/);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : null;
+}
+
+const IRAUCUBA_SECS = [
+  { id: 1,  nome: 'GABINETE DO PREFEITO' },
+  { id: 2,  nome: 'SECRETARIA DE ADMINISTRAÇÃO' },
+  { id: 5,  nome: 'SECRETARIA DE SAÚDE' },
+  { id: 7,  nome: 'SECRETARIA DE INFRAESTRUTURA' },
+  { id: 11, nome: 'SECRETARIA DE FINANÇAS' },
+  { id: 15, nome: 'AUTARQUIA MUNICIPAL DE MEIO AMBIENTE DE IRAUÇUBA' },
+  { id: 30, nome: 'INSTITUTO DE PREVIDÊNCIA DO MUNICÍPIO DE IRAUÇUBA' },
+  { id: 32, nome: 'SECRETARIA DO DESENVOLVIMENTO ECONÔMICO' },
+  { id: 36, nome: 'SECRETARIA DE EDUCAÇÃO' },
+  { id: 38, nome: 'SECRETARIA DA JUVENTUDE, CULTURA, ESPORTE E LAZER' },
+  { id: 39, nome: 'SECRETARIA DA INCLUSÃO E PROMOÇÃO SOCIAL' },
+  { id: 40, nome: 'CONTROLADORIA GERAL DO MUNICÍPIO' },
+  { id: 57, nome: 'SECRETARIA DO DESENVOLVIMENTO RURAL, MEIO AMBIENTE E RECURSOS HÍDRICOS' },
+  { id: 58, nome: 'SECRETARIA DE GOVERNO, PLANEJAMENTO E SEGURANÇA CIDADÃ' },
+  { id: 59, nome: 'PROCURADORIA GERAL JURÍDICA MUNICIPAL' },
+];
+
+function _parseSecpageIraucuba(html) {
+  const siglaM = html.match(/<h2[^>]*id="EsOv"[^>]*>\s*([^<]+)\s*<\/h2>/i);
+  const sigla = siglaM ? siglaM[1].trim().slice(0, 10) : '';
+  const responsaveis = [];
+
+  // Encontrar a tabela correta: a que tem cabeçalho com "Nome" e "Data"
+  const tableRe = /<table[^>]*class='table[^']*'[^>]*>([\s\S]*?)<\/table>/gi;
+  let tbMatch;
+  while ((tbMatch = tableRe.exec(html)) !== null) {
+    const content = tbMatch[1];
+    // Só processar a tabela que tem cabeçalho Nome / Data início
+    if (!/<td[^>]*>\s*<strong>\s*Nome\s*<\/strong>/i.test(content)) continue;
+    const rowRe = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+    let m;
+    while ((m = rowRe.exec(content)) !== null) {
+      const cells = (m[1].match(/<td[^>]*>([\s\S]*?)<\/td>/gi) || []).map(c => _cleanHtml(c));
+      if (cells.length >= 2 && cells[0] && cells[0] !== 'Nome' && cells[0] !== 'Mais') {
+        responsaveis.push({ nome: cells[0], cargo: 'Secretário(a)', data_inicio: _parseDateBR(cells[1]) || null, data_fim: _parseDateBR(cells[2]) || null });
+      }
+    }
+    break; // tabela encontrada
+  }
+  // O último da lista é o gestor atual — forçar data_fim=null
+  if (responsaveis.length) {
+    responsaveis[responsaveis.length - 1].data_fim = null;
+  }
+  return { sigla, responsaveis };
+}
+
+const importarSecretariasAgentes = async (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+  const sse = (data) => { try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch {} if (res.flush) res.flush(); };
+  try {
+    const { Secretaria } = req.models;
+    const schema = req.tenant?.schema;
+    sse({ tipo: 'inicio', msg: `Iniciando importação de ${IRAUCUBA_SECS.length} secretarias...`, total: IRAUCUBA_SECS.length });
+    let secCriadas = 0, secDuplic = 0, agenteCriados = 0, agentesDuplic = 0, erros = 0;
+    for (let i = 0; i < IRAUCUBA_SECS.length; i++) {
+      const { id, nome } = IRAUCUBA_SECS[i];
+      sse({ tipo: 'progresso', atual: i + 1, total: IRAUCUBA_SECS.length, msg: nome });
+      try {
+        const html = await _httpGetIraucuba(`https://iraucuba.ce.gov.br/secretaria.php?sec=${id}`);
+        const { sigla, responsaveis } = _parseSecpageIraucuba(html);
+        const existente = await Secretaria.findOne({ where: { nome: { [Op.iLike]: nome } } });
+        let secretariaId;
+        if (existente) {
+          secDuplic++;
+          secretariaId = existente.id;
+          // Sempre atualiza responsaveis (sobrescreve) para garantir dados atuais
+          if (responsaveis.length) {
+            await existente.update({ responsaveis, sigla: sigla || existente.sigla });
+          }
+        } else {
+          const autoSigla = sigla || nome.split(' ').filter(w => w.length > 3 && !/^(de|da|do|das|dos|e|a|o)$/i.test(w)).map(w => w[0]).join('').toUpperCase().slice(0, 10);
+          const nova = await Secretaria.create({ nome, sigla: autoSigla, responsaveis, ativo: true });
+          secCriadas++;
+          secretariaId = nova.id;
+        }
+        if (responsaveis.length && schema) {
+          // Gestor atual = último da lista (mais recente)
+          const atual = responsaveis[responsaveis.length - 1];
+          if (atual.nome) {
+            const [existAg] = await req.tenantDb.query(
+              `SELECT id FROM "${schema}".agentes WHERE lower(nome)=lower(:nome) AND secretaria_id=:sid LIMIT 1`,
+              { replacements: { nome: atual.nome, sid: secretariaId }, type: req.tenantDb.QueryTypes.SELECT }
+            );
+            if (existAg) {
+              agentesDuplic++;
+              sse({ tipo: 'detalhe', msg: `  👤 ${atual.nome} (já existia)` });
+            } else {
+              await req.tenantDb.query(
+                `INSERT INTO "${schema}".agentes (nome,cargo,secretaria_id,ativo,created_at,updated_at) VALUES (:nome,:cargo,:sid,true,NOW(),NOW())`,
+                { replacements: { nome: atual.nome, cargo: 'Secretário(a)', sid: secretariaId }, type: req.tenantDb.QueryTypes.INSERT }
+              );
+              agenteCriados++;
+              sse({ tipo: 'detalhe', msg: `  👤 Secretário: ${atual.nome}` });
+            }
+          }
+        }
+      } catch (err) {
+        erros++;
+        console.error(`importarSecretariasAgentes sec=${id}:`, err.message);
+      }
+    }
+    sse({ tipo: 'concluido', msg: 'Importação concluída!', secCriadas, secDuplic, agenteCriados, agentesDuplic, erros, total: IRAUCUBA_SECS.length });
+  } catch (err) {
+    console.error('importarSecretariasAgentes:', err);
+    sse({ tipo: 'erro', msg: err.message || 'Erro desconhecido' });
+  }
+  res.end();
+};
+
 const createSecretaria = async (req, res) => {
   try {
     const {
@@ -438,4 +580,5 @@ module.exports = {
   updateAgente,
   deleteAgente,
   listSecretariasPublico,
+  importarSecretariasAgentes,
 };

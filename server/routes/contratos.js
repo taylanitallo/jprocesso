@@ -5,6 +5,8 @@ const {
   listItens, createItem, updateItem, deleteItem,
   listContratos, createContrato, updateContrato, deleteContrato,
   syncFromDids,
+  importarItensTransparencia,
+  importarContratosIraucuba,
 } = require('../controllers/contratosController');
 const { authenticate, tenantMiddleware } = require('../middleware/auth');
 
@@ -18,12 +20,14 @@ router.put('/credores/:id',   updateCredor);
 router.delete('/credores/:id', deleteCredor);
 
 // Catálogo de Itens
+router.get('/itens/importar-transparencia', importarItensTransparencia); // SSE — deve vir antes de /itens
 router.get('/itens',       listItens);
 router.post('/itens',      createItem);
 router.put('/itens/:id',   updateItem);
 router.delete('/itens/:id', deleteItem);
 
 // Contratos
+router.get('/importar-iraucuba', importarContratosIraucuba); // SSE — deve vir antes de /:id
 router.get('/',       listContratos);
 router.post('/',      createContrato);
 router.put('/:id',    updateContrato);

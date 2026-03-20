@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import {
   FileText, ShoppingBag, User, PackageOpen, Search, X, Plus, Edit3,
   Trash2, Eye, BarChart2, List, Check, AlertTriangle, Printer, ChevronUp, ChevronDown,
-  Loader2, CheckCircle2, XCircle
+  Loader2, CheckCircle2, XCircle, Download
 } from 'lucide-react'
 import { JAIButton } from '../components/JAI'
 import api from '../services/api'
@@ -864,6 +864,301 @@ function ConfirmModalCredor({ credor, onConfirm, onClose }) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+//  MODAL: IMPORTAR CONTRATOS DE IRAUÇUBA
+// ══════════════════════════════════════════════════════════════════════════════
+function ImportarContratosIraucubaModal({ onClose, onConcluido }) {
+  const [status, setStatus] = useState('idle')
+  const [log, setLog] = useState([])
+  const [progress, setProgress] = useState({ atual: 0, total: 0 })
+  const [resumo, setResumo] = useState(null)
+
+  const iniciar = async () => {
+    setStatus('running')
+    setLog([])
+    setProgress({ atual: 0, total: 0 })
+    setResumo(null)
+    try {
+      const token      = localStorage.getItem('token')
+      const subdomain  = localStorage.getItem('subdomain')
+      const baseUrl    = import.meta.env.VITE_API_URL || '/api'
+      const response = await fetch(`${baseUrl}/contratos/importar-iraucuba`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'x-tenant-subdomain': subdomain,
+          Accept: 'text/event-stream',
+        },
+      })
+      if (!response.ok || !response.body) { setStatus('error'); setLog(['❌ Erro ao conectar ao servidor.']); return }
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buf = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buf += decoder.decode(value, { stream: true })
+        const lines = buf.split('\n')
+        buf = lines.pop()
+        for (const line of lines) {
+          if (!line.startsWith('data:')) continue
+          try {
+            const ev = JSON.parse(line.slice(5).trim())
+            if (ev.tipo === 'progresso') setProgress({ atual: ev.atual, total: ev.total })
+            if (ev.tipo === 'concluido') { setStatus('done'); setResumo(ev) }
+            if (ev.tipo === 'erro')      setStatus('error')
+            if (ev.msg) setLog(p => [...p, ev.msg])
+          } catch {}
+        }
+      }
+      if (status === 'running') setStatus('done')
+    } catch (err) {
+      setStatus('error')
+      setLog(p => [...p, `❌ ${err.message}`])
+    }
+  }
+
+  const pct = progress.total ? Math.round((progress.atual / progress.total) * 100) : 0
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl max-w-lg w-full shadow-xl">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <Download className="w-5 h-5 text-teal-600" /> Importar Contratos de Irauçuba
+            </h2>
+            <p className="text-xs text-gray-500 mt-0.5">Importa contratos vigentes de iraucuba.ce.gov.br, criando credores se necessário</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><XCircle className="w-5 h-5" /></button>
+        </div>
+        <div className="p-6 space-y-4">
+          {status === 'idle' && (
+            <div className="text-sm text-gray-600 dark:text-gray-300 space-y-2">
+              <p>Esta operação irá:</p>
+              <ul className="list-disc ml-5 space-y-1">
+                <li>Buscar todos os contratos <strong>vigentes</strong> do portal da Prefeitura de Irauçuba</li>
+                <li>Cadastrar automaticamente os credores ainda não existentes</li>
+                <li>Contratos com número já cadastrado <strong>não serão duplicados</strong></li>
+              </ul>
+            </div>
+          )}
+          {(status === 'running' || status === 'done') && (
+            <>
+              <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2.5">
+                <div className="bg-teal-500 h-2.5 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+              </div>
+              <p className="text-xs text-gray-500 text-center">
+                {progress.total ? `${progress.atual} / ${progress.total} contratos` : 'Aguardando...'}
+              </p>
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 max-h-40 overflow-y-auto text-xs text-gray-600 dark:text-gray-300 space-y-0.5 font-mono">
+                {log.map((l, i) => <div key={i}>{l}</div>)}
+              </div>
+            </>
+          )}
+          {status === 'error' && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-3 text-sm text-red-700 dark:text-red-400">
+              {log[log.length - 1] || 'Erro desconhecido'}
+            </div>
+          )}
+          {resumo && (
+            <div className="bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-700 rounded-lg p-3 text-sm text-teal-800 dark:text-teal-300 space-y-0.5">
+              <div>✅ <strong>{resumo.criados}</strong> contrato(s) importado(s)</div>
+              <div>🔁 <strong>{resumo.duplicados}</strong> já existia(m) — ignorado(s)</div>
+              {resumo.erros > 0 && <div>⚠️ {resumo.erros} erro(s)</div>}
+            </div>
+          )}
+          <div className="flex justify-end gap-2 pt-2">
+            {status === 'done' ? (
+              <button onClick={onConcluido} className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold">
+                Fechar e Recarregar
+              </button>
+            ) : status === 'running' ? (
+              <div className="flex items-center gap-2 text-sm text-gray-500"><Loader2 className="w-4 h-4 animate-spin" /> Importando...</div>
+            ) : (
+              <>
+                <button onClick={onClose} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50">Cancelar</button>
+                <button onClick={iniciar} className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+                  <Download className="w-4 h-4" /> Iniciar Importação
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  MODAL: IMPORTAR ITENS DO PORTAL DE TRANSPARÊNCIA
+// ══════════════════════════════════════════════════════════════════════════════
+function ImportarTransparenciaModal({ onClose, onConcluido }) {
+  const [status, setStatus]         = useState('idle') // idle | rodando | concluido | erro
+  const [log, setLog]               = useState([])
+  const [progresso, setProgresso]   = useState({ atual: 0, total: 0 })
+  const readerRef                   = useRef(null)
+
+  const addLog = (msg, tipo = 'info') => setLog(p => [...p, { msg, tipo }])
+
+  const iniciar = async () => {
+    setStatus('rodando')
+    setLog([])
+    setProgresso({ atual: 0, total: 0 })
+    try {
+      const token      = localStorage.getItem('token')
+      const subdomain  = localStorage.getItem('subdomain')
+      const baseUrl    = import.meta.env.VITE_API_URL || '/api'
+
+      const response = await fetch(`${baseUrl}/contratos/itens/importar-transparencia`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'x-tenant-subdomain': subdomain,
+          Accept: 'text/event-stream',
+        },
+      })
+
+      if (!response.ok) {
+        setStatus('erro')
+        addLog(`Erro HTTP ${response.status}`, 'erro')
+        return
+      }
+
+      const reader  = response.body.getReader()
+      const decoder = new TextDecoder()
+      readerRef.current = reader
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const parts = buffer.split('\n')
+        buffer = parts.pop()
+        for (const line of parts) {
+          if (!line.startsWith('data: ')) continue
+          try {
+            const evt = JSON.parse(line.slice(6))
+            if (evt.tipo === 'inicio')    addLog(evt.msg)
+            if (evt.tipo === 'lista_ok') { addLog(evt.msg); setProgresso({ atual: 0, total: evt.total }) }
+            if (evt.tipo === 'progresso') setProgresso({ atual: evt.atual, total: evt.total })
+            if (evt.tipo === 'salvando') { addLog(evt.msg); setProgresso({ atual: evt.atual, total: evt.total }) }
+            if (evt.tipo === 'concluido') {
+              addLog(`✅ ${evt.importados} novos importados · ${evt.duplicados} duplicados ignorados · ${evt.erros} erros`, 'sucesso')
+              setStatus('concluido')
+            }
+            if (evt.tipo === 'erro') { addLog(`❌ ${evt.msg}`, 'erro'); setStatus('erro') }
+          } catch {}
+        }
+      }
+    } catch (err) {
+      addLog(`Erro de conexão: ${err.message}`, 'erro')
+      setStatus('erro')
+    }
+  }
+
+  const cancelar = () => { if (readerRef.current) readerRef.current.cancel(); onClose() }
+  const pct = progresso.total > 0 ? Math.round((progresso.atual / progresso.total) * 100) : 0
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-xl flex flex-col">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <div>
+            <h2 className="text-base font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+              <Download className="w-4 h-4 text-teal-600" /> Importar Itens do Portal
+            </h2>
+            <p className="text-xs text-gray-500 mt-0.5">transparencia.acontratacao.com.br · Prefeitura de Irauçuba</p>
+          </div>
+          {status !== 'rodando' && (
+            <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500">
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+
+        {/* Body */}
+        <div className="p-6 space-y-4">
+          {status === 'idle' && (
+            <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
+              <p>Serão importados itens com os campos:</p>
+              <ul className="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">
+                <li>Categoria · Unidade de medida</li>
+                <li>Classificação · Subclassificação</li>
+                <li>Especificação</li>
+              </ul>
+              <p>Itens com descrição já existente serão <strong>ignorados</strong> (sem duplicatas).</p>
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg px-4 py-3 text-amber-700 dark:text-amber-300">
+                ⚠️ Este processo pode levar <strong>alguns minutos</strong>. Não feche a janela.
+              </div>
+            </div>
+          )}
+
+          {(status === 'rodando' || status === 'concluido' || status === 'erro') && (
+            <>
+              {/* Barra de progresso */}
+              {progresso.total > 0 && (
+                <div>
+                  <div className="flex justify-between text-xs text-gray-500 mb-1">
+                    <span>
+                      {status === 'concluido' ? 'Concluído!' : 'Processando detalhes...'}
+                    </span>
+                    <span>{progresso.atual.toLocaleString('pt-BR')} / {progresso.total.toLocaleString('pt-BR')} ({pct}%)</span>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                    <div
+                      className={`h-2.5 rounded-full transition-all duration-300 ${status === 'concluido' ? 'bg-green-500' : 'bg-teal-600'}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+              {/* Log */}
+              <div className="bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-3 h-40 overflow-y-auto space-y-1">
+                {log.map((entry, i) => (
+                  <p key={i} className={`text-xs font-mono ${
+                    entry.tipo === 'erro'    ? 'text-red-500 dark:text-red-400' :
+                    entry.tipo === 'sucesso' ? 'text-green-600 dark:text-green-400 font-semibold' :
+                    'text-gray-600 dark:text-gray-400'
+                  }`}>{entry.msg}</p>
+                ))}
+                {status === 'rodando' && (
+                  <p className="text-xs text-teal-500 animate-pulse">⏳ Processando...</p>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+          {status === 'idle' && (
+            <>
+              <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
+              <button onClick={iniciar}
+                className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
+                <Download className="w-4 h-4" /> Iniciar Importação
+              </button>
+            </>
+          )}
+          {status === 'rodando' && (
+            <button onClick={cancelar} className="btn-secondary text-sm">Cancelar</button>
+          )}
+          {(status === 'concluido' || status === 'erro') && (
+            <button
+              onClick={status === 'concluido' ? onConcluido : onClose}
+              className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold transition-colors"
+            >
+              {status === 'concluido' ? 'Fechar e Recarregar' : 'Fechar'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 //  TAB ITENS
 // ══════════════════════════════════════════════════════════════════════════════
 function TabItens() {
@@ -874,10 +1169,12 @@ function TabItens() {
   const [selecionado, setSelecionado]   = useState(null)
   const [modal, setModal]               = useState(null) // 'novo'|'editar'|'visualizar'|'excluir'|'relatorio'|'listagem'
   const [ordenar, setOrdenar]           = useState({ col: 'descricao', asc: true })
+  const [showImportar, setShowImportar] = useState(false)
 
-  useEffect(() => {
+  const recarregarItens = () =>
     api.get('/contratos/itens').then(r => setItens(r.data)).catch(() => {})
-  }, [])
+
+  useEffect(() => { recarregarItens() }, [])
 
   const setF = (k, v) => setFiltros(p => ({ ...p, [k]: v }))
 
@@ -1146,9 +1443,19 @@ function TabItens() {
           className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
           <List className="w-4 h-4" /> Listagem
         </button>
+        <button onClick={() => setShowImportar(true)}
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
+          <Download className="w-4 h-4" /> Importar do Portal
+        </button>
       </div>
 
       {/* ── Modais ── */}
+      {showImportar && (
+        <ImportarTransparenciaModal
+          onClose={() => setShowImportar(false)}
+          onConcluido={() => { setShowImportar(false); recarregarItens() }}
+        />
+      )}
       {modal === 'novo' && (
         <ItemModal modo="novo" item={null} codigoProximo={proxCod()} onSave={incluir} onClose={() => setModal(null)} />
       )}
@@ -2478,9 +2785,13 @@ function TabContratos() {
   const [contratos, setContratos] = useState([])
   const [credores, setCredores] = useState([])
 
-  useEffect(() => {
+  const recarregarContratos = () => {
     api.get('/contratos').then(r => setContratos(r.data)).catch(() => {})
     api.get('/contratos/credores').then(r => setCredores(r.data)).catch(() => {})
+  }
+
+  useEffect(() => {
+    recarregarContratos()
   }, [])
 
   const FILTROS_VAZIOS = { numero: '', objeto: '', credor: '', modalidade: '', status: '' }
@@ -2488,6 +2799,7 @@ function TabContratos() {
   const [filtrosAtivos, setFiltrosAtivos]   = useState(FILTROS_VAZIOS)
   const [selecionado, setSelecionado]       = useState(null)
   const [modal, setModal]                   = useState(null)
+  const [showImportarIraucuba, setShowImportarIraucuba] = useState(false)
   const [ordenar, setOrdenar]               = useState({ col: 'numero_contrato', asc: true })
 
   const setF = (k, v) => setFiltros(p => ({ ...p, [k]: v }))
@@ -2708,6 +3020,10 @@ function TabContratos() {
           className="flex items-center gap-1.5 px-4 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
           <Eye className="w-4 h-4" /> Visualizar
         </button>
+        <button onClick={() => setShowImportarIraucuba(true)}
+          className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg border border-teal-500 text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-900/20 text-sm font-semibold transition-colors">
+          <Download className="w-4 h-4" /> Importar de Irauçuba
+        </button>
       </div>
 
       {/* ── Modais ── */}
@@ -2722,6 +3038,12 @@ function TabContratos() {
       )}
       {modal === 'excluir' && contratoSelecionado && (
         <ConfirmModalContrato contrato={contratoSelecionado} onConfirm={excluir} onClose={() => setModal(null)} />
+      )}
+      {showImportarIraucuba && (
+        <ImportarContratosIraucubaModal
+          onClose={() => setShowImportarIraucuba(false)}
+          onConcluido={() => { setShowImportarIraucuba(false); recarregarContratos() }}
+        />
       )}
     </div>
   )
