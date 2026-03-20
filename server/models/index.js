@@ -19,6 +19,13 @@ const defineCredorModel = require('./Credor');
 const defineContratoItemModel = require('./ContratoItem');
 const defineContratoItemVinculoModel = require('./ContratoItemVinculo');
 const defineContratoModel = require('./Contrato');
+const definePatGrupoModel = require('./PatGrupo');
+const definePatBemModel = require('./PatBem');
+const definePatResponsabilidadeModel = require('./PatResponsabilidade');
+const definePatMovimentacaoModel = require('./PatMovimentacao');
+const definePatBaixaModel = require('./PatBaixa');
+const definePatInventarioModel = require('./PatInventario');
+const definePatInventarioItemModel = require('./PatInventarioItem');
 
 const initTenantModels = (sequelize) => {
   const User = defineUserModel(sequelize);
@@ -42,6 +49,13 @@ const initTenantModels = (sequelize) => {
   const ContratoItem = defineContratoItemModel(sequelize);
   const ContratoItemVinculo = defineContratoItemVinculoModel(sequelize);
   const Contrato = defineContratoModel(sequelize);
+  const PatGrupo = definePatGrupoModel(sequelize);
+  const PatBem = definePatBemModel(sequelize);
+  const PatResponsabilidade = definePatResponsabilidadeModel(sequelize);
+  const PatMovimentacao = definePatMovimentacaoModel(sequelize);
+  const PatBaixa = definePatBaixaModel(sequelize);
+  const PatInventario = definePatInventarioModel(sequelize);
+  const PatInventarioItem = definePatInventarioItemModel(sequelize);
 
   // Contrato → Credor
   Contrato.belongsTo(Credor, { foreignKey: 'credor_id', as: 'credor' });
@@ -121,6 +135,31 @@ const initTenantModels = (sequelize) => {
   Processo.hasOne(Did, { foreignKey: 'processo_id', as: 'did' });
   Did.belongsTo(User, { foreignKey: 'criado_por_id', as: 'criadoPor' });
 
+  // Patrimônio associations
+  PatBem.belongsTo(PatGrupo,    { foreignKey: 'grupo_id',      as: 'grupo' });
+  PatGrupo.hasMany(PatBem,      { foreignKey: 'grupo_id',      as: 'bens' });
+  PatBem.belongsTo(Secretaria,  { foreignKey: 'secretaria_id', as: 'secretaria' });
+  PatBem.belongsTo(Setor,       { foreignKey: 'setor_id',      as: 'setor' });
+  PatBem.belongsTo(User,        { foreignKey: 'responsavel_id', as: 'responsavel' });
+  PatBem.hasMany(PatResponsabilidade, { foreignKey: 'bem_id', as: 'responsabilidades' });
+  PatResponsabilidade.belongsTo(PatBem, { foreignKey: 'bem_id', as: 'bem' });
+  PatResponsabilidade.belongsTo(Secretaria, { foreignKey: 'secretaria_id', as: 'secretaria' });
+  PatResponsabilidade.belongsTo(Setor,      { foreignKey: 'setor_id',      as: 'setor' });
+  PatBem.hasMany(PatMovimentacao, { foreignKey: 'bem_id', as: 'movimentacoes' });
+  PatMovimentacao.belongsTo(PatBem, { foreignKey: 'bem_id', as: 'bem' });
+  PatMovimentacao.belongsTo(Secretaria, { foreignKey: 'secretaria_origem_id',  as: 'secretariaOrigem' });
+  PatMovimentacao.belongsTo(Secretaria, { foreignKey: 'secretaria_destino_id', as: 'secretariaDestino' });
+  PatMovimentacao.belongsTo(Setor,      { foreignKey: 'setor_origem_id',       as: 'setorOrigem' });
+  PatMovimentacao.belongsTo(Setor,      { foreignKey: 'setor_destino_id',      as: 'setorDestino' });
+  PatBem.hasOne(PatBaixa,  { foreignKey: 'bem_id', as: 'baixa' });
+  PatBaixa.belongsTo(PatBem, { foreignKey: 'bem_id', as: 'bem' });
+  PatInventario.hasMany(PatInventarioItem, { foreignKey: 'inventario_id', as: 'itens' });
+  PatInventarioItem.belongsTo(PatInventario, { foreignKey: 'inventario_id', as: 'inventario' });
+  PatInventarioItem.belongsTo(PatBem, { foreignKey: 'bem_id', as: 'bem' });
+  PatBem.hasMany(PatInventarioItem, { foreignKey: 'bem_id', as: 'inventarioItens' });
+  PatInventario.belongsTo(User,       { foreignKey: 'responsavel_id', as: 'responsavel' });
+  PatInventario.belongsTo(Secretaria, { foreignKey: 'secretaria_id',  as: 'secretaria' });
+
   return {
     User,
     Secretaria,
@@ -142,6 +181,13 @@ const initTenantModels = (sequelize) => {
     Credor,
     ContratoItem,
     Contrato,
+    PatGrupo,
+    PatBem,
+    PatResponsabilidade,
+    PatMovimentacao,
+    PatBaixa,
+    PatInventario,
+    PatInventarioItem,
   };
 };
 

@@ -25,12 +25,14 @@ import {
   Package,
   Inbox,
   DollarSign,
-  ScrollText
+  ScrollText,
+  Landmark
 } from 'lucide-react';
 
 const SYSTEM_MODULES = [
   { id: 'processos',    label: 'Processos',    emoji: '📋', descricao: 'Gestão de protocolos e processos administrativos', Icon: Inbox },
   { id: 'almoxarifado', label: 'Almoxarifado', emoji: '📦', descricao: 'Controle de estoque e materiais', Icon: Package },
+  { id: 'patrimonio',   label: 'Patrimônio',   emoji: '🏛️', descricao: 'Controle de bens permanentes – TCE-CE', Icon: Landmark },
   { id: 'financeiro',   label: 'Financeiro',   emoji: '💵', descricao: 'Gestão financeira e DIDs', Icon: DollarSign },
   { id: 'contratos',    label: 'Contratos',    emoji: '📝', descricao: 'Gestão de contratos', Icon: ScrollText },
 ];

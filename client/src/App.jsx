@@ -13,6 +13,7 @@ import Relatorios from './pages/Relatorios'
 import Configuracoes from './pages/Configuracoes'
 import Usuarios from './pages/Usuarios'
 import Almoxarifado from './pages/Almoxarifado'
+import Patrimonio from './pages/Patrimonio'
 import Financeiro from './pages/Financeiro'
 import Contratos from './pages/Contratos'
 import FormularioDid from './pages/FormularioDid'
@@ -93,6 +94,8 @@ function App() {
             <Route path="usuarios" element={<Usuarios />} />
             <Route path="almoxarifado" element={<Almoxarifado />} />
             <Route path="almoxarifado/:tab" element={<Almoxarifado />} />
+            <Route path="patrimonio" element={<Patrimonio />} />
+            <Route path="patrimonio/:tab" element={<Patrimonio />} />
             <Route path="financeiro" element={<Financeiro />} />
             <Route path="financeiro/:tab" element={<Financeiro />} />
             <Route path="contratos" element={<Contratos />} />

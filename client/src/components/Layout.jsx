@@ -1,7 +1,7 @@
 import { Outlet, Link, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
-import { FileText, Home, Building2, LogOut, Menu, X, Inbox, BarChart3, Settings, Users, Package, Sun, Moon, ChevronRight, DollarSign, ScrollText, Lock } from 'lucide-react'
+import { FileText, Home, Building2, LogOut, Menu, X, Inbox, BarChart3, Settings, Users, Package, Sun, Moon, ChevronRight, DollarSign, ScrollText, Lock, Landmark } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import JAI from './JAI'
 import api from '../services/api'
@@ -59,7 +59,8 @@ export default function Layout() {
   const menuItems = [
     { path: `/${subdomain}`,              icon: Home,      emoji: '🏠', label: 'Dashboard',   exact: true },
     { path: `/${subdomain}/processos`,    icon: Inbox,     emoji: '📋', label: 'Processos',    modulo: 'processos' },
-    { path: `/${subdomain}/almoxarifado`, icon: Package,    emoji: '📦', label: 'Almoxarifado', modulo: 'almoxarifado' },
+    { path: `/${subdomain}/almoxarifado`, icon: Package,   emoji: '📦', label: 'Almoxarifado', modulo: 'almoxarifado' },
+    { path: `/${subdomain}/patrimonio`,   icon: Landmark,  emoji: '🏛️', label: 'Patrimônio',   modulo: 'patrimonio' },
     { path: `/${subdomain}/financeiro`,   icon: DollarSign, emoji: '💵', label: 'Financeiro',   modulo: 'financeiro' },
     { path: `/${subdomain}/contratos`,    icon: ScrollText, emoji: '📝', label: 'Contratos',    modulo: 'contratos' },
   ]

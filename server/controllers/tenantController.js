@@ -384,6 +384,210 @@ async function migrarSchemaUsuarios(schema, pool) {
       updated_at    TIMESTAMP     DEFAULT NOW()
     );
   `);
+
+  // =====================================================================
+  // ALMOXARIFADO - categorias de material de consumo
+  // =====================================================================
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ${schema}.alm_categorias (
+      id         UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+      codigo     VARCHAR(20)  NOT NULL UNIQUE,
+      nome       VARCHAR(255) NOT NULL,
+      descricao  TEXT,
+      ativo      BOOLEAN      DEFAULT TRUE,
+      created_at TIMESTAMP    DEFAULT NOW(),
+      updated_at TIMESTAMP    DEFAULT NOW()
+    );
+    ALTER TABLE IF EXISTS ${schema}.alm_itens
+      ADD COLUMN IF NOT EXISTS categoria_id UUID REFERENCES ${schema}.alm_categorias(id),
+      ADD COLUMN IF NOT EXISTS especificacao_tecnica TEXT;
+  `);
+
+  // =====================================================================
+  // PATRIMÔNIO – tabelas conforme Manual TCE-Ceará
+  // =====================================================================
+
+  // Grupos de bens permanentes (classificação TCE-CE)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ${schema}.pat_grupos (
+      id                 UUID           PRIMARY KEY DEFAULT gen_random_uuid(),
+      codigo             VARCHAR(10)    NOT NULL UNIQUE,
+      nome               VARCHAR(255)   NOT NULL,
+      descricao          TEXT,
+      vida_util_anos     INTEGER        DEFAULT 10,
+      taxa_depreciacao   DECIMAL(5,2)   DEFAULT 10.00,
+      conta_contabil     VARCHAR(30),
+      ativo              BOOLEAN        DEFAULT TRUE,
+      created_at         TIMESTAMP      DEFAULT NOW(),
+      updated_at         TIMESTAMP      DEFAULT NOW()
+    );
+    INSERT INTO ${schema}.pat_grupos (codigo, nome, descricao, vida_util_anos, taxa_depreciacao, conta_contabil)
+    VALUES
+      ('01', 'Mobiliário em Geral',              'Mesas, cadeiras, armários e similares',      10, 10.00, '1.4.9.1.1.00.00'),
+      ('02', 'Equipamentos de Processamento de Dados', 'Computadores, impressoras e periféricos', 5, 20.00, '1.4.9.2.1.00.00'),
+      ('03', 'Aparelhos e Equipamentos',          'Aparelhos de ar-condicionado, TVs e similares', 10, 10.00, '1.4.9.3.1.00.00'),
+      ('04', 'Veículos em Geral',                 'Automóveis, camionetes, motocicletas',        5, 20.00, '1.4.9.4.1.00.00'),
+      ('05', 'Equipamentos e Material Técnico',   'Aparelhos cirúrgicos, laboratoriais e similares', 10, 10.00, '1.4.9.5.1.00.00'),
+      ('06', 'Material Permanente de uso Específico', 'Instrumentos musicais, esportivos e outros', 10, 10.00, '1.4.9.6.1.00.00'),
+      ('07', 'Bens de Natureza Cultural',         'Obras de arte, peças artísticas e similares', 0, 0.00, '1.4.9.7.1.00.00'),
+      ('08', 'Semoventes',                        'Animais de propriedade do município',          10, 10.00, '1.4.9.8.1.00.00'),
+      ('09', 'Imóveis',                           'Terrenos, edificações e benfeitorias',         0, 0.00, '1.4.8.1.1.00.00'),
+      ('10', 'Outros Materiais Permanentes',      'Demais bens não classificados acima',         10, 10.00, '1.4.9.9.1.00.00')
+    ON CONFLICT (codigo) DO NOTHING;
+  `);
+
+  // Bens permanentes tombados
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ${schema}.pat_bens (
+      id                          UUID           PRIMARY KEY DEFAULT gen_random_uuid(),
+      numero_tombamento           VARCHAR(30)    NOT NULL UNIQUE,
+      numero_tombamento_anterior  VARCHAR(30),
+      grupo_id                    UUID           REFERENCES ${schema}.pat_grupos(id),
+      descricao                   VARCHAR(500)   NOT NULL,
+      especificacao_tecnica       TEXT,
+      marca                       VARCHAR(100),
+      modelo                      VARCHAR(100),
+      numero_serie                VARCHAR(100),
+      cor                         VARCHAR(50),
+      numero_nota_fiscal          VARCHAR(50),
+      serie_nf                    VARCHAR(10),
+      chave_nfe                   VARCHAR(44),
+      data_nota_fiscal            DATE,
+      cnpj_fornecedor             VARCHAR(18),
+      nome_fornecedor             VARCHAR(255),
+      numero_empenho              VARCHAR(50),
+      numero_contrato             VARCHAR(50),
+      numero_processo             VARCHAR(50),
+      data_aquisicao              DATE           NOT NULL,
+      valor_aquisicao             DECIMAL(15,2)  NOT NULL,
+      vida_util_anos              INTEGER,
+      taxa_depreciacao            DECIMAL(5,2),
+      valor_residual              DECIMAL(15,2)  DEFAULT 0,
+      estado_conservacao          VARCHAR(20)    DEFAULT 'BOM'
+                                    CHECK (estado_conservacao IN ('OTIMO','BOM','REGULAR','RUIM','PESSIMO','INSERVIVEL')),
+      status                      VARCHAR(20)    DEFAULT 'ATIVO'
+                                    CHECK (status IN ('ATIVO','TRANSFERIDO','BAIXADO','CEDIDO','EXTRAVIADO')),
+      secretaria_id               UUID           REFERENCES ${schema}.secretarias(id),
+      setor_id                    UUID           REFERENCES ${schema}.setores(id),
+      responsavel_id              UUID           REFERENCES ${schema}.usuarios(id),
+      local_fisico                VARCHAR(255),
+      sala                        VARCHAR(100),
+      placa                       VARCHAR(20),
+      renavam                     VARCHAR(20),
+      usuario_cadastro_id         UUID           REFERENCES ${schema}.usuarios(id),
+      observacoes                 TEXT,
+      foto_url                    VARCHAR(500),
+      ativo                       BOOLEAN        DEFAULT TRUE,
+      created_at                  TIMESTAMP      DEFAULT NOW(),
+      updated_at                  TIMESTAMP      DEFAULT NOW()
+    );
+  `);
+
+  // Termos de guarda e responsabilidade
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ${schema}.pat_responsabilidades (
+      id                    UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+      numero_termo          VARCHAR(50)  UNIQUE,
+      bem_id                UUID         NOT NULL REFERENCES ${schema}.pat_bens(id),
+      secretaria_id         UUID         REFERENCES ${schema}.secretarias(id),
+      setor_id              UUID         REFERENCES ${schema}.setores(id),
+      responsavel_id        UUID         REFERENCES ${schema}.usuarios(id),
+      nome_responsavel      VARCHAR(255) NOT NULL,
+      cargo_responsavel     VARCHAR(150),
+      matricula_responsavel VARCHAR(50),
+      data_inicio           DATE         NOT NULL,
+      data_fim              DATE,
+      status                VARCHAR(20)  DEFAULT 'VIGENTE' CHECK (status IN ('VIGENTE','ENCERRADO')),
+      observacoes           TEXT,
+      assinado_em           TIMESTAMP,
+      usuario_id            UUID         REFERENCES ${schema}.usuarios(id),
+      created_at            TIMESTAMP    DEFAULT NOW(),
+      updated_at            TIMESTAMP    DEFAULT NOW()
+    );
+  `);
+
+  // Movimentações patrimoniais
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ${schema}.pat_movimentacoes (
+      id                      UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+      bem_id                  UUID        NOT NULL REFERENCES ${schema}.pat_bens(id),
+      tipo                    VARCHAR(30) NOT NULL
+                                CHECK (tipo IN ('ENTRADA','TRANSFERENCIA','CESSAO','DEVOLUCAO','BAIXA','INVENTARIO','AJUSTE')),
+      secretaria_origem_id    UUID        REFERENCES ${schema}.secretarias(id),
+      setor_origem_id         UUID        REFERENCES ${schema}.setores(id),
+      responsavel_origem_id   UUID        REFERENCES ${schema}.usuarios(id),
+      secretaria_destino_id   UUID        REFERENCES ${schema}.secretarias(id),
+      setor_destino_id        UUID        REFERENCES ${schema}.setores(id),
+      responsavel_destino_id  UUID        REFERENCES ${schema}.usuarios(id),
+      data_movimentacao       DATE        NOT NULL,
+      numero_documento        VARCHAR(100),
+      justificativa           TEXT,
+      observacoes             TEXT,
+      usuario_id              UUID        REFERENCES ${schema}.usuarios(id),
+      created_at              TIMESTAMP   DEFAULT NOW(),
+      updated_at              TIMESTAMP   DEFAULT NOW()
+    );
+  `);
+
+  // Baixas de bens permanentes
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ${schema}.pat_baixas (
+      id                       UUID           PRIMARY KEY DEFAULT gen_random_uuid(),
+      bem_id                   UUID           NOT NULL REFERENCES ${schema}.pat_bens(id),
+      motivo                   VARCHAR(30)    NOT NULL
+                                 CHECK (motivo IN ('INSERVIVEL','EXTRAVIO','FURTO_ROUBO','VENDA','DOACAO','PERMUTA','SINISTRO','OUTROS')),
+      numero_processo          VARCHAR(100),
+      numero_resolucao         VARCHAR(100),
+      data_baixa               DATE           NOT NULL,
+      valor_estimado_residual  DECIMAL(15,2)  DEFAULT 0,
+      descricao_ocorrencia     TEXT,
+      autorizado_por           VARCHAR(255),
+      usuario_id               UUID           REFERENCES ${schema}.usuarios(id),
+      observacoes              TEXT,
+      created_at               TIMESTAMP      DEFAULT NOW(),
+      updated_at               TIMESTAMP      DEFAULT NOW()
+    );
+  `);
+
+  // Inventário patrimonial
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ${schema}.pat_inventarios (
+      id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+      numero              VARCHAR(30) NOT NULL UNIQUE,
+      ano_exercicio       INTEGER     NOT NULL,
+      status              VARCHAR(20) DEFAULT 'EM_ANDAMENTO'
+                            CHECK (status IN ('EM_ANDAMENTO','CONCLUIDO','CANCELADO')),
+      data_inicio         DATE        NOT NULL,
+      data_conclusao      DATE,
+      responsavel_id      UUID        REFERENCES ${schema}.usuarios(id),
+      secretaria_id       UUID        REFERENCES ${schema}.secretarias(id),
+      total_bens          INTEGER     DEFAULT 0,
+      total_conferidos    INTEGER     DEFAULT 0,
+      total_divergencias  INTEGER     DEFAULT 0,
+      observacoes         TEXT,
+      usuario_id          UUID        REFERENCES ${schema}.usuarios(id),
+      created_at          TIMESTAMP   DEFAULT NOW(),
+      updated_at          TIMESTAMP   DEFAULT NOW()
+    );
+  `);
+
+  // Itens do inventário patrimonial
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ${schema}.pat_inventario_itens (
+      id                            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+      inventario_id                 UUID        NOT NULL REFERENCES ${schema}.pat_inventarios(id) ON DELETE CASCADE,
+      bem_id                        UUID        REFERENCES ${schema}.pat_bens(id),
+      numero_tombamento             VARCHAR(30) NOT NULL,
+      encontrado                    BOOLEAN,
+      local_encontrado              VARCHAR(255),
+      estado_conservacao_encontrado VARCHAR(20),
+      observacoes                   TEXT,
+      conferido_por_id              UUID        REFERENCES ${schema}.usuarios(id),
+      conferido_em                  TIMESTAMP,
+      created_at                    TIMESTAMP   DEFAULT NOW(),
+      updated_at                    TIMESTAMP   DEFAULT NOW()
+    );
+  `);
 }
 
 // Executar migração em todos os tenants ativos (chamado no startup do servidor)
