@@ -203,8 +203,8 @@ export default function ConsultaPublica() {
           <div className="flex items-center justify-between">
             {/* Logo / nome */}
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm">
-                <FileText className="h-5 w-5 text-teal-700" />
+              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm overflow-hidden">
+                <img src="/BRASÃO JPROCESSO.png" alt="jProcesso" className="w-7 h-7 object-contain" />
               </div>
               <div>
                 <div className="text-xs font-semibold uppercase tracking-wider opacity-80">jProcesso</div>
