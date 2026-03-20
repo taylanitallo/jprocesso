@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { Eye, EyeOff, Search, Sun, Moon } from 'lucide-react'
+import api from '../services/api'
 
 export default function Login() {
   const [cpf, setCpf] = useState('')
@@ -25,9 +26,8 @@ export default function Login() {
 
   const fetchTenantInfo = async (sub) => {
     try {
-      const response = await fetch(`/api/tenants/info?subdomain=${sub}`)
-      const data = await response.json()
-      setTenantInfo(data)
+      const response = await api.get(`/tenants/info?subdomain=${sub}`)
+      setTenantInfo(response.data)
     } catch (err) {
       console.error('Erro ao buscar informações do tenant:', err)
     }
