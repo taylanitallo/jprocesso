@@ -96,22 +96,14 @@ export default function Layout() {
 
           {/* Logo */}
           <div className="px-3 py-2.5 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-            <div className="flex items-center space-x-3">
-              <div className="flex-shrink-0">
-                {tenant?.configuracoes?.logo_sidebar
-                  ? <img src={tenant.configuracoes.logo_sidebar} alt="logo" className="h-10 w-10 object-contain rounded-xl" />
-                  : <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-2.5 rounded-xl shadow-md">
-                      <FileText className="h-5 w-5 text-white" />
-                    </div>
-                }
-              </div>
-              <div className="flex-1 min-w-0">
-                <h1 className="font-bold text-gray-900 dark:text-white text-sm leading-tight">jProcesso</h1>
-                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{tenant?.nome || 'Sistema'}</p>
-              </div>
+            <div className="flex items-center justify-between">
+              {tenant?.configuracoes?.logo_sidebar
+                ? <img src={tenant.configuracoes.logo_sidebar} alt="logo" className="h-12 w-full object-contain" />
+                : <img src="/logo jprocesso sem fundo.png" alt="jProcesso" className="h-12 w-full object-contain" />
+              }
               <button
                 onClick={() => setSidebarOpen(false)}
-                className="lg:hidden p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                className="lg:hidden p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 flex-shrink-0 ml-1"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -243,6 +235,13 @@ export default function Layout() {
               >
                 <Menu className="h-5 w-5" />
               </button>
+
+              {/* Logo do sistema — canto esquerdo da barra superior */}
+              <img
+                src="/logo jprocessos 2.png"
+                alt="jProcesso"
+                className="h-7 object-contain flex-shrink-0"
+              />
 
               {nomeEntidade && (
                 <span className="font-bold uppercase tracking-wide text-gray-800 dark:text-gray-100 text-base truncate flex-1">
