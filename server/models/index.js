@@ -127,7 +127,7 @@ const initTenantModels = (sequelize) => {
   // Financeiro associations
   FinanceiroLancamento.belongsTo(Processo, { foreignKey: 'processo_id', as: 'processo' });
   Processo.hasMany(FinanceiroLancamento, { foreignKey: 'processo_id', as: 'lancamentos' });
-  FinanceiroLancamento.belongsTo(Setor, { foreignKey: 'setor_id', as: 'setor' });
+  FinanceiroLancamento.belongsTo(Secretaria, { foreignKey: 'secretaria_id', as: 'secretaria' });
   FinanceiroLancamento.belongsTo(User, { foreignKey: 'usuario_id', as: 'usuario' });
 
   // DID associations
@@ -180,6 +180,7 @@ const initTenantModels = (sequelize) => {
     Did,
     Credor,
     ContratoItem,
+    ContratoItemVinculo,
     Contrato,
     PatGrupo,
     PatBem,

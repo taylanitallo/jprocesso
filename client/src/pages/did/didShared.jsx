@@ -114,12 +114,12 @@ export function SectionCard({ icon: Icon, title, color, children }) {
   )
 }
 
-export function SecaoBotoes({ locked, onAlterar, onSalvar, saving, label, editando }) {
+export function SecaoBotoes({ locked, onAlterar, onSalvar, saving, label }) {
   return (
     <div className="col-span-2 flex justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-700 mt-1">
       {locked ? (
-        <button type="button" onClick={onAlterar} disabled={!editando}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+        <button type="button" onClick={onAlterar}
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
           <Pencil className="w-3.5 h-3.5" /> Alterar
         </button>
       ) : (

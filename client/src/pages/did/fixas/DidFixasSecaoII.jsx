@@ -2,10 +2,9 @@ import { Shield } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Field, Input, Textarea, SectionCard, SecaoBotoes } from '../didShared'
 
-export default function DidFixasSecaoII({ form, inp, saving, didId, onSave, editando }) {
+export default function DidFixasSecaoII({ form, inp, saving, didId, onSave }) {
   const [locked, setLocked] = useState(false)
   useEffect(() => { if (didId) setLocked(true) }, [didId])
-  useEffect(() => { setLocked(!editando) }, [editando])
 
   const salvar = async () => {
     const ok = await onSave?.()
@@ -24,7 +23,7 @@ export default function DidFixasSecaoII({ form, inp, saving, didId, onSave, edit
       <Field label="Despacho via C.I.">
         <Textarea value={form.despacho_ci} onChange={inp('despacho_ci')} disabled={locked} />
       </Field>
-      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção II" editando={editando} />
+      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção II" />
     </SectionCard>
   )
 }

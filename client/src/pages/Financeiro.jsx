@@ -606,7 +606,7 @@ export default function Financeiro() {
 
   // ── Relatório state
   const [relatorio, setRelatorio] = useState(null)
-  const [relFiltros, setRelFiltros] = useState({ data_inicio: '', data_fim: '', categoria: '' })
+  const [relFiltros, setRelFiltros] = useState({ data_inicio: '', data_fim: '', tipo: '' })
   const [relLoading, setRelLoading] = useState(false)
 
   const anos = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i)
@@ -1405,14 +1405,15 @@ export default function Financeiro() {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Categoria</label>
-                <select className="input-field" value={relFiltros.categoria} onChange={e => setRelFiltros(f => ({ ...f, categoria: e.target.value }))}>
+                <select className="input-field" value={relFiltros.tipo} onChange={e => setRelFiltros(f => ({ ...f, tipo: e.target.value }))}>
                   <option value="">Todas</option>
-                  {CATEGORIAS.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+                  <option value="fixas">Fixas</option>
+                  <option value="variaveis">Variáveis</option>
                 </select>
               </div>
               <div className="flex items-end gap-2">
                 <button className="btn-primary text-sm flex-1" onClick={loadRelatorio}>📊 Gerar</button>
-                <button className="btn-secondary text-sm" onClick={() => setRelFiltros({ data_inicio: '', data_fim: '', categoria: '' })}>✕</button>
+                <button className="btn-secondary text-sm" onClick={() => setRelFiltros({ data_inicio: '', data_fim: '', tipo: '' })}>✕</button>
               </div>
             </div>
           </div>
@@ -1432,17 +1433,20 @@ export default function Financeiro() {
                 <div className="card p-5">
                   <p className="section-header mb-4">📊 Por Status</p>
                   <div className="space-y-2">
-                    {relatorio.porStatus?.map((s, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
-                        <span className={'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ' + STATUS_LABELS[s.status]?.color}>
-                          {STATUS_LABELS[s.status]?.emoji} {STATUS_LABELS[s.status]?.label || s.status}
-                        </span>
-                        <div className="text-right">
-                          <p className="font-semibold text-gray-900 dark:text-white">{fmtMoeda(s.total)}</p>
-                          <p className="text-xs text-gray-400">{s.qtd} lanç.</p>
+                    {relatorio.porStatus?.map((s, i) => {
+                      const pago = s.pago === 'sim'
+                      return (
+                        <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${pago ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300'}`}>
+                            {pago ? '✅' : '⏳'} {pago ? 'Pago' : 'Pendente'}
+                          </span>
+                          <div className="text-right">
+                            <p className="font-semibold text-gray-900 dark:text-white">{fmtMoeda(s.total)}</p>
+                            <p className="text-xs text-gray-400">{s.qtd} DID(s)</p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                     {relatorio.porStatus?.length === 0 && <p className="text-sm text-gray-400 text-center py-4">Sem dados</p>}
                   </div>
                 </div>
@@ -1453,10 +1457,10 @@ export default function Financeiro() {
                   <div className="space-y-2">
                     {relatorio.porTipo?.map((t, i) => (
                       <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
-                        <span className="text-sm capitalize text-gray-700 dark:text-gray-300">{t.tipo}</span>
+                        <span className="text-sm capitalize text-gray-700 dark:text-gray-300">{t.tipo_did || 'Não informado'}</span>
                         <div className="text-right">
                           <p className="font-semibold text-gray-900 dark:text-white">{fmtMoeda(t.total)}</p>
-                          <p className="text-xs text-gray-400">{t.qtd} lanç.</p>
+                          <p className="text-xs text-gray-400">{t.qtd} DID(s)</p>
                         </div>
                       </div>
                     ))}
@@ -1464,44 +1468,44 @@ export default function Financeiro() {
                   </div>
                 </div>
 
-                {/* Por categoria */}
+                {/* Por secretaria */}
                 <div className="card p-5">
-                  <p className="section-header mb-4">📂 Por Categoria</p>
+                  <p className="section-header mb-4">📂 Por Secretaria</p>
                   <div className="space-y-3">
-                    {relatorio.porCategoria?.map((c, i) => {
+                    {relatorio.porSecretaria?.map((s, i) => {
                       const pct = parseFloat(relatorio.valorTotal) > 0
-                        ? Math.round((parseFloat(c.total) / parseFloat(relatorio.valorTotal)) * 100)
+                        ? Math.round((parseFloat(s.total) / parseFloat(relatorio.valorTotal)) * 100)
                         : 0
                       return (
                         <div key={i}>
                           <div className="flex justify-between text-sm mb-1">
-                            <span className="text-gray-700 dark:text-gray-300 capitalize">{c.categoria || 'outros'}</span>
-                            <span className="font-semibold text-gray-900 dark:text-white">{fmtMoeda(c.total)} <span className="text-xs text-gray-400">({pct}%)</span></span>
+                            <span className="text-gray-700 dark:text-gray-300 capitalize">{s.secretaria || 'Não informada'}</span>
+                            <span className="font-semibold text-gray-900 dark:text-white">{fmtMoeda(s.total)} <span className="text-xs text-gray-400">({pct}%)</span></span>
                           </div>
                           <div className="h-2 bg-gray-100 dark:bg-gray-600 rounded-full">
-                            <div className="h-2 bg-green-500 rounded-full" style={{ width: pct + '%' }} />
+                            <div className="h-2 bg-blue-500 rounded-full" style={{ width: pct + '%' }} />
                           </div>
                         </div>
                       )
                     })}
-                    {relatorio.porCategoria?.length === 0 && <p className="text-sm text-gray-400 text-center py-4">Sem dados</p>}
+                    {relatorio.porSecretaria?.length === 0 && <p className="text-sm text-gray-400 text-center py-4">Sem dados</p>}
                   </div>
                 </div>
 
-                {/* Por setor */}
+                {/* Por credor */}
                 <div className="card p-5">
-                  <p className="section-header mb-4">🏛️ Por Setor</p>
+                  <p className="section-header mb-4">🏛️ Por Credor</p>
                   <div className="space-y-2">
-                    {relatorio.porSetor?.map((s, i) => (
+                    {relatorio.porCredor?.map((c, i) => (
                       <div key={i} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                        <span className="text-sm text-gray-700 dark:text-gray-300">{s.setor?.nome || 'Sem setor'}</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">{c.credor || 'Não informado'}</span>
                         <div className="text-right">
-                          <p className="font-semibold text-gray-900 dark:text-white">{fmtMoeda(s.dataValues?.total || s.total)}</p>
-                          <p className="text-xs text-gray-400">{s.dataValues?.qtd || s.qtd} lanç.</p>
+                          <p className="font-semibold text-gray-900 dark:text-white">{fmtMoeda(c.total)}</p>
+                          <p className="text-xs text-gray-400">{c.qtd} DID(s)</p>
                         </div>
                       </div>
                     ))}
-                    {relatorio.porSetor?.length === 0 && <p className="text-sm text-gray-400 text-center py-4">Sem dados</p>}
+                    {relatorio.porCredor?.length === 0 && <p className="text-sm text-gray-400 text-center py-4">Sem dados</p>}
                   </div>
                 </div>
               </div>

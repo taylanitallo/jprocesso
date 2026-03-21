@@ -202,7 +202,6 @@ export default function DidVariaveisSecaoI({
   didId,
   onSaveSecaoI,
   saving,
-  editando,
 }) {
   const [contratos, setContratos] = useState([])
   const [credoresStorage, setCredoresStorage] = useState([])
@@ -218,7 +217,7 @@ export default function DidVariaveisSecaoI({
   const [stockData, setStockData] = useState({})
   const [almStockData, setAlmStockData] = useState({})
   const [loadingStock, setLoadingStock] = useState(false)
-  useEffect(() => { setLocked(!editando) }, [editando])
+  useEffect(() => { if (didId) setLocked(true) }, [didId])
 
   useEffect(() => {
     if (form.contrato_ref && !contratoSel) {
@@ -600,8 +599,8 @@ export default function DidVariaveisSecaoI({
       {/* Botões */}
       <div className="col-span-2 flex justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-700 mt-1">
         {locked ? (
-            <button type="button" onClick={() => setLocked(false)} disabled={!editando}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+            <button type="button" onClick={() => setLocked(false)}
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
             <Pencil className="w-3.5 h-3.5" /> Alterar
           </button>
         ) : (

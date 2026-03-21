@@ -244,6 +244,7 @@ export default function FormularioDid() {
   }
   const [loading, setLoading]   = useState(true)
   const [saving, setSaving]     = useState(false)
+  const [savingDid, setSavingDid] = useState(false)
   const [editando, setEditando] = useState(processoId === 'novo')
   const [msg, setMsg]           = useState(null) // { ok, text }
   const [processo, setProcesso] = useState(null)
@@ -421,7 +422,6 @@ export default function FormularioDid() {
       SECAO_I_FIELDS.forEach(k => { payload[k] = form[k] })
       const { data } = await api.post(`/did/processo/${targetId}`, payload)
       setDid(data.did)
-      setEditando(false)
       setMsg({ ok: true, text: `Seção I — DID Nº ${data.did.numero_did} salva com sucesso!` })
       if (processoId === 'novo') {
         navigate(`/${subdomain}/processos/${targetId}/did`, { replace: true })
@@ -443,7 +443,6 @@ export default function FormularioDid() {
       const targetId = await criarProcessoSeNovo()
       const { data } = await api.post(`/did/processo/${targetId}`, { ...form, tipo_did: tipoDid, itens_did: itensDid })
       setDid(data.did)
-      setEditando(false)
       setMsg({ ok: true, text: `DID Nº ${data.did.numero_did} salvo com sucesso!` })
       if (processoId === 'novo') {
         navigate(`/${subdomain}/processos/${targetId}/did`, { replace: true })
@@ -456,6 +455,28 @@ export default function FormularioDid() {
       return false
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleSaveDid = async () => {
+    setSavingDid(true)
+    try {
+      const targetId = await criarProcessoSeNovo()
+      const { data } = await api.post(`/did/processo/${targetId}`, { ...form, tipo_did: tipoDid, itens_did: itensDid })
+      setDid(data.did)
+      setEditando(false)
+      setMsg({ ok: true, text: `DID Nº ${data.did.numero_did} salvo com sucesso!` })
+      if (processoId === 'novo') {
+        navigate(`/${subdomain}/processos/${targetId}/did`, { replace: true })
+        return true
+      }
+      setTimeout(() => setMsg(null), 4000)
+      return true
+    } catch (err) {
+      setMsg({ ok: false, text: err.response?.data?.error || 'Erro ao salvar Processo' })
+      return false
+    } finally {
+      setSavingDid(false)
     }
   }
 
@@ -549,9 +570,9 @@ export default function FormularioDid() {
             className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
             ✏️ Alterar
           </button>
-          <button onClick={handleSave} disabled={saving || !editando} className="btn-primary flex items-center gap-2 py-1.5 text-sm">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            {saving ? '⏳ Salvando...' : '✅ Salvar'}
+          <button onClick={handleSaveDid} disabled={savingDid || !editando} className="btn-primary flex items-center gap-2 py-1.5 text-sm">
+            {savingDid ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {savingDid ? '⏳ Salvando...' : '✅ Salvar'}
           </button>
         </div>
       </div>
@@ -649,14 +670,13 @@ export default function FormularioDid() {
             didId={did?.id}
             onSaveSecaoI={handleSaveSecaoI}
             saving={saving}
-            editando={editando}
           />
-          <DidFixasSecaoII form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} editando={editando} />
-          <DidFixasSecaoIII form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} editando={editando} />
-          <DidFixasSecaoIV form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} editando={editando} />
-          <DidFixasSecaoV form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} editando={editando} />
-          <DidFixasSecaoVI form={form} inp={inp} chk={chk} vliq={vliq} saving={saving} didId={did?.id} onSave={handleSave} editando={editando} />
-          <DidFixasSecaoVII form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} editando={editando} />
+          <DidFixasSecaoII form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} />
+          <DidFixasSecaoIII form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} />
+          <DidFixasSecaoIV form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} />
+          <DidFixasSecaoV form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} />
+          <DidFixasSecaoVI form={form} inp={inp} chk={chk} vliq={vliq} saving={saving} didId={did?.id} onSave={handleSave} />
+          <DidFixasSecaoVII form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} />
         </>
       ) : (
         <>
@@ -673,25 +693,23 @@ export default function FormularioDid() {
             didId={did?.id}
             onSaveSecaoI={handleSaveSecaoI}
             saving={saving}
-            editando={editando}
           />
-          <DidVariaveisSecaoII form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} editando={editando} />
-          <DidVariaveisSecaoIII form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} editando={editando} />
-          <DidVariaveisSecaoIV form={form} inp={inp} set={set} saving={saving} didId={did?.id} onSave={handleSave} editando={editando} />
-          <DidVariaveisSecaoV form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} editando={editando} />
-          <DidVariaveisSecaoVI form={form} inp={inp} set={set} saving={saving} didId={did?.id} onSave={handleSave} editando={editando} />
+          <DidVariaveisSecaoII form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} />
+          <DidVariaveisSecaoIII form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} />
+          <DidVariaveisSecaoIV form={form} inp={inp} set={set} saving={saving} didId={did?.id} onSave={handleSave} />
+          <DidVariaveisSecaoV form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} />
+          <DidVariaveisSecaoVI form={form} inp={inp} set={set} saving={saving} didId={did?.id} onSave={handleSave} />
           <DidVariaveisSecaoVII
             form={form} inp={inp} chk={chk}
             saving={saving}
             didId={did?.id}
             onSave={handleSave}
-            editando={editando}
           />
-          <DidVariaveisSecaoVIII form={form} inp={inp} set={set} saving={saving} didId={did?.id} onSave={handleSave} editando={editando} />
-          <DidVariaveisSecaoIX form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} editando={editando} />
-          <DidVariaveisSecaoX form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} editando={editando} />
-          <DidVariaveisSecaoXI form={form} inp={inp} chk={chk} vliq={vliq} saving={saving} didId={did?.id} onSave={handleSave} editando={editando} />
-          <DidVariaveisSecaoXII form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} editando={editando} />
+          <DidVariaveisSecaoVIII form={form} inp={inp} set={set} saving={saving} didId={did?.id} onSave={handleSave} />
+          <DidVariaveisSecaoIX form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} />
+          <DidVariaveisSecaoX form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} />
+          <DidVariaveisSecaoXI form={form} inp={inp} chk={chk} vliq={vliq} saving={saving} didId={did?.id} onSave={handleSave} />
+          <DidVariaveisSecaoXII form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} />
         </>
       )}
 
@@ -713,9 +731,9 @@ export default function FormularioDid() {
           className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
           ✏️ Alterar
         </button>
-        <button onClick={handleSave} disabled={saving || !editando} className="btn-primary flex items-center gap-2">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          {saving ? '⏳ Salvando...' : '✅ Salvar Processo'}
+        <button onClick={handleSaveDid} disabled={savingDid || !editando} className="btn-primary flex items-center gap-2">
+          {savingDid ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          {savingDid ? '⏳ Salvando...' : '✅ Salvar Processo'}
         </button>
       </div>
     </div>

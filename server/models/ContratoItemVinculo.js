@@ -10,6 +10,7 @@ module.exports = (sequelize) => {
     unidade:        { type: DataTypes.STRING(50) },
     quantidade:     { type: DataTypes.DECIMAL(15, 4) },
     valor_unitario: { type: DataTypes.DECIMAL(15, 2) },
+    // Coluna GENERATED ALWAYS no banco (quantidade * valor_unitario) — não inserir manualmente
     valor_total:    { type: DataTypes.DECIMAL(15, 2) },
     ordem:          { type: DataTypes.INTEGER, defaultValue: 0 },
   }, {

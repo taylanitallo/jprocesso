@@ -16,7 +16,7 @@ async function ensureTables(req) {
 const getDashboard = async (req, res) => {
   try {
     await ensureTables(req);
-    const { FinanceiroLancamento, Processo, Setor, User, Did } = req.models;
+    const { FinanceiroLancamento, Processo, User, Did } = req.models;
     const {
       ano = new Date().getFullYear(),
       // novos filtros DID — valores podem vir como string separada por vírgula ou array
@@ -183,14 +183,7 @@ const getDashboard = async (req, res) => {
     ]);
 
     // Lançamentos (mantidos para compatibilidade — exibidos se houver dados)
-    const hoje = new Date().toISOString().split('T')[0];
-    const em30dias = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
-    const [vencimentosProximos, porCategoria, porMes, ultimosLancamentos] = await Promise.all([
-      FinanceiroLancamento.findAll({
-        where: { status: 'pendente', data_vencimento: { [Op.between]: [hoje, em30dias] } },
-        include: [{ model: Setor, as: 'setor', attributes: ['nome'] }, { model: Processo, as: 'processo', attributes: ['numero', 'assunto'] }],
-        order: [['data_vencimento', 'ASC']], limit: 10
-      }),
+    const [porCategoria, porMes, ultimosLancamentos] = await Promise.all([
       FinanceiroLancamento.findAll({
         attributes: ['categoria', [fn('SUM', col('valor')), 'total'], [fn('COUNT', col('id')), 'qtd']],
         where: { ...whereBase, status: { [Op.not]: 'cancelado' } },
@@ -203,10 +196,11 @@ const getDashboard = async (req, res) => {
         order: [[fn('DATE_TRUNC', 'month', col('data_lancamento')), 'ASC']]
       }),
       FinanceiroLancamento.findAll({
-        include: [{ model: Setor, as: 'setor', attributes: ['nome'] }, { model: Processo, as: 'processo', attributes: ['numero', 'assunto'] }],
+        include: [{ model: Processo, as: 'processo', attributes: ['numero', 'assunto'] }],
         order: [['data_lancamento', 'DESC'], ['created_at', 'DESC']], limit: 8
       })
     ]);
+    const vencimentosProximos = [];
 
     res.json({
       totais: {
@@ -290,9 +284,9 @@ const getDashboardOptions = async (req, res) => {
 const listLancamentos = async (req, res) => {
   try {
     await ensureTables(req);
-    const { FinanceiroLancamento, Processo, Setor, User } = req.models;
+    const { FinanceiroLancamento, Processo, User } = req.models;
     const {
-      status, tipo, categoria, setor_id, processo_id,
+      status, tipo, categoria, secretaria_id, processo_id,
       data_inicio, data_fim, busca,
       page = 1, limit = 20
     } = req.query;
@@ -301,7 +295,7 @@ const listLancamentos = async (req, res) => {
     if (status) where.status = status;
     if (tipo) where.tipo = tipo;
     if (categoria) where.categoria = categoria;
-    if (setor_id) where.setor_id = setor_id;
+    if (secretaria_id) where.secretaria_id = secretaria_id;
     if (processo_id) where.processo_id = processo_id;
     if (data_inicio || data_fim) {
       where.data_lancamento = {};
@@ -311,8 +305,8 @@ const listLancamentos = async (req, res) => {
     if (busca) {
       where[Op.or] = [
         { descricao: { [Op.iLike]: `%${busca}%` } },
-        { fornecedor_nome: { [Op.iLike]: `%${busca}%` } },
-        { numero_documento: { [Op.iLike]: `%${busca}%` } }
+        { empenho: { [Op.iLike]: `%${busca}%` } },
+        { dotacao: { [Op.iLike]: `%${busca}%` } }
       ];
     }
 
@@ -320,7 +314,6 @@ const listLancamentos = async (req, res) => {
     const { count, rows } = await FinanceiroLancamento.findAndCountAll({
       where,
       include: [
-        { model: Setor, as: 'setor', attributes: ['nome'] },
         { model: Processo, as: 'processo', attributes: ['numero', 'assunto', 'status'] },
         { model: User, as: 'usuario', attributes: ['nome'] }
       ],
@@ -342,9 +335,9 @@ const createLancamento = async (req, res) => {
     await ensureTables(req);
     const { FinanceiroLancamento, Processo } = req.models;
     const {
-      processo_id, numero_documento, tipo, categoria,
-      fornecedor_nome, fornecedor_cpf_cnpj, descricao,
-      valor, data_lancamento, data_vencimento, setor_id, observacao
+      processo_id, tipo, categoria, descricao,
+      valor, data_lancamento, secretaria_id,
+      dotacao, empenho, observacoes
     } = req.body;
 
     if (!descricao || !valor || !data_lancamento) {
@@ -355,26 +348,21 @@ const createLancamento = async (req, res) => {
     if (processo_id) {
       const proc = await Processo.findByPk(processo_id);
       if (!proc) return res.status(404).json({ error: 'Processo não encontrado' });
-      if (proc.tipo_processo !== 'Did') {
-        return res.status(400).json({ error: 'Apenas processos do tipo DID podem ser vinculados' });
-      }
     }
 
     const lancamento = await FinanceiroLancamento.create({
       processo_id: processo_id || null,
-      numero_documento,
-      tipo: tipo || 'outros',
-      categoria: categoria || 'outros',
-      fornecedor_nome,
-      fornecedor_cpf_cnpj,
+      tipo: tipo || null,
+      categoria: categoria || null,
       descricao,
       valor: parseFloat(valor),
       data_lancamento,
-      data_vencimento: data_vencimento || null,
-      setor_id: setor_id || null,
+      secretaria_id: secretaria_id || null,
+      dotacao: dotacao || null,
+      empenho: empenho || null,
       status: 'pendente',
-      usuario_id: req.user.id,
-      observacao
+      usuario_id: req.user?.id || null,
+      observacoes: observacoes || null
     });
 
     res.status(201).json(lancamento);
@@ -392,9 +380,8 @@ const updateLancamento = async (req, res) => {
     if (!lancamento) return res.status(404).json({ error: 'Lançamento não encontrado' });
 
     const campos = [
-      'numero_documento', 'tipo', 'categoria', 'fornecedor_nome', 'fornecedor_cpf_cnpj',
-      'descricao', 'valor', 'data_lancamento', 'data_vencimento', 'data_pagamento',
-      'status', 'setor_id', 'observacao'
+      'tipo', 'categoria', 'descricao', 'valor', 'data_lancamento',
+      'secretaria_id', 'dotacao', 'empenho', 'status', 'observacoes'
     ];
     const updates = {};
     campos.forEach(c => { if (req.body[c] !== undefined) updates[c] = req.body[c]; });
@@ -431,8 +418,7 @@ const pagarLancamento = async (req, res) => {
     if (!lancamento) return res.status(404).json({ error: 'Lançamento não encontrado' });
     if (lancamento.status === 'pago') return res.status(400).json({ error: 'Lançamento já quitado' });
 
-    const hoje = new Date().toISOString().split('T')[0];
-    await lancamento.update({ status: 'pago', data_pagamento: req.body.data_pagamento || hoje });
+    await lancamento.update({ status: 'pago' });
     res.json(lancamento);
   } catch (error) {
     res.status(500).json({ error: 'Erro ao quitar lançamento' });
@@ -527,56 +513,74 @@ const getProcessosDid = async (req, res) => {
 };
 
 // ============================================================
-// RELATÓRIO RESUMIDO
+// RELATÓRIO RESUMIDO — baseado em DIDs
 // ============================================================
 const getRelatorio = async (req, res) => {
   try {
-    await ensureTables(req);
-    const { FinanceiroLancamento, Setor } = req.models;
-    const { data_inicio, data_fim, categoria, setor_id } = req.query;
+    const { Did } = req.models;
+    const { data_inicio, data_fim, tipo } = req.query;
 
-    const where = { status: { [Op.not]: 'cancelado' } };
+    const where = {};
     if (data_inicio || data_fim) {
-      where.data_lancamento = {};
-      if (data_inicio) where.data_lancamento[Op.gte] = data_inicio;
-      if (data_fim) where.data_lancamento[Op.lte] = data_fim;
+      where.data_did = {};
+      if (data_inicio) where.data_did[Op.gte] = data_inicio;
+      if (data_fim)    where.data_did[Op.lte] = data_fim;
     }
-    if (categoria) where.categoria = categoria;
-    if (setor_id) where.setor_id = setor_id;
+    if (tipo) where.tipo_did = tipo;
 
-    const porStatus = await FinanceiroLancamento.findAll({
-      attributes: ['status', [fn('SUM', col('valor')), 'total'], [fn('COUNT', col('id')), 'qtd']],
-      where,
-      group: ['status'],
-      raw: true
+    const [porStatus, porTipo, porSecretaria, porCredor, valorTotal] = await Promise.all([
+      // Por status de pagamento
+      Did.findAll({
+        attributes: ['pago', [fn('SUM', col('valor_bruto')), 'total'], [fn('COUNT', col('id')), 'qtd']],
+        where,
+        group: ['pago'],
+        order: [[literal('total'), 'DESC']],
+        raw: true
+      }),
+      // Por tipo (fixas / variáveis)
+      Did.findAll({
+        attributes: ['tipo_did', [fn('SUM', col('valor_bruto')), 'total'], [fn('COUNT', col('id')), 'qtd']],
+        where,
+        group: ['tipo_did'],
+        order: [[literal('total'), 'DESC']],
+        raw: true
+      }),
+      // Por secretaria
+      Did.findAll({
+        attributes: [
+          ['secretaria_sec1', 'secretaria'],
+          [fn('SUM', col('valor_bruto')), 'total'],
+          [fn('COUNT', col('id')), 'qtd']
+        ],
+        where: { ...where, secretaria_sec1: { [Op.not]: null } },
+        group: ['secretaria_sec1'],
+        order: [[literal('total'), 'DESC']],
+        limit: 10,
+        raw: true
+      }),
+      // Por credor (top 10)
+      Did.findAll({
+        attributes: [
+          ['credor_sec1', 'credor'],
+          [fn('SUM', col('valor_bruto')), 'total'],
+          [fn('COUNT', col('id')), 'qtd']
+        ],
+        where: { ...where, credor_sec1: { [Op.not]: null } },
+        group: ['credor_sec1'],
+        order: [[literal('total'), 'DESC']],
+        limit: 10,
+        raw: true
+      }),
+      Did.sum('valor_bruto', { where })
+    ]);
+
+    res.json({
+      valorTotal: parseFloat(valorTotal || 0).toFixed(2),
+      porStatus,
+      porTipo,
+      porSecretaria,
+      porCredor
     });
-
-    const porCategoria = await FinanceiroLancamento.findAll({
-      attributes: ['categoria', [fn('SUM', col('valor')), 'total'], [fn('COUNT', col('id')), 'qtd']],
-      where,
-      group: ['categoria'],
-      order: [[literal('total'), 'DESC']],
-      raw: true
-    });
-
-    const porSetor = await FinanceiroLancamento.findAll({
-      attributes: ['setor_id', [fn('SUM', col('valor')), 'total'], [fn('COUNT', col('FinanceiroLancamento.id')), 'qtd']],
-      where,
-      include: [{ model: Setor, as: 'setor', attributes: ['nome'] }],
-      group: ['FinanceiroLancamento.setor_id', 'setor.id', 'setor.nome'],
-      order: [[literal('total'), 'DESC']]
-    });
-
-    const porTipo = await FinanceiroLancamento.findAll({
-      attributes: ['tipo', [fn('SUM', col('valor')), 'total'], [fn('COUNT', col('id')), 'qtd']],
-      where,
-      group: ['tipo'],
-      raw: true
-    });
-
-    const valorTotal = await FinanceiroLancamento.sum('valor', { where }) || 0;
-
-    res.json({ valorTotal: parseFloat(valorTotal).toFixed(2), porStatus, porCategoria, porSetor, porTipo });
   } catch (error) {
     console.error('Erro getRelatorio financeiro:', error);
     res.status(500).json({ error: 'Erro ao gerar relatório' });

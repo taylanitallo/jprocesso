@@ -2,10 +2,9 @@ import { ClipboardCheck } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Field, Input, Textarea, Checkbox, SectionCard, SecaoBotoes } from '../didShared'
 
-export default function DidVariaveisSecaoVII({ form, inp, chk, saving, didId, onSave, editando }) {
+export default function DidVariaveisSecaoVII({ form, inp, chk, saving, didId, onSave }) {
   const [locked, setLocked] = useState(false)
   useEffect(() => { if (didId) setLocked(true) }, [didId])
-  useEffect(() => { setLocked(!editando) }, [editando])
 
   const salvar = async () => {
     const ok = await onSave?.()
@@ -119,7 +118,6 @@ export default function DidVariaveisSecaoVII({ form, inp, chk, saving, didId, on
         onSalvar={salvar}
         saving={saving}
         label="Salvar Atestado"
-        editando={editando}
       />
     </SectionCard>
   )

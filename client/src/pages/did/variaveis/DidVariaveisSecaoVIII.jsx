@@ -2,10 +2,9 @@ import { ShoppingCart } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Field, Input, SectionCard, SecaoBotoes } from '../didShared'
 
-export default function DidVariaveisSecaoVIII({ form, inp, set, saving, didId, onSave, editando }) {
+export default function DidVariaveisSecaoVIII({ form, inp, set, saving, didId, onSave }) {
   const [locked, setLocked] = useState(false)
   useEffect(() => { if (didId) setLocked(true) }, [didId])
-  useEffect(() => { setLocked(!editando) }, [editando])
 
   const salvar = async () => {
     const ok = await onSave?.()
@@ -26,7 +25,7 @@ export default function DidVariaveisSecaoVIII({ form, inp, set, saving, didId, o
         <Input type="date" value={form.compras3_local_entrega} onChange={inp('compras3_local_entrega')} disabled={locked} />
       </Field>
 
-      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Setor de Compras" editando={editando} />
+      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Setor de Compras" />
     </SectionCard>
   )
 }

@@ -7,79 +7,53 @@ const defineFinanceiroLancamentoModel = (sequelize) => {
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true
     },
-    processo_id: {
-      type: DataTypes.UUID,
-      allowNull: true,
-      comment: 'FK: Processo DID vinculado (opcional)'
-    },
-    numero_documento: {
-      type: DataTypes.STRING(50),
-      allowNull: true,
-      comment: 'Número da nota fiscal, empenho, contrato, etc.'
-    },
     tipo: {
-      type: DataTypes.ENUM('empenho', 'liquidacao', 'pagamento', 'receita', 'outros'),
-      defaultValue: 'outros',
-      comment: 'Tipo do lançamento financeiro'
+      type: DataTypes.STRING(50),
+      allowNull: true
     },
     categoria: {
       type: DataTypes.STRING(50),
-      allowNull: true,
-      comment: 'Categoria: material, servicos, pessoal, obras, outros'
-    },
-    fornecedor_nome: {
-      type: DataTypes.STRING,
-      allowNull: true,
-      comment: 'Nome do fornecedor/credor'
-    },
-    fornecedor_cpf_cnpj: {
-      type: DataTypes.STRING(14),
-      allowNull: true,
-      comment: 'CPF ou CNPJ do fornecedor (sem pontuação)'
+      allowNull: true
     },
     descricao: {
       type: DataTypes.STRING,
-      allowNull: false,
-      comment: 'Descrição resumida do lançamento'
+      allowNull: false
     },
     valor: {
       type: DataTypes.DECIMAL(15, 2),
       allowNull: false,
-      defaultValue: 0,
-      comment: 'Valor do lançamento'
+      defaultValue: 0
     },
     data_lancamento: {
       type: DataTypes.DATEONLY,
-      allowNull: false,
-      comment: 'Data do lançamento'
+      allowNull: false
     },
-    data_vencimento: {
-      type: DataTypes.DATEONLY,
-      allowNull: true,
-      comment: 'Data de vencimento (para despesas a pagar)'
+    secretaria_id: {
+      type: DataTypes.UUID,
+      allowNull: true
     },
-    data_pagamento: {
-      type: DataTypes.DATEONLY,
-      allowNull: true,
-      comment: 'Data efetiva do pagamento'
+    processo_id: {
+      type: DataTypes.UUID,
+      allowNull: true
+    },
+    dotacao: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    empenho: {
+      type: DataTypes.STRING,
+      allowNull: true
     },
     status: {
-      type: DataTypes.ENUM('pendente', 'pago', 'cancelado', 'vencido'),
-      defaultValue: 'pendente',
-      comment: 'Status do pagamento'
+      type: DataTypes.STRING(20),
+      defaultValue: 'pendente'
     },
-    setor_id: {
-      type: DataTypes.UUID,
-      allowNull: true,
-      comment: 'FK: Setor que gerou a despesa'
+    observacoes: {
+      type: DataTypes.TEXT,
+      allowNull: true
     },
     usuario_id: {
       type: DataTypes.UUID,
-      allowNull: false,
-      comment: 'FK: Usuário que registrou'
-    },
-    observacao: {
-      type: DataTypes.TEXT,
       allowNull: true
     }
   }, {

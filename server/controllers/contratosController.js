@@ -185,7 +185,7 @@ const syncItens = async (ContratoItemVinculo, contratoId, itens) => {
       unidade:        it.unidade || null,
       quantidade:     it.quantidade ? parseFloat(String(it.quantidade).replace(',', '.')) : null,
       valor_unitario: it.valor_unitario ? parseFloat(String(it.valor_unitario).replace(',', '.')) : null,
-      valor_total:    it.valor_total ? parseFloat(String(it.valor_total).replace(',', '.')) : null,
+      // valor_total é GENERATED ALWAYS (quantidade * valor_unitario) — não incluir no INSERT
       ordem:          idx,
     }));
   if (rows.length) await ContratoItemVinculo.bulkCreate(rows);

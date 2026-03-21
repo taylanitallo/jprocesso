@@ -2917,7 +2917,10 @@ function TabContratos() {
       const { data: atualizado } = await api.put(`/contratos/${selecionado}`, data)
       setContratos(prev => prev.map(c => c.id === selecionado ? atualizado : c))
       setModal(null)
-    } catch { alert('Erro ao salvar contrato.') }
+    } catch (err) {
+      const msg = err.response?.data?.error || err.message || 'Erro desconhecido'
+      alert(`Erro ao salvar contrato: ${msg}`)
+    }
   }
   const excluir = async () => {
     try {

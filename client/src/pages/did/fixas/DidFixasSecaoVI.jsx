@@ -48,10 +48,9 @@ function BancoSelect({ value, onChange, disabled }) {
   )
 }
 
-export default function DidFixasSecaoVI({ form, inp, chk, vliq, saving, didId, onSave, editando }) {
+export default function DidFixasSecaoVI({ form, inp, chk, vliq, saving, didId, onSave }) {
   const [locked, setLocked] = useState(false)
   useEffect(() => { if (didId) setLocked(true) }, [didId])
-  useEffect(() => { setLocked(!editando) }, [editando])
 
   const salvar = async () => {
     const ok = await onSave?.()
@@ -185,7 +184,7 @@ export default function DidFixasSecaoVI({ form, inp, chk, vliq, saving, didId, o
         )}
       </div>
 
-      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção VI" editando={editando} />
+      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção VI" />
     </SectionCard>
   )
 }

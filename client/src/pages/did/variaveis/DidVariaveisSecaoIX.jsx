@@ -2,10 +2,9 @@ import { Calculator } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Field, Input, SectionCard, SecaoBotoes } from '../didShared'
 
-export default function DidVariaveisSecaoIX({ form, inp, saving, didId, onSave, editando }) {
+export default function DidVariaveisSecaoIX({ form, inp, saving, didId, onSave }) {
   const [locked, setLocked] = useState(false)
   useEffect(() => { if (didId) setLocked(true) }, [didId])
-  useEffect(() => { setLocked(!editando) }, [editando])
 
   const salvar = async () => {
     const ok = await onSave?.()
@@ -30,7 +29,7 @@ export default function DidVariaveisSecaoIX({ form, inp, saving, didId, onSave, 
       <Field label="Data da Liquidação" half>
         <Input type="date" value={form.contabil_pc_data_liquidacao} onChange={inp('contabil_pc_data_liquidacao')} disabled={locked} />
       </Field>
-      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Contabilidade" editando={editando} />
+      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Contabilidade" />
     </SectionCard>
   )
 }

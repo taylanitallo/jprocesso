@@ -17,10 +17,9 @@ function SimNao({ value, onChange, disabled }) {
   )
 }
 
-export default function DidFixasSecaoVII({ form, inp, saving, didId, onSave, editando }) {
+export default function DidFixasSecaoVII({ form, inp, saving, didId, onSave }) {
   const [locked, setLocked] = useState(false)
   useEffect(() => { if (didId) setLocked(true) }, [didId])
-  useEffect(() => { setLocked(!editando) }, [editando])
 
   const salvar = async () => {
     const ok = await onSave?.()
@@ -36,7 +35,7 @@ export default function DidFixasSecaoVII({ form, inp, saving, didId, onSave, edi
       <Field label="Enviado para o TCE/SIM" half>
         <SimNao value={form.contab_fech_tce} onChange={inp('contab_fech_tce')} disabled={locked} />
       </Field>
-      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção VII" editando={editando} />
+      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção VII" />
     </SectionCard>
   )
 }
