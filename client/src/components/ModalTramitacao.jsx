@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { X, Send, Lock, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react'
 import api from '../services/api'
+import { useAuth } from '../context/AuthContext'
 
 export default function ModalTramitacao({ processo, onClose, onSuccess }) {
+  const { user } = useAuth()
   const [secretarias, setSecretarias] = useState([])
   const [setores, setSetores] = useState([])
   const [usuarios, setUsuarios] = useState([])
@@ -10,9 +12,14 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
   const [error, setError] = useState('')
   const [step, setStep] = useState(1) // 1: dados, 2: confirmação senha
 
+  // Operador só pode tramitar dentro da própria secretaria,
+  // a menos que tenha sido designado por um gestor neste processo
+  const foiDesignadoPorGestor = processo?.usuario_atual_id === user?.id
+  const isOperadorRestrito = user?.tipo === 'operacional' && !foiDesignadoPorGestor
+
   const [formData, setFormData] = useState({
     despacho: '',
-    destinoSecretariaId: '',
+    destinoSecretariaId: isOperadorRestrito ? (user?.secretariaId || '') : '',
     destinoSetorId: '',
     destinoUsuarioId: '',
     senhaConfirmacao: ''
@@ -176,6 +183,16 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
               </div>
             </div>
 
+            {/* Aviso para operadores restritos */}
+            {isOperadorRestrito && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start space-x-2">
+                <AlertTriangle className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-blue-700">
+                  Como operador, você só pode tramitar para setores da sua secretaria. Para tramitar entre secretarias, solicite a um gestor.
+                </p>
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Despacho * <span className="text-gray-500 dark:text-gray-400 font-normal">(mínimo 10 caracteres)</span>
@@ -198,6 +215,14 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Secretaria de Destino *
               </label>
+              {isOperadorRestrito ? (
+                <input
+                  type="text"
+                  value={secretarias.find(s => s.id === formData.destinoSecretariaId)?.nome || '...'}
+                  disabled
+                  className="input-field bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-500"
+                />
+              ) : (
               <select
                 name="destinoSecretariaId"
                 value={formData.destinoSecretariaId}
@@ -212,6 +237,7 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
                   </option>
                 ))}
               </select>
+              )}
             </div>
 
             {formData.destinoSecretariaId && (

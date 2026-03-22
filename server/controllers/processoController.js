@@ -183,6 +183,39 @@ const tramitarProcesso = async (req, res) => {
       }
     }
 
+    // Operadores só podem tramitar para setores da própria secretaria
+    // EXCETO se foram designados explicitamente por um gestor/admin na última tramitação
+    if (req.user.tipo === 'operacional' && req.user.secretariaId) {
+      const { Setor } = req.models;
+      const destinoSetor = await Setor.findByPk(destinoSetorId, { transaction });
+
+      if (!destinoSetor) {
+        await transaction.rollback();
+        return res.status(404).json({ error: 'Setor de destino não encontrado' });
+      }
+
+      if (String(destinoSetor.secretariaId) !== String(req.user.secretariaId)) {
+        // Verifica se foi designado por gestor/admin na última tramitação
+        const ultimaTramitacao = await Tramitacao.findOne({
+          where: { processo_id: processo.id },
+          order: [['data_hora', 'DESC']],
+          include: [{ model: User, as: 'origemUsuario', attributes: ['tipo'] }],
+          transaction
+        });
+
+        const foiDesignadoPorGestor =
+          ultimaTramitacao?.destino_usuario_id === req.user.id &&
+          (ultimaTramitacao?.origemUsuario?.tipo === 'gestor' || ultimaTramitacao?.origemUsuario?.tipo === 'admin');
+
+        if (!foiDesignadoPorGestor) {
+          await transaction.rollback();
+          return res.status(403).json({
+            error: 'Operadores só podem tramitar para setores da sua própria secretaria. Solicite a um gestor para tramitar entre secretarias.'
+          });
+        }
+      }
+    }
+
     // Gerar assinatura digital
     const timestamp = new Date().toISOString();
     const dadosAssinatura = `${processo.id}|${req.user.id}|${user.cpf}|tramite|${destinoSetorId}|${timestamp}`;
