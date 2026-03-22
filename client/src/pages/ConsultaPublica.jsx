@@ -592,9 +592,7 @@ export default function ConsultaPublica() {
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">{proc.numero}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{proc.assunto}</p>
-                        {proc.interessado_nome && (
-                          <p className="text-xs text-teal-600 dark:text-teal-400 truncate">{proc.interessado_nome}</p>
-                        )}
+                        {proc.interessado_nome && <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{proc.interessado_nome}</p>}
                       </div>
                       <div className="flex-shrink-0 text-xs text-gray-400 dark:text-gray-500 text-right">
                         <p>{proc.setorAtual?.secretaria?.sigla || proc.setorAtual?.sigla || ''}</p>

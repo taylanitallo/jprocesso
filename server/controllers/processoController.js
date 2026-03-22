@@ -669,7 +669,7 @@ const buscarProcessosPublico = async (req, res) => {
         include: [
           { model: Setor, as: 'origemSetor', attributes: ['id', 'nome', 'sigla'] },
           { model: Setor, as: 'destinoSetor', attributes: ['id', 'nome', 'sigla'] },
-          { model: User, as: 'origemUsuario', attributes: ['id', 'nome'] }
+          { model: User, as: 'origemUsuario', attributes: ['id', 'nome', 'cpf'] }
         ]
       }
     ];
