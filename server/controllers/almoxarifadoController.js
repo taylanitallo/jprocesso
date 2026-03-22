@@ -545,6 +545,10 @@ const listRequisicoes = async (req, res) => {
 
     const where = {};
     if (status) where.status = status;
+    // Restringe ao usuário não-admin a apenas sua secretaria
+    if (req.user.tipo !== 'admin' && req.user.secretariaId) {
+      where.secretaria_id = req.user.secretariaId;
+    }
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const { count, rows } = await AlmoxarifadoRequisicao.findAndCountAll({

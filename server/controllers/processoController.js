@@ -403,10 +403,6 @@ const listProcessos = async (req, res) => {
     if (status) where.status = status;
     if (prioridade) where.prioridade = prioridade;
 
-    if (req.user.tipo === 'operacional') {
-      where.usuario_atual_id = req.user.id;
-    }
-
     if (search) {
       where[Op.or] = [
         { numero: { [Op.iLike]: `%${search}%` } },
@@ -417,6 +413,12 @@ const listProcessos = async (req, res) => {
 
     const offset = (page - 1) * limit;
 
+    // Filtra por secretaria para usuários não-admin
+    const filtrarPorSecretaria = req.user.tipo !== 'admin' && req.user.secretariaId;
+    const setorInclude = filtrarPorSecretaria
+      ? { model: Setor, as: 'setorAtual', attributes: ['id', 'nome', 'sigla'], where: { secretariaId: req.user.secretariaId }, required: true }
+      : { model: Setor, as: 'setorAtual', attributes: ['id', 'nome', 'sigla'] };
+
     const { count, rows: processos } = await Processo.findAndCountAll({
       where,
       limit: parseInt(limit),
@@ -425,7 +427,7 @@ const listProcessos = async (req, res) => {
       subQuery: false,
       include: [
         { model: User, as: 'usuarioAtual', attributes: ['id', 'nome', 'email'] },
-        { model: Setor, as: 'setorAtual', attributes: ['id', 'nome', 'sigla'] },
+        setorInclude,
         { model: User, as: 'criadoPor', attributes: ['id', 'nome', 'email'] }
       ]
     });

@@ -127,7 +127,7 @@ const deleteItem = async (req, res) => {
 
 const listContratos = async (req, res) => {
   try {
-    const { Contrato, Credor, ContratoItemVinculo } = req.models;
+    const { Contrato, Credor, ContratoItemVinculo, Secretaria } = req.models;
     const { status, q } = req.query;
 
     const where = {};
@@ -137,6 +137,11 @@ const listContratos = async (req, res) => {
         { numero_contrato: { [Op.iLike]: `%${q}%` } },
         { objeto: { [Op.iLike]: `%${q}%` } },
       ];
+    }
+    // Restringe ao usuário não-admin a apenas sua secretaria
+    if (req.user.tipo !== 'admin' && req.user.secretariaId && Secretaria) {
+      const sec = await Secretaria.findByPk(req.user.secretariaId, { attributes: ['nome'] });
+      if (sec) where.secretaria = sec.nome;
     }
 
     const contratos = await Contrato.findAll({

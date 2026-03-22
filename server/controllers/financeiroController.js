@@ -88,6 +88,11 @@ const getDashboard = async (req, res) => {
     // ── Filtro base para FinanceiroLancamento (mantido) ───────────────────
     const whereBase = {};
     whereBase.data_lancamento = { [Op.between]: [`${ano}-01-01`, `${ano}-12-31`] };
+    // Restringe ao usuário não-admin a apenas sua secretaria
+    if (req.user.tipo !== 'admin' && req.user.secretariaId) {
+      whereBase.secretaria_id = req.user.secretariaId;
+      if (req.user.secretariaNome) didFiltro.secretaria_sec1 = req.user.secretariaNome;
+    }
 
     // Totais gerais (lançamentos)
     const totalLancamentos = await FinanceiroLancamento.count({ where: whereBase });
@@ -296,6 +301,10 @@ const listLancamentos = async (req, res) => {
     if (tipo) where.tipo = tipo;
     if (categoria) where.categoria = categoria;
     if (secretaria_id) where.secretaria_id = secretaria_id;
+    // Restringe ao usuário não-admin a apenas sua secretaria
+    if (req.user.tipo !== 'admin' && req.user.secretariaId) {
+      where.secretaria_id = req.user.secretariaId;
+    }
     if (processo_id) where.processo_id = processo_id;
     if (data_inicio || data_fim) {
       where.data_lancamento = {};

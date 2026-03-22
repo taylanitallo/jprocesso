@@ -155,7 +155,9 @@ const login = async (req, res) => {
         email: user.email, 
         tipo: user.tipo,
         tenantId: tenant.id,
-        subdomain: tenant.subdominio
+        subdomain: tenant.subdominio,
+        secretariaId: user.secretariaId,
+        secretariaNome: user.secretaria?.nome
       },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRE || '7d' }
@@ -169,6 +171,8 @@ const login = async (req, res) => {
         nomeReduzido: user.nomeReduzido,
         email: user.email,
         tipo: user.tipo,
+        secretariaId: user.secretariaId,
+        permissoes: user.permissoes,
         secretaria: user.secretaria,
         setor: user.setor
       },
@@ -223,8 +227,14 @@ const listUsers = async (req, res) => {
   try {
     const { User, Secretaria, Setor } = req.models;
 
+    const where = {};
+    if (req.user.tipo !== 'admin' && req.user.secretariaId) {
+      where.secretariaId = req.user.secretariaId;
+    }
+
     const users = await User.findAll({
       attributes: ['id', 'nome', 'nomeReduzido', 'email', 'cpf', 'telefone', 'tipo', 'ativo', 'permissoes', 'secretariaId', 'setorId'],
+      where,
       include: [
         {
           model: Secretaria,

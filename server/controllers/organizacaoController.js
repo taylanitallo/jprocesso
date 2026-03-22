@@ -180,8 +180,14 @@ const listSecretarias = async (req, res) => {
   try {
     const { Secretaria, Setor } = req.models;
 
+    const where = { ativo: true };
+    // Restringe ao usuário não-admin a apenas sua secretaria
+    if (req.user.tipo !== 'admin' && req.user.secretariaId) {
+      where.id = req.user.secretariaId;
+    }
+
     const secretarias = await Secretaria.findAll({
-      where: { ativo: true },
+      where,
       include: [{ model: Setor, as: 'setores', required: false }],
       order: [
         ['nome', 'ASC'],

@@ -75,6 +75,10 @@ const listarBens = async (req, res) => {
     if (grupo_id)      where.grupo_id      = grupo_id;
     if (secretaria_id) where.secretaria_id = secretaria_id;
     if (setor_id)      where.setor_id      = setor_id;
+    // Restringe ao usuário não-admin a apenas sua secretaria
+    if (req.user.tipo !== 'admin' && req.user.secretariaId) {
+      where.secretaria_id = req.user.secretariaId;
+    }
     if (q) {
       where[Op.or] = [
         { numero_tombamento: { [Op.iLike]: `%${q}%` } },
