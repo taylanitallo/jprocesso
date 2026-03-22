@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { 
@@ -17,7 +18,11 @@ import {
   Building2,
   Briefcase,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  Upload,
+  Download,
+  FileSpreadsheet,
+  ChevronDown
 } from 'lucide-react';
 
 export default function Usuarios() {
@@ -34,6 +39,111 @@ export default function Usuarios() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Import / Export
+  const importInputRef = useRef(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importResults, setImportResults] = useState([]);
+  const [showIoMenu, setShowIoMenu] = useState(false);
+
+  const handleDownloadModelo = () => {
+    const headers = ['nome', 'nome_reduzido', 'cpf', 'email', 'senha', 'tipo', 'secretaria_sigla', 'setor_nome'];
+    const exemplos = [
+      ['João da Silva', 'João Silva', '000.000.000-00', 'joao@prefeitura.gov.br', 'senha123', 'operacional', 'SEMAD', 'Protocolo Geral'],
+      ['Maria Souza', 'Maria Souza', '111.111.111-11', 'maria@prefeitura.gov.br', 'senha456', 'gestor', 'SEMED', 'Direção'],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...exemplos]);
+    ws['!cols'] = headers.map(() => ({ wch: 22 }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Usuarios');
+    XLSX.writeFile(wb, 'modelo_importacao_usuarios.xlsx');
+  };
+
+  const handleExportUsuarios = () => {
+    const dados = usuarios.map(u => ({
+      nome: u.nome || '',
+      nome_reduzido: u.nomeReduzido || '',
+      cpf: u.cpf || '',
+      email: u.email || '',
+      tipo: u.tipo || '',
+      secretaria_sigla: u.secretaria?.sigla || '',
+      setor_nome: u.setor?.nome || '',
+      ativo: u.ativo ? 'Sim' : 'Não',
+    }));
+    const ws = XLSX.utils.json_to_sheet(dados);
+    ws['!cols'] = Object.keys(dados[0] || {}).map(() => ({ wch: 22 }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Usuarios');
+    XLSX.writeFile(wb, `usuarios_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.xlsx`);
+  };
+
+  const handleImportFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!importInputRef.current) return;
+    importInputRef.current.value = '';
+    if (!file) return;
+
+    setImportLoading(true);
+    setImportResults([]);
+    setShowImportModal(true);
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const wb = XLSX.read(buffer, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+      const results = [];
+      for (const row of rows) {
+        const nome = String(row['nome'] || '').trim();
+        if (!nome) continue;
+        const cpf = String(row['cpf'] || '').trim();
+        const email = String(row['email'] || '').trim();
+        const senha = String(row['senha'] || '').trim() || 'Mudar@123';
+        const tipo = ['admin','gestor','operacional'].includes(String(row['tipo']).trim())
+          ? String(row['tipo']).trim() : 'operacional';
+        const secretariaSigla = String(row['secretaria_sigla'] || '').trim();
+        const setorNome = String(row['setor_nome'] || '').trim();
+
+        const secretaria = secretariaSigla
+          ? secretarias.find(s => s.sigla?.toLowerCase() === secretariaSigla.toLowerCase())
+          : null;
+        const setor = setorNome
+          ? setores.find(s => s.nome?.toLowerCase() === setorNome.toLowerCase())
+          : null;
+
+        try {
+          await api.post('/auth/register', {
+            nome,
+            nomeReduzido: String(row['nome_reduzido'] || '').trim() || null,
+            cpf,
+            email,
+            senha,
+            tipo,
+            secretariaId: secretaria?.id || null,
+            setorId: setor?.id || null,
+            permissoes: {
+              criar_processo: true, editar_processo: true, excluir_processo: false,
+              tramitar_processo: true, acessar_almoxarifado: false, acessar_financeiro: false,
+              acessar_contratos: false, visualizar_relatorios: false,
+              gerenciar_usuarios: false, gerenciar_secretarias: false, gerenciar_configuracoes: false,
+            },
+          });
+          results.push({ nome, status: 'ok', msg: 'Importado com sucesso' });
+        } catch (err) {
+          results.push({ nome, status: 'erro', msg: err.response?.data?.error || 'Erro ao importar' });
+        }
+      }
+
+      setImportResults(results);
+      await fetchUsuarios();
+    } catch (err) {
+      setImportResults([{ nome: '—', status: 'erro', msg: 'Falha ao ler o arquivo .xlsx' }]);
+    } finally {
+      setImportLoading(false);
+    }
+  };
 
   // Buscar usuários da API
   const [usuarios, setUsuarios] = useState([]);
@@ -304,10 +414,68 @@ export default function Usuarios() {
             <h1 className="page-title">👥 Gerenciamento de Usuários</h1>
             <p className="page-subtitle">Gerencie usuários, permissões e acessos ao sistema</p>
           </div>
-          <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2">
-            <UserPlus className="h-5 w-5" />
-            Novo Usuário
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Menu Importar / Exportar */}
+            <div className="relative">
+              <button
+                onClick={() => setShowIoMenu(v => !v)}
+                className="btn-secondary flex items-center gap-2"
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                Planilha
+                <ChevronDown className="h-4 w-4" />
+              </button>
+              {showIoMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowIoMenu(false)} />
+                  <div className="absolute right-0 mt-1 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-20 overflow-hidden">
+                    <button
+                      onClick={() => { setShowIoMenu(false); handleExportUsuarios(); }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 text-left"
+                    >
+                      <Download className="h-4 w-4 text-green-600" />
+                      <div>
+                        <div className="font-medium">Exportar usuários</div>
+                        <div className="text-xs text-gray-400">Baixar lista em .xlsx</div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => { setShowIoMenu(false); importInputRef.current?.click(); }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 text-left border-t border-gray-100 dark:border-gray-700"
+                    >
+                      <Upload className="h-4 w-4 text-blue-600" />
+                      <div>
+                        <div className="font-medium">Importar usuários</div>
+                        <div className="text-xs text-gray-400">Carregar planilha .xlsx</div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => { setShowIoMenu(false); handleDownloadModelo(); }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 text-left border-t border-gray-100 dark:border-gray-700"
+                    >
+                      <FileSpreadsheet className="h-4 w-4 text-orange-500" />
+                      <div>
+                        <div className="font-medium">Baixar modelo</div>
+                        <div className="text-xs text-gray-400">Planilha de importação</div>
+                      </div>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+            {/* Input oculto para importar arquivo */}
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              onChange={handleImportFile}
+            />
+            <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2">
+              <UserPlus className="h-5 w-5" />
+              Novo Usuário
+            </button>
+          </div>
         </div>
 
       {/* Filtros */}
@@ -674,6 +842,67 @@ export default function Usuarios() {
               >
                 Excluir
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal Resultado da Importação */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-lg w-full shadow-xl">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <Upload className="h-5 w-5 text-blue-600" />
+                Resultado da Importação
+              </h2>
+              {!importLoading && (
+                <button onClick={() => setShowImportModal(false)} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg">
+                  <XCircle className="h-5 w-5" />
+                </button>
+              )}
+            </div>
+            <div className="p-6">
+              {importLoading ? (
+                <div className="flex flex-col items-center gap-3 py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Importando usuários...</p>
+                </div>
+              ) : (
+                <>
+                  <div className="flex gap-4 mb-4 text-sm">
+                    <span className="flex items-center gap-1.5 text-green-600 font-medium">
+                      <CheckCircle className="h-4 w-4" />
+                      {importResults.filter(r => r.status === 'ok').length} importados
+                    </span>
+                    <span className="flex items-center gap-1.5 text-red-600 font-medium">
+                      <XCircle className="h-4 w-4" />
+                      {importResults.filter(r => r.status === 'erro').length} com erro
+                    </span>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto space-y-1.5">
+                    {importResults.map((r, i) => (
+                      <div key={i} className={`flex items-start gap-2 text-sm px-3 py-2 rounded-lg ${
+                        r.status === 'ok'
+                          ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300'
+                          : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300'
+                      }`}>
+                        {r.status === 'ok'
+                          ? <CheckCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                          : <XCircle className="h-4 w-4 shrink-0 mt-0.5" />}
+                        <div>
+                          <span className="font-medium">{r.nome}</span>
+                          <span className="ml-2 opacity-80">— {r.msg}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-end mt-4">
+                    <button onClick={() => setShowImportModal(false)} className="btn-primary">
+                      Fechar
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
