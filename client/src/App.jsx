@@ -42,6 +42,16 @@ function PrivateRoute({ children, requireAdmin = false }) {
   return children
 }
 
+// Bloqueia acesso direto por URL a módulos que o usuário não tem permissão
+function PermissionRoute({ children, permissao }) {
+  const { user } = useAuth()
+  const subdomain = window.location.pathname.split('/')[1]
+  if (!permissao) return children
+  if (user?.tipo === 'admin') return children
+  if (!user?.permissoes?.[permissao]) return <Navigate to={`/${subdomain}`} replace />
+  return children
+}
+
 // Wrapper da rota de login — redireciona sincronamente se já autenticado (sem flash)
 function LoginRoute() {
   const { user, loading } = useAuth()
@@ -88,21 +98,21 @@ function App() {
             <Route path="processos/:id" element={<DetalhesProcesso />} />
             <Route path="processos/:id/did" element={<FormularioDid />} />
             <Route path="enviados" element={<EnviadosRedirect />} />
-            <Route path="organizacao" element={<Secretarias />} />
-            <Route path="organizacao/:tab" element={<Secretarias />} />
+            <Route path="organizacao" element={<PermissionRoute permissao="gerenciar_secretarias"><Secretarias /></PermissionRoute>} />
+            <Route path="organizacao/:tab" element={<PermissionRoute permissao="gerenciar_secretarias"><Secretarias /></PermissionRoute>} />
             <Route path="secretarias" element={<OrganizacaoRedirect />} />
-            <Route path="usuarios" element={<Usuarios />} />
-            <Route path="almoxarifado" element={<Almoxarifado />} />
-            <Route path="almoxarifado/:tab" element={<Almoxarifado />} />
-            <Route path="patrimonio" element={<Patrimonio />} />
-            <Route path="patrimonio/:tab" element={<Patrimonio />} />
-            <Route path="financeiro" element={<Financeiro />} />
-            <Route path="financeiro/:tab" element={<Financeiro />} />
-            <Route path="contratos" element={<Contratos />} />
-            <Route path="contratos/:tab" element={<Contratos />} />
-            <Route path="relatorios" element={<Relatorios />} />
-            <Route path="configuracoes" element={<Configuracoes />} />
-            <Route path="configuracoes/:tab" element={<Configuracoes />} />
+            <Route path="usuarios" element={<PermissionRoute permissao="gerenciar_usuarios"><Usuarios /></PermissionRoute>} />
+            <Route path="almoxarifado" element={<PermissionRoute permissao="acessar_almoxarifado"><Almoxarifado /></PermissionRoute>} />
+            <Route path="almoxarifado/:tab" element={<PermissionRoute permissao="acessar_almoxarifado"><Almoxarifado /></PermissionRoute>} />
+            <Route path="patrimonio" element={<PermissionRoute permissao="acessar_almoxarifado"><Patrimonio /></PermissionRoute>} />
+            <Route path="patrimonio/:tab" element={<PermissionRoute permissao="acessar_almoxarifado"><Patrimonio /></PermissionRoute>} />
+            <Route path="financeiro" element={<PermissionRoute permissao="acessar_financeiro"><Financeiro /></PermissionRoute>} />
+            <Route path="financeiro/:tab" element={<PermissionRoute permissao="acessar_financeiro"><Financeiro /></PermissionRoute>} />
+            <Route path="contratos" element={<PermissionRoute permissao="acessar_contratos"><Contratos /></PermissionRoute>} />
+            <Route path="contratos/:tab" element={<PermissionRoute permissao="acessar_contratos"><Contratos /></PermissionRoute>} />
+            <Route path="relatorios" element={<PermissionRoute permissao="visualizar_relatorios"><Relatorios /></PermissionRoute>} />
+            <Route path="configuracoes" element={<PermissionRoute permissao="gerenciar_configuracoes"><Configuracoes /></PermissionRoute>} />
+            <Route path="configuracoes/:tab" element={<PermissionRoute permissao="gerenciar_configuracoes"><Configuracoes /></PermissionRoute>} />
           </Route>
         </Route>
 

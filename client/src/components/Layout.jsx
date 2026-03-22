@@ -56,20 +56,27 @@ export default function Layout() {
     return Array.isArray(modHabilitados) && modHabilitados.includes(modulo)
   }
 
+  // Verifica permissão individual do usuário (admin ignora — tem acesso total)
+  const temPermissao = (permissao) => {
+    if (!permissao) return true
+    if (user?.tipo === 'admin') return true
+    return !!user?.permissoes?.[permissao]
+  }
+
   const menuItems = [
-    { path: `/${subdomain}`,              icon: Home,      emoji: '🏠', label: 'Dashboard',   exact: true },
-    { path: `/${subdomain}/processos`,    icon: Inbox,     emoji: '📋', label: 'Processos',    modulo: 'processos' },
-    { path: `/${subdomain}/almoxarifado`, icon: Package,   emoji: '📦', label: 'Almoxarifado', modulo: 'almoxarifado' },
-    { path: `/${subdomain}/patrimonio`,   icon: Landmark,  emoji: '🏛️', label: 'Patrimônio',   modulo: 'patrimonio' },
-    { path: `/${subdomain}/financeiro`,   icon: DollarSign, emoji: '💵', label: 'Financeiro',   modulo: 'financeiro' },
-    { path: `/${subdomain}/contratos`,    icon: ScrollText, emoji: '📝', label: 'Contratos',    modulo: 'contratos' },
+    { path: `/${subdomain}`,              icon: Home,       emoji: '🏠', label: 'Dashboard',    exact: true },
+    { path: `/${subdomain}/processos`,    icon: Inbox,      emoji: '📋', label: 'Processos',    modulo: 'processos' },
+    { path: `/${subdomain}/almoxarifado`, icon: Package,    emoji: '📦', label: 'Almoxarifado', modulo: 'almoxarifado', permissao: 'acessar_almoxarifado' },
+    { path: `/${subdomain}/patrimonio`,   icon: Landmark,   emoji: '🏛️', label: 'Patrimônio',   modulo: 'patrimonio',   permissao: 'acessar_almoxarifado' },
+    { path: `/${subdomain}/financeiro`,   icon: DollarSign, emoji: '💵', label: 'Financeiro',   modulo: 'financeiro',   permissao: 'acessar_financeiro' },
+    { path: `/${subdomain}/contratos`,    icon: ScrollText, emoji: '📝', label: 'Contratos',    modulo: 'contratos',    permissao: 'acessar_contratos' },
   ]
 
   const adminMenuItems = [
-    { path: `/${subdomain}/organizacao`, icon: Building2, emoji: '🏛️', label: 'Organização' },
-    { path: `/${subdomain}/usuarios`,    icon: Users,     emoji: '👥', label: 'Usuários' },
-    { path: `/${subdomain}/relatorios`,  icon: BarChart3, emoji: '📊', label: 'Relatórios' },
-    { path: `/${subdomain}/configuracoes`, icon: Settings, emoji: '⚙️', label: 'Configurações' },
+    { path: `/${subdomain}/organizacao`,   icon: Building2, emoji: '🏛️', label: 'Organização',   permissao: 'gerenciar_secretarias' },
+    { path: `/${subdomain}/usuarios`,      icon: Users,     emoji: '👥', label: 'Usuários',      permissao: 'gerenciar_usuarios' },
+    { path: `/${subdomain}/relatorios`,    icon: BarChart3, emoji: '📊', label: 'Relatórios',    permissao: 'visualizar_relatorios' },
+    { path: `/${subdomain}/configuracoes`, icon: Settings,  emoji: '⚙️', label: 'Configurações', permissao: 'gerenciar_configuracoes' },
   ]
 
   const isActive = (path, exact = false) => {
@@ -116,8 +123,9 @@ export default function Layout() {
               {menuItems.map((item) => {
                 const active = isActive(item.path, item.exact)
                 const habilitado = item.modulo ? isModuloHabilitado(item.modulo) : true
+                const permitido = temPermissao(item.permissao)
 
-                if (!habilitado) {
+                if (!habilitado || !permitido) {
                   return (
                     <button
                       key={item.path}
@@ -174,6 +182,8 @@ export default function Layout() {
                 <div className="space-y-0.5">
                   {adminMenuItems.map((item) => {
                     const active = isActive(item.path)
+                    const permitido = temPermissao(item.permissao)
+                    if (!permitido) return null
                     return (
                       <Link
                         key={item.path}
