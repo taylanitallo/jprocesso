@@ -1748,7 +1748,7 @@ export default function Secretarias() {
 
       {/* Modal Criar/Editar Setor */}
       {showModalSetor && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4 overflow-y-auto">
           <div className="bg-white dark:bg-gray-800 rounded-xl max-w-lg w-full my-8 shadow-xl">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">

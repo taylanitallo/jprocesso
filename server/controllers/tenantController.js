@@ -332,6 +332,7 @@ async function migrarSchemaUsuarios(schema, pool) {
   await pool.query(`
     DO $$
     BEGIN
+      -- Renomear coluna 'tipo' para 'tipo_acao' se ainda não foi renomeada
       IF EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_schema = '${schema}' AND table_name = 'tramitacoes' AND column_name = 'tipo'
@@ -341,11 +342,39 @@ async function migrarSchemaUsuarios(schema, pool) {
       ) THEN
         ALTER TABLE ${schema}.tramitacoes RENAME COLUMN tipo TO tipo_acao;
       END IF;
+
+      -- Remover check constraint antiga (gerada com 'tramitacao' em vez de 'tramite')
+      IF EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE table_schema = '${schema}' AND table_name = 'tramitacoes'
+          AND constraint_name = 'tramitacoes_tipo_check'
+      ) THEN
+        ALTER TABLE ${schema}.tramitacoes DROP CONSTRAINT tramitacoes_tipo_check;
+      END IF;
+
+      -- Remover check constraint de tipo_acao caso exista com valores errados
+      IF EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE table_schema = '${schema}' AND table_name = 'tramitacoes'
+          AND constraint_name = 'tramitacoes_tipo_acao_check'
+      ) THEN
+        ALTER TABLE ${schema}.tramitacoes DROP CONSTRAINT tramitacoes_tipo_acao_check;
+      END IF;
     END$$;
     ALTER TABLE IF EXISTS ${schema}.tramitacoes
       ADD COLUMN IF NOT EXISTS tipo_acao VARCHAR(30),
       ADD COLUMN IF NOT EXISTS justificativa_devolucao TEXT,
       ADD COLUMN IF NOT EXISTS assinatura_digital VARCHAR(255);
+    -- Garantir que a coluna tipo_acao aceita os valores corretos usados pelo código
+    ALTER TABLE IF EXISTS ${schema}.tramitacoes
+      ADD CONSTRAINT tramitacoes_tipo_acao_check
+      CHECK (tipo_acao IN ('abertura','tramite','devolucao','conclusao','arquivamento'))
+      NOT VALID;
+  `);
+
+  // setores: garantir que sigla permita null (banco antigo criou como NOT NULL)
+  await pool.query(`
+    ALTER TABLE IF EXISTS ${schema}.setores ALTER COLUMN sigla DROP NOT NULL;
   `);
 
   // secretarias: adicionar colunas extras do modelo
@@ -708,10 +737,12 @@ async function criarEstruturaIsolada(schema, tenant, usuarioAdmin) {
         origem_setor_id UUID REFERENCES ${schema}.setores(id),
         destino_setor_id UUID REFERENCES ${schema}.setores(id),
         destino_usuario_id UUID REFERENCES ${schema}.usuarios(id),
-        tipo VARCHAR(20) NOT NULL
-          CHECK (tipo IN ('abertura', 'tramitacao', 'devolucao', 'conclusao', 'arquivamento')),
+        tipo_acao VARCHAR(30) NOT NULL
+          CHECK (tipo_acao IN ('abertura', 'tramite', 'devolucao', 'conclusao', 'arquivamento')),
         despacho TEXT,
         observacao TEXT,
+        justificativa_devolucao TEXT,
+        assinatura_digital VARCHAR(255),
         data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         ip_origem VARCHAR(45),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
