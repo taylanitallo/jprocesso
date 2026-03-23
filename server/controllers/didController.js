@@ -106,7 +106,7 @@ const createOrUpdate = async (req, res) => {
       }]
     });
 
-    res.json({ did: didAtualizado });
+    res.json({ did: didAtualizado || did });
   } catch (err) {
     console.error('Erro createOrUpdate DID:', err);
     res.status(500).json({ error: err.message });

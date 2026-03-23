@@ -11,6 +11,7 @@ import AdminTenants from './pages/AdminTenants'
 import Enviados from './pages/Enviados'
 import Relatorios from './pages/Relatorios'
 import Configuracoes from './pages/Configuracoes'
+import Registros from './pages/Registros'
 import Usuarios from './pages/Usuarios'
 import Almoxarifado from './pages/Almoxarifado'
 import Patrimonio from './pages/Patrimonio'
@@ -113,6 +114,7 @@ function App() {
             <Route path="relatorios" element={<PermissionRoute permissao="visualizar_relatorios"><Relatorios /></PermissionRoute>} />
             <Route path="configuracoes" element={<PermissionRoute permissao="gerenciar_configuracoes"><Configuracoes /></PermissionRoute>} />
             <Route path="configuracoes/:tab" element={<PermissionRoute permissao="gerenciar_configuracoes"><Configuracoes /></PermissionRoute>} />
+            <Route path="registros" element={<PermissionRoute permissao="visualizar_registros"><Registros /></PermissionRoute>} />
           </Route>
         </Route>
 

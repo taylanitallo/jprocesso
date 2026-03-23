@@ -2,6 +2,7 @@
 const crypto = require('crypto');
 const xml2js = require('xml2js');
 const nfseService = require('../services/nfseService');
+const { registrarLog } = require('../middleware/activityLogger');
 
 // â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -275,6 +276,12 @@ const createItem = async (req, res) => {
       localizacao
     });
     res.status(201).json(item);
+    await registrarLog(req, {
+      acao: 'criar_item_almoxarifado',
+      modulo: 'almoxarifado',
+      descricao: `Item de almoxarifado criado: ${nome}`,
+      referencia_id: item.id
+    });
   } catch (error) {
     console.error('Erro createItem:', error);
     res.status(500).json({ error: 'Erro ao criar item' });

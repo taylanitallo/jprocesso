@@ -396,6 +396,7 @@ export default function Usuarios() {
     { key: 'gerenciar_usuarios',     label: '👥 Gerenciar Usuários',    description: 'Criar, editar e excluir usuários' },
     { key: 'gerenciar_secretarias',  label: '🏛️ Gerenciar Organização', description: 'Gerenciar secretarias e setores' },
     { key: 'gerenciar_configuracoes',label: '⚙️ Configurações',         description: 'Acessar configurações do sistema' },
+    { key: 'visualizar_registros',   label: '📋 Registros de Atividade', description: 'Visualizar o histórico de ações dos usuários' },
   ];
 
   return (

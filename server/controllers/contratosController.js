@@ -3,6 +3,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 const { Op } = require('sequelize');
 const https  = require('https');
+const { registrarLog } = require('../middleware/activityLogger');
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -207,6 +208,13 @@ const createContrato = async (req, res) => {
     await syncItens(ContratoItemVinculo, contrato.id, itens);
     const itensDoContrato = ContratoItemVinculo ? await ContratoItemVinculo.findAll({ where: { contrato_id: contrato.id }, order: [['ordem', 'ASC']] }) : [];
     res.status(201).json({ ...contrato.toJSON(), itens: itensDoContrato });
+    await registrarLog(req, {
+      acao: 'criar_contrato',
+      modulo: 'contratos',
+      descricao: `Contrato criado: ${contrato.numero || contrato.id}`,
+      referencia_id: contrato.id,
+      referencia_numero: contrato.numero
+    });
   } catch (err) {
     if (err.name === 'SequelizeUniqueConstraintError') {
       return res.status(409).json({ error: 'Número de contrato já cadastrado' });

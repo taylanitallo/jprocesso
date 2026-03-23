@@ -1,4 +1,7 @@
+import { createContext, useContext } from 'react'
 import { Pencil, Check, Loader2 } from 'lucide-react'
+
+export const DidReadOnlyContext = createContext(false)
 
 // ─── Constante de estado vazio do DID ────────────────────────────────────────
 export const EMPTY = {
@@ -115,6 +118,9 @@ export function SectionCard({ icon: Icon, title, color, children }) {
 }
 
 export function SecaoBotoes({ locked, onAlterar, onSalvar, saving, label }) {
+  const readOnly = useContext(DidReadOnlyContext)
+  // Em modo somente leitura, nenhum botão de edição é exibido
+  if (readOnly) return null
   return (
     <div className="col-span-2 flex justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-700 mt-1">
       {locked ? (

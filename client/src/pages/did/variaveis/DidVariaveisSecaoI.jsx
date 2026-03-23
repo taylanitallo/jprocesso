@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useContext } from 'react'
 import { FileText, Plus, Trash2, Search, X, Check, CheckCircle, Pencil, Loader2, ListPlus } from 'lucide-react'
-import { Field, Input, Textarea, SectionCard } from '../didShared'
+import { Field, Input, Textarea, SectionCard, DidReadOnlyContext } from '../didShared'
 import api from '../../../services/api'
 
 // ─── Modal de seleção de itens do contrato (com Saldo DID + Estoque Almoxarifado) ────
@@ -218,6 +218,7 @@ export default function DidVariaveisSecaoI({
   const [almStockData, setAlmStockData] = useState({})
   const [loadingStock, setLoadingStock] = useState(false)
   useEffect(() => { if (didId) setLocked(true) }, [didId])
+  const readOnly = useContext(DidReadOnlyContext)
 
   useEffect(() => {
     if (form.contrato_ref && !contratoSel) {
@@ -598,7 +599,7 @@ export default function DidVariaveisSecaoI({
 
       {/* Botões */}
       <div className="col-span-2 flex justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-700 mt-1">
-        {locked ? (
+        {!readOnly && (locked ? (
             <button type="button" onClick={() => setLocked(false)}
               className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
             <Pencil className="w-3.5 h-3.5" /> Alterar
@@ -610,7 +611,7 @@ export default function DidVariaveisSecaoI({
             className="flex items-center gap-1.5 px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} Salvar Seção I
           </button>
-        )}
+        ))}
       </div>
 
     </SectionCard>

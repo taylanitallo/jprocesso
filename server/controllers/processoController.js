@@ -1,6 +1,7 @@
 const QRCode = require('qrcode');
 const crypto = require('crypto');
 const { Op, Sequelize } = require('sequelize');
+const { registrarLog } = require('../middleware/activityLogger');
 
 const createProcesso = async (req, res) => {
   const transaction = await req.tenantDb.transaction();
@@ -79,6 +80,14 @@ const createProcesso = async (req, res) => {
     }, { transaction });
 
     await transaction.commit();
+
+    await registrarLog(req, {
+      acao: 'criar_processo',
+      modulo: 'processos',
+      descricao: `Processo ${processo.numero} criado — assunto: ${processo.assunto}`,
+      referencia_id: processo.id,
+      referencia_numero: processo.numero
+    });
 
     res.status(201).json({
       message: 'Processo criado com sucesso',
@@ -247,6 +256,14 @@ const tramitarProcesso = async (req, res) => {
 
     await transaction.commit();
 
+    await registrarLog(req, {
+      acao: 'tramitar_processo',
+      modulo: 'processos',
+      descricao: `Processo tramitado para setor ${destinoSetorId}`,
+      referencia_id: processo.id,
+      referencia_numero: processo.numero
+    });
+
     res.json({ 
       message: 'Processo tramitado com sucesso',
       assinatura_digital: assinaturaDigital,
@@ -350,6 +367,14 @@ const devolverProcesso = async (req, res) => {
 
     await transaction.commit();
 
+    await registrarLog(req, {
+      acao: 'devolver_processo',
+      modulo: 'processos',
+      descricao: `Processo devolvido ao setor de origem`,
+      referencia_id: processo.id,
+      referencia_numero: processo.numero
+    });
+
     res.json({ 
       message: 'Processo devolvido com sucesso',
       setor_devolucao: ultimaTramitacao.origem_setor_id,
@@ -414,6 +439,14 @@ const concluirProcesso = async (req, res) => {
     }, { transaction });
 
     await transaction.commit();
+
+    await registrarLog(req, {
+      acao: 'concluir_processo',
+      modulo: 'processos',
+      descricao: `Processo concluído`,
+      referencia_id: processo.id,
+      referencia_numero: processo.numero
+    });
 
     res.json({ 
       message: 'Processo concluído com sucesso',
@@ -484,8 +517,11 @@ const listProcessos = async (req, res) => {
 const getDashboardStats = async (req, res) => {
   try {
     const { Processo, User, Setor } = req.models;
-    const userId  = req.user.id;
-    const setorId = req.user.setorId || req.user.setor_id;
+    const userId = req.user.id;
+
+    // Busca setorId sempre do banco (não depende do token)
+    const userInfo = await User.findByPk(userId, { attributes: ['id', 'setorId', 'secretariaId', 'tipo'] });
+    const setorId = userInfo?.setorId || null;
 
     const agora = new Date();
     const inicioDia = new Date(agora); inicioDia.setHours(0, 0, 0, 0);
@@ -496,10 +532,13 @@ const getDashboardStats = async (req, res) => {
       { model: User, as: 'usuarioAtual', attributes: ['id', 'nome'] }
     ];
 
-    // ── Minha Caixa: processos no setor do usuário (não concluídos/arquivados)
+    // ── Minha Caixa: processos no setor do usuário OU destinados a ele diretamente
+    const orConditions = [{ usuario_atual_id: userId }];
+    if (setorId) orConditions.push({ setor_atual_id: setorId });
+
     const whereMinhasCaixa = {
       status: { [Op.notIn]: ['concluido', 'arquivado'] },
-      ...(setorId ? { setor_atual_id: setorId } : { usuario_atual_id: userId })
+      [Op.or]: orConditions
     };
 
     const [
@@ -573,7 +612,7 @@ const getProcessoById = async (req, res) => {
     const processo = await Processo.findByPk(id, {
       include: [
         { model: User, as: 'usuarioAtual', attributes: ['id', 'nome', 'email'] },
-        { model: Setor, as: 'setorAtual', attributes: ['id', 'nome', 'sigla'] },
+        { model: Setor, as: 'setorAtual', attributes: ['id', 'nome', 'sigla', 'secretariaId'] },
         { model: User, as: 'criadoPor', attributes: ['id', 'nome', 'email'] },
         {
           model: Tramitacao,

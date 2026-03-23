@@ -1,4 +1,5 @@
 const { Op } = require('sequelize');
+const { registrarLog } = require('../middleware/activityLogger');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Gerar próximo número de tombamento  (ex: 2026000001)

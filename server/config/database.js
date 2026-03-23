@@ -51,6 +51,35 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
     // 0. Usuários — coluna nome_reduzido
     run(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS nome_reduzido VARCHAR(60)`),
 
+    // 0a. Processos — colunas opcionais adicionadas após criação inicial
+    run(`
+      ALTER TABLE processos
+        ADD COLUMN IF NOT EXISTS tipo_processo VARCHAR(50)
+    `),
+
+    // 0c. Módulo Registro (Logs de atividade) — tabela de auditoria por tenant
+    run(`
+      CREATE TABLE IF NOT EXISTS logs (
+        id                UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+        usuario_id        UUID,
+        acao              VARCHAR(100)  NOT NULL,
+        modulo            VARCHAR(50)   NOT NULL,
+        descricao         TEXT,
+        referencia_id     VARCHAR(100),
+        referencia_numero VARCHAR(100),
+        secretaria_id     UUID,
+        setor_id          UUID,
+        ip                VARCHAR(45),
+        user_agent        VARCHAR(300),
+        dados_extras      JSONB,
+        created_at        TIMESTAMP     NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS logs_usuario_id_idx    ON logs (usuario_id);
+      CREATE INDEX IF NOT EXISTS logs_modulo_idx        ON logs (modulo);
+      CREATE INDEX IF NOT EXISTS logs_secretaria_id_idx ON logs (secretaria_id);
+      CREATE INDEX IF NOT EXISTS logs_created_at_idx    ON logs (created_at DESC);
+    `),
+
     // 0b. Contratos — colunas fontes_recurso e dotacoes (adicionadas no modelo mas não estavam na migration inicial)
     run(`
       ALTER TABLE contratos

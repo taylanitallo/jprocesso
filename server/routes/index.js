@@ -11,6 +11,7 @@ const schemaContextRoutes = require('./schemaContext');
 const contratosRoutes    = require('./contratos');
 const importexportRoutes = require('./importexport');
 const patrimonioRoutes   = require('./patrimonio');
+const logRoutes          = require('./log');
 
 module.exports = (app) => {
   // Se estiver em modo mock, usar rotas mock
@@ -31,5 +32,6 @@ module.exports = (app) => {
     app.use('/api/export', importexportRoutes);
     app.use('/api/import', importexportRoutes);
     app.use('/api/patrimonio', patrimonioRoutes);
+    app.use('/api/logs',       logRoutes);
   }
 };

@@ -1,7 +1,7 @@
 import { Outlet, Link, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
-import { FileText, Home, Building2, LogOut, Menu, X, Inbox, BarChart3, Settings, Users, Package, Sun, Moon, ChevronRight, DollarSign, ScrollText, Lock, Landmark } from 'lucide-react'
+import { FileText, Home, Building2, LogOut, Menu, X, Inbox, BarChart3, Settings, Users, Package, Sun, Moon, ChevronRight, DollarSign, ScrollText, Lock, Landmark, ClipboardList } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import JAI from './JAI'
 import api from '../services/api'
@@ -73,10 +73,11 @@ export default function Layout() {
   ]
 
   const adminMenuItems = [
-    { path: `/${subdomain}/organizacao`,   icon: Building2, emoji: '🏛️', label: 'Organização',   permissao: 'gerenciar_secretarias' },
-    { path: `/${subdomain}/usuarios`,      icon: Users,     emoji: '👥', label: 'Usuários',      permissao: 'gerenciar_usuarios' },
-    { path: `/${subdomain}/relatorios`,    icon: BarChart3, emoji: '📊', label: 'Relatórios',    permissao: 'visualizar_relatorios' },
-    { path: `/${subdomain}/configuracoes`, icon: Settings,  emoji: '⚙️', label: 'Configurações', permissao: 'gerenciar_configuracoes' },
+    { path: `/${subdomain}/organizacao`,   icon: Building2,      emoji: '🏛️', label: 'Organização',   permissao: 'gerenciar_secretarias' },
+    { path: `/${subdomain}/usuarios`,      icon: Users,          emoji: '👥', label: 'Usuários',      permissao: 'gerenciar_usuarios' },
+    { path: `/${subdomain}/relatorios`,    icon: BarChart3,      emoji: '📊', label: 'Relatórios',    permissao: 'visualizar_relatorios' },
+    { path: `/${subdomain}/configuracoes`, icon: Settings,       emoji: '⚙️', label: 'Configurações', permissao: 'gerenciar_configuracoes' },
+    { path: `/${subdomain}/registros`,     icon: ClipboardList,  emoji: '📋', label: 'Registro',      permissao: 'visualizar_registros' },
   ]
 
   const isActive = (path, exact = false) => {

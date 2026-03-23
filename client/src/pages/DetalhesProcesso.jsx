@@ -30,11 +30,11 @@ export default function DetalhesProcesso() {
 
   const { user: currentUser } = useAuth()
 
-  // Verificar se o usuário logado é o responsável atual
   const isResponsavel = !!(currentUser && processo && processo.status !== 'concluido' && (
     processo.usuario_atual_id === currentUser.id ||
     (processo.usuario_atual_id === null && processo.setor_atual_id === currentUser.setor?.id) ||
-    currentUser.tipo === 'admin'
+    currentUser.tipo === 'admin' ||
+    (currentUser.tipo === 'gestor' && processo.setorAtual?.secretariaId === currentUser.secretariaId)
   ))
 
   const podeDevolver = isResponsavel && processo?.status !== 'aberto'
@@ -212,14 +212,9 @@ export default function DetalhesProcesso() {
             {/* Botão dinâmico por tipo de processo */}
             {processo.tipo_processo === 'Did' && (
               <button
-                onClick={() => navigate(`/${subdomain}/processos/${id}/did`)}
-                disabled={!isResponsavel}
-                className={`px-4 py-2 rounded-lg flex items-center space-x-2 shadow-md transition-all ${
-                  isResponsavel
-                    ? 'bg-purple-600 text-white hover:bg-purple-700 hover:shadow-lg'
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                }`}
-                title="Abrir Documento de Intenção de Despesas"
+                onClick={() => navigate(`/${subdomain}/processos/${id}/did`, { state: { readOnly: !isResponsavel } })}
+                className="px-4 py-2 rounded-lg flex items-center space-x-2 shadow-md transition-all bg-purple-600 text-white hover:bg-purple-700 hover:shadow-lg"
+                title={isResponsavel ? 'Abrir Documento de Intenção de Despesas' : 'Visualizar DID (somente leitura)'}
               >
                 <ClipboardList className="h-5 w-5" />
                 <span>DID</span>

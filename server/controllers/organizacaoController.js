@@ -181,8 +181,8 @@ const listSecretarias = async (req, res) => {
     const { Secretaria, Setor } = req.models;
 
     const where = { ativo: true };
-    // Restringe ao usuário não-admin a apenas sua secretaria
-    if (req.user.tipo !== 'admin' && req.user.secretariaId) {
+    // Restringe ao usuário operacional a apenas sua secretaria; admin e gestor veem todas
+    if (req.user.tipo !== 'admin' && req.user.tipo !== 'gestor' && req.user.secretariaId) {
       where.id = req.user.secretariaId;
     }
 

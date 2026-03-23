@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const Tenant = require('../models/Tenant');
 const { getTenantConnection, masterDb } = require('../config/database');
 const initTenantModels = require('../models');
+const { registrarLog } = require('../middleware/activityLogger');
 
 const register = async (req, res) => {
   try {
@@ -157,7 +158,8 @@ const login = async (req, res) => {
         tenantId: tenant.id,
         subdomain: tenant.subdominio,
         secretariaId: user.secretariaId,
-        secretariaNome: user.secretaria?.nome
+        secretariaNome: user.secretaria?.nome,
+        setorId: user.setorId || null
       },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRE || '7d' }

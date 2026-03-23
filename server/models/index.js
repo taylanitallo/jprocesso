@@ -26,6 +26,7 @@ const definePatMovimentacaoModel = require('./PatMovimentacao');
 const definePatBaixaModel = require('./PatBaixa');
 const definePatInventarioModel = require('./PatInventario');
 const definePatInventarioItemModel = require('./PatInventarioItem');
+const defineLogModel = require('./Log');
 
 const initTenantModels = (sequelize) => {
   const User = defineUserModel(sequelize);
@@ -56,6 +57,7 @@ const initTenantModels = (sequelize) => {
   const PatBaixa = definePatBaixaModel(sequelize);
   const PatInventario = definePatInventarioModel(sequelize);
   const PatInventarioItem = definePatInventarioItemModel(sequelize);
+  const Log = defineLogModel(sequelize);
 
   // Contrato → Credor
   Contrato.belongsTo(Credor, { foreignKey: 'credor_id', as: 'credor' });
@@ -160,6 +162,11 @@ const initTenantModels = (sequelize) => {
   PatInventario.belongsTo(User,       { foreignKey: 'responsavel_id', as: 'responsavel' });
   PatInventario.belongsTo(Secretaria, { foreignKey: 'secretaria_id',  as: 'secretaria' });
 
+  // Log associations
+  Log.belongsTo(User,       { foreignKey: 'usuario_id',   as: 'usuario',    constraints: false });
+  Log.belongsTo(Secretaria, { foreignKey: 'secretaria_id', as: 'secretaria', constraints: false });
+  Log.belongsTo(Setor,      { foreignKey: 'setor_id',      as: 'setor',      constraints: false });
+
   return {
     User,
     Secretaria,
@@ -189,6 +196,7 @@ const initTenantModels = (sequelize) => {
     PatBaixa,
     PatInventario,
     PatInventarioItem,
+    Log,
   };
 };
 

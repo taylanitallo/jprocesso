@@ -1,4 +1,5 @@
 const { Op, fn, col, literal } = require('sequelize');
+const { registrarLog } = require('../middleware/activityLogger');
 
 const initializedSchemas = new Set();
 
@@ -375,6 +376,12 @@ const createLancamento = async (req, res) => {
     });
 
     res.status(201).json(lancamento);
+    await registrarLog(req, {
+      acao: 'criar_lancamento',
+      modulo: 'financeiro',
+      descricao: `Lançamento criado: ${descricao} — R$ ${valor}`,
+      referencia_id: lancamento.id
+    });
   } catch (error) {
     console.error('Erro createLancamento:', error);
     res.status(500).json({ error: 'Erro ao criar lançamento' });
@@ -411,6 +418,12 @@ const deleteLancamento = async (req, res) => {
     const lancamento = await FinanceiroLancamento.findByPk(req.params.id);
     if (!lancamento) return res.status(404).json({ error: 'Lançamento não encontrado' });
     await lancamento.destroy();
+    await registrarLog(req, {
+      acao: 'excluir_lancamento',
+      modulo: 'financeiro',
+      descricao: `Lançamento excluído: ${lancamento.descricao}`,
+      referencia_id: lancamento.id
+    });
     res.json({ message: 'Lançamento excluído' });
   } catch (error) {
     console.error('Erro deleteLancamento:', error);

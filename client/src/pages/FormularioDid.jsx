@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Save, Loader2, CheckCircle, AlertCircle, FileCheck, FileDown } from 'lucide-react'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { ArrowLeft, Save, Loader2, CheckCircle, AlertCircle, FileCheck, FileDown, Eye } from 'lucide-react'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
-import { EMPTY } from './did/didShared'
+import { EMPTY, DidReadOnlyContext } from './did/didShared'
 import { gerarDidPDF } from './did/gerarDidPDF'
 import DidFixasSecaoI from './did/fixas/DidFixasSecaoI'
 import DidFixasSecaoII from './did/fixas/DidFixasSecaoII'
@@ -227,7 +227,10 @@ function ModalItensContrato({ contrato, itensDid, onConfirm, onClose }) {
 export default function FormularioDid() {
   const { id: processoId, subdomain } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const { tenant } = useAuth()
+  // Modo somente leitura: ativado quando o processo está em outro setor/secretaria
+  const readOnly = location.state?.readOnly === true
 
   const [gerandoPDF, setGerandoPDF] = useState(false)
 
@@ -421,6 +424,7 @@ export default function FormularioDid() {
       const payload = { tipo_did: tipoDid, itens_did: itensDid }
       SECAO_I_FIELDS.forEach(k => { payload[k] = form[k] })
       const { data } = await api.post(`/did/processo/${targetId}`, payload)
+      if (!data?.did) throw new Error('Servidor retornou resposta inválida ao salvar DID')
       setDid(data.did)
       setMsg({ ok: true, text: `Seção I — DID Nº ${data.did.numero_did} salva com sucesso!` })
       if (processoId === 'novo') {
@@ -430,7 +434,7 @@ export default function FormularioDid() {
       setTimeout(() => setMsg(null), 4000)
       return true
     } catch (err) {
-      setMsg({ ok: false, text: err.response?.data?.error || 'Erro ao salvar Seção I' })
+      setMsg({ ok: false, text: err.response?.data?.error || err.message || 'Erro ao salvar Seção I' })
       return false
     } finally {
       setSaving(false)
@@ -442,6 +446,7 @@ export default function FormularioDid() {
     try {
       const targetId = await criarProcessoSeNovo()
       const { data } = await api.post(`/did/processo/${targetId}`, { ...form, tipo_did: tipoDid, itens_did: itensDid })
+      if (!data?.did) throw new Error('Servidor retornou resposta inválida ao salvar DID')
       setDid(data.did)
       setMsg({ ok: true, text: `DID Nº ${data.did.numero_did} salvo com sucesso!` })
       if (processoId === 'novo') {
@@ -451,7 +456,7 @@ export default function FormularioDid() {
       setTimeout(() => setMsg(null), 4000)
       return true
     } catch (err) {
-      setMsg({ ok: false, text: err.response?.data?.error || 'Erro ao salvar Processo' })
+      setMsg({ ok: false, text: err.response?.data?.error || err.message || 'Erro ao salvar Processo' })
       return false
     } finally {
       setSaving(false)
@@ -463,6 +468,7 @@ export default function FormularioDid() {
     try {
       const targetId = await criarProcessoSeNovo()
       const { data } = await api.post(`/did/processo/${targetId}`, { ...form, tipo_did: tipoDid, itens_did: itensDid })
+      if (!data?.did) throw new Error('Servidor retornou resposta inválida ao salvar DID')
       setDid(data.did)
       setEditando(false)
       setMsg({ ok: true, text: `DID Nº ${data.did.numero_did} salvo com sucesso!` })
@@ -473,7 +479,7 @@ export default function FormularioDid() {
       setTimeout(() => setMsg(null), 4000)
       return true
     } catch (err) {
-      setMsg({ ok: false, text: err.response?.data?.error || 'Erro ao salvar Processo' })
+      setMsg({ ok: false, text: err.response?.data?.error || err.message || 'Erro ao salvar Processo' })
       return false
     } finally {
       setSavingDid(false)
@@ -537,7 +543,16 @@ export default function FormularioDid() {
   )
 
   return (
+    <DidReadOnlyContext.Provider value={readOnly}>
     <div className="space-y-4 animate-fade-in">
+
+      {/* Banner somente leitura */}
+      {readOnly && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-300 px-4 py-3 rounded-lg flex items-center gap-2">
+          <Eye className="h-5 w-5 flex-shrink-0" />
+          <span className="text-sm font-medium">Modo somente leitura — o processo está em outro setor. Você pode visualizar e gerar PDF, mas não pode editar.</span>
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex items-center gap-3">
@@ -563,6 +578,8 @@ export default function FormularioDid() {
             {gerandoPDF ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
             {gerandoPDF ? 'Gerando...' : 'Gerar PDF'}
           </button>
+          {!readOnly && (
+            <>
           <button
             type="button"
             onClick={() => setEditando(true)}
@@ -574,6 +591,8 @@ export default function FormularioDid() {
             {savingDid ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             {savingDid ? '⏳ Salvando...' : '✅ Salvar'}
           </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -724,6 +743,8 @@ export default function FormularioDid() {
           {gerandoPDF ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
           {gerandoPDF ? 'Gerando...' : 'Gerar PDF'}
         </button>
+        {!readOnly && (
+          <>
         <button
           type="button"
           onClick={() => setEditando(true)}
@@ -735,7 +756,10 @@ export default function FormularioDid() {
           {savingDid ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           {savingDid ? '⏳ Salvando...' : '✅ Salvar Processo'}
         </button>
+          </>
+        )}
       </div>
     </div>
+    </DidReadOnlyContext.Provider>
   )
 }
