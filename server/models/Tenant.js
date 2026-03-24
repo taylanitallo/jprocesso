@@ -49,6 +49,7 @@ const Tenant = masterDb.define('Tenant', {
   }
 }, {
   tableName: 'clientes',
+  schema: 'public',
   timestamps: true,
   underscored: true,
   indexes: [

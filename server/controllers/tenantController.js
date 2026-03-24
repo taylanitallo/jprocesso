@@ -834,7 +834,7 @@ const getStatistics = async (req, res) => {
 
     const tenantsPorEstado = await masterDb.query(`
       SELECT estado, COUNT(*) as total
-      FROM clientes
+      FROM public.clientes
       WHERE ativo = true
       GROUP BY estado
       ORDER BY total DESC
