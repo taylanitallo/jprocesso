@@ -12,6 +12,9 @@ const routes = require('./routes');
 
 const app = express();
 
+// Railway usa proxy reverso — necessário para express-rate-limit funcionar corretamente
+app.set('trust proxy', 1);
+
 // CORS deve ser o primeiro middleware para garantir cabeçalhos mesmo em erros
 const allowedOrigins = process.env.FRONTEND_URL
   ? process.env.FRONTEND_URL.split(',')
