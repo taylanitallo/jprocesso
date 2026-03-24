@@ -590,14 +590,24 @@ const getDashboardStats = async (req, res) => {
       Processo.count({ where: { status: 'concluido' } }),
 
       // 6. urgentes (prioridade=urgente, não concluídos, últimos 5)
+      // Aplica a mesma regra de visibilidade da caixa de entrada:
+      // - operacional: apenas no seu setor ou destinados a ele
+      // - gestor: toda a secretaria
+      // - admin: todos
       Processo.findAll({
         where: {
+          ...( userInfo?.tipo === 'operacional' ? whereMinhasCaixa : {} ),
           prioridade: 'urgente',
           status: { [Op.notIn]: ['concluido', 'arquivado'] }
         },
         limit: 5,
         order: [['data_abertura', 'ASC']],
-        include: includeBasico
+        include: userInfo?.tipo !== 'admin' && userInfo?.secretariaId
+          ? [
+              { model: Setor, as: 'setorAtual', attributes: ['id', 'nome', 'sigla'], where: { secretariaId: userInfo.secretariaId }, required: true },
+              { model: User, as: 'usuarioAtual', attributes: ['id', 'nome'] }
+            ]
+          : includeBasico
       })
     ]);
 
