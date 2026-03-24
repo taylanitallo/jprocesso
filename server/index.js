@@ -90,9 +90,10 @@ const initDatabase = async () => {
 
     console.log('✅ Banco de dados pronto para uso');
   } catch (error) {
-    console.error('Erro ao conectar ao banco de dados');
-    console.log('\n⚠️  Para rodar sem banco, adicione USE_MOCK_AUTH=true no .env\n');
-    process.exit(1);
+    console.error('❌ Erro ao conectar ao banco de dados:', error.message);
+    console.error('Stack:', error.stack);
+    console.log('\n⚠️  Servidor vai iniciar mesmo assim — verifique as variáveis de banco\n');
+    // NÃO encerra o processo: servidor sobe para responder health checks e CORS
   }
 };
 
@@ -103,6 +104,11 @@ initDatabase().then(() => {
     if (USE_MOCK) {
       console.log('🔓 Modo MOCK ativado');
     }
+  });
+}).catch((err) => {
+  console.error('❌ Falha crítica na inicialização:', err.message);
+  app.listen(PORT, () => {
+    console.log(`Servidor rodando na porta ${PORT} (modo degradado — sem banco)`);
   });
 });
 
