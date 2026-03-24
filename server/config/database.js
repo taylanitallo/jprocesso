@@ -9,7 +9,7 @@ const POOL_CONFIG = {
   evict: 3000,      // verificar conexões ociosas a cada 3s
 };
 
-const IS_SUPABASE = process.env.DB_HOST && process.env.DB_HOST.includes('supabase.co');
+const IS_SUPABASE = process.env.DB_HOST && (process.env.DB_HOST.includes('supabase.co') || process.env.DB_HOST.includes('supabase.com'));
 
 const DIALECT_OPTIONS = {
   keepAlive: true,
