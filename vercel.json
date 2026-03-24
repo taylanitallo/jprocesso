@@ -1,0 +1,9 @@
+{
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/jprocesso",
+      "permanent": true
+    }
+  ]
+}
