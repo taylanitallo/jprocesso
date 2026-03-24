@@ -883,7 +883,7 @@ const getTenantInfo = async (req, res) => {
     res.json({ success: true, tenant });
   } catch (error) {
     console.error('❌ Erro ao buscar info do tenant:', error);
-    res.status(500).json({ error: 'Erro ao buscar município' });
+    res.status(500).json({ error: 'Erro ao buscar município', detail: error.message });
   }
 };
 
