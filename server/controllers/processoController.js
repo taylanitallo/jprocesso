@@ -545,7 +545,11 @@ const getDashboardStats = async (req, res) => {
       { model: User, as: 'usuarioAtual', attributes: ['id', 'nome'] }
     ];
 
-    // ── Minha Caixa: processos no setor do usuário OU destinados a ele diretamente
+    // ── Filtro de visibilidade por tipo de usuário ────────────────────────────
+    // operacional: apenas processos no seu setor OU destinados diretamente a ele
+    // gestor: todos os processos da sua secretaria
+    // admin: todos os processos
+
     const orConditions = [{ usuario_atual_id: userId }];
     if (setorId) orConditions.push({ setor_atual_id: setorId });
 
@@ -553,6 +557,27 @@ const getDashboardStats = async (req, res) => {
       status: { [Op.notIn]: ['concluido', 'arquivado'] },
       [Op.or]: orConditions
     };
+
+    // Include com filtro de secretaria para gestor
+    const includeComSecretaria = userInfo?.secretariaId
+      ? [
+          { model: Setor, as: 'setorAtual', attributes: ['id', 'nome', 'sigla'], where: { secretariaId: userInfo.secretariaId }, required: true },
+          { model: User, as: 'usuarioAtual', attributes: ['id', 'nome'] }
+        ]
+      : includeBasico;
+
+    // Where base para cada tipo de usuário (usado em Novos Hoje, 48h, Concluídos, Urgentes)
+    const whereVisivel =
+      userInfo?.tipo === 'operacional'
+        ? { [Op.or]: orConditions }
+        : userInfo?.tipo === 'gestor' && userInfo?.secretariaId
+          ? {}  // filtro aplicado via include (setorAtual.secretariaId)
+          : {}; // admin: sem filtro
+
+    const includeVisivelSemStatus =
+      userInfo?.tipo === 'gestor' && userInfo?.secretariaId
+        ? includeComSecretaria
+        : includeBasico;
 
     const [
       minhaCaixaCount,
@@ -573,41 +598,44 @@ const getDashboardStats = async (req, res) => {
         include: includeBasico
       }),
 
-      // 3. novos hoje (todos visíveis ao usuário)
+      // 3. novos hoje — respeitando visibilidade do usuário
       Processo.count({
-        where: { created_at: { [Op.gte]: inicioDia } }
+        where: { ...whereVisivel, created_at: { [Op.gte]: inicioDia } },
+        include: userInfo?.tipo === 'gestor' && userInfo?.secretariaId
+          ? [{ model: Setor, as: 'setorAtual', where: { secretariaId: userInfo.secretariaId }, required: true }]
+          : []
       }),
 
-      // 4. pendentes > 48h (não concluídos/arquivados)
+      // 4. pendentes > 48h — respeitando visibilidade do usuário
       Processo.count({
         where: {
+          ...whereVisivel,
           data_abertura: { [Op.lte]: limite48h },
           status: { [Op.notIn]: ['concluido', 'arquivado'] }
-        }
+        },
+        include: userInfo?.tipo === 'gestor' && userInfo?.secretariaId
+          ? [{ model: Setor, as: 'setorAtual', where: { secretariaId: userInfo.secretariaId }, required: true }]
+          : []
       }),
 
-      // 5. concluídos (total)
-      Processo.count({ where: { status: 'concluido' } }),
+      // 5. concluídos — respeitando visibilidade do usuário
+      Processo.count({
+        where: { ...whereVisivel, status: 'concluido' },
+        include: userInfo?.tipo === 'gestor' && userInfo?.secretariaId
+          ? [{ model: Setor, as: 'setorAtual', where: { secretariaId: userInfo.secretariaId }, required: true }]
+          : []
+      }),
 
-      // 6. urgentes (prioridade=urgente, não concluídos, últimos 5)
-      // Aplica a mesma regra de visibilidade da caixa de entrada:
-      // - operacional: apenas no seu setor ou destinados a ele
-      // - gestor: toda a secretaria
-      // - admin: todos
+      // 6. urgentes — respeitando visibilidade do usuário
       Processo.findAll({
         where: {
-          ...( userInfo?.tipo === 'operacional' ? whereMinhasCaixa : {} ),
+          ...whereVisivel,
           prioridade: 'urgente',
           status: { [Op.notIn]: ['concluido', 'arquivado'] }
         },
         limit: 5,
         order: [['data_abertura', 'ASC']],
-        include: userInfo?.tipo !== 'admin' && userInfo?.secretariaId
-          ? [
-              { model: Setor, as: 'setorAtual', attributes: ['id', 'nome', 'sigla'], where: { secretariaId: userInfo.secretariaId }, required: true },
-              { model: User, as: 'usuarioAtual', attributes: ['id', 'nome'] }
-            ]
-          : includeBasico
+        include: includeVisivelSemStatus
       })
     ]);
 
