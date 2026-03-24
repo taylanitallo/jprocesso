@@ -12,10 +12,12 @@ const routes = require('./routes');
 
 const app = express();
 
-// Configurações atualizadas
-app.use(helmet());
-const allowedOrigins = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : null;
-app.use(cors({
+// CORS deve ser o primeiro middleware para garantir cabeçalhos mesmo em erros
+const allowedOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(',')
+  : null;
+
+const corsOptions = {
   origin: allowedOrigins
     ? (origin, cb) => {
         if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
@@ -23,7 +25,11 @@ app.use(cors({
       }
     : true,
   credentials: true
-}));
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // preflight para todas as rotas
+app.use(helmet());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 if (process.env.NODE_ENV !== 'production') {
@@ -53,6 +59,17 @@ routes(app);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Sistema de Tramitação JEOS Processos' });
+});
+
+// Error handler global — garante CORS mesmo em erros 500
+app.use((err, req, res, next) => {
+  const origin = req.headers.origin;
+  if (!allowedOrigins || (origin && allowedOrigins.includes(origin))) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+  }
+  console.error('Erro interno:', err.message);
+  res.status(err.status || 500).json({ error: err.message || 'Erro interno do servidor' });
 });
 
 const PORT = process.env.PORT || 5000;
