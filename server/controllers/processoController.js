@@ -479,9 +479,22 @@ const listProcessos = async (req, res) => {
 
     const offset = (page - 1) * limit;
 
-    // Filtra por secretaria para usuários não-admin
-    const filtrarPorSecretaria = req.user.tipo !== 'admin' && req.user.secretariaId;
-    const setorInclude = filtrarPorSecretaria
+    // Filtra processos conforme o tipo do usuário:
+    // - admin: vê tudo
+    // - gestor: vê todos os processos da sua secretaria
+    // - operacional: vê apenas processos no seu setor ou destinados a ele diretamente
+    const tipoUsuario = req.user.tipo;
+
+    if (tipoUsuario === 'operacional') {
+      // Busca setorId atualizado do banco
+      const userInfo = await User.findByPk(req.user.id, { attributes: ['id', 'setorId'] });
+      const setorId = userInfo?.setorId || null;
+      const orCond = [{ usuario_atual_id: req.user.id }];
+      if (setorId) orCond.push({ setor_atual_id: setorId });
+      where[Op.or] = orCond;
+    }
+
+    const setorInclude = (tipoUsuario !== 'admin' && req.user.secretariaId)
       ? { model: Setor, as: 'setorAtual', attributes: ['id', 'nome', 'sigla'], where: { secretariaId: req.user.secretariaId }, required: true }
       : { model: Setor, as: 'setorAtual', attributes: ['id', 'nome', 'sigla'] };
 
