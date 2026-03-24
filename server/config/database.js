@@ -10,12 +10,12 @@ const POOL_CONFIG = {
 };
 
 const IS_SUPABASE = process.env.DB_HOST && (process.env.DB_HOST.includes('supabase.co') || process.env.DB_HOST.includes('supabase.com'));
+const IS_POOLER = parseInt(process.env.DB_PORT) === 6543;
 
 const DIALECT_OPTIONS = {
   keepAlive: true,
   connectTimeout: 10000,
-  statement_timeout: 30000,
-  idle_in_transaction_session_timeout: 30000,
+  ...(IS_POOLER ? {} : { statement_timeout: 30000, idle_in_transaction_session_timeout: 30000 }),
   ...(IS_SUPABASE ? { ssl: { require: true, rejectUnauthorized: false } } : {}),
 };
 
