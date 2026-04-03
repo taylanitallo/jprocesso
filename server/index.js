@@ -25,17 +25,11 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions)); // preflight para todas as rotas
 app.use(helmet({
-  frameguard: false, // Permite ser carregado em iframe
+  frameguard: false,
   contentSecurityPolicy: {
+    useDefaults: false,
     directives: {
-      defaultSrc: ["'self'", "https://www.jeossistemas.com", "https://*.jeossistemas.com"],
-      frameSrc: ["'self'", "https://www.jeossistemas.com"],
-      frameAncestors: ["'self'", "https://www.jeossistemas.com", "https://*.jeossistemas.com"],
-      connectSrc: ["'self'", "https://"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      fontSrc: ["'self'", "data:"]
+      frameAncestors: ["'self'", "https://www.jeossistemas.com", "https://*.jeossistemas.com"]
     }
   }
 }));
