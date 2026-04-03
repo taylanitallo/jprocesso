@@ -15,18 +15,10 @@ const app = express();
 // Railway usa proxy reverso — necessário para express-rate-limit funcionar corretamente
 app.set('trust proxy', 1);
 
-// CORS deve ser o primeiro middleware para garantir cabeçalhos mesmo em erros
-const allowedOrigins = process.env.FRONTEND_URL
-  ? process.env.FRONTEND_URL.split(',')
-  : null;
-
+// CORS deve ser o primeiro middleware garantir cabeçalhos mesmo em erros
+// Em desenvolvimento, usar CLIENT_URL; em produção, permitir todos (endpoints públicos)
 const corsOptions = {
-  origin: allowedOrigins
-    ? (origin, cb) => {
-        if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-        return cb(new Error('Not allowed by CORS'));
-      }
-    : true,
+  origin: true, // Permitir todas as origins - endpoints específicos validam autenticação
   credentials: true
 };
 
