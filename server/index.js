@@ -28,9 +28,9 @@ app.use(helmet({
   frameguard: false, // Permite ser carregado em iframe
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
+      defaultSrc: ["'self'", "https://www.jeossistemas.com", "https://*.jeossistemas.com"],
       frameSrc: ["'self'", "https://www.jeossistemas.com"],
-      frameAncestors: ["'self'", "https://www.jeossistemas.com"],
+      frameAncestors: ["'self'", "https://www.jeossistemas.com", "https://*.jeossistemas.com"],
       connectSrc: ["'self'", "https://"],
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
