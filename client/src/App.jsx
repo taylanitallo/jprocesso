@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
+import MunicipioSelector from './pages/MunicipioSelector'
 import LoginAdmin from './pages/LoginAdmin'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
@@ -79,8 +80,11 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <Routes>
+        {/* Seletor de Municípios - Rota Raiz */}
+        <Route path="/" element={<MunicipioSelector />} />
+
         {/* Área Restrita - Login Admin */}
-        <Route path="/" element={<LoginAdmin />} />
+        <Route path="/admin" element={<LoginAdmin />} />
         
         {/* Admin Routes - Gestão de Municípios (após login admin) */}
         <Route path="/admin" element={<PrivateRoute requireAdmin><AdminTenants /></PrivateRoute>} />

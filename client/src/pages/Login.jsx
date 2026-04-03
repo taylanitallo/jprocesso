@@ -211,15 +211,6 @@ export default function Login() {
                     {loading ? '⏳ Entrando...' : '🚀 Acessar jProcesso'}
                   </button>
                 </form>
-
-                <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 text-center">
-                  <button
-                    onClick={() => window.location.href = '/'}
-                    className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                  >
-                    🔧 Área de Administração
-                  </button>
-                </div>
               </div>
             </div>
           </div>
