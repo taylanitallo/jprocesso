@@ -83,9 +83,6 @@ function App() {
         {/* Seletor de Municípios - Rota Raiz */}
         <Route path="/" element={<MunicipioSelector />} />
 
-        {/* Fallback para /login sem subdomínio - redireciona para / */}
-        <Route path="/login" element={<Navigate to="/" replace />} />
-
         {/* Área Restrita - Login Admin */}
         <Route path="/admin" element={<LoginAdmin />} />
         
