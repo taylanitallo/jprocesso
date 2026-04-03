@@ -19,17 +19,22 @@ export default function MunicipioSelector() {
 
   const fetchMunicipios = async () => {
     try {
+      console.log('Iniciando fetch de municípios...')
+      console.log('URL da API:', import.meta.env.VITE_API_URL || '/api')
       const res = await api.get('/tenants')
+      console.log('Resposta da API:', res.data)
       if (res.data.tenants && Array.isArray(res.data.tenants)) {
         // Filtrar apenas ativos e ordenar por nome
         const ativos = res.data.tenants.filter(t => t.ativo)
         const ordenados = ativos.sort((a, b) =>
           a.nome_municipio.localeCompare(b.nome_municipio)
         )
+        console.log('Municípios carregados:', ordenados)
         setMunicipios(ordenados)
       }
     } catch (err) {
       console.error('Erro ao carregar municípios:', err)
+      console.error('Detalhes do erro:', err.response?.data || err.message)
       setError('Erro ao carregar municípios. Tente novamente.')
     } finally {
       setLoading(false)
