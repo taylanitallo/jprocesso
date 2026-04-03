@@ -30,6 +30,7 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       frameSrc: ["'self'", "https://www.jeossistemas.com"],
+      frameAncestors: ["'self'", "https://www.jeossistemas.com"],
       connectSrc: ["'self'", "https://"],
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
