@@ -1,7 +1,23 @@
 import axios from 'axios'
 
+// Determinar URL da API com fallbacks inteligentes
+const getApiUrl = () => {
+  // Verificar variável de ambiente Vite
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL
+  }
+
+  // Em produção (Vercel), usar Railway diretamente
+  if (import.meta.env.PROD) {
+    return 'https://jprocesso-production.up.railway.app/api'
+  }
+
+  // Em desenvolvimento, usar rota relativa (proxy do vite)
+  return '/api'
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api'
+  baseURL: getApiUrl()
 })
 
 // Interceptor de request para adicionar headers
