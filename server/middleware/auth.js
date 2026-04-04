@@ -65,7 +65,6 @@ const tenantMiddleware = async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.error('Erro no middleware tenant:', error);
     return res.status(500).json({ error: 'Erro ao processar tenant' });
   }
 };

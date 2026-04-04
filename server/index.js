@@ -26,7 +26,16 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions)); // preflight para todas as rotas
 app.use(helmet({
   frameguard: false,
-  contentSecurityPolicy: false
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      frameAncestors: ["'self'", "https://www.jeossistemas.com", "https://*.jeossistemas.com"]
+    }
+  }
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -67,7 +76,7 @@ app.use((err, req, res, next) => {
     res.header('Access-Control-Allow-Credentials', 'true');
   }
   console.error('Erro interno:', err.message);
-  res.status(err.status || 500).json({ error: err.message || 'Erro interno do servidor' });
+  res.status(err.status || 500).json({ error: 'Erro interno do servidor' });
 });
 
 const PORT = process.env.PORT || 5000;
@@ -88,8 +97,7 @@ const initDatabase = async () => {
 
     console.log('✅ Banco de dados pronto para uso');
   } catch (error) {
-    console.error('❌ Erro ao conectar ao banco de dados:', error.message);
-    console.error('Stack:', error.stack);
+    console.error('❌ Erro ao conectar ao banco de dados.');
     console.log('\n⚠️  Servidor vai iniciar mesmo assim — verifique as variáveis de banco\n');
     // NÃO encerra o processo: servidor sobe para responder health checks e CORS
   }

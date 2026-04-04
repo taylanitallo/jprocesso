@@ -38,7 +38,6 @@ export default function LoginAdmin() {
       // Redirecionar para área de gestão
       navigate('/admin');
     } catch (err) {
-      console.error('Erro no login:', err);
       setError(err.response?.data?.error || 'Erro ao fazer login. Verifique suas credenciais.');
     } finally {
       setLoading(false);

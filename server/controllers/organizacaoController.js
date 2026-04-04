@@ -262,15 +262,11 @@ const deleteSecretaria = async (req, res) => {
 
 const createSetor = async (req, res) => {
   try {
-    console.log('📝 Recebendo requisição para criar setor');
-    console.log('Body:', req.body);
-    
     const { nome, sigla, descricao, secretaria_id } = req.body;
     const { Setor } = req.models;
 
     if (!Setor) {
-      console.error('❌ Model Setor não encontrado!');
-      return res.status(500).json({ error: 'Model Setor não disponível' });
+      return res.status(500).json({ error: 'Erro interno do servidor' });
     }
 
     const setor = await Setor.create({

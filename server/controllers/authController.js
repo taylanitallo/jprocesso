@@ -285,7 +285,8 @@ const updateUser = async (req, res) => {
 
     await user.update(updatePayload);
 
-    res.json({ message: 'Usuário atualizado com sucesso', user });
+    const { senha: _, ...userSafe } = user.toJSON();
+    res.json({ message: 'Usuário atualizado com sucesso', user: userSafe });
   } catch (error) {
     console.error('Erro ao atualizar usuário:', error);
     res.status(500).json({ error: 'Erro ao atualizar usuário' });
