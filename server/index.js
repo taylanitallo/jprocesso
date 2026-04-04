@@ -26,12 +26,7 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions)); // preflight para todas as rotas
 app.use(helmet({
   frameguard: false,
-  contentSecurityPolicy: {
-    useDefaults: false,
-    directives: {
-      frameAncestors: ["'self'", "https://www.jeossistemas.com", "https://*.jeossistemas.com"]
-    }
-  }
+  contentSecurityPolicy: false
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
