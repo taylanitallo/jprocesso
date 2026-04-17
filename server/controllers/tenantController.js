@@ -620,6 +620,7 @@ async function migrarSchemaUsuarios(schema, pool) {
 }
 
 // Executar migração em todos os tenants ativos (chamado no startup do servidor)
+// OTIMIZADO: tenants migrados em paralelo (Promise.allSettled) ao invés de sequencial
 const migrarTodosOsSchemas = async () => {
   const pool = new Pool({
     host: process.env.DB_HOST,
@@ -630,14 +631,16 @@ const migrarTodosOsSchemas = async () => {
   });
   try {
     const tenants = await Tenant.findAll({ where: { ativo: true }, attributes: ['schema'] });
-    for (const tenant of tenants) {
-      try {
-        await migrarSchemaUsuarios(tenant.schema, pool);
-        await migrarAgentes(tenant.schema, pool);
-      } catch (_) {
-        // schema pode não ter sido criado ainda
-      }
-    }
+    await Promise.allSettled(
+      tenants.map(async (tenant) => {
+        try {
+          await migrarSchemaUsuarios(tenant.schema, pool);
+          await migrarAgentes(tenant.schema, pool);
+        } catch (_) {
+          // schema pode não ter sido criado ainda
+        }
+      })
+    );
   } finally {
     await pool.end();
   }

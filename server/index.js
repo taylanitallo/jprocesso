@@ -5,7 +5,7 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
-const { masterDb } = require('./config/database');
+const { masterDb, getTenantConnection } = require('./config/database');
 const Tenant = require('./models/Tenant');
 const { migrarTodosOsSchemas } = require('./controllers/tenantController');
 const routes = require('./routes');
@@ -68,6 +68,9 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Sistema de Tramitação JEOS Processos' });
 });
 
+// Endpoint leve de keepalive — usado pelo auto-ping abaixo
+app.get('/ping', (req, res) => res.send('pong'));
+
 // Error handler global — garante CORS mesmo em erros 500
 app.use((err, req, res, next) => {
   const origin = req.headers.origin;
@@ -95,6 +98,22 @@ const initDatabase = async () => {
     // Migração automática: garantir colunas ausentes em todos os schemas
     await migrarTodosOsSchemas();
 
+    // Pré-aquecer cache de conexões para todos os tenants ativos.
+    // Sem isso, a PRIMEIRA requisição de cada tenant após cold start dispara
+    // runTenantMigrations em tempo real, adicionando 2-4s de latência.
+    const tenants = await Tenant.findAll({ where: { ativo: true }, attributes: ['schema'] });
+    if (tenants.length > 0) {
+      console.log(`🔥 Pré-aquecendo conexões para ${tenants.length} tenant(s)...`);
+      await Promise.allSettled(
+        tenants.map((t) =>
+          getTenantConnection(t.schema).catch((e) =>
+            console.warn(`⚠️  Falha ao pré-aquecer ${t.schema}:`, e.message)
+          )
+        )
+      );
+      console.log('✅ Cache de tenants aquecido');
+    }
+
     console.log('✅ Banco de dados pronto para uso');
   } catch (error) {
     console.error('❌ Erro ao conectar ao banco de dados.');
@@ -110,6 +129,7 @@ initDatabase().then(() => {
     if (USE_MOCK) {
       console.log('🔓 Modo MOCK ativado');
     }
+
   });
 }).catch((err) => {
   console.error('❌ Falha crítica na inicialização:', err.message);
