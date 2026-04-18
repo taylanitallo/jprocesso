@@ -141,7 +141,7 @@ export default function LoginAdmin() {
               <div>
                 <p className="font-medium text-gray-900 dark:text-white mb-0.5 text-sm">Apenas para Administradores</p>
                 <p className="text-xs leading-relaxed">
-                  Para acessar como município, utilize: <span className="font-mono text-blue-600">https://jprocesso.vercel.app/nome-municipio</span>
+                  Para acessar como município, utilize: <span className="font-mono text-blue-600">https://www.jeossistemas.com/jprocesso/nome-municipio</span>
                 </p>
               </div>
             </div>
