@@ -3,7 +3,6 @@ import axios from 'axios'
 // Determinar URL da API com fallbacks inteligentes
 const getApiUrl = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL
-  if (import.meta.env.PROD) return 'https://jprocesso-production.up.railway.app/api'
   return '/api'
 }
 
