@@ -203,15 +203,15 @@ function gerarMockNFSe(chave) {
         endereco: {
           logradouro: 'Rua das Flores',
           numero: '100',
-          cidade: 'Irauçuba',
-          uf: 'CE',
-          cep: '62600-000'
+          cidade: 'CIDADE NÃO INFORMADA',
+          uf: 'XX',
+          cep: '00000-000'
         }
       },
-      // Tomador (quem contratou = Prefeitura de Irauçuba)
+      // Tomador (quem contratou = município configurado no tenant)
       tom_serv: {
         cnpj:         CNPJ_TOMADOR_FORMATADO,
-        razao_social: 'MUNICIPIO DE IRAUCUBA',
+        razao_social: 'MUNICIPIO NAO INFORMADO',
         inscricao_municipal: ''
       },
       // Serviços prestados
