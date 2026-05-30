@@ -58,3 +58,7 @@ relatorios-light.png
 # Pastas locais fora do app
 documentos-licitacao/
 hostgator-deploy/
+
+# Documentação local/operacional
+README.md
+SYSTEM_PROMPT.md
