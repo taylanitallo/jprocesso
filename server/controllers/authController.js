@@ -225,7 +225,7 @@ const login = async (req, res) => {
       });
     }
     
-    const tenant = await Tenant.findOne({ where: { subdominio: subdomain || 'teste', ativo: true } });
+    const tenant = await Tenant.findOne({ where: { subdominio: subdomain, ativo: true } });
     if (!tenant) {
       return res.status(404).json({ error: 'Cliente não encontrado' });
     }

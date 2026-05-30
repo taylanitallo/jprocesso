@@ -3,7 +3,7 @@
  *
  * Exemplos:
  * - /jprocesso/ → null (rota raiz - MunicipioSelector)
- * - /jprocesso/teste/login → "teste"
+ * - /jprocesso/municipio/login → "municipio"
  * - /jprocesso/municipio/processos → "municipio"
  */
 export const getSubdomain = () => {

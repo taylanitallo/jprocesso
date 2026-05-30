@@ -12,276 +12,15 @@ import {
   Trash2, 
   Briefcase,
   AlertTriangle,
-  ChevronDown,
-  ChevronRight,
-  Loader2,
   CheckCircle,
   UserCheck,
   X,
-  UserCog,
-  Users,
-  Search,
-  Download
+  UserCog
 } from 'lucide-react';
 
-// ══════════════════════════════════════════════════════════════════════════════
-//  MODAL: IMPORTAR SECRETARIAS DO PORTAL DE IRAUÇUBA
-// ══════════════════════════════════════════════════════════════════════════════
-function ImportarSecretariasModal({ onClose, onConcluido }) {
-  const [status, setStatus] = useState('idle') // idle | running | done | error
-  const [log, setLog] = useState([])
-  const [progress, setProgress] = useState({ atual: 0, total: 0 })
-  const [resumo, setResumo] = useState(null)
-  const logRef = useState(null)[1]
-  const logBoxRef = useState(null)
-
-  const iniciar = async () => {
-    setStatus('running')
-    setLog([])
-    setProgress({ atual: 0, total: 0 })
-    setResumo(null)
-    try {
-      const token      = localStorage.getItem('token')
-      const subdomain  = localStorage.getItem('subdomain')
-      const baseUrl    = import.meta.env.VITE_API_URL || '/api'
-      const response = await fetch(`${baseUrl}/organizacao/importar-iraucuba`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'x-tenant-subdomain': subdomain,
-          Accept: 'text/event-stream',
-        },
-      })
-      if (!response.ok || !response.body) { setStatus('error'); setLog(p => [...p, '❌ Erro ao conectar ao servidor.']); return }
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder()
-      let buf = ''
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buf += decoder.decode(value, { stream: true })
-        const lines = buf.split('\n')
-        buf = lines.pop()
-        for (const line of lines) {
-          if (!line.startsWith('data:')) continue
-          try {
-            const ev = JSON.parse(line.slice(5).trim())
-            if (ev.tipo === 'progresso') setProgress({ atual: ev.atual, total: ev.total })
-            if (ev.tipo === 'concluido') { setStatus('done'); setResumo(ev); setLog(p => [...p, `✅ ${ev.msg}`]) }
-            if (ev.tipo === 'erro')      { setStatus('error'); setLog(p => [...p, `❌ ${ev.msg}`]) }
-            if (ev.msg) setLog(p => [...p, ev.msg])
-          } catch {}
-        }
-      }
-      if (status === 'running') setStatus('done')
-    } catch (err) {
-      setStatus('error')
-      setLog(p => [...p, `❌ ${err.message}`])
-    }
-  }
-
-  const pct = progress.total ? Math.round((progress.atual / progress.total) * 100) : 0
-
-  return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-xl max-w-lg w-full shadow-xl">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700/50 flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-gray-900 dark:text-slate-100 flex items-center gap-2">
-              <Download className="w-5 h-5 text-teal-600" /> Importar do Portal de Irauçuba
-            </h2>
-            <p className="text-xs text-gray-500 mt-0.5">Cria secretarias e agentes ordenadores a partir de iraucuba.ce.gov.br</p>
-          </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
-        </div>
-        <div className="p-6 space-y-4">
-          {status === 'idle' && (
-            <div className="text-sm text-gray-600 dark:text-slate-300 space-y-2">
-              <p>Esta operação irá:</p>
-              <ul className="list-disc ml-5 space-y-1">
-                <li>Importar <strong>15 secretarias</strong> do site da Prefeitura de Irauçuba</li>
-                <li>Cadastrar o <strong>secretário(a) atual</strong> de cada secretaria como agente ordenador</li>
-                <li>Registros já existentes <strong>não serão duplicados</strong></li>
-              </ul>
-            </div>
-          )}
-          {(status === 'running' || status === 'done') && (
-            <>
-              <div className="w-full bg-gray-100 dark:bg-slate-700/30 rounded-full h-2.5">
-                <div className="bg-teal-500 h-2.5 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
-              </div>
-              <p className="text-xs text-gray-500 text-center">
-                {progress.total ? `${progress.atual} / ${progress.total} secretarias` : 'Aguardando...'}
-              </p>
-              <div className="bg-gray-50 dark:bg-slate-700/30 rounded-lg p-3 max-h-40 overflow-y-auto text-xs text-gray-600 dark:text-slate-300 space-y-0.5 font-mono">
-                {log.map((l, i) => <div key={i}>{l}</div>)}
-              </div>
-            </>
-          )}
-          {status === 'error' && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-3 text-sm text-red-700 dark:text-red-400">
-              {log[log.length - 1] || 'Erro desconhecido'}
-            </div>
-          )}
-          {resumo && (
-            <div className="bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-700 rounded-lg p-3 text-sm text-teal-800 dark:text-teal-300 space-y-0.5">
-              <div>✅ <strong>{resumo.secCriadas}</strong> secretaria(s) criada(s) · {resumo.secDuplic} já existia(m)</div>
-              <div>👤 <strong>{resumo.agenteCriados}</strong> agente(s) criado(s) · {resumo.agentesDuplic} já existia(m)</div>
-              {resumo.erros > 0 && <div>⚠️ {resumo.erros} erro(s) durante a importação</div>}
-            </div>
-          )}
-          <div className="flex justify-end gap-2 pt-2">
-            {status === 'done' ? (
-              <button onClick={onConcluido} className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold">
-                Fechar e Recarregar
-              </button>
-            ) : status === 'running' ? (
-              <div className="flex items-center gap-2 text-sm text-gray-500"><Loader2 className="w-4 h-4 animate-spin" /> Importando...</div>
-            ) : (
-              <>
-                <button onClick={onClose} className="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-50">Cancelar</button>
-                <button onClick={iniciar} className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
-                  <Download className="w-4 h-4" /> Iniciar Importação
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 export default function Secretarias() {
-  const { subdomain, tab: tabParam } = useParams();
-  const navigate = useNavigate();
-  const [showModalSecretaria, setShowModalSecretaria] = useState(false);
-  const [showModalSetor, setShowModalSetor] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [editingSecretaria, setEditingSecretaria] = useState(null);
-  const [editingSetor, setEditingSetor] = useState(null);
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [expandedSecretarias, setExpandedSecretarias] = useState([]);
-  const [selectedSecretaria, setSelectedSecretaria] = useState(null);
-  const [secFiltroDescricao, setSecFiltroDescricao] = useState('');
-  const [secFiltroVigor, setSecFiltroVigor] = useState('');
-  const [showSetoresPanel, setShowSetoresPanel] = useState(false);
-  const [selectedSetorInPanel, setSelectedSetorInPanel] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
-
-  const [secretarias, setSecretarias] = useState([]);
-
-  // Buscar secretarias e setores da API
-  useEffect(() => {
-    fetchSecretarias();
-  }, []);
-
-  const fetchSecretarias = async () => {
-    try {
-      const res = await api.get('/organizacao/secretarias');
-      const secretariasData = res.data?.secretarias || res.data || [];
-
-      // O backend já retorna cada secretaria com secretaria.setores embutidos (via Sequelize include)
-      const ordenadas = [...secretariasData].sort((a, b) =>
-        (a.nome || '').localeCompare(b.nome || '')
-      );
-
-      setSecretarias(ordenadas);
-    } catch (error) {
-      console.error('Erro ao carregar secretarias:', error);
-      setSecretarias([]);
-    }
-  };
-
-  const [formSecretaria, setFormSecretaria] = useState({
-    nome: '', sigla: '', descricao: '',
-    data_inicio: '', data_fim: '', email: '', whatsapp: '',
-    outros_sistemas: false, cnpj: '', razao_social: '', codigo_unidade: '',
-    responsaveis: [], setores: []
-  });
-
-  const [formSetor, setFormSetor] = useState({
-    nome: '',
-    descricao: '',
-    secretariaId: null
-  });
-
-  // ── Tabs ──────────────────────────────────────────────────────────────────
-  const VALID_TABS = ['entidade', 'secretarias', 'agentes', 'responsaveis'];
-  const activeTab = VALID_TABS.includes(tabParam) ? tabParam : 'entidade';
-  const setActiveTab = (key) => navigate(`/${subdomain}/organizacao/${key}`, { replace: false });
-
-  // ── Agentes (localStorage) ────────────────────────────────────────────────
-  const [agentes, setAgentes] = useState([]);
-  useEffect(() => {
-    api.get('/organizacao/agentes').then(r => setAgentes(r.data?.agentes || r.data || [])).catch(() => {});
-  }, []);
-  const [showModalAgente,       setShowModalAgente]       = useState(false);
-  const [editingAgente,         setEditingAgente]         = useState(null);
-  const [showDeleteAgenteModal, setShowDeleteAgenteModal] = useState(false);
-  const [deleteAgenteTarget,    setDeleteAgenteTarget]    = useState(null);
-  const [agenteSearch,          setAgenteSearch]          = useState('');
-  const [selectedAgente,        setSelectedAgente]        = useState(null);
-  const [formAgente, setFormAgente] = useState({
-    nome: '', nome_reduzido: '', cpf: '', nascimento: '', telefone: '', email: '', matricula: ''
-  });
-
-  // ── Responsáveis ──────────────────────────────────────────────────────────
-  const [showModalResp,  setShowModalResp]  = useState(false);
-  const [showImportarSec, setShowImportarSec] = useState(false);
-  const [editingResp,    setEditingResp]    = useState(null); // { secId, index }
-  const [selectedResp,   setSelectedResp]   = useState(null);
-  const [respFiltroVigor,   setRespFiltroVigor]   = useState(new Date().toISOString().slice(0,10));
-  const [respFiltroNome,    setRespFiltroNome]    = useState('');
-  const [respFiltroSec,     setRespFiltroSec]     = useState('');
-  const [respFiltroCargo,   setRespFiltroCargo]   = useState('');
-  const [respSearch,        setRespSearch]        = useState(''); // kept for compat
-  const [formResp, setFormResp] = useState({
-    secretaria_id: '', agente_id: '', nome: '', cargo: '', data_inicio: '', data_fim: '', amparo: ''
-  });
-
-  // ── Orçamento ────────────────────────────────────────────────────────────────
-  const [showOrcamentoPanel, setShowOrcamentoPanel] = useState(false);
-  const [orcamentoEditing, setOrcamentoEditing] = useState(false);
-  const [orcamentoOriginal, setOrcamentoOriginal] = useState(null);
-  const [formOrcamento, setFormOrcamento] = useState({ exercicio: '', valor_loa: '', valor_suplementado: '', valor_reduzido: '' });
-
-  const openOrcamentoPanel = () => {
-    const orc = selectedSecretaria?.orcamento || {};
-    const vals = {
-      exercicio:          orc.exercicio          || new Date().getFullYear().toString(),
-      valor_loa:          orc.valor_loa          != null ? String(orc.valor_loa)          : '',
-      valor_suplementado: orc.valor_suplementado != null ? String(orc.valor_suplementado) : '',
-      valor_reduzido:     orc.valor_reduzido     != null ? String(orc.valor_reduzido)     : '',
-    };
-    setFormOrcamento(vals);
-    setOrcamentoOriginal(vals);
-    setOrcamentoEditing(false);
-    setShowOrcamentoPanel(true);
-  };
-
-  const saveOrcamento = async () => {
-    try {
-      setLoading(true);
-      const orcamento = {
-        exercicio:          formOrcamento.exercicio,
-        valor_loa:          parseFloat(formOrcamento.valor_loa          || '0') || 0,
-        valor_suplementado: parseFloat(formOrcamento.valor_suplementado || '0') || 0,
-        valor_reduzido:     parseFloat(formOrcamento.valor_reduzido     || '0') || 0,
-      };
-      await api.put(`/organizacao/secretarias/${selectedSecretaria.id}`, {
-        nome: selectedSecretaria.nome, sigla: selectedSecretaria.sigla,
-        descricao: selectedSecretaria.descricao, ativo: selectedSecretaria.ativo, orcamento
-      });
-      await fetchSecretarias();
-      setOrcamentoEditing(false);
-      setSuccessMessage('Orçamento salvo com sucesso!');
-      setTimeout(() => setSuccessMessage(''), 3000);
-    } catch { alert('Erro ao salvar orçamento.'); }
-    finally { setLoading(false); }
-  };
-
-  // ── Dotações ────────────────────────────────────────────────────────────────
+  // â”€â”€ DotaÃ§Ãµes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [showDotacoesPanel, setShowDotacoesPanel] = useState(false);
   const [dotacoesList, setDotacoesList] = useState([]);
   const [selectedDotacao, setSelectedDotacao] = useState(null);
@@ -306,9 +45,9 @@ export default function Secretarias() {
       });
       await fetchSecretarias();
       setDotacoesList(lista);
-      setSuccessMessage('Dotações salvas com sucesso!');
+      setSuccessMessage('DotaÃ§Ãµes salvas com sucesso!');
       setTimeout(() => setSuccessMessage(''), 3000);
-    } catch { alert('Erro ao salvar dotações.'); }
+    } catch { alert('Erro ao salvar dotaÃ§Ãµes.'); }
     finally { setLoading(false); }
   };
 
@@ -328,7 +67,7 @@ export default function Secretarias() {
 
   const deleteDotacao = () => {
     if (!selectedDotacao) return;
-    if (!window.confirm(`Excluir a dotação "${selectedDotacao.codigo || selectedDotacao.descricao}"?`)) return;
+    if (!window.confirm(`Excluir a dotaÃ§Ã£o "${selectedDotacao.codigo || selectedDotacao.descricao}"?`)) return;
     const nova = dotacoesList.filter(d => d.id !== selectedDotacao.id);
     saveDotacoes(nova);
     setSelectedDotacao(null);
@@ -339,7 +78,7 @@ export default function Secretarias() {
     return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
-  // ── Entidade ──────────────────────────────────────────────────────────────
+  // â”€â”€ Entidade â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [entidadeLoading, setEntidadeLoading] = useState(false);
   const [entidadeSaved,   setEntidadeSaved]   = useState(false);
   const [entidadeEditing, setEntidadeEditing] = useState(false);
@@ -453,7 +192,7 @@ export default function Secretarias() {
     setShowModalSecretaria(true);
   };
 
-  // ── Gestão de responsáveis ────────────────────────────────────────────────
+  // â”€â”€ GestÃ£o de responsÃ¡veis â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const addResponsavel = () => {
     setFormSecretaria(p => ({
       ...p,
@@ -482,7 +221,7 @@ export default function Secretarias() {
   };
 
   const handleCreateSetor = (secretariaId) => {
-    console.log('🔍 Criando setor para secretaria ID:', secretariaId);
+    console.log('ðŸ” Criando setor para secretaria ID:', secretariaId);
     setEditingSetor(null);
     setFormSetor({
       nome: '',
@@ -570,7 +309,7 @@ export default function Secretarias() {
       setShowModalSecretaria(false);
       setEditingSecretaria(null);
       
-      // Limpar mensagem após 3 segundos
+      // Limpar mensagem apÃ³s 3 segundos
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
       console.error('Erro ao salvar secretaria:', error);
@@ -606,7 +345,7 @@ export default function Secretarias() {
       setShowModalSetor(false);
       setEditingSetor(null);
       
-      // Limpar mensagem após 3 segundos
+      // Limpar mensagem apÃ³s 3 segundos
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
       console.error('Erro ao salvar setor:', error);
@@ -636,7 +375,7 @@ export default function Secretarias() {
     setFormSecretaria({ ...formSecretaria, setores: newSetores });
   };
 
-  // ── Agentes functions ──────────────────────────────────────────────────────
+  // â”€â”€ Agentes functions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const openModalAgente = (agente = null) => {
     setEditingAgente(agente);
     setFormAgente(agente ? { ...agente } : {
@@ -675,7 +414,7 @@ export default function Secretarias() {
     } catch { alert('Erro ao remover agente.'); }
   };
 
-  // ── Responsáveis functions ─────────────────────────────────────────────────
+  // â”€â”€ ResponsÃ¡veis functions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const todosResponsaveis = secretarias.flatMap(sec =>
     (sec.responsaveis || []).map((r, i) => ({
       ...r, _secId: sec.id, _secNome: sec.nome, _secSigla: sec.sigla, _idx: i
@@ -715,17 +454,17 @@ export default function Secretarias() {
       await fetchSecretarias();
       setShowModalResp(false);
       setEditingResp(null);
-      setSuccessMessage('Responsável salvo com sucesso!');
+      setSuccessMessage('ResponsÃ¡vel salvo com sucesso!');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch {
-      alert('Erro ao salvar responsável. Tente novamente.');
+      alert('Erro ao salvar responsÃ¡vel. Tente novamente.');
     } finally {
       setLoading(false);
     }
   };
 
   const deleteResponsavel = async (resp) => {
-    if (!window.confirm(`Remover "${resp.nome}" como responsável de ${resp._secSigla}?`)) return;
+    if (!window.confirm(`Remover "${resp.nome}" como responsÃ¡vel de ${resp._secSigla}?`)) return;
     try {
       const sec = secretarias.find(s => s.id === resp._secId);
       if (!sec) return;
@@ -734,14 +473,14 @@ export default function Secretarias() {
         nome: sec.nome, sigla: sec.sigla, descricao: sec.descricao, ativo: sec.ativo, responsaveis
       });
       await fetchSecretarias();
-      setSuccessMessage('Responsável removido com sucesso.');
+      setSuccessMessage('ResponsÃ¡vel removido com sucesso.');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch {
-      alert('Erro ao remover responsável.');
+      alert('Erro ao remover responsÃ¡vel.');
     }
   };
 
-  // ── Helpers de formatação ─────────────────────────────────────────────────
+  // â”€â”€ Helpers de formataÃ§Ã£o â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const formatCNPJ = (v) => {
     const d = v.replace(/\D/g, '').slice(0, 14);
     if (d.length <= 2) return d;
@@ -768,9 +507,9 @@ export default function Secretarias() {
   };
 
   const maskCPF = (cpf) => {
-    if (!cpf) return '—';
+    if (!cpf) return 'â€”';
     const d = cpf.replace(/\D/g, '');
-    if (d.length < 11) return cpf || '—';
+    if (d.length < 11) return cpf || 'â€”';
     return `***.${d.slice(3,6)}.${d.slice(6,9)}-**`;
   };
 
@@ -787,19 +526,19 @@ export default function Secretarias() {
       {/* Header */}
       <PageHeader
         icon={Building2}
-        eyebrow="Organização"
-        title="Gestão de Organização"
-        subtitle="Gerencie secretarias, agentes e responsáveis do município"
+        eyebrow="OrganizaÃ§Ã£o"
+        title="GestÃ£o de OrganizaÃ§Ã£o"
+        subtitle="Gerencie secretarias, agentes e responsÃ¡veis do municÃ­pio"
       />
 
-      {/* Abas do módulo */}
+      {/* Abas do mÃ³dulo */}
       <div className="border-b border-gray-200 dark:border-slate-700/50 -mt-1">
         <nav className="flex overflow-x-auto scrollbar-none -mb-px">
           {[
-            { key: 'entidade',     label: 'Entidade',              icon: '🏢'  },
-            { key: 'secretarias',  label: 'Secretarias e Setores', icon: '🏛️' },
-            { key: 'agentes',      label: 'Cadastro de Agentes',   icon: '🪪'  },
-            { key: 'responsaveis', label: 'Responsáveis',          icon: '👤'  },
+            { key: 'entidade',     label: 'Entidade',              icon: 'ðŸ¢'  },
+            { key: 'secretarias',  label: 'Secretarias e Setores', icon: 'ðŸ›ï¸' },
+            { key: 'agentes',      label: 'Cadastro de Agentes',   icon: 'ðŸªª'  },
+            { key: 'responsaveis', label: 'ResponsÃ¡veis',          icon: 'ðŸ‘¤'  },
           ].map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
               className={`flex-shrink-0 px-3 sm:px-5 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
@@ -813,22 +552,22 @@ export default function Secretarias() {
         </nav>
       </div>
 
-      {/* ── Tab: Secretarias e Setores ── */}
+      {/* â”€â”€ Tab: Secretarias e Setores â”€â”€ */}
       {activeTab === 'secretarias' && (
         <div className="space-y-3">
           {/* Campos para pesquisa */}
           <FilterBar>
             <div className="flex-1 min-w-48">
-              <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Descrição</label>
+              <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">DescriÃ§Ã£o</label>
               <input
                 value={secFiltroDescricao}
                 onChange={e => setSecFiltroDescricao(e.target.value)}
                 className="input-field text-sm"
-                placeholder="PESQUISAR POR DESCRIÇÃO"
+                placeholder="PESQUISAR POR DESCRIÃ‡ÃƒO"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Vigência</label>
+              <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">VigÃªncia</label>
               <input
                 type="date"
                 value={secFiltroVigor}
@@ -848,10 +587,10 @@ export default function Secretarias() {
                 <thead className="bg-gray-100 dark:bg-slate-700/30 border-b border-gray-200 dark:border-slate-700/50">
                   <tr>
                     <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-8"></th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Descrição</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-32">Data início</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">DescriÃ§Ã£o</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-32">Data inÃ­cio</th>
                     <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-32">Data fim</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-28">Código</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-28">CÃ³digo</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
@@ -895,19 +634,19 @@ export default function Secretarias() {
                           }`}
                         >
                           <td className="px-4 py-2.5 text-center">
-                            {isSelected && <span className="text-white text-xs">▶</span>}
+                            {isSelected && <span className="text-white text-xs">â–¶</span>}
                           </td>
                           <td className={`px-4 py-2.5 font-medium ${isSelected ? 'text-white' : 'text-gray-900 dark:text-slate-100'}`}>
                             {sec.nome}
                           </td>
                           <td className={`px-4 py-2.5 ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-slate-400'}`}>
-                            {sec.data_inicio ? new Date(sec.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
+                            {sec.data_inicio ? new Date(sec.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR') : 'â€”'}
                           </td>
                           <td className={`px-4 py-2.5 ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-slate-400'}`}>
-                            {sec.data_fim ? new Date(sec.data_fim + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
+                            {sec.data_fim ? new Date(sec.data_fim + 'T00:00:00').toLocaleDateString('pt-BR') : 'â€”'}
                           </td>
                           <td className={`px-4 py-2.5 font-mono text-xs ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-slate-400'}`}>
-                            {sec.codigo_unidade || '—'}
+                            {sec.codigo_unidade || 'â€”'}
                           </td>
                         </tr>
                       );
@@ -965,20 +704,14 @@ export default function Secretarias() {
                   disabled={!selectedSecretaria}
                   className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  💰 Orçamento
+                  ðŸ’° OrÃ§amento
                 </button>
                 <button
                   onClick={() => selectedSecretaria && openDotacoesPanel()}
                   disabled={!selectedSecretaria}
                   className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  📊 Dotações
-                </button>
-                <button
-                  onClick={() => setShowImportarSec(true)}
-                  className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border border-teal-500 text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-colors"
-                >
-                  <Download className="h-4 w-4" /> Importar do Portal
+                  ðŸ“Š DotaÃ§Ãµes
                 </button>
               </div>
             </div>
@@ -986,10 +719,10 @@ export default function Secretarias() {
         </div>
       )}
 
-      {/* ── Tab: Cadastro de Agentes ── */}
+      {/* â”€â”€ Tab: Cadastro de Agentes â”€â”€ */}
       {activeTab === 'agentes' && (
         <div className="space-y-3">
-          {/* Opções de filtro */}
+          {/* OpÃ§Ãµes de filtro */}
           <FilterBar>
             <div className="flex items-center gap-3">
               <label className="text-sm font-medium text-gray-600 dark:text-slate-400 whitespace-nowrap">Nome/CPF</label>
@@ -1054,7 +787,7 @@ export default function Secretarias() {
                             }`}
                           >
                             <td className="px-4 py-2.5 text-center">
-                              {isSelected && <span className="text-white text-xs">▶</span>}
+                              {isSelected && <span className="text-white text-xs">â–¶</span>}
                             </td>
                             <td className={`px-4 py-2.5 font-medium ${isSelected ? 'text-white' : 'text-gray-900 dark:text-slate-100'}`}>
                               {agente.nome}
@@ -1065,13 +798,13 @@ export default function Secretarias() {
                             <td className={`px-4 py-2.5 ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-slate-400'}`}>
                               {agente.nascimento
                                 ? new Date(agente.nascimento + 'T00:00:00').toLocaleDateString('pt-BR')
-                                : '—'}
+                                : 'â€”'}
                             </td>
                             <td className={`px-4 py-2.5 ${isSelected ? 'text-blue-100' : 'text-gray-600 dark:text-slate-400'}`}>
-                              {agente.telefone || '—'}
+                              {agente.telefone || 'â€”'}
                             </td>
                             <td className={`px-4 py-2.5 ${isSelected ? 'text-blue-100' : 'text-gray-600 dark:text-slate-400'}`}>
-                              {agente.email || '—'}
+                              {agente.email || 'â€”'}
                             </td>
                           </tr>
                         );
@@ -1122,14 +855,14 @@ export default function Secretarias() {
         </div>
       )}
 
-      {/* ── Tab: Responsáveis ── */}
+      {/* â”€â”€ Tab: ResponsÃ¡veis â”€â”€ */}
       {activeTab === 'responsaveis' && (
         <div className="space-y-3">
           {/* Campos para pesquisa */}
           <FilterBar>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 items-end flex-1">
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Vigência</label>
+                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">VigÃªncia</label>
                 <input
                   type="date"
                   value={respFiltroVigor}
@@ -1167,10 +900,10 @@ export default function Secretarias() {
             </div>
           </FilterBar>
 
-          {/* Tabela de Responsável */}
+          {/* Tabela de ResponsÃ¡vel */}
           <div className="card overflow-hidden">
             <div className="px-4 py-2 border-b border-gray-200 dark:border-slate-700/50">
-              <SectionTitle icon={UserCheck} title="Tabela de Responsável" />
+              <SectionTitle icon={UserCheck} title="Tabela de ResponsÃ¡vel" />
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -1180,7 +913,7 @@ export default function Secretarias() {
                     <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Nome</th>
                     <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Cargo</th>
                     <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Secretaria</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Data início</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Data inÃ­cio</th>
                     <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Data final</th>
                   </tr>
                 </thead>
@@ -1206,7 +939,7 @@ export default function Secretarias() {
                           <td colSpan={6}>
                             <EmptyState
                               icon={UserCheck}
-                              title={todosResponsaveis.length === 0 ? 'Nenhum responsável cadastrado' : 'Nenhum resultado para o filtro'}
+                              title={todosResponsaveis.length === 0 ? 'Nenhum responsÃ¡vel cadastrado' : 'Nenhum resultado para o filtro'}
                             />
                           </td>
                         </tr>
@@ -1227,13 +960,13 @@ export default function Secretarias() {
                           }`}
                         >
                           <td className="px-4 py-2.5 text-center">
-                            {isSelected && <span className="text-white text-xs">▶</span>}
+                            {isSelected && <span className="text-white text-xs">â–¶</span>}
                           </td>
                           <td className={`px-4 py-2.5 font-medium ${isSelected ? 'text-white' : 'text-gray-900 dark:text-slate-100'}`}>
                             {resp.nome}
                           </td>
                           <td className={`px-4 py-2.5 ${isSelected ? 'text-blue-100' : 'text-gray-600 dark:text-slate-400'}`}>
-                            {resp.cargo || '—'}
+                            {resp.cargo || 'â€”'}
                           </td>
                           <td className={`px-4 py-2.5 ${isSelected ? 'text-blue-100' : 'text-gray-600 dark:text-slate-400'}`}>
                             {resp._secNome}
@@ -1241,12 +974,12 @@ export default function Secretarias() {
                           <td className={`px-4 py-2.5 ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-slate-400'}`}>
                             {resp.data_inicio
                               ? new Date(resp.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR')
-                              : '—'}
+                              : 'â€”'}
                           </td>
                           <td className={`px-4 py-2.5 ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-slate-400'}`}>
                             {resp.data_fim
                               ? new Date(resp.data_fim + 'T00:00:00').toLocaleDateString('pt-BR')
-                              : '—'}
+                              : 'â€”'}
                           </td>
                         </tr>
                       );
@@ -1300,15 +1033,15 @@ export default function Secretarias() {
         </div>
       )}
 
-      {/* ── Tab: Entidade ── */}
+      {/* â”€â”€ Tab: Entidade â”€â”€ */}
       {activeTab === 'entidade' && (
         <div className="space-y-3">
           <form onSubmit={handleSubmitEntidade} className="space-y-3">
 
-            {/* ── Informações da entidade ── */}
+            {/* â”€â”€ InformaÃ§Ãµes da entidade â”€â”€ */}
             <div className="card overflow-hidden">
               <div className="px-6 py-3 bg-gray-50 dark:bg-slate-700/20 border-b border-gray-200 dark:border-slate-700/50">
-                <SectionTitle icon={Building2} title="Informações da entidade" />
+                <SectionTitle icon={Building2} title="InformaÃ§Ãµes da entidade" />
               </div>
               <div className="p-6 space-y-4">
 
@@ -1328,7 +1061,7 @@ export default function Secretarias() {
                     <input type="text" value={formEntidade.nome_abreviado}
                       onChange={e => setFormEntidade(p => ({...p, nome_abreviado: e.target.value}))}
                       disabled={!entidadeEditing}
-                      className="input-field w-72 disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30" placeholder="Ex: PMIRAUCUBA" />
+                      className="input-field w-72 disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30" placeholder="Ex: PMMUNICIPIO" />
                   </div>
                 </div>
 
@@ -1343,7 +1076,7 @@ export default function Secretarias() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">Razão social</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">RazÃ£o social</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.razao_social}
                       onChange={e => setFormEntidade(p => ({...p, razao_social: e.target.value}))}
@@ -1353,7 +1086,7 @@ export default function Secretarias() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">Código unidade</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">CÃ³digo unidade</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.codigo_unidade}
                       onChange={e => setFormEntidade(p => ({...p, codigo_unidade: e.target.value}))}
@@ -1387,8 +1120,8 @@ export default function Secretarias() {
                       <option value="">Selecione...</option>
                       <option value="Executivo">Executivo</option>
                       <option value="Legislativo">Legislativo</option>
-                      <option value="Judiciário">Judiciário</option>
-                      <option value="Ministério Público">Ministério Público</option>
+                      <option value="JudiciÃ¡rio">JudiciÃ¡rio</option>
+                      <option value="MinistÃ©rio PÃºblico">MinistÃ©rio PÃºblico</option>
                     </select>
                   </div>
                 </div>
@@ -1414,7 +1147,7 @@ export default function Secretarias() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">Whatsapp notificação</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">Whatsapp notificaÃ§Ã£o</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.whatsapp}
                       onChange={e => setFormEntidade(p => ({...p, whatsapp: formatTelefone(e.target.value)}))}
@@ -1426,10 +1159,10 @@ export default function Secretarias() {
               </div>
             </div>
 
-            {/* ── Endereço ── */}
+            {/* â”€â”€ EndereÃ§o â”€â”€ */}
             <div className="card overflow-hidden">
               <div className="px-6 py-3 bg-gray-50 dark:bg-slate-700/20 border-b border-gray-200 dark:border-slate-700/50">
-                <SectionTitle icon={Building2} title="Endereço" />
+                <SectionTitle icon={Building2} title="EndereÃ§o" />
               </div>
               <div className="p-6 space-y-4">
 
@@ -1453,12 +1186,12 @@ export default function Secretarias() {
                     <input type="text" value={formEntidade.logradouro}
                       onChange={e => setFormEntidade(p => ({...p, logradouro: e.target.value}))}
                       disabled={!entidadeEditing}
-                      className="input-field disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30" placeholder="Rua, Avenida, Praça..." />
+                      className="input-field disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30" placeholder="Rua, Avenida, PraÃ§a..." />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">Número</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">NÃºmero</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.numero}
                       onChange={e => setFormEntidade(p => ({...p, numero: e.target.value}))}
@@ -1515,7 +1248,7 @@ export default function Secretarias() {
               </div>
             </div>
 
-            {/* Botões */}
+            {/* BotÃµes */}
             <div className="flex items-center justify-end gap-3">
               {entidadeSaved && (
                 <span className="text-sm text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
@@ -1554,13 +1287,7 @@ export default function Secretarias() {
         </div>
       )}
 
-      {/* Modal Importar do Portal de Irauçuba */}
-      {showImportarSec && (
-        <ImportarSecretariasModal
-          onClose={() => setShowImportarSec(false)}
-          onConcluido={() => { setShowImportarSec(false); fetchSecretarias(); }}
-        />
-      )}
+      {/* Modal Importar do Portal de IrauÃ§uba */}
 
       {/* Modal Criar/Editar Secretaria */}
       {showModalSecretaria && (
@@ -1568,7 +1295,7 @@ export default function Secretarias() {
           <div className="bg-white dark:bg-slate-900 rounded-xl max-w-2xl w-full my-8 shadow-xl">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700/50 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
-                Cadastro de secretarias — {editingSecretaria ? 'Edição' : 'Inclusão'}
+                Cadastro de secretarias â€” {editingSecretaria ? 'EdiÃ§Ã£o' : 'InclusÃ£o'}
               </h2>
               <button onClick={() => { setShowModalSecretaria(false); setEditingSecretaria(null); }}
                 className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg">
@@ -1577,13 +1304,13 @@ export default function Secretarias() {
             </div>
 
             <form onSubmit={handleSubmitSecretaria} className="max-h-[calc(90vh-120px)] overflow-y-auto">
-              {/* ── Informações da secretaria ── */}
+              {/* â”€â”€ InformaÃ§Ãµes da secretaria â”€â”€ */}
               <div className="px-6 py-3 bg-gray-50 dark:bg-slate-700/20 border-b border-gray-200 dark:border-slate-700/50">
-                <SectionTitle icon={Building2} title="Informações da secretaria" />
+                <SectionTitle icon={Building2} title="InformaÃ§Ãµes da secretaria" />
               </div>
               <div className="p-6 space-y-4">
                 <div className="grid grid-cols-3 gap-4 items-start">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 pt-2 text-right col-span-1">Descrição *</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 pt-2 text-right col-span-1">DescriÃ§Ã£o *</label>
                   <div className="col-span-2">
                     <input
                       type="text"
@@ -1596,7 +1323,7 @@ export default function Secretarias() {
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-4 items-start">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 pt-2 text-right col-span-1">Abreviação</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 pt-2 text-right col-span-1">AbreviaÃ§Ã£o</label>
                   <div className="col-span-2">
                     <input
                       type="text"
@@ -1609,7 +1336,7 @@ export default function Secretarias() {
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-4 items-start">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 pt-2 text-right col-span-1">Data início</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 pt-2 text-right col-span-1">Data inÃ­cio</label>
                   <div className="col-span-2">
                     <input
                       type="date"
@@ -1643,7 +1370,7 @@ export default function Secretarias() {
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-4 items-start">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 pt-2 text-right col-span-1">Whatsapp notificação</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 pt-2 text-right col-span-1">Whatsapp notificaÃ§Ã£o</label>
                   <div className="col-span-2">
                     <input
                       type="text"
@@ -1666,15 +1393,15 @@ export default function Secretarias() {
                       className="w-4 h-4 rounded border-gray-300 text-blue-600 cursor-pointer"
                     />
                     <label htmlFor="outros_sistemas" className="text-sm text-gray-600 dark:text-slate-400 cursor-pointer select-none">
-                      Secretaria de outros sistemas - Não mostra na lista de secretarias
+                      Secretaria de outros sistemas - NÃ£o mostra na lista de secretarias
                     </label>
                   </div>
                 </div>
               </div>
 
-              {/* ── Informações para o PNCP ── */}
+              {/* â”€â”€ InformaÃ§Ãµes para o PNCP â”€â”€ */}
               <div className="px-6 py-3 bg-gray-50 dark:bg-slate-700/20 border-t border-b border-gray-200 dark:border-slate-700/50">
-                <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">Informações para o PNCP</p>
+                <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">InformaÃ§Ãµes para o PNCP</p>
               </div>
               <div className="p-6 space-y-4">
                 <div className="grid grid-cols-3 gap-4 items-start">
@@ -1691,7 +1418,7 @@ export default function Secretarias() {
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-4 items-start">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 pt-2 text-right col-span-1">Razão social</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 pt-2 text-right col-span-1">RazÃ£o social</label>
                   <div className="col-span-2">
                     <input
                       type="text"
@@ -1702,7 +1429,7 @@ export default function Secretarias() {
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-4 items-start">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 pt-2 text-right col-span-1">Código unidade</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 pt-2 text-right col-span-1">CÃ³digo unidade</label>
                   <div className="col-span-2">
                     <input
                       type="text"
@@ -1714,7 +1441,7 @@ export default function Secretarias() {
                 </div>
               </div>
 
-              {/* Botões */}
+              {/* BotÃµes */}
               <div className="px-6 py-4 border-t border-gray-200 dark:border-slate-700/50 flex justify-end gap-2">
                 <button
                   type="button"
@@ -1761,13 +1488,13 @@ export default function Secretarias() {
                 <input type="text" value={formSetor.nome} onChange={(e) => setFormSetor({ ...formSetor, nome: e.target.value })} required className="input-field" placeholder="Ex: Protocolo Geral" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Descrição</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">DescriÃ§Ã£o</label>
                 <textarea
                   value={formSetor.descricao}
                   onChange={(e) => setFormSetor({ ...formSetor, descricao: e.target.value })}
                   rows="3"
                   className="input-field resize-none"
-                  placeholder="Breve descrição do setor"
+                  placeholder="Breve descriÃ§Ã£o do setor"
                 />
               </div>
 
@@ -1782,7 +1509,7 @@ export default function Secretarias() {
         </div>
       )}
 
-      {/* Modal de Confirmação de Exclusão */}
+      {/* Modal de ConfirmaÃ§Ã£o de ExclusÃ£o */}
       {showDeleteModal && deleteTarget && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl max-w-md w-full shadow-xl">
@@ -1792,7 +1519,7 @@ export default function Secretarias() {
                   <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
                 </div>
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100">
-                  Confirmar Exclusão
+                  Confirmar ExclusÃ£o
                 </h2>
               </div>
             </div>
@@ -1804,7 +1531,7 @@ export default function Secretarias() {
                     Tem certeza que deseja excluir a secretaria <strong>{deleteTarget.data.nome}</strong>?
                     {deleteTarget.data.setores?.length > 0 && (
                       <span className="block mt-2 text-red-600 text-sm">
-                        ⚠️ Todos os {deleteTarget.data.setores.length} setores vinculados também serão excluídos.
+                        âš ï¸ Todos os {deleteTarget.data.setores.length} setores vinculados tambÃ©m serÃ£o excluÃ­dos.
                       </span>
                     )}
                   </>
@@ -1815,7 +1542,7 @@ export default function Secretarias() {
                 )}
               </p>
               <p className="text-sm text-gray-600">
-                Esta ação não pode ser desfeita.
+                Esta aÃ§Ã£o nÃ£o pode ser desfeita.
               </p>
             </div>
 
@@ -1823,14 +1550,14 @@ export default function Secretarias() {
               <button onClick={() => { setShowDeleteModal(false); setDeleteTarget(null); }} className="btn-secondary">Cancelar</button>
               <button onClick={confirmDelete} className="btn-danger flex items-center gap-2">
                 <Trash2 className="h-4 w-4" />
-                Confirmar Exclusão
+                Confirmar ExclusÃ£o
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Painel de Setores ── */}
+      {/* â”€â”€ Painel de Setores â”€â”€ */}
       {showSetoresPanel && selectedSecretaria && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl max-w-2xl w-full shadow-xl flex flex-col max-h-[80vh]">
@@ -1838,7 +1565,7 @@ export default function Secretarias() {
             <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700/50 flex items-center justify-between shrink-0">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
-                  Setores — {selectedSecretaria.nome}
+                  Setores â€” {selectedSecretaria.nome}
                   {selectedSecretaria.sigla && <span className="text-gray-400 font-normal text-base ml-1">({selectedSecretaria.sigla})</span>}
                 </h2>
               </div>
@@ -1854,7 +1581,7 @@ export default function Secretarias() {
                 <thead className="bg-gray-100 dark:bg-slate-700/30 border-b border-gray-200 dark:border-slate-700/50">
                   <tr>
                     <th className="w-8 px-4 py-2.5"></th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Descrição</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">DescriÃ§Ã£o</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
@@ -1879,7 +1606,7 @@ export default function Secretarias() {
                           }`}
                         >
                           <td className="px-4 py-2.5 text-center">
-                            {isSel && <span className="text-white text-xs">▶</span>}
+                            {isSel && <span className="text-white text-xs">â–¶</span>}
                           </td>
                           <td className={`px-4 py-2.5 font-medium ${isSel ? 'text-white' : 'text-gray-900 dark:text-slate-100'}`}>
                             {setor.nome}
@@ -1924,13 +1651,13 @@ export default function Secretarias() {
         </div>
       )}
 
-      {/* ── Modal Novo/Editar Agente ── */}
+      {/* â”€â”€ Modal Novo/Editar Agente â”€â”€ */}
       {showModalAgente && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 rounded-xl max-w-lg w-full my-8 shadow-xl">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700/50 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
-                Cadastro de agentes — {editingAgente ? 'Edição' : 'Inclusão'}
+                Cadastro de agentes â€” {editingAgente ? 'EdiÃ§Ã£o' : 'InclusÃ£o'}
               </h2>
               <button onClick={() => { setShowModalAgente(false); setEditingAgente(null); }}
                 className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg">
@@ -1938,7 +1665,7 @@ export default function Secretarias() {
               </button>
             </div>
             <div className="px-6 py-3 bg-gray-50 dark:bg-slate-700/20 border-b border-gray-200 dark:border-slate-700/50">
-              <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">Informações informações</p>
+              <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">InformaÃ§Ãµes informaÃ§Ãµes</p>
             </div>
             <form onSubmit={saveAgente} className="p-6 space-y-4">
               <div>
@@ -1994,7 +1721,7 @@ export default function Secretarias() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Matrícula</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">MatrÃ­cula</label>
                   <input
                     type="text"
                     value={formAgente.matricula || ''}
@@ -2039,7 +1766,7 @@ export default function Secretarias() {
         </div>
       )}
 
-      {/* ── Confirmação exclusão Agente ── */}
+      {/* â”€â”€ ConfirmaÃ§Ã£o exclusÃ£o Agente â”€â”€ */}
       {showDeleteAgenteModal && deleteAgenteTarget && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl max-w-md w-full shadow-xl">
@@ -2047,11 +1774,11 @@ export default function Secretarias() {
               <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center shrink-0">
                 <AlertTriangle className="h-5 w-5 text-red-600" />
               </div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Confirmar Exclusão</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Confirmar ExclusÃ£o</h2>
             </div>
             <div className="p-6">
               <p className="text-gray-700 dark:text-slate-300">
-                Excluir o agente <strong>{deleteAgenteTarget.nome}</strong>? Esta ação não pode ser desfeita.
+                Excluir o agente <strong>{deleteAgenteTarget.nome}</strong>? Esta aÃ§Ã£o nÃ£o pode ser desfeita.
               </p>
             </div>
             <div className="px-6 py-4 bg-gray-50 dark:bg-slate-700/30 border-t border-gray-200 dark:border-slate-700/50 flex justify-end gap-3">
@@ -2065,13 +1792,13 @@ export default function Secretarias() {
         </div>
       )}
 
-      {/* ── Modal Novo/Editar Responsável ── */}
+      {/* â”€â”€ Modal Novo/Editar ResponsÃ¡vel â”€â”€ */}
       {showModalResp && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 rounded-xl max-w-lg w-full my-8 shadow-xl">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700/50 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
-                Cadastro de responsável — {editingResp ? 'Edição' : 'Inclusão'}
+                Cadastro de responsÃ¡vel â€” {editingResp ? 'EdiÃ§Ã£o' : 'InclusÃ£o'}
               </h2>
               <button onClick={() => { setShowModalResp(false); setEditingResp(null); }}
                 className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg">
@@ -2079,13 +1806,13 @@ export default function Secretarias() {
               </button>
             </div>
             <div className="px-6 py-2.5 bg-gray-50 dark:bg-slate-700/20 border-b border-gray-200 dark:border-slate-700/50">
-              <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">Informações do responsável</p>
+              <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">InformaÃ§Ãµes do responsÃ¡vel</p>
             </div>
             <form onSubmit={saveResponsavel} className="p-6 space-y-4">
               {/* Datas */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Data início *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Data inÃ­cio *</label>
                   <input
                     type="date"
                     value={formResp.data_inicio}
@@ -2123,7 +1850,7 @@ export default function Secretarias() {
                   }}
                   className="input-field"
                 >
-                  <option value="">— selecionar do cadastro de agentes —</option>
+                  <option value="">â€” selecionar do cadastro de agentes â€”</option>
                   {agentes.map(a => (
                     <option key={a.id} value={a.id}>{a.nome}</option>
                   ))}
@@ -2159,17 +1886,17 @@ export default function Secretarias() {
                   <option value="Gestores">Gestores</option>
                   <option value="Ordenadores">Ordenadores</option>
                   <option value="Setor de compra">Setor de compra</option>
-                  <option value="Comissão de licitação">Comissão de licitação</option>
+                  <option value="ComissÃ£o de licitaÃ§Ã£o">ComissÃ£o de licitaÃ§Ã£o</option>
                   <option value="Fiscais de contratos">Fiscais de contratos</option>
-                  <option value="Equipe de planejamento das contratações">Equipe de planejamento das contratações</option>
-                  <option value="Agentes de contratações">Agentes de contratações</option>
+                  <option value="Equipe de planejamento das contrataÃ§Ãµes">Equipe de planejamento das contrataÃ§Ãµes</option>
+                  <option value="Agentes de contrataÃ§Ãµes">Agentes de contrataÃ§Ãµes</option>
                   <option value="Gestor de contratos">Gestor de contratos</option>
                 </select>
               </div>
 
-              {/* Secretaria\órgão */}
+              {/* Secretaria\Ã³rgÃ£o */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Secretaria\órgão *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Secretaria\Ã³rgÃ£o *</label>
                 <select
                   value={formResp.secretaria_id}
                   onChange={e => setFormResp(p => ({...p, secretaria_id: e.target.value}))}
@@ -2228,7 +1955,7 @@ export default function Secretarias() {
         </div>
       )}
 
-      {/* ── Painel de Orçamento ── */}
+      {/* â”€â”€ Painel de OrÃ§amento â”€â”€ */}
       {showOrcamentoPanel && selectedSecretaria && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl max-w-lg w-full shadow-xl">
@@ -2236,7 +1963,7 @@ export default function Secretarias() {
             <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700/50 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
-                  💰 Orçamento — {selectedSecretaria.sigla || selectedSecretaria.nome}
+                  ðŸ’° OrÃ§amento â€” {selectedSecretaria.sigla || selectedSecretaria.nome}
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{selectedSecretaria.nome}</p>
               </div>
@@ -2250,7 +1977,7 @@ export default function Secretarias() {
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1">Exercício</label>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1">ExercÃ­cio</label>
                   <input
                     type="number"
                     min="2000" max="2099"
@@ -2264,7 +1991,7 @@ export default function Secretarias() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1">Valor LOA (Lei Orçamentária Anual)</label>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1">Valor LOA (Lei OrÃ§amentÃ¡ria Anual)</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">R$</span>
                   <input
@@ -2313,7 +2040,7 @@ export default function Secretarias() {
 
               {/* Valor vigente calculado */}
               <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4 flex items-center justify-between">
-                <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">Valor Vigente (LOA + Suplementado − Reduzido)</span>
+                <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">Valor Vigente (LOA + Suplementado âˆ’ Reduzido)</span>
                 <span className="text-lg font-bold text-indigo-700 dark:text-indigo-300">
                   {formatBRL(
                     (parseFloat(formOrcamento.valor_loa          || '0') || 0) +
@@ -2346,7 +2073,7 @@ export default function Secretarias() {
         </div>
       )}
 
-      {/* ── Painel de Dotações ── */}
+      {/* â”€â”€ Painel de DotaÃ§Ãµes â”€â”€ */}
       {showDotacoesPanel && selectedSecretaria && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl max-w-3xl w-full shadow-xl flex flex-col max-h-[85vh]">
@@ -2354,7 +2081,7 @@ export default function Secretarias() {
             <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700/50 flex items-center justify-between shrink-0">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
-                  📊 Dotações Orçamentárias — {selectedSecretaria.sigla || selectedSecretaria.nome}
+                  ðŸ“Š DotaÃ§Ãµes OrÃ§amentÃ¡rias â€” {selectedSecretaria.sigla || selectedSecretaria.nome}
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{selectedSecretaria.nome}</p>
               </div>
@@ -2370,8 +2097,8 @@ export default function Secretarias() {
                 <thead className="bg-gray-100 dark:bg-slate-700/30 border-b border-gray-200 dark:border-slate-700/50 sticky top-0">
                   <tr>
                     <th className="w-8 px-3 py-2.5"></th>
-                    <th className="text-left px-3 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Código</th>
-                    <th className="text-left px-3 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Descrição</th>
+                    <th className="text-left px-3 py-2.5 font-semibold text-gray-600 dark:text-slate-300">CÃ³digo</th>
+                    <th className="text-left px-3 py-2.5 font-semibold text-gray-600 dark:text-slate-300">DescriÃ§Ã£o</th>
                     <th className="text-left px-3 py-2.5 font-semibold text-gray-600 dark:text-slate-300">El. Despesa</th>
                     <th className="text-left px-3 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Fonte</th>
                     <th className="text-right px-3 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Valor Previsto</th>
@@ -2381,7 +2108,7 @@ export default function Secretarias() {
                   {dotacoesList.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="text-center py-10 text-gray-400 dark:text-slate-500 text-sm">
-                        Nenhuma dotação cadastrada. Use "Incluir" para adicionar.
+                        Nenhuma dotaÃ§Ã£o cadastrada. Use "Incluir" para adicionar.
                       </td>
                     </tr>
                   ) : dotacoesList.map(dot => {
@@ -2393,13 +2120,13 @@ export default function Secretarias() {
                         onDoubleClick={() => { setSelectedDotacao(dot); setEditingDotacao(dot); setFormDotacao({ codigo: dot.codigo||'', descricao: dot.descricao||'', elemento_despesa: dot.elemento_despesa||'', fonte_recurso: dot.fonte_recurso||'', valor_previsto: dot.valor_previsto != null ? String(dot.valor_previsto) : '' }); setShowFormDotacao(true); }}
                         className={`cursor-pointer transition-colors select-none ${isSel ? 'bg-blue-600 text-white' : 'hover:bg-blue-50 dark:hover:bg-blue-900/10'}`}
                       >
-                        <td className="px-3 py-2.5 text-center">{isSel && <span className="text-white text-xs">▶</span>}</td>
-                        <td className={`px-3 py-2.5 font-mono text-xs ${isSel ? 'text-blue-100' : 'text-gray-700 dark:text-slate-300'}`}>{dot.codigo || '—'}</td>
-                        <td className={`px-3 py-2.5 ${isSel ? 'text-white' : 'text-gray-900 dark:text-slate-100'}`}>{dot.descricao || '—'}</td>
-                        <td className={`px-3 py-2.5 font-mono text-xs ${isSel ? 'text-blue-100' : 'text-gray-500'}`}>{dot.elemento_despesa || '—'}</td>
-                        <td className={`px-3 py-2.5 text-xs ${isSel ? 'text-blue-100' : 'text-gray-500'}`}>{dot.fonte_recurso || '—'}</td>
+                        <td className="px-3 py-2.5 text-center">{isSel && <span className="text-white text-xs">â–¶</span>}</td>
+                        <td className={`px-3 py-2.5 font-mono text-xs ${isSel ? 'text-blue-100' : 'text-gray-700 dark:text-slate-300'}`}>{dot.codigo || 'â€”'}</td>
+                        <td className={`px-3 py-2.5 ${isSel ? 'text-white' : 'text-gray-900 dark:text-slate-100'}`}>{dot.descricao || 'â€”'}</td>
+                        <td className={`px-3 py-2.5 font-mono text-xs ${isSel ? 'text-blue-100' : 'text-gray-500'}`}>{dot.elemento_despesa || 'â€”'}</td>
+                        <td className={`px-3 py-2.5 text-xs ${isSel ? 'text-blue-100' : 'text-gray-500'}`}>{dot.fonte_recurso || 'â€”'}</td>
                         <td className={`px-3 py-2.5 text-right font-mono text-xs ${isSel ? 'text-blue-100' : 'text-gray-700 dark:text-slate-300'}`}>
-                          {dot.valor_previsto != null ? formatBRL(dot.valor_previsto) : '—'}
+                          {dot.valor_previsto != null ? formatBRL(dot.valor_previsto) : 'â€”'}
                         </td>
                       </tr>
                     );
@@ -2418,16 +2145,16 @@ export default function Secretarias() {
               </table>
             </div>
 
-            {/* Formulário inline de inclusão/edição */}
+            {/* FormulÃ¡rio inline de inclusÃ£o/ediÃ§Ã£o */}
             {showFormDotacao && (
               <div className="border-t border-gray-200 dark:border-slate-700/50 p-4 bg-gray-50 dark:bg-slate-700/20 shrink-0">
                 <h3 className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-3">
-                  {editingDotacao ? 'Editar Dotação' : 'Nova Dotação'}
+                  {editingDotacao ? 'Editar DotaÃ§Ã£o' : 'Nova DotaÃ§Ã£o'}
                 </h3>
                 <form onSubmit={handleSubmitDotacao} className="space-y-3">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Código da Dotação *</label>
+                      <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">CÃ³digo da DotaÃ§Ã£o *</label>
                       <input
                         required
                         value={formDotacao.codigo}
@@ -2448,13 +2175,13 @@ export default function Secretarias() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Descrição / Ação *</label>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">DescriÃ§Ã£o / AÃ§Ã£o *</label>
                     <input
                       required
                       value={formDotacao.descricao}
                       onChange={e => setFormDotacao(p => ({...p, descricao: e.target.value}))}
                       className="input-field text-sm"
-                      placeholder="Descrição da ação orçamentária"
+                      placeholder="DescriÃ§Ã£o da aÃ§Ã£o orÃ§amentÃ¡ria"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -2484,7 +2211,7 @@ export default function Secretarias() {
                   <div className="flex justify-end gap-2 pt-1">
                     <button type="button" onClick={() => { setShowFormDotacao(false); setEditingDotacao(null); setSelectedDotacao(null); }} className="btn-secondary text-sm px-3 py-1.5">Cancelar</button>
                     <button type="submit" disabled={loading} className="btn-primary text-sm px-3 py-1.5">
-                      {loading ? '⏳' : (editingDotacao ? '💾 Salvar' : '✅ Adicionar')}
+                      {loading ? 'â³' : (editingDotacao ? 'ðŸ’¾ Salvar' : 'âœ… Adicionar')}
                     </button>
                   </div>
                 </form>
@@ -2494,7 +2221,7 @@ export default function Secretarias() {
             {/* Toolbar */}
             <div className="px-4 py-2.5 border-t border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-700/20 flex items-center justify-between shrink-0">
               <span className="text-xs text-gray-500 dark:text-slate-400">
-                {dotacoesList.length} dotação(ões) cadastrada(s)
+                {dotacoesList.length} dotaÃ§Ã£o(Ãµes) cadastrada(s)
               </span>
               <div className="flex items-center gap-2">
                 <button
@@ -2526,3 +2253,4 @@ export default function Secretarias() {
     </div>
   );
 }
+

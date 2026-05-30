@@ -1,16 +1,14 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const {
   listCredores, createCredor, updateCredor, deleteCredor,
   listItens, createItem, updateItem, deleteItem,
   listContratos, createContrato, updateContrato, deleteContrato,
   syncFromDids,
-  importarItensTransparencia,
-  importarContratosIraucuba,
 } = require('../controllers/contratosController');
 const { authenticate, tenantMiddleware, requireTenant } = require('../middleware/auth');
 
-// Todos os endpoints exigem autenticação + tenant
+// Todos os endpoints exigem autenticaÃ§Ã£o + tenant
 router.use(tenantMiddleware, requireTenant, authenticate);
 
 // Credores
@@ -19,21 +17,21 @@ router.post('/credores',      createCredor);
 router.put('/credores/:id',   updateCredor);
 router.delete('/credores/:id', deleteCredor);
 
-// Catálogo de Itens
-router.get('/itens/importar-transparencia', importarItensTransparencia); // SSE — deve vir antes de /itens
+// CatÃ¡logo de Itens
+// (rota SSE /itens/importar-transparencia removida)
 router.get('/itens',       listItens);
 router.post('/itens',      createItem);
 router.put('/itens/:id',   updateItem);
 router.delete('/itens/:id', deleteItem);
 
-// Contratos
-router.get('/importar-iraucuba', importarContratosIraucuba); // SSE — deve vir antes de /:id
+// Contratos // SSE â€” deve vir antes de /:id
 router.get('/',       listContratos);
 router.post('/',      createContrato);
 router.put('/:id',    updateContrato);
 router.delete('/:id', deleteContrato);
 
-// Sincronização: importa credores dos DIDs existentes para a tabela credores
+// SincronizaÃ§Ã£o: importa credores dos DIDs existentes para a tabela credores
 router.post('/sync-from-dids', syncFromDids);
 
 module.exports = router;
+

@@ -1,144 +1,4 @@
-const { Op } = require('sequelize');
-const https = require('https');
-const http  = require('http');
-
-// ── IMPORTAÇÃO SECRETARIAS/AGENTES – iraucuba.ce.gov.br ─────────────────────
-
-function _httpGetIraucuba(url) {
-  return new Promise((resolve, reject) => {
-    const u = new URL(url);
-    const mod = u.protocol === 'https:' ? https : http;
-    mod.get({ hostname: u.hostname, path: u.pathname + (u.search || ''), headers: { 'User-Agent': 'Mozilla/5.0' } }, (r) => {
-      if (r.statusCode >= 300 && r.statusCode < 400 && r.headers.location) {
-        return _httpGetIraucuba(new URL(r.headers.location, url).href).then(resolve).catch(reject);
-      }
-      const ch = []; r.on('data', c => ch.push(c)); r.on('end', () => resolve(Buffer.concat(ch).toString('utf8')));
-    }).on('error', reject).setTimeout(20000, function () { this.destroy(new Error('timeout')); });
-  });
-}
-
-function _cleanHtml(s) {
-  return (s || '').replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').replace(/&#\d+;/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-}
-
-function _parseDateBR(s) {
-  const m = (s || '').match(/(\d{2})\/(\d{2})\/(\d{4})/);
-  return m ? `${m[3]}-${m[2]}-${m[1]}` : null;
-}
-
-const IRAUCUBA_SECS = [
-  { id: 1,  nome: 'GABINETE DO PREFEITO' },
-  { id: 2,  nome: 'SECRETARIA DE ADMINISTRAÇÃO' },
-  { id: 5,  nome: 'SECRETARIA DE SAÚDE' },
-  { id: 7,  nome: 'SECRETARIA DE INFRAESTRUTURA' },
-  { id: 11, nome: 'SECRETARIA DE FINANÇAS' },
-  { id: 15, nome: 'AUTARQUIA MUNICIPAL DE MEIO AMBIENTE DE IRAUÇUBA' },
-  { id: 30, nome: 'INSTITUTO DE PREVIDÊNCIA DO MUNICÍPIO DE IRAUÇUBA' },
-  { id: 32, nome: 'SECRETARIA DO DESENVOLVIMENTO ECONÔMICO' },
-  { id: 36, nome: 'SECRETARIA DE EDUCAÇÃO' },
-  { id: 38, nome: 'SECRETARIA DA JUVENTUDE, CULTURA, ESPORTE E LAZER' },
-  { id: 39, nome: 'SECRETARIA DA INCLUSÃO E PROMOÇÃO SOCIAL' },
-  { id: 40, nome: 'CONTROLADORIA GERAL DO MUNICÍPIO' },
-  { id: 57, nome: 'SECRETARIA DO DESENVOLVIMENTO RURAL, MEIO AMBIENTE E RECURSOS HÍDRICOS' },
-  { id: 58, nome: 'SECRETARIA DE GOVERNO, PLANEJAMENTO E SEGURANÇA CIDADÃ' },
-  { id: 59, nome: 'PROCURADORIA GERAL JURÍDICA MUNICIPAL' },
-];
-
-function _parseSecpageIraucuba(html) {
-  const siglaM = html.match(/<h2[^>]*id="EsOv"[^>]*>\s*([^<]+)\s*<\/h2>/i);
-  const sigla = siglaM ? siglaM[1].trim().slice(0, 10) : '';
-  const responsaveis = [];
-
-  // Encontrar a tabela correta: a que tem cabeçalho com "Nome" e "Data"
-  const tableRe = /<table[^>]*class='table[^']*'[^>]*>([\s\S]*?)<\/table>/gi;
-  let tbMatch;
-  while ((tbMatch = tableRe.exec(html)) !== null) {
-    const content = tbMatch[1];
-    // Só processar a tabela que tem cabeçalho Nome / Data início
-    if (!/<td[^>]*>\s*<strong>\s*Nome\s*<\/strong>/i.test(content)) continue;
-    const rowRe = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
-    let m;
-    while ((m = rowRe.exec(content)) !== null) {
-      const cells = (m[1].match(/<td[^>]*>([\s\S]*?)<\/td>/gi) || []).map(c => _cleanHtml(c));
-      if (cells.length >= 2 && cells[0] && cells[0] !== 'Nome' && cells[0] !== 'Mais') {
-        responsaveis.push({ nome: cells[0], cargo: 'Secretário(a)', data_inicio: _parseDateBR(cells[1]) || null, data_fim: _parseDateBR(cells[2]) || null });
-      }
-    }
-    break; // tabela encontrada
-  }
-  // O último da lista é o gestor atual — forçar data_fim=null
-  if (responsaveis.length) {
-    responsaveis[responsaveis.length - 1].data_fim = null;
-  }
-  return { sigla, responsaveis };
-}
-
-const importarSecretariasAgentes = async (req, res) => {
-  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  res.flushHeaders();
-  const sse = (data) => { try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch {} if (res.flush) res.flush(); };
-  try {
-    const { Secretaria } = req.models;
-    const schema = req.tenant?.schema;
-    sse({ tipo: 'inicio', msg: `Iniciando importação de ${IRAUCUBA_SECS.length} secretarias...`, total: IRAUCUBA_SECS.length });
-    let secCriadas = 0, secDuplic = 0, agenteCriados = 0, agentesDuplic = 0, erros = 0;
-    for (let i = 0; i < IRAUCUBA_SECS.length; i++) {
-      const { id, nome } = IRAUCUBA_SECS[i];
-      sse({ tipo: 'progresso', atual: i + 1, total: IRAUCUBA_SECS.length, msg: nome });
-      try {
-        const html = await _httpGetIraucuba(`https://iraucuba.ce.gov.br/secretaria.php?sec=${id}`);
-        const { sigla, responsaveis } = _parseSecpageIraucuba(html);
-        const existente = await Secretaria.findOne({ where: { nome: { [Op.iLike]: nome } } });
-        let secretariaId;
-        if (existente) {
-          secDuplic++;
-          secretariaId = existente.id;
-          // Sempre atualiza responsaveis (sobrescreve) para garantir dados atuais
-          if (responsaveis.length) {
-            await existente.update({ responsaveis, sigla: sigla || existente.sigla });
-          }
-        } else {
-          const autoSigla = sigla || nome.split(' ').filter(w => w.length > 3 && !/^(de|da|do|das|dos|e|a|o)$/i.test(w)).map(w => w[0]).join('').toUpperCase().slice(0, 10);
-          const nova = await Secretaria.create({ nome, sigla: autoSigla, responsaveis, ativo: true });
-          secCriadas++;
-          secretariaId = nova.id;
-        }
-        if (responsaveis.length && schema) {
-          // Gestor atual = último da lista (mais recente)
-          const atual = responsaveis[responsaveis.length - 1];
-          if (atual.nome) {
-            const [existAg] = await req.tenantDb.query(
-              `SELECT id FROM "${schema}".agentes WHERE lower(nome)=lower(:nome) AND secretaria_id=:sid LIMIT 1`,
-              { replacements: { nome: atual.nome, sid: secretariaId }, type: req.tenantDb.QueryTypes.SELECT }
-            );
-            if (existAg) {
-              agentesDuplic++;
-              sse({ tipo: 'detalhe', msg: `  👤 ${atual.nome} (já existia)` });
-            } else {
-              await req.tenantDb.query(
-                `INSERT INTO "${schema}".agentes (nome,cargo,secretaria_id,ativo,created_at,updated_at) VALUES (:nome,:cargo,:sid,true,NOW(),NOW())`,
-                { replacements: { nome: atual.nome, cargo: 'Secretário(a)', sid: secretariaId }, type: req.tenantDb.QueryTypes.INSERT }
-              );
-              agenteCriados++;
-              sse({ tipo: 'detalhe', msg: `  👤 Secretário: ${atual.nome}` });
-            }
-          }
-        }
-      } catch (err) {
-        erros++;
-        console.error(`importarSecretariasAgentes sec=${id}:`, err.message);
-      }
-    }
-    sse({ tipo: 'concluido', msg: 'Importação concluída!', secCriadas, secDuplic, agenteCriados, agentesDuplic, erros, total: IRAUCUBA_SECS.length });
-  } catch (err) {
-    console.error('importarSecretariasAgentes:', err);
-    sse({ tipo: 'erro', msg: err.message || 'Erro desconhecido' });
-  }
-  res.end();
-};
+﻿const { Op } = require('sequelize');
 
 const createSecretaria = async (req, res) => {
   try {
@@ -151,7 +11,7 @@ const createSecretaria = async (req, res) => {
     const { Secretaria } = req.models;
 
     if (!Secretaria) {
-      return res.status(500).json({ error: 'Model Secretaria não disponível' });
+      return res.status(500).json({ error: 'Model Secretaria nÃ£o disponÃ­vel' });
     }
 
     const secretaria = await Secretaria.create({
@@ -181,7 +41,7 @@ const listSecretarias = async (req, res) => {
     const { Secretaria, Setor } = req.models;
 
     const where = { ativo: true };
-    // Restringe ao usuário operacional a apenas sua secretaria; admin e gestor veem todas
+    // Restringe ao usuÃ¡rio operacional a apenas sua secretaria; admin e gestor veem todas
     if (req.user.tipo !== 'admin' && req.user.tipo !== 'gestor' && req.user.secretariaId) {
       where.id = req.user.secretariaId;
     }
@@ -215,7 +75,7 @@ const updateSecretaria = async (req, res) => {
 
     const secretaria = await Secretaria.findByPk(id);
     if (!secretaria) {
-      return res.status(404).json({ error: 'Secretaria não encontrada' });
+      return res.status(404).json({ error: 'Secretaria nÃ£o encontrada' });
     }
 
     const updateData = { nome, sigla, descricao, ativo };
@@ -248,7 +108,7 @@ const deleteSecretaria = async (req, res) => {
 
     const secretaria = await Secretaria.findByPk(id);
     if (!secretaria) {
-      return res.status(404).json({ error: 'Secretaria não encontrada' });
+      return res.status(404).json({ error: 'Secretaria nÃ£o encontrada' });
     }
 
     await secretaria.update({ ativo: false });
@@ -276,7 +136,7 @@ const createSetor = async (req, res) => {
       secretariaId: secretaria_id  // Converter para camelCase que o Sequelize espera
     });
 
-    console.log('✅ Setor criado:', setor.id);
+    console.log('âœ… Setor criado:', setor.id);
     res.status(201).json(setor);
   } catch (error) {
     console.error('Erro ao criar setor:', error);
@@ -315,7 +175,7 @@ const updateSetor = async (req, res) => {
 
     const setor = await Setor.findByPk(id);
     if (!setor) {
-      return res.status(404).json({ error: 'Setor não encontrado' });
+      return res.status(404).json({ error: 'Setor nÃ£o encontrado' });
     }
 
     await setor.update({ nome, sigla, descricao, secretariaId, ativo });
@@ -334,7 +194,7 @@ const deleteSetor = async (req, res) => {
 
     const setor = await Setor.findByPk(id);
     if (!setor) {
-      return res.status(404).json({ error: 'Setor não encontrado' });
+      return res.status(404).json({ error: 'Setor nÃ£o encontrado' });
     }
 
     await setor.update({ ativo: false });
@@ -346,7 +206,7 @@ const deleteSetor = async (req, res) => {
   }
 };
 
-// Buscar setores de uma secretaria específica
+// Buscar setores de uma secretaria especÃ­fica
 const getSetoresBySecretaria = async (req, res) => {
   try {
     const { secretariaId } = req.params;
@@ -367,7 +227,7 @@ const getSetoresBySecretaria = async (req, res) => {
   }
 };
 
-// Buscar usuários de um setor específico
+// Buscar usuÃ¡rios de um setor especÃ­fico
 const getUsuariosBySetor = async (req, res) => {
   try {
     const { setorId } = req.params;
@@ -384,8 +244,8 @@ const getUsuariosBySetor = async (req, res) => {
 
     res.json({ usuarios });
   } catch (error) {
-    console.error('Erro ao buscar usuários:', error);
-    res.status(500).json({ error: 'Erro ao buscar usuários' });
+    console.error('Erro ao buscar usuÃ¡rios:', error);
+    res.status(500).json({ error: 'Erro ao buscar usuÃ¡rios' });
   }
 };
 
@@ -463,7 +323,7 @@ const updateEntidade = async (req, res) => {
   }
 };
 
-// ── Listar agentes (gestores) ativos do tenant ────────────────────────────
+// â”€â”€ Listar agentes (gestores) ativos do tenant â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const listAgentes = async (req, res) => {
   try {
     const schema = req.tenant.schema
@@ -477,17 +337,17 @@ const listAgentes = async (req, res) => {
     )
     res.json({ agentes: rows })
   } catch (error) {
-    // tabela ainda não existe ou erro não-crítico
+    // tabela ainda nÃ£o existe ou erro nÃ£o-crÃ­tico
     res.json({ agentes: [] })
   }
 }
 
-// ── Criar agente ─────────────────────────────────────────────────────────────
+// â”€â”€ Criar agente â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const createAgente = async (req, res) => {
   try {
     const schema = req.tenant.schema;
     const { nome, cargo, matricula, cpf, email, telefone, secretaria_id } = req.body;
-    if (!nome) return res.status(400).json({ error: 'Nome obrigatório' });
+    if (!nome) return res.status(400).json({ error: 'Nome obrigatÃ³rio' });
     const [rows] = await req.tenantDb.query(
       `INSERT INTO "${schema}".agentes
         (nome, cargo, matricula, cpf, email, telefone, secretaria_id, ativo, created_at, updated_at)
@@ -506,7 +366,7 @@ const createAgente = async (req, res) => {
   }
 };
 
-// ── Atualizar agente ──────────────────────────────────────────────────────────
+// â”€â”€ Atualizar agente â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const updateAgente = async (req, res) => {
   try {
     const schema = req.tenant.schema;
@@ -534,7 +394,7 @@ const updateAgente = async (req, res) => {
   }
 };
 
-// ── Excluir agente (soft delete) ──────────────────────────────────────────────
+// â”€â”€ Excluir agente (soft delete) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const deleteAgente = async (req, res) => {
   try {
     const schema = req.tenant.schema;
@@ -560,12 +420,12 @@ const listSecretariasPublico = async (req, res) => {
     });
     res.json({ secretarias });
   } catch (error) {
-    console.error('Erro ao listar secretarias públicas:', error);
+    console.error('Erro ao listar secretarias pÃºblicas:', error);
     res.status(500).json({ error: 'Erro ao listar secretarias' });
   }
 };
 
-// Endpoint dedicado para gestor atualizar logo da própria secretaria
+// Endpoint dedicado para gestor atualizar logo da prÃ³pria secretaria
 const updateSecretariaLogo = async (req, res) => {
   try {
     const { id } = req.params;
@@ -574,12 +434,12 @@ const updateSecretariaLogo = async (req, res) => {
 
     const secretaria = await Secretaria.findByPk(id);
     if (!secretaria) {
-      return res.status(404).json({ error: 'Secretaria não encontrada' });
+      return res.status(404).json({ error: 'Secretaria nÃ£o encontrada' });
     }
 
-    // Gestores só podem alterar a logo da própria secretaria
+    // Gestores sÃ³ podem alterar a logo da prÃ³pria secretaria
     if (req.user.tipo === 'gestor' && req.user.secretariaId !== id) {
-      return res.status(403).json({ error: 'Sem permissão para alterar outra secretaria' });
+      return res.status(403).json({ error: 'Sem permissÃ£o para alterar outra secretaria' });
     }
 
     await secretaria.update({ logo: logo || null });
@@ -610,5 +470,5 @@ module.exports = {
   updateAgente,
   deleteAgente,
   listSecretariasPublico,
-  importarSecretariasAgentes,
 };
+

@@ -8,7 +8,7 @@ build/
 .vscode/
 coverage/
 
-# Segurança / secrets
+# Seguranï¿½a / secrets
 .env
 .env.*
 !.env.example
@@ -29,7 +29,7 @@ jProcesso_SECURITY_QUARANTINE/
 login*.json
 tok.txt
 
-# Scripts locais temporários
+# Scripts locais temporï¿½rios
 test-*.js
 check-*.js
 _check_*.js
@@ -56,9 +56,10 @@ relatorios-dark.png
 relatorios-light.png
 
 # Pastas locais fora do app
-documentos-licitacao/
+docs/
 hostgator-deploy/
+.sixth/
 
-# Documentação local/operacional
+# Documentaï¿½ï¿½o local/operacional
 README.md
 SYSTEM_PROMPT.md

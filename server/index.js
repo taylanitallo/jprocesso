@@ -143,14 +143,8 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-const USE_MOCK = process.env.USE_MOCK_AUTH === 'true';
 
 const initDatabase = async () => {
-  if (USE_MOCK) {
-    console.log('⚠️  Modo MOCK ativado - rodando sem banco de dados');
-    return;
-  }
-  
   try {
     await masterDb.authenticate();
     console.log('✅ Conectado ao banco de dados PostgreSQL');
@@ -195,10 +189,6 @@ initDatabase().then(() => {
   app.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);
     console.log(`Ambiente: ${process.env.NODE_ENV}`);
-    if (USE_MOCK) {
-      console.log('🔓 Modo MOCK ativado');
-    }
-
   });
 }).catch((err) => {
   console.error('❌ Falha crítica na inicialização:', err.message);
