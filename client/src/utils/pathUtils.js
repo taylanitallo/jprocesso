@@ -4,7 +4,7 @@
  * Exemplos:
  * - /jprocesso/ → null (rota raiz - MunicipioSelector)
  * - /jprocesso/teste/login → "teste"
- * - /jprocesso/iraucuba/processos → "iraucuba"
+ * - /jprocesso/municipio/processos → "municipio"
  */
 export const getSubdomain = () => {
   const pathname = window.location.pathname

@@ -22,7 +22,7 @@ const Tenant = masterDb.define('Tenant', {
     type: DataTypes.STRING,
     allowNull: false,
     unique: true,
-    comment: 'Subdomínio para acesso (ex: iraucuba)'
+    comment: 'Subdomínio para acesso (ex: municipio-exemplo)'
   },
   schema: {
     type: DataTypes.STRING,
