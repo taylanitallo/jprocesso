@@ -215,16 +215,61 @@ jProcesso/
 
 ## Segurança
 
-- Autenticação via JWT
+- Autenticação via JWT (access token 15m + refresh token 30d em produção)
 - Rate limiting nas APIs
 - Helmet para headers de segurança
 - Validação de tipos de arquivo no upload
-- Hash SHA256 dos arquivos para integridade
-- Isolamento de dados por tenant (schema PostgreSQL)
+- Hash SHA256 e MD5 dos arquivos para integridade
+- Isolamento de dados por tenant (schema PostgreSQL por prefeitura)
+- Supabase Storage privado com signed URLs de curta duração (60s)
+- service_role key exclusiva do backend — nunca exposta ao frontend
+
+## Deploy
+
+### Railway (Backend)
+
+Configure as variáveis no painel **Railway > seu projeto > Variables**:
+
+| Variável | Valor |
+|---|---|
+| `NODE_ENV` | `production` |
+| `PORT` | _(Railway define automaticamente)_ |
+| `DB_HOST` | `aws-1-sa-east-1.pooler.supabase.com` |
+| `DB_PORT` | `5432` |
+| `DB_NAME` | `postgres` |
+| `DB_USER` | `postgres.<project-ref>` |
+| `DB_PASSWORD` | _(senha do Supabase)_ |
+| `JWT_SECRET` | _(64 bytes hex aleatório)_ |
+| `JWT_EXPIRE` | `15m` |
+| `REFRESH_TOKEN_SECRET` | _(64 bytes hex diferente do JWT\_SECRET)_ |
+| `REFRESH_TOKEN_EXPIRE` | `30d` |
+| `SUPABASE_URL` | `https://<project-ref>.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_KEY` | _(service\_role do Supabase — nunca expor)_ |
+| `SUPABASE_STORAGE_BUCKET` | `jprocesso-documentos` |
+| `CLIENT_URL` | URL do frontend no Vercel |
+| `ALLOWED_ORIGINS` | URL do frontend no Vercel |
+| `MAX_FILE_SIZE` | `10485760` |
+
+### Vercel (Frontend)
+
+Configure em **Vercel > projeto > Settings > Environment Variables**:
+
+| Variável | Valor |
+|---|---|
+| `VITE_API_URL` | `https://<seu-projeto>.up.railway.app/api` |
+
+> Não adicionar `VITE_SUPABASE_*` — o Storage é acessado exclusivamente pelo backend.
+
+### Supabase Storage
+
+Antes do primeiro deploy, crie o bucket no painel **Supabase > Storage**:
+- **Name**: `jprocesso-documentos`
+- **Public**: desativado (bucket privado obrigatório)
+- **File size limit**: 10 MB
+- **Allowed MIME types**: `application/pdf, image/jpeg, image/png, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document`
 
 ## Próximas Melhorias
 
-- Integração com AWS S3 para armazenamento de arquivos
 - Notificações por email
 - Dashboard com gráficos e estatísticas
 - Relatórios em PDF

@@ -7,3 +7,54 @@ dist/
 build/
 .vscode/
 coverage/
+
+# Segurança / secrets
+.env
+.env.*
+!.env.example
+server/.env
+server/.env.*
+client/.env
+client/.env.*
+!server/.env.example
+!client/.env.example
+
+# Backups e quarentena
+backup/
+jProcesso_SECURITY_QUARANTINE/
+
+# Logs e outputs
+*.log
+*.txt
+login*.json
+tok.txt
+
+# Scripts locais temporários
+test-*.js
+check-*.js
+_check_*.js
+debug-*.js
+diag*.js
+fix-*.js
+scan-*.js
+smoke-*.js
+reset-*.js
+verificar-*.js
+testar-*.js
+diagnostico*.js
+corrigir-*.js
+listar-*.js
+adicionar-*.js
+alterar-*.js
+limpar-*.js
+gerar-*.js
+pg-*.js
+pg_*.js
+
+# Screenshots locais
+relatorios-dark.png
+relatorios-light.png
+
+# Pastas locais fora do app
+documentos-licitacao/
+hostgator-deploy/
