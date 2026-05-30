@@ -19,7 +19,7 @@ const corClasses = {
   orange:  'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300',
   yellow:  'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300',
   purple:  'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
-  gray:    'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300',
+  gray:    'bg-gray-100 dark:bg-slate-700/30 text-gray-600 dark:text-slate-300',
 }
 
 const tipoUsuarioLabel = {
@@ -71,11 +71,11 @@ export default function Registros() {
       try {
         const [secRes, userRes, modRes] = await Promise.all([
           api.get('/organizacao/secretarias'),
-          api.get('/auth/usuarios'),
+          api.get('/auth/users'),
           api.get('/logs/modulos'),
         ])
         setSecretarias(secRes.data.secretarias || [])
-        setUsuarios(userRes.data.usuarios || [])
+        setUsuarios(userRes.data.users || [])
         setModulos(modRes.data.modulos || [])
       } catch { /* silencioso */ }
     }
@@ -184,7 +184,7 @@ export default function Registros() {
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
               filtrosAtivos > 0
                 ? 'bg-teal-600 text-white border-teal-600'
-                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                : 'bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-300 border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700/50'
             }`}
           >
             <Filter className="h-4 w-4" />
@@ -204,7 +204,7 @@ export default function Registros() {
 
               {/* Tipo de Usuário */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">
                   <User className="inline h-3.5 w-3.5 mr-1" />Tipo de Usuário
                 </label>
                 <select
@@ -221,7 +221,7 @@ export default function Registros() {
 
               {/* Usuário */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">
                   <User className="inline h-3.5 w-3.5 mr-1" />Usuário
                 </label>
                 <select
@@ -238,7 +238,7 @@ export default function Registros() {
 
               {/* Secretaria */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">
                   <Building2 className="inline h-3.5 w-3.5 mr-1" />Secretaria
                 </label>
                 <select
@@ -255,7 +255,7 @@ export default function Registros() {
 
               {/* Setor */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">
                   <Layers className="inline h-3.5 w-3.5 mr-1" />Setor
                 </label>
                 <select
@@ -273,7 +273,7 @@ export default function Registros() {
 
               {/* Módulo */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">
                   Módulo
                 </label>
                 <select
@@ -290,7 +290,7 @@ export default function Registros() {
 
               {/* Data Início */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">
                   <Clock className="inline h-3.5 w-3.5 mr-1" />Data Início
                 </label>
                 <input
@@ -303,7 +303,7 @@ export default function Registros() {
 
               {/* Data Fim */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">
                   <Clock className="inline h-3.5 w-3.5 mr-1" />Data Fim
                 </label>
                 <input
@@ -315,7 +315,7 @@ export default function Registros() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 pt-2 border-t dark:border-gray-700">
+            <div className="flex items-center gap-3 pt-2 border-t dark:border-slate-700/50">
               <button type="submit" className="btn-primary flex items-center gap-2">
                 <Search className="h-4 w-4" />
                 Aplicar Filtros
@@ -324,7 +324,7 @@ export default function Registros() {
                 <X className="h-4 w-4" />
                 Limpar
               </button>
-              <span className="text-sm text-gray-500 dark:text-gray-400 ml-auto">
+              <span className="text-sm text-gray-500 dark:text-slate-400 ml-auto">
                 {total.toLocaleString('pt-BR')} registro(s) encontrado(s)
               </span>
             </div>
@@ -347,30 +347,30 @@ export default function Registros() {
           </div>
         ) : logs.length === 0 ? (
           <div className="text-center py-20">
-            <p className="text-gray-400 dark:text-gray-600 text-sm">Nenhum registro encontrado para os filtros selecionados.</p>
+            <p className="text-gray-400 dark:text-slate-600 text-sm">Nenhum registro encontrado para os filtros selecionados.</p>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Data/Hora</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Usuário</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">Secretaria / Setor</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Módulo</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ação / Descrição</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Referência</th>
+                  <tr className="border-b border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-950/50">
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">Data/Hora</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Usuário</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider hidden md:table-cell">Secretaria / Setor</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Módulo</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Ação / Descrição</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider hidden lg:table-cell">Referência</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
                   {logs.map((log) => {
                     const modCfg = moduloConfig[log.modulo] || { cor: 'gray', label: log.modulo }
                     return (
-                      <tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                      <tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors">
                         {/* Data */}
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                          <p className="text-xs text-gray-500 dark:text-slate-400 font-mono">
                             {formatarData(log.created_at)}
                           </p>
                         </td>
@@ -381,7 +381,7 @@ export default function Registros() {
                             {log.usuario?.nomeReduzido || log.usuario?.nome || <span className="text-gray-400 italic">Sistema</span>}
                           </p>
                           {log.usuario?.tipo && (
-                            <p className="text-xs text-gray-400 dark:text-gray-500">
+                            <p className="text-xs text-gray-400 dark:text-slate-500">
                               {tipoUsuarioLabel[log.usuario.tipo] || log.usuario.tipo}
                             </p>
                           )}
@@ -391,10 +391,10 @@ export default function Registros() {
                         <td className="px-4 py-3 hidden md:table-cell">
                           {log.secretaria ? (
                             <div>
-                              <p className="text-xs font-medium text-gray-700 dark:text-gray-300">{log.secretaria.sigla || log.secretaria.nome}</p>
-                              {log.setor && <p className="text-xs text-gray-400 dark:text-gray-500">{log.setor.nome}</p>}
+                              <p className="text-xs font-medium text-gray-700 dark:text-slate-300">{log.secretaria.sigla || log.secretaria.nome}</p>
+                              {log.setor && <p className="text-xs text-gray-400 dark:text-slate-500">{log.setor.nome}</p>}
                             </div>
-                          ) : <span className="text-gray-300 dark:text-gray-600">—</span>}
+                          ) : <span className="text-gray-300 dark:text-slate-600">—</span>}
                         </td>
 
                         {/* Módulo */}
@@ -406,17 +406,17 @@ export default function Registros() {
 
                         {/* Ação / Descrição */}
                         <td className="px-4 py-3 max-w-xs">
-                          <p className="text-xs font-mono text-gray-600 dark:text-gray-400 mb-0.5">{log.acao}</p>
+                          <p className="text-xs font-mono text-gray-600 dark:text-slate-400 mb-0.5">{log.acao}</p>
                           {log.descricao && (
-                            <p className="text-sm text-gray-700 dark:text-gray-300 truncate" title={log.descricao}>{log.descricao}</p>
+                            <p className="text-sm text-gray-700 dark:text-slate-300 truncate" title={log.descricao}>{log.descricao}</p>
                           )}
                         </td>
 
                         {/* Referência */}
                         <td className="px-4 py-3 hidden lg:table-cell">
                           {log.referencia_numero || log.referencia_id
-                            ? <span className="text-xs font-mono text-gray-500 dark:text-gray-400">{log.referencia_numero || log.referencia_id}</span>
-                            : <span className="text-gray-300 dark:text-gray-600">—</span>}
+                            ? <span className="text-xs font-mono text-gray-500 dark:text-slate-400">{log.referencia_numero || log.referencia_id}</span>
+                            : <span className="text-gray-300 dark:text-slate-600">—</span>}
                         </td>
                       </tr>
                     )
@@ -427,15 +427,15 @@ export default function Registros() {
 
             {/* Paginação */}
             {pages > 1 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-gray-700">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+              <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-slate-700/50">
+                <p className="text-sm text-gray-500 dark:text-slate-400">
                   Página {page} de {pages} &nbsp;·&nbsp; {total.toLocaleString('pt-BR')} registros
                 </p>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => buscarLogs(page - 1)}
                     disabled={page <= 1}
-                    className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="p-1 rounded hover:bg-gray-100 dark:hover:bg-slate-700/50 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </button>
@@ -453,7 +453,7 @@ export default function Registros() {
                         className={`w-8 h-8 rounded text-sm font-medium transition-colors ${
                           pg === page
                             ? 'bg-teal-600 text-white'
-                            : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400'
+                            : 'hover:bg-gray-100 dark:hover:bg-slate-700/50 text-gray-600 dark:text-slate-400'
                         }`}
                       >
                         {pg}
@@ -463,7 +463,7 @@ export default function Registros() {
                   <button
                     onClick={() => buscarLogs(page + 1)}
                     disabled={page >= pages}
-                    className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="p-1 rounded hover:bg-gray-100 dark:hover:bg-slate-700/50 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <ChevronRight className="h-5 w-5" />
                   </button>

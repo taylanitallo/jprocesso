@@ -83,8 +83,35 @@ const authorize = (...roles) => {
   };
 };
 
+// Garante que a requisição vem de um SuperAdmin global (token com isAdmin: true).
+// Deve ser usado APÓS `authenticate`.
+const requireSuperAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Não autenticado' });
+  }
+  if (!req.user.isAdmin) {
+    return res.status(403).json({ error: 'Acesso restrito a administradores do sistema' });
+  }
+  next();
+};
+
+// Garante que req.models e req.tenant estão disponíveis (tenant foi resolvido).
+// O admin global (subdomain='admin') não possui schema próprio, portanto esta
+// rota não é acessível para ele — retorna 403 antes de chegar ao controller.
+// Deve ser usado APÓS `tenantMiddleware`.
+const requireTenant = (req, res, next) => {
+  if (!req.models || !req.tenant) {
+    return res.status(403).json({
+      error: 'Esta operação requer acesso a um município específico. O administrador global não possui dados de processos.'
+    });
+  }
+  next();
+};
+
 module.exports = {
   authenticate,
   tenantMiddleware,
-  authorize
+  requireTenant,
+  authorize,
+  requireSuperAdmin,
 };

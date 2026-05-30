@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const ctrl = require('../controllers/patrimonioController');
-const { authenticate, tenantMiddleware, authorize } = require('../middleware/auth');
+const { authenticate, tenantMiddleware, requireTenant, authorize } = require('../middleware/auth');
 
-const auth = [tenantMiddleware, authenticate];
+const auth = [tenantMiddleware, requireTenant, authenticate];
 const admin = [...auth, authorize('admin')];
 const gestor = [...auth, authorize('admin', 'gestor')];
 

@@ -1,9 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   Landmark, DollarSign, ArrowLeftRight, PackageX,
-  RefreshCw, ClipboardCheck, TrendingDown
+  RefreshCw, ClipboardCheck, TrendingDown, BarChart2
 } from 'lucide-react'
 import api from '../services/api'
+import PageHeader from '../components/ui/PageHeader'
+import StatCard from '../components/ui/StatCard'
+import SectionTitle from '../components/ui/SectionTitle'
+import EmptyState from '../components/ui/EmptyState'
 
 const fmtMoney = (v) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
@@ -29,49 +33,45 @@ export default function PatDashboard() {
       </div>
     )
   }
-  if (!dados) return null
+  if (!dados) return (
+    <EmptyState
+      icon={Landmark}
+      title="Sem dados disponíveis"
+      description="Não foi possível carregar os dados do painel patrimonial."
+      action={<button onClick={load} className="btn-primary text-sm">Tentar novamente</button>}
+    />
+  )
 
   const { kpis, porGrupo, ultimosTombamentos, transferencias30dias } = dados
 
-  const cards = [
-    { label: 'Bens Ativos',          value: kpis.ativos,                     icon: Landmark,      color: 'blue' },
-    { label: 'Valor Patrimonial',     value: fmtMoney(kpis.valorTotal),       icon: DollarSign,    color: 'green' },
-    { label: 'Transferências (30d)',  value: transferencias30dias,            icon: ArrowLeftRight, color: 'yellow' },
-    { label: 'Baixados',             value: kpis.baixados,                   icon: PackageX,       color: 'red' },
-    { label: 'Cedidos',              value: kpis.cedidos,                    icon: ClipboardCheck, color: 'purple' },
-    { label: 'Extraviados',          value: kpis.extraviados,                icon: TrendingDown,   color: 'orange' },
-  ]
-
-  const colorMap = {
-    blue:   'bg-blue-50 text-blue-700 border-blue-100',
-    green:  'bg-green-50 text-green-700 border-green-100',
-    red:    'bg-red-50 text-red-700 border-red-100',
-    yellow: 'bg-yellow-50 text-yellow-700 border-yellow-100',
-    orange: 'bg-orange-50 text-orange-700 border-orange-100',
-    purple: 'bg-purple-50 text-purple-700 border-purple-100',
-  }
-
   return (
     <div className="space-y-6">
-      {/* KPIs */}
+      <PageHeader
+        icon={Landmark}
+        eyebrow="Patrimônio"
+        title="Painel"
+        subtitle="Visão geral do acervo patrimonial, indicadores e últimos tombamentos"
+        actions={
+          <button onClick={load} className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+            <RefreshCw className="h-4 w-4" /> Atualizar
+          </button>
+        }
+      />
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        {cards.map(c => (
-          <div key={c.label} className={`rounded-xl border p-4 ${colorMap[c.color]}`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium opacity-80">{c.label}</span>
-              <c.icon className="h-5 w-5 opacity-60" />
-            </div>
-            <p className="text-2xl font-bold">{c.value ?? 0}</p>
-          </div>
-        ))}
+        <StatCard icon={Landmark}      label="Bens Ativos"         value={kpis.ativos ?? 0}              tone="blue" />
+        <StatCard icon={DollarSign}    label="Valor Patrimonial"   value={fmtMoney(kpis.valorTotal)}     tone="green" />
+        <StatCard icon={ArrowLeftRight} label="Transf. (30d)"      value={transferencias30dias ?? 0}     tone="amber" />
+        <StatCard icon={PackageX}      label="Baixados"            value={kpis.baixados ?? 0}            tone="red" />
+        <StatCard icon={ClipboardCheck} label="Cedidos"            value={kpis.cedidos ?? 0}             tone="violet" />
+        <StatCard icon={TrendingDown}  label="Extraviados"         value={kpis.extraviados ?? 0}         tone="cyan" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Por grupo */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-          <h3 className="font-semibold text-gray-900 dark:text-white mb-3">📊 Distribuição por Grupo</h3>
+          <SectionTitle icon={BarChart2} title="Distribuição por Grupo" />
           {(!porGrupo || porGrupo.length === 0) ? (
-            <p className="text-sm text-gray-500 text-center py-4">Nenhum bem cadastrado</p>
+            <EmptyState icon={Landmark} title="Nenhum bem cadastrado" />
           ) : (
             <div className="space-y-2">
               {porGrupo.map(g => (
@@ -93,9 +93,9 @@ export default function PatDashboard() {
 
         {/* Últimos tombamentos */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-          <h3 className="font-semibold text-gray-900 dark:text-white mb-3">🏷️ Últimos Tombamentos</h3>
+          <SectionTitle icon={Landmark} title="Últimos Tombamentos" />
           {(!ultimosTombamentos || ultimosTombamentos.length === 0) ? (
-            <p className="text-sm text-gray-500 text-center py-4">Nenhum tombamento registrado</p>
+            <EmptyState icon={Landmark} title="Nenhum tombamento registrado" />
           ) : (
             <div className="space-y-2">
               {ultimosTombamentos.map(b => (

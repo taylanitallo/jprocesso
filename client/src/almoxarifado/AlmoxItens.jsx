@@ -3,6 +3,11 @@ import { Search, Edit2, Trash2, AlertTriangle, RefreshCw, Package, Info, MapPin 
 import api from '../services/api'
 import AlmoxModal from './AlmoxModal'
 import { fmt, fmtMoney, TIPO_ITEM } from './almoxConstants'
+import PageHeader from '../components/ui/PageHeader'
+import FilterBar from '../components/ui/FilterBar'
+import SectionTitle from '../components/ui/SectionTitle'
+import EmptyState from '../components/ui/EmptyState'
+import ActionBar from '../components/ui/ActionBar'
 
 // ─── Modal de Estoque do Item ─────────────────────────────────────────────────
 // Exibe campos do catálogo como somente-leitura e permite editar apenas dados de estoque
@@ -289,7 +294,23 @@ export default function AlmoxItens() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4 gap-3">
+      <PageHeader
+        icon={Package}
+        eyebrow="Almoxarifado"
+        title="Itens de Estoque"
+        subtitle="Catálogo de materiais com configurações de estoque, localização e ressuprimento"
+        actions={
+          <button
+            onClick={load}
+            className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700"
+            title="Atualizar lista"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </button>
+        }
+      />
+
+      <FilterBar>
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
@@ -299,14 +320,7 @@ export default function AlmoxItens() {
             className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
-        <button
-          onClick={load}
-          className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700"
-          title="Atualizar lista"
-        >
-          <RefreshCw className="h-4 w-4" />
-        </button>
-      </div>
+      </FilterBar>
 
       {/* Aviso sobre origem dos itens */}
       <div className="flex items-start gap-2 px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg text-xs text-amber-700 dark:text-amber-400">
@@ -322,13 +336,16 @@ export default function AlmoxItens() {
           <RefreshCw className="h-7 w-7 animate-spin text-blue-500" />
         </div>
       ) : todosItens.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-gray-400 dark:text-gray-500">
-          <Package className="h-12 w-12 mb-3 opacity-30" />
-          <p className="font-medium">Nenhum item no catálogo</p>
-          <p className="text-sm mt-1">Acesse <strong>Contratos → Itens</strong> para cadastrar itens no catálogo.</p>
-        </div>
+        <EmptyState
+          icon={Package}
+          title="Nenhum item no catálogo"
+          description="Acesse Contratos → Itens para cadastrar itens no catálogo."
+        />
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="px-4 pt-4">
+            <SectionTitle icon={Package} title="Lista de Itens" subtitle={`${itens.length} de ${todosItens.length} item(ns)`} />
+          </div>
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
               <tr>
@@ -342,8 +359,12 @@ export default function AlmoxItens() {
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {itens.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
-                    Nenhum item encontrado com "{busca}"
+                  <td colSpan={9} className="px-4 py-0">
+                    <EmptyState
+                      icon={Search}
+                      title="Nenhum item encontrado"
+                      description={`Nenhum resultado para "${busca}"`}
+                    />
                   </td>
                 </tr>
               )}
@@ -377,7 +398,7 @@ export default function AlmoxItens() {
                       {[item.corredor, item.prateleira, item.gaveta].filter(Boolean).join('-') || item.localizacao || '—'}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
+                      <ActionBar align="left">
                         <button
                           onClick={() => setEditando(item)}
                           className="p-1.5 rounded hover:bg-amber-50 text-amber-600"
@@ -394,7 +415,7 @@ export default function AlmoxItens() {
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         )}
-                      </div>
+                      </ActionBar>
                     </td>
                   </tr>
                 )

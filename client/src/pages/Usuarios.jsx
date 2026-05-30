@@ -2,6 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import PageHeader from '../components/ui/PageHeader';
+import StatCard from '../components/ui/StatCard';
+import SectionTitle from '../components/ui/SectionTitle';
+import EmptyState from '../components/ui/EmptyState';
+import FilterBar from '../components/ui/FilterBar';
+import ActionBar from '../components/ui/ActionBar';
 import { 
   Users, 
   UserPlus, 
@@ -410,12 +416,12 @@ export default function Usuarios() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-          <div>
-            <h1 className="page-title">👥 Gerenciamento de Usuários</h1>
-            <p className="page-subtitle">Gerencie usuários, permissões e acessos ao sistema</p>
-          </div>
-          <div className="flex items-center gap-2">
+      <PageHeader
+        icon={Users}
+        eyebrow="Administração"
+        title="Gerenciamento de Usuários"
+        subtitle="Gerencie usuários, permissões e acessos ao sistema"
+        actions={<>
             {/* Menu Importar / Exportar */}
             <div className="relative">
               <button
@@ -429,10 +435,10 @@ export default function Usuarios() {
               {showIoMenu && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowIoMenu(false)} />
-                  <div className="absolute right-0 mt-1 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-20 overflow-hidden">
+                  <div className="absolute right-0 mt-1 w-56 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700/50 rounded-lg shadow-lg z-20 overflow-hidden">
                     <button
                       onClick={() => { setShowIoMenu(false); handleExportUsuarios(); }}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 text-left"
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700/50 text-left"
                     >
                       <Download className="h-4 w-4 text-green-600" />
                       <div>
@@ -442,7 +448,7 @@ export default function Usuarios() {
                     </button>
                     <button
                       onClick={() => { setShowIoMenu(false); importInputRef.current?.click(); }}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 text-left border-t border-gray-100 dark:border-gray-700"
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700/50 text-left border-t border-gray-100 dark:border-slate-700/50"
                     >
                       <Upload className="h-4 w-4 text-blue-600" />
                       <div>
@@ -452,7 +458,7 @@ export default function Usuarios() {
                     </button>
                     <button
                       onClick={() => { setShowIoMenu(false); handleDownloadModelo(); }}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 text-left border-t border-gray-100 dark:border-gray-700"
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700/50 text-left border-t border-gray-100 dark:border-slate-700/50"
                     >
                       <FileSpreadsheet className="h-4 w-4 text-orange-500" />
                       <div>
@@ -476,52 +482,49 @@ export default function Usuarios() {
               <UserPlus className="h-5 w-5" />
               Novo Usuário
             </button>
-          </div>
-        </div>
+        </>}
+      />
 
       {/* Filtros */}
-      <div className="card p-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="md:col-span-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input type="text" placeholder="🔍 Buscar por nome, email ou CPF..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="input-field pl-10" />
-            </div>
-          </div>
-          <div>
-            <select value={filterTipo} onChange={(e) => setFilterTipo(e.target.value)} className="input-field">
-              <option value="todos">👥 Todos os tipos</option>
-              <option value="admin">🛡️ Administradores</option>
-              <option value="gestor">💼 Gestores</option>
-              <option value="operacional">👷 Operacionais</option>
-            </select>
-          </div>
+      <FilterBar>
+        <div className="relative flex-1 min-w-48">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <input type="text" placeholder="Buscar por nome, email ou CPF..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="input-field pl-10" />
         </div>
-      </div>
+        <select value={filterTipo} onChange={(e) => setFilterTipo(e.target.value)} className="input-field w-48">
+          <option value="todos">Todos os tipos</option>
+          <option value="admin">Administradores</option>
+          <option value="gestor">Gestores</option>
+          <option value="operacional">Operacionais</option>
+        </select>
+      </FilterBar>
 
       {/* Estatísticas */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="card p-4"><p className="text-xs text-gray-500 dark:text-gray-400">👥 Total</p><p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{usuarios.length}</p></div>
-        <div className="card p-4"><p className="text-xs text-gray-500 dark:text-gray-400">🛡️ Admins</p><p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{usuarios.filter(u => u.tipo === 'admin').length}</p></div>
-        <div className="card p-4"><p className="text-xs text-gray-500 dark:text-gray-400">💼 Gestores</p><p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">{usuarios.filter(u => u.tipo === 'gestor').length}</p></div>
-        <div className="card p-4"><p className="text-xs text-gray-500 dark:text-gray-400">👷 Operacionais</p><p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{usuarios.filter(u => u.tipo === 'operacional').length}</p></div>
+        <StatCard icon={Users} label="Total" value={usuarios.length} tone="blue" />
+        <StatCard icon={Shield} label="Admins" value={usuarios.filter(u => u.tipo === 'admin').length} tone="red" />
+        <StatCard icon={Briefcase} label="Gestores" value={usuarios.filter(u => u.tipo === 'gestor').length} tone="violet" />
+        <StatCard icon={Users} label="Operacionais" value={usuarios.filter(u => u.tipo === 'operacional').length} tone="green" />
       </div>
 
       {/* Lista de Usuários */}
       <div className="card overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-700/50">
+        <div className="px-6 pt-5 pb-2">
+          <SectionTitle icon={Users} title="Lista de Usuários" subtitle={`${filteredUsuarios.length} usuário(s)`} />
+        </div>
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700/50">
+          <thead className="bg-gray-50 dark:bg-slate-700/30">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Usuário</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Secretaria/Setor</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ações</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Usuário</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Tipo</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Secretaria/Setor</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Ações</th>
             </tr>
           </thead>
-          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+          <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700/50">
             {filteredUsuarios.map((usuario) => (
-              <tr key={usuario.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
+              <tr key={usuario.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/40 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-full flex items-center justify-center">
@@ -530,17 +533,17 @@ export default function Usuarios() {
                       </span>
                     </div>
                     <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{usuario.nome}</div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">{usuario.email}</div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-slate-100">{usuario.nome}</div>
+                      <div className="text-sm text-gray-500 dark:text-slate-400">{usuario.email}</div>
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`
                     px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
-                    ${usuario.tipo === 'admin' ? 'bg-red-100 text-red-800' : ''}
-                    ${usuario.tipo === 'gestor' ? 'bg-blue-100 text-blue-800' : ''}
-                    ${usuario.tipo === 'operacional' ? 'bg-green-100 text-green-800' : ''}
+                    ${usuario.tipo === 'admin' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' : ''}
+                    ${usuario.tipo === 'gestor' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : ''}
+                    ${usuario.tipo === 'operacional' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : ''}
                   `}>
                     {usuario.tipo === 'admin' ? 'Administrador' : ''}
                     {usuario.tipo === 'gestor' ? 'Gestor' : ''}
@@ -548,8 +551,8 @@ export default function Usuarios() {
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="text-sm font-medium text-gray-800 dark:text-gray-200">{usuario.secretaria?.sigla || '-'}</div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">{usuario.setor?.nome || '-'}</div>
+                  <div className="text-sm font-medium text-gray-800 dark:text-slate-200">{usuario.secretaria?.sigla || '-'}</div>
+                  <div className="text-sm text-gray-500 dark:text-slate-400">{usuario.setor?.nome || '-'}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <button
@@ -590,46 +593,42 @@ export default function Usuarios() {
         </table>
 
         {filteredUsuarios.length === 0 && (
-          <div className="text-center py-14">
-            <div className="text-5xl mb-3">👤‍🧐</div>
-            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Nenhum usuário encontrado</h3>
-            <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">Tente ajustar os filtros de busca</p>
-          </div>
+          <EmptyState icon={Users} title="Nenhum usuário encontrado" description="Tente ajustar os filtros de busca" />
         )}
       </div>
 
       {/* Modal Criar Usuário */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-4xl w-full my-8 shadow-xl">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">👤➕ Novo Usuário</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Preencha as informações do usuário</p>
+          <div className="bg-white dark:bg-slate-900 rounded-xl max-w-4xl w-full my-8 shadow-xl">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700/50 sticky top-0 bg-white dark:bg-slate-900 z-10">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100">Novo Usuário</h2>
+              <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Preencha as informações do usuário</p>
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[calc(90vh-120px)] overflow-y-auto">
               {/* Dados Pessoais */}
               <div>
-                <h3 className="section-header">👤 Dados Pessoais</h3>
+                <SectionTitle icon={Users} title="Dados Pessoais" />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome Completo *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Nome Completo *</label>
                     <input type="text" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} required className="input-field" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome Reduzido <span className="text-gray-400 font-normal">(exibido na tela)</span></label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Nome Reduzido <span className="text-gray-400 font-normal">(exibido na tela)</span></label>
                     <input type="text" value={formData.nomeReduzido} onChange={(e) => setFormData({ ...formData, nomeReduzido: e.target.value })} maxLength="60" className="input-field" placeholder="Ex: João Silva" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">🪪 CPF *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">CPF *</label>
                     <input type="text" value={formData.cpf} onChange={(e) => setFormData({ ...formData, cpf: e.target.value })} required maxLength="11" className="input-field" placeholder="Apenas números" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📧 E-mail *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">E-mail *</label>
                     <input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required className="input-field" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">🔑 Senha *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Senha *</label>
                     <div className="relative">
                       <input type={showPassword ? 'text' : 'password'} value={formData.senha} onChange={(e) => setFormData({ ...formData, senha: e.target.value })} required minLength="6" className="input-field pr-10" />
                       <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -641,24 +640,24 @@ export default function Usuarios() {
               </div>
 
               {/* Vinculação */}
-              <div className="border-t dark:border-gray-700 pt-6">
-                <h3 className="section-header">🏛️ Vinculação Organizacional</h3>
+              <div className="border-t dark:border-slate-700/50 pt-6">
+                <SectionTitle icon={Building2} title="Vinculação Organizacional" />
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo de Usuário *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Tipo de Usuário *</label>
                     <select value={formData.tipo} onChange={(e) => setFormData({ ...formData, tipo: e.target.value })} className="input-field">
                       {tiposUsuario.map(tipo => (<option key={tipo.value} value={tipo.value}>{tipo.label}</option>))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">🏛️ Secretaria *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Secretaria *</label>
                     <select value={formData.secretariaId} onChange={(e) => setFormData({ ...formData, secretariaId: e.target.value, setorId: '' })} required className="input-field">
                       <option value="">Selecione...</option>
                       {secretarias.map(sec => (<option key={sec.id} value={sec.id}>{sec.sigla} - {sec.nome}</option>))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📍 Setor *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Setor *</label>
                     <select value={formData.setorId} onChange={(e) => setFormData({ ...formData, setorId: e.target.value })} required disabled={!formData.secretariaId} className="input-field disabled:opacity-60">
                       <option value="">Selecione...</option>
                       {setores.filter(s => s.secretaria_id === formData.secretariaId || s.secretariaId === formData.secretariaId).sort((a, b) => a.nome.localeCompare(b.nome)).map(setor => (<option key={setor.id} value={setor.id}>{setor.nome}</option>))}
@@ -667,29 +666,31 @@ export default function Usuarios() {
                 </div>
               </div>
 
-              <div className="border-t dark:border-gray-700 pt-6">
-                <h3 className="section-header">🛡️ Permissões de Acesso</h3>
-                <div className="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-4 space-y-3">
+              <div className="border-t dark:border-slate-700/50 pt-6">
+                <SectionTitle icon={Shield} title="Permissões de Acesso" />
+                <div className="bg-gray-50 dark:bg-slate-700/20 rounded-lg p-4 space-y-3">
                   {permissoesDisponiveis.map((perm) => (
                     <div key={perm.key} className="flex items-start justify-between py-2">
                       <div className="flex-1">
-                        <label className="font-medium text-gray-800 dark:text-gray-200 text-sm">{perm.label}</label>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{perm.description}</p>
+                        <label className="font-medium text-gray-800 dark:text-slate-200 text-sm">{perm.label}</label>
+                        <p className="text-xs text-gray-500 dark:text-slate-400">{perm.description}</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer ml-4">
                         <input type="checkbox" checked={formData.permissoes[perm.key]} onChange={(e) => setFormData({ ...formData, permissoes: { ...formData.permissoes, [perm.key]: e.target.checked } })} className="sr-only peer" />
-                        <div className="w-11 h-6 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
+                        <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
                       </label>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-3 pt-4 border-t dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-800">
-                <button type="button" onClick={() => setShowModal(false)} className="btn-secondary">Cancelar</button>
-                <button type="submit" disabled={loading} className="btn-primary flex items-center gap-2">
-                  {loading ? '⏳ Salvando...' : <><UserPlus className="h-4 w-4" /> Cadastrar Usuário</>}
-                </button>
+              <div className="pt-4 border-t dark:border-slate-700/50 sticky bottom-0 bg-white dark:bg-slate-900">
+                <ActionBar>
+                  <button type="button" onClick={() => setShowModal(false)} className="btn-secondary">Cancelar</button>
+                  <button type="submit" disabled={loading} className="btn-primary flex items-center gap-2">
+                    {loading ? 'Salvando...' : <><UserPlus className="h-4 w-4" /> Cadastrar Usuário</>}
+                  </button>
+                </ActionBar>
               </div>
             </form>
           </div>
@@ -699,36 +700,36 @@ export default function Usuarios() {
       {/* Modal Editar Usuário */}
       {showEditModal && selectedUser && editData && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-4xl w-full my-8 shadow-xl">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">✏️ Editar Usuário</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Atualize as informações e permissões</p>
+          <div className="bg-white dark:bg-slate-900 rounded-xl max-w-4xl w-full my-8 shadow-xl">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700/50 sticky top-0 bg-white dark:bg-slate-900 z-10">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100">Editar Usuário</h2>
+              <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Atualize as informações e permissões</p>
             </div>
 
             <form onSubmit={handleSubmitEdit} className="p-6 space-y-6 max-h-[calc(90vh-120px)] overflow-y-auto">
 
               {/* Dados Pessoais */}
               <div>
-                <h3 className="section-header">👤 Dados Pessoais</h3>
+                <SectionTitle icon={Users} title="Dados Pessoais" />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome Completo *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Nome Completo *</label>
                     <input type="text" value={editData.nome} onChange={(e) => setEditData({ ...editData, nome: e.target.value })} required className="input-field" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome Reduzido <span className="text-gray-400 font-normal">(exibido na tela)</span></label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Nome Reduzido <span className="text-gray-400 font-normal">(exibido na tela)</span></label>
                     <input type="text" value={editData.nomeReduzido} onChange={(e) => setEditData({ ...editData, nomeReduzido: e.target.value })} maxLength="60" className="input-field" placeholder="Ex: João Silva" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">🪪 CPF</label>
-                    <input type="text" value={editData.cpf} disabled className="input-field disabled:bg-gray-50 disabled:text-gray-500 dark:disabled:bg-gray-700/30" />
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">CPF</label>
+                    <input type="text" value={editData.cpf} disabled className="input-field disabled:bg-gray-50 disabled:text-gray-500 dark:disabled:bg-slate-700/30" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📧 E-mail *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">E-mail *</label>
                     <input type="email" value={editData.email} onChange={(e) => setEditData({ ...editData, email: e.target.value })} required className="input-field" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">🔑 Nova Senha <span className="text-gray-400 font-normal">(opcional)</span></label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Nova Senha <span className="text-gray-400 font-normal">(opcional)</span></label>
                     <div className="relative">
                       <input type={showEditPassword ? 'text' : 'password'} value={editData.novaSenha} onChange={(e) => setEditData({ ...editData, novaSenha: e.target.value })} minLength="6" className="input-field pr-10" placeholder="Deixe em branco para manter" />
                       <button type="button" onClick={() => setShowEditPassword(!showEditPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -740,24 +741,24 @@ export default function Usuarios() {
               </div>
 
               {/* Vinculação */}
-              <div className="border-t dark:border-gray-700 pt-6">
-                <h3 className="section-header">🏛️ Vinculação Organizacional</h3>
+              <div className="border-t dark:border-slate-700/50 pt-6">
+                <SectionTitle icon={Building2} title="Vinculação Organizacional" />
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo de Usuário *</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Tipo de Usuário *</label>
                     <select value={editData.tipo} onChange={(e) => setEditData({ ...editData, tipo: e.target.value })} className="input-field">
                       {tiposUsuario.map(tipo => (<option key={tipo.value} value={tipo.value}>{tipo.label}</option>))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">🏛️ Secretaria</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Secretaria</label>
                     <select value={editData.secretariaId} onChange={(e) => setEditData({ ...editData, secretariaId: e.target.value, setorId: '' })} className="input-field">
                       <option value="">Selecione...</option>
                       {secretarias.map(sec => (<option key={sec.id} value={sec.id}>{sec.sigla} - {sec.nome}</option>))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">📍 Setor</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Setor</label>
                     <select value={editData.setorId} onChange={(e) => setEditData({ ...editData, setorId: e.target.value })} disabled={!editData.secretariaId} className="input-field disabled:opacity-60">
                       <option value="">Selecione...</option>
                       {setores.filter(s => s.secretaria_id === editData.secretariaId || s.secretariaId === editData.secretariaId).sort((a, b) => a.nome.localeCompare(b.nome)).map(setor => (<option key={setor.id} value={setor.id}>{setor.nome}</option>))}
@@ -767,36 +768,38 @@ export default function Usuarios() {
                 <div className="mt-4">
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input type="checkbox" checked={editData.ativo} onChange={(e) => setEditData({ ...editData, ativo: e.target.checked })} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 relative" />
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Usuário ativo (pode fazer login)</span>
+                    <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 relative" />
+                    <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Usuário ativo (pode fazer login)</span>
                   </label>
                 </div>
               </div>
 
               {/* Permissões */}
-              <div className="border-t dark:border-gray-700 pt-6">
-                <h3 className="section-header">🛡️ Permissões de Acesso</h3>
-                <div className="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-4 space-y-3">
+              <div className="border-t dark:border-slate-700/50 pt-6">
+                <SectionTitle icon={Shield} title="Permissões de Acesso" />
+                <div className="bg-gray-50 dark:bg-slate-700/20 rounded-lg p-4 space-y-3">
                   {permissoesDisponiveis.map((perm) => (
                     <div key={perm.key} className="flex items-start justify-between py-2">
                       <div className="flex-1">
-                        <label className="font-medium text-gray-800 dark:text-gray-200 text-sm">{perm.label}</label>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{perm.description}</p>
+                        <label className="font-medium text-gray-800 dark:text-slate-200 text-sm">{perm.label}</label>
+                        <p className="text-xs text-gray-500 dark:text-slate-400">{perm.description}</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer ml-4">
                         <input type="checkbox" checked={!!editData.permissoes[perm.key]} onChange={(e) => setEditData({ ...editData, permissoes: { ...editData.permissoes, [perm.key]: e.target.checked } })} className="sr-only peer" />
-                        <div className="w-11 h-6 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
+                        <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
                       </label>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-3 pt-4 border-t dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-800">
-                <button type="button" onClick={() => { setShowEditModal(false); setSelectedUser(null); setEditData(null); }} className="btn-secondary">Cancelar</button>
-                <button type="submit" disabled={loading} className="btn-primary flex items-center gap-2">
-                  {loading ? '⏳ Salvando...' : <><Edit2 className="h-4 w-4" /> Salvar Alterações</>}
-                </button>
+              <div className="pt-4 border-t dark:border-slate-700/50 sticky bottom-0 bg-white dark:bg-slate-900">
+                <ActionBar>
+                  <button type="button" onClick={() => { setShowEditModal(false); setSelectedUser(null); setEditData(null); }} className="btn-secondary">Cancelar</button>
+                  <button type="submit" disabled={loading} className="btn-primary flex items-center gap-2">
+                    {loading ? 'Salvando...' : <><Edit2 className="h-4 w-4" /> Salvar Alterações</>}
+                  </button>
+                </ActionBar>
               </div>
             </form>
           </div>
@@ -806,43 +809,45 @@ export default function Usuarios() {
       {/* Modal de Confirmação de Exclusão */}
       {showDeleteModal && deleteTarget && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full shadow-xl">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-slate-900 rounded-xl max-w-md w-full shadow-xl">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700/50">
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0 w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
                   <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
                 </div>
-                <h2 className="text-xl font-semibold text-gray-900">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                   Confirmar Exclusão
                 </h2>
               </div>
             </div>
 
             <div className="p-6">
-              <p className="text-gray-700 mb-4">
+              <p className="text-gray-700 dark:text-slate-300 mb-4">
                 Tem certeza que deseja excluir o usuário <strong>{deleteTarget.nome}</strong>?
               </p>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 dark:text-slate-400">
                 Esta ação não pode ser desfeita.
               </p>
             </div>
 
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
-              <button
-                onClick={() => {
-                  setShowDeleteModal(false);
-                  setDeleteTarget(null);
-                }}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-              >
-                Excluir
-              </button>
+            <div className="px-6 py-4 bg-gray-50 dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700/50">
+              <ActionBar>
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setDeleteTarget(null);
+                  }}
+                  className="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700/50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                >
+                  Excluir
+                </button>
+              </ActionBar>
             </div>
           </div>
         </div>
@@ -850,9 +855,9 @@ export default function Usuarios() {
       {/* Modal Resultado da Importação */}
       {showImportModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-lg w-full shadow-xl">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+          <div className="bg-white dark:bg-slate-900 rounded-xl max-w-lg w-full shadow-xl">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700/50 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100 flex items-center gap-2">
                 <Upload className="h-5 w-5 text-blue-600" />
                 Resultado da Importação
               </h2>
@@ -866,7 +871,7 @@ export default function Usuarios() {
               {importLoading ? (
                 <div className="flex flex-col items-center gap-3 py-8">
                   <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Importando usuários...</p>
+                  <p className="text-sm text-gray-500 dark:text-slate-400">Importando usuários...</p>
                 </div>
               ) : (
                 <>

@@ -398,10 +398,10 @@ async function migrarSchemaUsuarios(schema, pool) {
     CREATE TABLE IF NOT EXISTS ${schema}.anexos (
       id            UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
       processo_id   UUID          NOT NULL REFERENCES ${schema}.processos(id) ON DELETE CASCADE,
-      nome_arquivo  VARCHAR(255)  NOT NULL,
-      nome_sistema  VARCHAR(255)  NOT NULL,
-      url_arquivo   VARCHAR(500)  NOT NULL,
-      tipo_mime     VARCHAR(100)  NOT NULL,
+      nome_arquivo  VARCHAR(255)  NOT NULL DEFAULT '',
+      nome_sistema  VARCHAR(255)  NOT NULL DEFAULT '',
+      url_arquivo   VARCHAR(500)  NOT NULL DEFAULT '',
+      tipo_mime     VARCHAR(100)  NOT NULL DEFAULT '',
       tamanho_bytes INTEGER       NOT NULL DEFAULT 0,
       hash_md5      VARCHAR(64)   NOT NULL DEFAULT '',
       hash_sha256   VARCHAR(64)   NOT NULL DEFAULT '',
@@ -412,6 +412,23 @@ async function migrarSchemaUsuarios(schema, pool) {
       created_at    TIMESTAMP     DEFAULT NOW(),
       updated_at    TIMESTAMP     DEFAULT NOW()
     );
+    ALTER TABLE ${schema}.anexos
+      ADD COLUMN IF NOT EXISTS nome_arquivo  VARCHAR(255) NOT NULL DEFAULT '',
+      ADD COLUMN IF NOT EXISTS nome_sistema  VARCHAR(255) NOT NULL DEFAULT '',
+      ADD COLUMN IF NOT EXISTS url_arquivo   VARCHAR(500) NOT NULL DEFAULT '',
+      ADD COLUMN IF NOT EXISTS tipo_mime     VARCHAR(100) NOT NULL DEFAULT '',
+      ADD COLUMN IF NOT EXISTS tamanho_bytes INTEGER      NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS hash_md5      VARCHAR(64)  NOT NULL DEFAULT '',
+      ADD COLUMN IF NOT EXISTS hash_sha256   VARCHAR(64)  NOT NULL DEFAULT '',
+      ADD COLUMN IF NOT EXISTS data_upload   TIMESTAMP             DEFAULT NOW(),
+      ADD COLUMN IF NOT EXISTS descricao     TEXT,
+      ADD COLUMN IF NOT EXISTS versao        INTEGER               DEFAULT 1,
+      ADD COLUMN IF NOT EXISTS created_at    TIMESTAMP             DEFAULT NOW(),
+      ADD COLUMN IF NOT EXISTS updated_at    TIMESTAMP             DEFAULT NOW();
+    ALTER TABLE ${schema}.anexos
+      ALTER COLUMN nome_original SET DEFAULT '',
+      ALTER COLUMN caminho       SET DEFAULT '',
+      ALTER COLUMN tamanho       SET DEFAULT 0;
   `);
 
   // =====================================================================

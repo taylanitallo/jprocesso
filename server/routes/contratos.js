@@ -8,10 +8,10 @@ const {
   importarItensTransparencia,
   importarContratosIraucuba,
 } = require('../controllers/contratosController');
-const { authenticate, tenantMiddleware } = require('../middleware/auth');
+const { authenticate, tenantMiddleware, requireTenant } = require('../middleware/auth');
 
 // Todos os endpoints exigem autenticação + tenant
-router.use(tenantMiddleware, authenticate);
+router.use(tenantMiddleware, requireTenant, authenticate);
 
 // Credores
 router.get('/credores',       listCredores);

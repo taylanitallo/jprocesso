@@ -13,20 +13,23 @@ const {
   consultarProcessoPublico,
   deleteProcesso
 } = require('../controllers/processoController');
-const { authenticate, tenantMiddleware, authorize } = require('../middleware/auth');
+const { authenticate, tenantMiddleware, requireTenant, authorize } = require('../middleware/auth');
 
-router.get('/dashboard', tenantMiddleware, authenticate, getDashboardStats);
-router.post('/', tenantMiddleware, authenticate, createProcesso);
-router.get('/', tenantMiddleware, authenticate, listProcessos);
-router.get('/enviados', tenantMiddleware, authenticate, listProcessosEnviados);
-router.get('/:id', tenantMiddleware, authenticate, getProcessoById);
-router.post('/:id/tramitar', tenantMiddleware, authenticate, tramitarProcesso);
-router.post('/:id/devolver', tenantMiddleware, authenticate, devolverProcesso);
-router.post('/:id/concluir', tenantMiddleware, authenticate, concluirProcesso);
-router.delete('/:id', tenantMiddleware, authenticate, authorize('admin'), deleteProcesso);
+// Todas as rotas de processo exigem tenant resolvido (req.models)
+const tenantAuth = [tenantMiddleware, requireTenant, authenticate];
 
-// Rotas públicas (sem autenticação)
-router.get('/publico/busca', tenantMiddleware, buscarProcessosPublico);
-router.get('/publico/:numero', tenantMiddleware, consultarProcessoPublico);
+router.get('/dashboard', ...tenantAuth, getDashboardStats);
+router.post('/', ...tenantAuth, createProcesso);
+router.get('/', ...tenantAuth, listProcessos);
+router.get('/enviados', ...tenantAuth, listProcessosEnviados);
+router.get('/:id', ...tenantAuth, getProcessoById);
+router.post('/:id/tramitar', ...tenantAuth, tramitarProcesso);
+router.post('/:id/devolver', ...tenantAuth, devolverProcesso);
+router.post('/:id/concluir', ...tenantAuth, concluirProcesso);
+router.delete('/:id', ...tenantAuth, authorize('admin'), deleteProcesso);
+
+// Rotas públicas (sem autenticação) — ainda exigem tenant válido
+router.get('/publico/busca', tenantMiddleware, requireTenant, buscarProcessosPublico);
+router.get('/publico/:numero', tenantMiddleware, requireTenant, consultarProcessoPublico);
 
 module.exports = router;

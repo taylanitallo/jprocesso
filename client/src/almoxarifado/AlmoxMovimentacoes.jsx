@@ -1,10 +1,16 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
-  Plus, Filter, ChevronLeft, ChevronRight, RefreshCw
+  Plus, Filter, ChevronLeft, ChevronRight, RefreshCw,
+  ArrowDownCircle, ArrowUpCircle
 } from 'lucide-react'
 import api from '../services/api'
 import AlmoxModal from './AlmoxModal'
 import { fmt, fmtMoney, today } from './almoxConstants'
+import PageHeader from '../components/ui/PageHeader'
+import FilterBar from '../components/ui/FilterBar'
+import SectionTitle from '../components/ui/SectionTitle'
+import EmptyState from '../components/ui/EmptyState'
+import ActionBar from '../components/ui/ActionBar'
 
 // ─── Modal: Registrar Entrada / Saída ────────────────────────────────────────
 function MovimentacaoModal({ tipo, itens, onClose, onSave, saving, erro }) {
@@ -178,45 +184,66 @@ function MovimentacoesTab({ tipo }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-        <div className="flex items-center gap-3 flex-wrap">
+      <PageHeader
+        icon={tipo === 'ENTRADA' ? ArrowDownCircle : ArrowUpCircle}
+        eyebrow="Almoxarifado"
+        title={tipo === 'ENTRADA' ? 'Entradas de Material' : 'Saídas de Material'}
+        subtitle={tipo === 'ENTRADA'
+          ? 'Registro de recebimentos e entradas no estoque'
+          : 'Registro de saídas, consumo e distribuição de materiais'}
+        actions={
+          <button
+            onClick={() => { setAbrirModal(true); setErro('') }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white ${
+              tipo === 'ENTRADA' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
+            }`}
+          >
+            <Plus className="h-4 w-4" />
+            {tipo === 'ENTRADA' ? 'Registrar Entrada' : 'Registrar Saída'}
+          </button>
+        }
+      />
+
+      <FilterBar
+        actions={
+          <button
+            onClick={() => { setPage(1); load(1) }}
+            className="flex items-center gap-1 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg text-sm text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 font-medium"
+          >
+            <Filter className="h-4 w-4" /> Filtrar
+          </button>
+        }
+      >
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Item</label>
           <select
             value={filtros.item_id}
             onChange={e => setFiltros(f => ({ ...f, item_id: e.target.value }))}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
           >
             <option value="">Todos os itens</option>
             {itens.map(i => <option key={i.id} value={i.id}>{i.nome}</option>)}
           </select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Data inicial</label>
           <input
             type="date"
             value={filtros.data_inicio}
             onChange={e => setFiltros(f => ({ ...f, data_inicio: e.target.value }))}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
           />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Data final</label>
           <input
             type="date"
             value={filtros.data_fim}
             onChange={e => setFiltros(f => ({ ...f, data_fim: e.target.value }))}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
           />
-          <button
-            onClick={() => { setPage(1); load(1) }}
-            className="flex items-center gap-1 px-3 py-2 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200"
-          >
-            <Filter className="h-4 w-4" /> Filtrar
-          </button>
         </div>
-        <button
-          onClick={() => { setAbrirModal(true); setErro('') }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white ${
-            tipo === 'ENTRADA' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
-          }`}
-        >
-          <Plus className="h-4 w-4" />
-          {tipo === 'ENTRADA' ? 'Registrar Entrada' : 'Registrar Saída'}
-        </button>
-      </div>
+      </FilterBar>
 
       {loading ? (
         <div className="flex justify-center py-12">
@@ -224,6 +251,13 @@ function MovimentacoesTab({ tipo }) {
         </div>
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="px-4 pt-4">
+            <SectionTitle
+              icon={tipo === 'ENTRADA' ? ArrowDownCircle : ArrowUpCircle}
+              title={tipo === 'ENTRADA' ? 'Registros de Entradas' : 'Registros de Saídas'}
+              subtitle={`${total} registro(s)`}
+            />
+          </div>
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
               <tr>
@@ -237,8 +271,12 @@ function MovimentacoesTab({ tipo }) {
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {movs.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
-                    Nenhuma {tipo === 'ENTRADA' ? 'entrada' : 'saída'} encontrada
+                  <td colSpan={7} className="px-4 py-0">
+                    <EmptyState
+                      icon={tipo === 'ENTRADA' ? ArrowDownCircle : ArrowUpCircle}
+                      title={`Nenhuma ${tipo === 'ENTRADA' ? 'entrada' : 'saída'} encontrada`}
+                      description="Tente ajustar os filtros ou registre uma nova movimentação."
+                    />
                   </td>
                 </tr>
               )}

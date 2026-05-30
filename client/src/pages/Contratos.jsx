@@ -3,10 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom'
 import {
   FileText, ShoppingBag, User, PackageOpen, Search, X, Plus, Edit3,
   Trash2, Eye, BarChart2, List, Check, AlertTriangle, Printer, ChevronUp, ChevronDown,
-  Loader2, CheckCircle2, XCircle, Download
+  Loader2, CheckCircle2, XCircle, Download, RefreshCw
 } from 'lucide-react'
 import { JAIButton } from '../components/JAI'
 import api from '../services/api'
+import { PageHeader } from '../components/ui'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const TABS = [
@@ -34,7 +35,7 @@ function proximoCodigo(itens) {
 function FieldRow({ label, children }) {
   return (
     <div className="flex items-center gap-3 min-h-[34px]">
-      <span className="w-36 shrink-0 text-sm text-right text-gray-600 dark:text-gray-400">{label}</span>
+      <span className="w-36 shrink-0 text-sm text-right text-gray-600 dark:text-slate-400">{label}</span>
       <div className="flex-1 min-w-0">{children}</div>
     </div>
   )
@@ -42,7 +43,7 @@ function FieldRow({ label, children }) {
 
 function SectionTitle({ children }) {
   return (
-    <div className="bg-gray-100 dark:bg-gray-700 px-4 py-1.5 -mx-6 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide border-y border-gray-200 dark:border-gray-600">
+    <div className="bg-slate-100 dark:bg-slate-700 px-4 py-1.5 -mx-6 text-xs font-bold text-gray-600 dark:text-slate-300 uppercase tracking-wide border-y border-gray-200 dark:border-slate-600">
       {children}
     </div>
   )
@@ -82,12 +83,12 @@ function ItemModal({ modo, item, codigoProximo, onSave, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded shadow-2xl w-full max-w-2xl flex flex-col" style={{ maxHeight: '92vh' }}>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col" style={{ maxHeight: '92vh' }}>
 
         {/* Barra de título */}
-        <div className="flex items-center justify-between bg-blue-700 px-4 py-2.5 rounded-t shrink-0">
+        <div className="flex items-center justify-between bg-slate-900 dark:bg-slate-900 px-5 py-3 rounded-t-2xl shrink-0">
           <span className="text-sm font-semibold text-white">Cadastro de itens — {titulo}</span>
-          <button onClick={onClose} className="p-0.5 rounded hover:bg-blue-600 text-white/80 hover:text-white">
+          <button onClick={onClose} className="p-0.5 rounded hover:bg-slate-700 text-white/80 hover:text-white">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -104,7 +105,7 @@ function ItemModal({ modo, item, codigoProximo, onSave, onClose }) {
               <input
                 value={form.codigo}
                 readOnly
-                className="input-field text-sm w-28 bg-gray-100 dark:bg-gray-700 cursor-default font-mono tracking-widest"
+                className="input-field text-sm w-28 bg-gray-100 dark:bg-slate-700 cursor-default font-mono tracking-widest"
               />
             </FieldRow>
 
@@ -134,7 +135,7 @@ function ItemModal({ modo, item, codigoProximo, onSave, onClose }) {
                 </select>
                 {!readonly && (
                   <button onClick={() => set('categoria', '')} title="Limpar"
-                    className="px-2 rounded border border-gray-300 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    className="px-2 rounded border border-gray-300 dark:border-slate-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 )}
@@ -155,7 +156,7 @@ function ItemModal({ modo, item, codigoProximo, onSave, onClose }) {
                 </select>
                 {!readonly && (
                   <button onClick={() => set('unidade_medida', '')} title="Limpar"
-                    className="px-2 rounded border border-gray-300 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    className="px-2 rounded border border-gray-300 dark:border-slate-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 )}
@@ -190,7 +191,7 @@ function ItemModal({ modo, item, codigoProximo, onSave, onClose }) {
                 />
                 {!readonly && (
                   <button onClick={() => set('catalogo', '')} title="Limpar"
-                    className="px-2 py-1.5 rounded border border-gray-300 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    className="px-2 py-1.5 rounded border border-gray-300 dark:border-slate-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 )}
@@ -210,7 +211,7 @@ function ItemModal({ modo, item, codigoProximo, onSave, onClose }) {
                 />
                 {!readonly && (
                   <button onClick={() => set('classificacao', '')} title="Limpar"
-                    className="px-2 py-1.5 rounded border border-gray-300 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    className="px-2 py-1.5 rounded border border-gray-300 dark:border-slate-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 )}
@@ -229,7 +230,7 @@ function ItemModal({ modo, item, codigoProximo, onSave, onClose }) {
                 />
                 {!readonly && (
                   <button onClick={() => set('subclassificacao', '')} title="Limpar"
-                    className="px-2 py-1.5 rounded border border-gray-300 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    className="px-2 py-1.5 rounded border border-gray-300 dark:border-slate-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 )}
@@ -284,10 +285,10 @@ function ItemModal({ modo, item, codigoProximo, onSave, onClose }) {
         </div>
 
         {/* ── Aviso + Rodapé ── */}
-        <div className="border-t border-gray-200 dark:border-gray-700 shrink-0">
+        <div className="border-t border-gray-200 dark:border-slate-700/50 shrink-0">
           <div className="bg-red-50 dark:bg-red-900/20 border-b border-red-100 dark:border-red-800 px-4 py-2 flex items-center justify-between gap-4">
-            <p className="text-xs text-red-700 dark:text-red-300 font-medium">
-              ⚠️ Obs: Atenção! No campo descrição do item, informar a nomenclatura do item e não a especificação!
+            <p className="text-xs text-red-700 dark:text-red-300 font-medium flex items-start gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" /> Obs: Atenção! No campo descrição do item, informar a nomenclatura do item e não a especificação!
             </p>
             {!readonly && (
               <JAIButton
@@ -302,17 +303,17 @@ function ItemModal({ modo, item, codigoProximo, onSave, onClose }) {
           <div className="px-5 py-3 flex items-center gap-2">
             {!readonly && (
               <button onClick={salvar}
-                className="flex items-center gap-1.5 px-5 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-semibold transition-colors shadow-sm">
+                className="flex items-center gap-1.5 px-5 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
                 <Check className="w-4 h-4" /> Salvar
               </button>
             )}
             <button onClick={onClose}
-              className="flex items-center gap-1.5 px-5 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded text-sm font-semibold transition-colors">
+              className="flex items-center gap-1.5 px-5 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 rounded-lg text-sm font-semibold transition-colors">
               {readonly ? 'Fechar' : 'Cancelar'}
             </button>
             {!readonly && (
               <button onClick={onClose}
-                className="flex items-center gap-1.5 px-5 py-1.5 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400 rounded text-sm font-semibold transition-colors">
+                className="flex items-center gap-1.5 px-5 py-1.5 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400 rounded-lg text-sm font-semibold transition-colors">
                 Sair
               </button>
             )}
@@ -332,32 +333,32 @@ function RelatorioModal({ item, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col">
 
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between bg-slate-900 dark:bg-slate-900 px-5 py-3 rounded-t-2xl shrink-0">
           <div>
-            <h2 className="text-base font-bold text-gray-800 dark:text-gray-100">📊 Relatório do Item</h2>
+            <h2 className="text-sm font-semibold text-white flex items-center gap-2"><BarChart2 className="w-4 h-4" /> Relatório do Item</h2>
             <p className="text-xs text-gray-500 mt-0.5">Todos os contratos e processos onde o item é utilizado</p>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500">
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="p-0.5 rounded hover:bg-slate-700 text-white/80 hover:text-white">
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Info do item */}
-        <div className="px-6 py-3 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-800">
-          <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wide">Item selecionado</p>
-          <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm mt-0.5">{item.descricao}</p>
+        <div className="px-6 py-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700/50">
+          <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Item selecionado</p>
+          <p className="font-semibold text-gray-800 dark:text-slate-100 text-sm mt-0.5">{item.descricao}</p>
           <div className="flex gap-4 mt-1 text-xs text-gray-500">
-            <span>Código: <strong className="text-gray-700 dark:text-gray-300">{item.codigo || '—'}</strong></span>
-            <span>Unidade: <strong className="text-gray-700 dark:text-gray-300">{item.unidade_medida}</strong></span>
-            <span>Categoria: <strong className="text-gray-700 dark:text-gray-300">{item.categoria}</strong></span>
+            <span>Código: <strong className="text-gray-700 dark:text-slate-300">{item.codigo || '—'}</strong></span>
+            <span>Unidade: <strong className="text-gray-700 dark:text-slate-300">{item.unidade_medida}</strong></span>
+            <span>Categoria: <strong className="text-gray-700 dark:text-slate-300">{item.categoria}</strong></span>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
           {usos.length === 0 ? (
-            <div className="text-center py-12 text-gray-400 dark:text-gray-500">
+            <div className="text-center py-12 text-gray-400 dark:text-slate-500">
               <BarChart2 className="w-12 h-12 mx-auto mb-3 opacity-30" />
               <p className="font-medium">Nenhum uso encontrado</p>
               <p className="text-sm mt-1">Este item ainda não foi utilizado em nenhum contrato ou processo.</p>
@@ -365,17 +366,17 @@ function RelatorioModal({ item, onClose }) {
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 dark:bg-gray-700/50 text-xs">
-                  <th className="text-left px-3 py-2.5 font-semibold text-gray-600 dark:text-gray-300">Contrato / Processo</th>
-                  <th className="text-left px-3 py-2.5 font-semibold text-gray-600 dark:text-gray-300">Secretaria</th>
-                  <th className="text-right px-3 py-2.5 font-semibold text-gray-600 dark:text-gray-300">Qtd</th>
-                  <th className="text-right px-3 py-2.5 font-semibold text-gray-600 dark:text-gray-300">Valor Unit.</th>
-                  <th className="text-right px-3 py-2.5 font-semibold text-gray-600 dark:text-gray-300">Total</th>
+                <tr className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">
+                  <th className="text-left px-3 py-2.5 font-semibold">Contrato / Processo</th>
+                  <th className="text-left px-3 py-2.5 font-semibold">Secretaria</th>
+                  <th className="text-right px-3 py-2.5 font-semibold">Qtd</th>
+                  <th className="text-right px-3 py-2.5 font-semibold">Valor Unit.</th>
+                  <th className="text-right px-3 py-2.5 font-semibold">Total</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
                 {usos.map((u, i) => (
-                  <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                  <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                     <td className="px-3 py-2 font-medium text-blue-600">{u.contrato}</td>
                     <td className="px-3 py-2 text-gray-600">{u.secretaria}</td>
                     <td className="px-3 py-2 text-right">{u.quantidade}</td>
@@ -388,7 +389,7 @@ function RelatorioModal({ item, onClose }) {
           )}
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-slate-700/50 flex justify-between items-center">
           <span className="text-xs text-gray-400">{usos.length} registro(s) encontrado(s)</span>
           <div className="flex gap-3">
             <button className="btn-secondary text-sm flex items-center gap-2">
@@ -411,28 +412,28 @@ function ListagemModal({ item, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col">
 
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between bg-slate-900 dark:bg-slate-900 px-5 py-3 rounded-t-2xl shrink-0">
           <div>
-            <h2 className="text-base font-bold text-gray-800 dark:text-gray-100">📋 Listagem</h2>
-            <p className="text-xs text-gray-500 mt-0.5">Contratos e secretarias que possuem este item</p>
+            <h2 className="text-sm font-semibold text-white flex items-center gap-2"><List className="w-4 h-4" /> Listagem</h2>
+            <p className="text-xs text-slate-400 mt-0.5">Contratos e secretarias que possuem este item</p>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500">
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="p-0.5 rounded hover:bg-slate-700 text-white/80 hover:text-white">
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Info do item */}
-        <div className="px-6 py-3 bg-indigo-50 dark:bg-indigo-900/20 border-b border-indigo-100 dark:border-indigo-800">
-          <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">Item</p>
-          <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm mt-0.5">{item.descricao}</p>
+        <div className="px-6 py-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700/50">
+          <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Item</p>
+          <p className="font-semibold text-gray-800 dark:text-slate-100 text-sm mt-0.5">{item.descricao}</p>
           <p className="text-xs text-gray-500 mt-0.5">Código: {item.codigo || '—'} · {item.unidade_medida} · {item.categoria}</p>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
           {registros.length === 0 ? (
-            <div className="text-center py-12 text-gray-400 dark:text-gray-500">
+            <div className="text-center py-12 text-gray-400 dark:text-slate-500">
               <List className="w-12 h-12 mx-auto mb-3 opacity-30" />
               <p className="font-medium">Nenhum registro encontrado</p>
               <p className="text-sm mt-1">Este item não está presente em nenhum contrato ou secretaria.</p>
@@ -440,17 +441,17 @@ function ListagemModal({ item, onClose }) {
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 dark:bg-gray-700/50 text-xs">
-                  <th className="text-left px-3 py-2.5 font-semibold text-gray-600 dark:text-gray-300">N° Contrato</th>
-                  <th className="text-left px-3 py-2.5 font-semibold text-gray-600 dark:text-gray-300">Credor</th>
-                  <th className="text-left px-3 py-2.5 font-semibold text-gray-600 dark:text-gray-300">Secretaria</th>
-                  <th className="text-left px-3 py-2.5 font-semibold text-gray-600 dark:text-gray-300">Vigência</th>
-                  <th className="text-right px-3 py-2.5 font-semibold text-gray-600 dark:text-gray-300">Saldo</th>
+                <tr className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">
+                  <th className="text-left px-3 py-2.5 font-semibold">N° Contrato</th>
+                  <th className="text-left px-3 py-2.5 font-semibold">Credor</th>
+                  <th className="text-left px-3 py-2.5 font-semibold">Secretaria</th>
+                  <th className="text-left px-3 py-2.5 font-semibold">Vigência</th>
+                  <th className="text-right px-3 py-2.5 font-semibold">Saldo</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
                 {registros.map((r, i) => (
-                  <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                  <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                     <td className="px-3 py-2 font-medium text-blue-600">{r.contrato}</td>
                     <td className="px-3 py-2 text-gray-600">{r.credor}</td>
                     <td className="px-3 py-2 text-gray-600">{r.secretaria}</td>
@@ -463,7 +464,7 @@ function ListagemModal({ item, onClose }) {
           )}
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-slate-700/50 flex justify-between items-center">
           <span className="text-xs text-gray-400">{registros.length} registro(s)</span>
           <div className="flex gap-3">
             <button className="btn-secondary text-sm flex items-center gap-2">
@@ -483,14 +484,14 @@ function ListagemModal({ item, onClose }) {
 function ConfirmModal({ item, onConfirm, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md">
         <div className="p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center shrink-0">
               <AlertTriangle className="w-5 h-5 text-red-600" />
             </div>
             <div>
-              <h3 className="font-bold text-gray-800 dark:text-gray-100">Excluir Item</h3>
+              <h3 className="font-bold text-gray-800 dark:text-slate-100">Excluir Item</h3>
               <p className="text-sm text-gray-500">Esta ação marcará o item como excluído.</p>
             </div>
           </div>
@@ -654,12 +655,12 @@ function CredorModal({ modo, credor, onSave, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded shadow-2xl w-full max-w-2xl flex flex-col" style={{ maxHeight: '92vh' }}>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col" style={{ maxHeight: '92vh' }}>
 
         {/* Barra de título */}
-        <div className="flex items-center justify-between bg-blue-700 px-4 py-2.5 rounded-t shrink-0">
+        <div className="flex items-center justify-between bg-slate-900 dark:bg-slate-900 px-5 py-3 rounded-t-2xl shrink-0">
           <span className="text-sm font-semibold text-white">Cadastro de Credores — {titulo}</span>
-          <button onClick={onClose} className="p-0.5 rounded hover:bg-blue-600 text-white/80 hover:text-white">
+          <button onClick={onClose} className="p-0.5 rounded hover:bg-slate-700 text-white/80 hover:text-white">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -675,7 +676,7 @@ function CredorModal({ modo, credor, onSave, onClose }) {
             <FieldRow label="Tipo de Pessoa">
               <div className="flex gap-4">
                 {['Jurídica', 'Física'].map(t => (
-                  <label key={t} className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+                  <label key={t} className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-slate-300">
                     <input type="radio" name="tipo_credor" value={t} checked={form.tipo === t}
                       onChange={() => onTipoChange(t)} disabled={readonly}
                       className="w-4 h-4 text-blue-600" />
@@ -812,15 +813,15 @@ function CredorModal({ modo, credor, onSave, onClose }) {
         </div>
 
         {/* Rodapé */}
-        <div className="border-t border-gray-200 dark:border-gray-700 px-5 py-3 flex items-center gap-2 shrink-0">
+        <div className="border-t border-gray-200 dark:border-slate-700/50 px-5 py-3 flex items-center gap-2 shrink-0">
           {!readonly && (
             <button onClick={salvar}
-              className="flex items-center gap-1.5 px-5 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-semibold transition-colors shadow-sm">
+              className="flex items-center gap-1.5 px-5 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
               <Check className="w-4 h-4" /> Salvar
             </button>
           )}
           <button onClick={onClose}
-            className="flex items-center gap-1.5 px-5 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded text-sm font-semibold transition-colors">
+            className="flex items-center gap-1.5 px-5 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 rounded-lg text-sm font-semibold transition-colors">
             {readonly ? 'Fechar' : 'Cancelar'}
           </button>
         </div>
@@ -835,14 +836,14 @@ function CredorModal({ modo, credor, onSave, onClose }) {
 function ConfirmModalCredor({ credor, onConfirm, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md">
         <div className="p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center shrink-0">
               <AlertTriangle className="w-5 h-5 text-red-600" />
             </div>
             <div>
-              <h3 className="font-bold text-gray-800 dark:text-gray-100">Excluir Credor</h3>
+              <h3 className="font-bold text-gray-800 dark:text-slate-100">Excluir Credor</h3>
               <p className="text-sm text-gray-500">Esta ação marcará o credor como inativo.</p>
             </div>
           </div>
@@ -888,7 +889,7 @@ function ImportarContratosIraucubaModal({ onClose, onConcluido }) {
           Accept: 'text/event-stream',
         },
       })
-      if (!response.ok || !response.body) { setStatus('error'); setLog(['❌ Erro ao conectar ao servidor.']); return }
+      if (!response.ok || !response.body) { setStatus('error'); setLog(['[ERRO] Erro ao conectar ao servidor.']); return }
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let buf = ''
@@ -912,7 +913,7 @@ function ImportarContratosIraucubaModal({ onClose, onConcluido }) {
       if (status === 'running') setStatus('done')
     } catch (err) {
       setStatus('error')
-      setLog(p => [...p, `❌ ${err.message}`])
+      setLog(p => [...p, `[ERRO] ${err.message}`])
     }
   }
 
@@ -920,19 +921,19 @@ function ImportarContratosIraucubaModal({ onClose, onConcluido }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl max-w-lg w-full shadow-xl">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full shadow-xl">
+        <div className="flex items-center justify-between bg-slate-900 dark:bg-slate-900 px-5 py-3 rounded-t-2xl shrink-0">
           <div>
-            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-              <Download className="w-5 h-5 text-teal-600" /> Importar Contratos de Irauçuba
+            <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+              <Download className="w-4 h-4 text-teal-400" /> Importar Contratos de Irauçuba
             </h2>
-            <p className="text-xs text-gray-500 mt-0.5">Importa contratos vigentes de iraucuba.ce.gov.br, criando credores se necessário</p>
+            <p className="text-xs text-slate-400 mt-0.5">Importa contratos vigentes de iraucuba.ce.gov.br, criando credores se necessário</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><XCircle className="w-5 h-5" /></button>
+          <button onClick={onClose} className="p-0.5 rounded hover:bg-slate-700 text-white/80 hover:text-white"><X className="w-4 h-4" /></button>
         </div>
         <div className="p-6 space-y-4">
           {status === 'idle' && (
-            <div className="text-sm text-gray-600 dark:text-gray-300 space-y-2">
+            <div className="text-sm text-gray-600 dark:text-slate-300 space-y-2">
               <p>Esta operação irá:</p>
               <ul className="list-disc ml-5 space-y-1">
                 <li>Buscar todos os contratos <strong>vigentes</strong> do portal da Prefeitura de Irauçuba</li>
@@ -943,13 +944,13 @@ function ImportarContratosIraucubaModal({ onClose, onConcluido }) {
           )}
           {(status === 'running' || status === 'done') && (
             <>
-              <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2.5">
+              <div className="w-full bg-gray-100 dark:bg-slate-700 rounded-full h-2.5">
                 <div className="bg-teal-500 h-2.5 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
               </div>
               <p className="text-xs text-gray-500 text-center">
                 {progress.total ? `${progress.atual} / ${progress.total} contratos` : 'Aguardando...'}
               </p>
-              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 max-h-40 overflow-y-auto text-xs text-gray-600 dark:text-gray-300 space-y-0.5 font-mono">
+              <div className="bg-gray-50 dark:bg-slate-700/30 rounded-lg p-3 max-h-40 overflow-y-auto text-xs text-gray-600 dark:text-slate-300 space-y-0.5 font-mono">
                 {log.map((l, i) => <div key={i}>{l}</div>)}
               </div>
             </>
@@ -961,9 +962,9 @@ function ImportarContratosIraucubaModal({ onClose, onConcluido }) {
           )}
           {resumo && (
             <div className="bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-700 rounded-lg p-3 text-sm text-teal-800 dark:text-teal-300 space-y-0.5">
-              <div>✅ <strong>{resumo.criados}</strong> contrato(s) importado(s)</div>
-              <div>🔁 <strong>{resumo.duplicados}</strong> já existia(m) — ignorado(s)</div>
-              {resumo.erros > 0 && <div>⚠️ {resumo.erros} erro(s)</div>}
+              <div className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-teal-600 shrink-0" /> <strong>{resumo.criados}</strong> contrato(s) importado(s)</div>
+              <div className="flex items-center gap-1.5"><RefreshCw className="w-3.5 h-3.5 text-gray-400 shrink-0" /> <strong>{resumo.duplicados}</strong> já existia(m) — ignorado(s)</div>
+              {resumo.erros > 0 && <div className="flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" /> {resumo.erros} erro(s)</div>}
             </div>
           )}
           <div className="flex justify-end gap-2 pt-2">
@@ -975,7 +976,7 @@ function ImportarContratosIraucubaModal({ onClose, onConcluido }) {
               <div className="flex items-center gap-2 text-sm text-gray-500"><Loader2 className="w-4 h-4 animate-spin" /> Importando...</div>
             ) : (
               <>
-                <button onClick={onClose} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50">Cancelar</button>
+                <button onClick={onClose} className="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-50">Cancelar</button>
                 <button onClick={iniciar} className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
                   <Download className="w-4 h-4" /> Iniciar Importação
                 </button>
@@ -1042,10 +1043,10 @@ function ImportarTransparenciaModal({ onClose, onConcluido }) {
             if (evt.tipo === 'progresso') setProgresso({ atual: evt.atual, total: evt.total })
             if (evt.tipo === 'salvando') { addLog(evt.msg); setProgresso({ atual: evt.atual, total: evt.total }) }
             if (evt.tipo === 'concluido') {
-              addLog(`✅ ${evt.importados} novos importados · ${evt.duplicados} duplicados ignorados · ${evt.erros} erros`, 'sucesso')
+              addLog(`${evt.importados} novos importados · ${evt.duplicados} duplicados ignorados · ${evt.erros} erros`, 'sucesso')
               setStatus('concluido')
             }
-            if (evt.tipo === 'erro') { addLog(`❌ ${evt.msg}`, 'erro'); setStatus('erro') }
+            if (evt.tipo === 'erro') { addLog(evt.msg, 'erro'); setStatus('erro') }
           } catch {}
         }
       }
@@ -1060,19 +1061,19 @@ function ImportarTransparenciaModal({ onClose, onConcluido }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-xl flex flex-col">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-xl flex flex-col">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between bg-slate-900 dark:bg-slate-900 px-5 py-3 rounded-t-2xl shrink-0">
           <div>
-            <h2 className="text-base font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-              <Download className="w-4 h-4 text-teal-600" /> Importar Itens do Portal
+            <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+              <Download className="w-4 h-4 text-teal-400" /> Importar Itens do Portal
             </h2>
             <p className="text-xs text-gray-500 mt-0.5">transparencia.acontratacao.com.br · Prefeitura de Irauçuba</p>
           </div>
           {status !== 'rodando' && (
-            <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500">
-              <X className="w-5 h-5" />
+            <button onClick={onClose} className="p-0.5 rounded hover:bg-slate-700 text-white/80 hover:text-white">
+              <X className="w-4 h-4" />
             </button>
           )}
         </div>
@@ -1080,16 +1081,16 @@ function ImportarTransparenciaModal({ onClose, onConcluido }) {
         {/* Body */}
         <div className="p-6 space-y-4">
           {status === 'idle' && (
-            <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
+            <div className="space-y-3 text-sm text-gray-600 dark:text-slate-400">
               <p>Serão importados itens com os campos:</p>
-              <ul className="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">
+              <ul className="list-disc list-inside space-y-1 text-gray-700 dark:text-slate-300">
                 <li>Categoria · Unidade de medida</li>
                 <li>Classificação · Subclassificação</li>
                 <li>Especificação</li>
               </ul>
               <p>Itens com descrição já existente serão <strong>ignorados</strong> (sem duplicatas).</p>
               <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg px-4 py-3 text-amber-700 dark:text-amber-300">
-                ⚠️ Este processo pode levar <strong>alguns minutos</strong>. Não feche a janela.
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 inline-block mr-1 align-middle text-amber-600" /> Este processo pode levar <strong>alguns minutos</strong>. Não feche a janela.
               </div>
             </div>
           )}
@@ -1105,7 +1106,7 @@ function ImportarTransparenciaModal({ onClose, onConcluido }) {
                     </span>
                     <span>{progresso.atual.toLocaleString('pt-BR')} / {progresso.total.toLocaleString('pt-BR')} ({pct}%)</span>
                   </div>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                  <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2.5">
                     <div
                       className={`h-2.5 rounded-full transition-all duration-300 ${status === 'concluido' ? 'bg-green-500' : 'bg-teal-600'}`}
                       style={{ width: `${pct}%` }}
@@ -1114,16 +1115,16 @@ function ImportarTransparenciaModal({ onClose, onConcluido }) {
                 </div>
               )}
               {/* Log */}
-              <div className="bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-3 h-40 overflow-y-auto space-y-1">
+              <div className="bg-gray-50 dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700/50 p-3 h-40 overflow-y-auto space-y-1">
                 {log.map((entry, i) => (
                   <p key={i} className={`text-xs font-mono ${
                     entry.tipo === 'erro'    ? 'text-red-500 dark:text-red-400' :
                     entry.tipo === 'sucesso' ? 'text-green-600 dark:text-green-400 font-semibold' :
-                    'text-gray-600 dark:text-gray-400'
+                    'text-gray-600 dark:text-slate-400'
                   }`}>{entry.msg}</p>
                 ))}
                 {status === 'rodando' && (
-                  <p className="text-xs text-teal-500 animate-pulse">⏳ Processando...</p>
+                  <p className="text-xs text-teal-500 animate-pulse flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Processando...</p>
                 )}
               </div>
             </>
@@ -1131,7 +1132,7 @@ function ImportarTransparenciaModal({ onClose, onConcluido }) {
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-slate-700/50">
           {status === 'idle' && (
             <>
               <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
@@ -1258,7 +1259,7 @@ function TabItens() {
         {/* Linha 1 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="md:col-span-2">
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Descrição</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Descrição</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
               <input value={filtros.descricao} onChange={e => setF('descricao', e.target.value)}
@@ -1267,7 +1268,7 @@ function TabItens() {
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Catálogo</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Catálogo</label>
             <input value={filtros.catalogo} onChange={e => setF('catalogo', e.target.value)}
               onKeyDown={e => e.key === 'Enter' && pesquisar()}
               placeholder="Pesquisar catálogo" className="input-field text-sm" />
@@ -1277,7 +1278,7 @@ function TabItens() {
         {/* Linha 2 */}
         <div className="flex flex-wrap gap-3 items-end">
           <div className="w-32">
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Código</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Código</label>
             <input value={filtros.codigo} onChange={e => setF('codigo', e.target.value)}
               placeholder="Código" className="input-field text-sm" />
           </div>
@@ -1285,25 +1286,25 @@ function TabItens() {
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={filtros.mostrarExcluido} onChange={e => setF('mostrarExcluido', e.target.checked)}
                 className="w-4 h-4 rounded text-blue-600" />
-              <span className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">Mostrar excluído</span>
+              <span className="text-sm text-gray-600 dark:text-slate-400 whitespace-nowrap">Mostrar excluído</span>
             </label>
           </div>
           <div className="w-40">
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Categoria</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Categoria</label>
             <select value={filtros.categoria} onChange={e => setF('categoria', e.target.value)} className="input-field text-sm">
               <option value="">Todas</option>
               {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
           <div className="w-36">
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Status</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Status</label>
             <select value={filtros.status} onChange={e => setF('status', e.target.value)} className="input-field text-sm">
               <option value="">Todos</option>
               {STATUS_ITEM.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
           <div className="w-36">
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Validado</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Validado</label>
             <select value={filtros.validado} onChange={e => setF('validado', e.target.value)} className="input-field text-sm">
               <option value="">Todos</option>
               <option value="SIM">Sim</option>
@@ -1312,7 +1313,7 @@ function TabItens() {
           </div>
           <div className="ml-auto flex gap-2 pb-0.5">
             <button onClick={limparFiltros}
-              className="px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+              className="px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
               Limpar
             </button>
             <button onClick={pesquisar}
@@ -1328,7 +1329,7 @@ function TabItens() {
         <div className="overflow-x-auto" style={{ maxHeight: '380px', overflowY: 'auto' }}>
           <table className="w-full text-sm">
             <thead className="sticky top-0 z-10">
-              <tr className="bg-blue-700 text-white text-xs select-none">
+              <tr className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs select-none uppercase tracking-wider">
                 {[
                   { col: 'codigo',        label: 'Código',            cls: 'text-left px-3 py-2.5 font-semibold whitespace-nowrap w-24' },
                   { col: 'descricao',     label: 'Descrição',         cls: 'text-left px-3 py-2.5 font-semibold min-w-[260px]' },
@@ -1345,10 +1346,10 @@ function TabItens() {
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
               {itensFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-14 text-gray-400 dark:text-gray-500">
+                  <td colSpan={7} className="text-center py-14 text-gray-400 dark:text-slate-500">
                     <PackageOpen className="w-10 h-10 mx-auto mb-2 opacity-30" />
                     Nenhum item encontrado
                   </td>
@@ -1363,27 +1364,27 @@ function TabItens() {
                     className={`cursor-pointer transition-colors text-xs ${
                       sel
                         ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100'
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-700/30 text-gray-700 dark:text-gray-300'
+                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 text-gray-700 dark:text-slate-300'
                     } ${item.status === 'EXCLUÍDO' ? 'opacity-50 line-through' : ''}`}
                   >
-                    <td className="px-3 py-2 font-mono text-gray-500 dark:text-gray-400">{item.codigo}</td>
+                    <td className="px-3 py-2 font-mono text-gray-500 dark:text-slate-400">{item.codigo}</td>
                     <td className="px-3 py-2 max-w-xs truncate font-medium">{item.descricao}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{item.unidade_medida}</td>
                     <td className="px-3 py-2">{item.categoria}</td>
-                    <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{item.catmat_serv || '—'}</td>
+                    <td className="px-3 py-2 text-gray-500 dark:text-slate-400">{item.catmat_serv || '—'}</td>
                     <td className="px-3 py-2 text-center">
                       <span className={`font-bold px-2 py-0.5 rounded-full text-xs ${
                         item.status === 'ATIVO'
                           ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                           : item.status === 'EXCLUÍDO'
                           ? 'bg-red-100 text-red-700'
-                          : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                          : 'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-400'
                       }`}>{item.status}</span>
                     </td>
                     <td className="px-3 py-2 text-center">
                       {item.validado
                         ? <Check className="w-3.5 h-3.5 text-green-600 mx-auto" />
-                        : <span className="text-gray-300 dark:text-gray-600">—</span>}
+                        : <span className="text-gray-300 dark:text-slate-600">—</span>}
                     </td>
 
                   </tr>
@@ -1395,17 +1396,17 @@ function TabItens() {
 
         {/* Detalhe do item selecionado */}
         {itemSelecionado?.detalhes && (
-          <div className="px-4 py-2 bg-amber-50 dark:bg-amber-900/10 border-t border-amber-100 dark:border-amber-800 text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+          <div className="px-4 py-2 bg-amber-50 dark:bg-amber-900/10 border-t border-amber-100 dark:border-amber-800 text-xs text-gray-600 dark:text-slate-400 leading-relaxed">
             <span className="font-semibold text-amber-700 dark:text-amber-400 mr-1">Detalhes:</span>
             {itemSelecionado.detalhes}
           </div>
         )}
 
         {/* Rodapé da tabela */}
-        <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700/20 border-t border-gray-200 dark:border-gray-600 flex items-center justify-between">
+        <div className="px-4 py-2 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700/50 flex items-center justify-between">
           <span className="text-xs text-gray-500">
             {itemSelecionado
-              ? <span className="text-blue-600 dark:text-blue-400 font-medium">✓ {itemSelecionado.descricao}</span>
+              ? <span className="text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1"><Check className="w-3 h-3" /> {itemSelecionado.descricao}</span>
               : <span className="text-gray-400">Clique para selecionar · Duplo clique para visualizar</span>}
           </span>
           <span className="text-xs text-gray-500">
@@ -1491,33 +1492,33 @@ function CredorContratosModal({ credor, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between bg-slate-900 dark:bg-slate-900 px-5 py-3 rounded-t-2xl shrink-0">
           <div>
-            <h2 className="text-base font-bold text-gray-800 dark:text-gray-100">📋 Contratos vinculados</h2>
-            <p className="text-xs text-gray-500 mt-0.5">Todos os contratos e atas ligados a este credor</p>
+            <h2 className="text-sm font-semibold text-white flex items-center gap-2"><FileText className="w-4 h-4" /> Contratos vinculados</h2>
+            <p className="text-xs text-slate-400 mt-0.5">Todos os contratos e atas ligados a este credor</p>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500">
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="p-0.5 rounded hover:bg-slate-700 text-white/80 hover:text-white">
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Info do credor */}
-        <div className="px-6 py-3 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-800">
-          <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wide">Credor</p>
-          <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm mt-0.5">{credor.razao_social}</p>
+        <div className="px-6 py-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700/50">
+          <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Credor</p>
+          <p className="font-semibold text-gray-800 dark:text-slate-100 text-sm mt-0.5">{credor.razao_social}</p>
           <div className="flex gap-4 mt-1 text-xs text-gray-500">
-            <span>{credor.tipo === 'Jurídica' ? 'CNPJ' : 'CPF'}: <strong className="text-gray-700 dark:text-gray-300 font-mono">{credor.cnpj_cpf}</strong></span>
-            {credor.cidade && <span>Cidade: <strong className="text-gray-700 dark:text-gray-300">{credor.cidade}{credor.uf ? '/' + credor.uf : ''}</strong></span>}
+            <span>{credor.tipo === 'Jurídica' ? 'CNPJ' : 'CPF'}: <strong className="text-gray-700 dark:text-slate-300 font-mono">{credor.cnpj_cpf}</strong></span>
+            {credor.cidade && <span>Cidade: <strong className="text-gray-700 dark:text-slate-300">{credor.cidade}{credor.uf ? '/' + credor.uf : ''}</strong></span>}
           </div>
         </div>
 
         {/* Tabela de contratos */}
         <div className="flex-1 overflow-y-auto">
           {vinculados.length === 0 ? (
-            <div className="text-center py-16 text-gray-400 dark:text-gray-500">
+            <div className="text-center py-16 text-gray-400 dark:text-slate-500">
               <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
               <p className="font-medium">Nenhum contrato vinculado</p>
               <p className="text-sm mt-1">Este credor ainda não possui contratos cadastrados.</p>
@@ -1525,7 +1526,7 @@ function CredorContratosModal({ credor, onClose }) {
           ) : (
             <table className="w-full text-sm">
               <thead className="sticky top-0">
-                <tr className="bg-blue-700 text-white text-xs">
+                <tr className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">
                   <th className="text-left px-4 py-2.5 font-semibold">N° Contrato</th>
                   <th className="text-left px-4 py-2.5 font-semibold">Objeto</th>
                   <th className="text-left px-4 py-2.5 font-semibold">Modalidade</th>
@@ -1534,9 +1535,9 @@ function CredorContratosModal({ credor, onClose }) {
                   <th className="text-center px-4 py-2.5 font-semibold">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
                 {vinculados.map(c => (
-                  <tr key={c.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 text-xs text-gray-700 dark:text-gray-300">
+                  <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 text-xs text-gray-700 dark:text-slate-300">
                     <td className="px-4 py-2 font-mono font-medium text-blue-600">{c.numero_contrato || '—'}</td>
                     <td className="px-4 py-2 max-w-xs truncate">{c.objeto || '—'}</td>
                     <td className="px-4 py-2">{c.modalidade || '—'}</td>
@@ -1547,7 +1548,7 @@ function CredorContratosModal({ credor, onClose }) {
                         c.status === 'ATIVO'
                           ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                           : c.status === 'ENCERRADO'
-                          ? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                          ? 'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-400'
                           : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
                       }`}>{c.status || '—'}</span>
                     </td>
@@ -1559,10 +1560,10 @@ function CredorContratosModal({ credor, onClose }) {
         </div>
 
         {/* Rodapé */}
-        <div className="px-6 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <div className="px-6 py-3 border-t border-slate-200 dark:border-slate-700/50 flex items-center justify-between bg-slate-50 dark:bg-slate-800/50">
           <span className="text-xs text-gray-400">{vinculados.length} contrato(s) encontrado(s)</span>
           <button onClick={onClose}
-            className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded text-sm font-semibold transition-colors">
+            className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 rounded text-sm font-semibold transition-colors">
             Fechar
           </button>
         </div>
@@ -1670,7 +1671,7 @@ function TabCredor() {
         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Opções para filtro</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="md:col-span-2">
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Razão Social / Nome</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Razão Social / Nome</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
               <input value={filtros.razao_social} onChange={e => setF('razao_social', e.target.value)}
@@ -1679,7 +1680,7 @@ function TabCredor() {
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">CNPJ / CPF</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">CNPJ / CPF</label>
             <input value={filtros.cnpj_cpf} onChange={e => setF('cnpj_cpf', e.target.value)}
               onKeyDown={e => e.key === 'Enter' && pesquisar()}
               placeholder="Pesquisar CNPJ ou CPF" className="input-field text-sm" />
@@ -1687,7 +1688,7 @@ function TabCredor() {
         </div>
         <div className="flex flex-wrap gap-3 items-end">
           <div className="w-36">
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tipo</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Tipo</label>
             <select value={filtros.tipo} onChange={e => setF('tipo', e.target.value)} className="input-field text-sm">
               <option value="">Todos</option>
               <option value="Jurídica">Jurídica</option>
@@ -1695,7 +1696,7 @@ function TabCredor() {
             </select>
           </div>
           <div className="w-36">
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Status</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Status</label>
             <select value={filtros.status} onChange={e => setF('status', e.target.value)} className="input-field text-sm">
               <option value="">Todos</option>
               <option value="ATIVO">ATIVO</option>
@@ -1704,7 +1705,7 @@ function TabCredor() {
           </div>
           <div className="ml-auto flex gap-2 pb-0.5">
             <button onClick={limparFiltros}
-              className="px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+              className="px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
               Limpar
             </button>
             <button onClick={pesquisar}
@@ -1720,7 +1721,7 @@ function TabCredor() {
         <div className="overflow-x-auto" style={{ maxHeight: '380px', overflowY: 'auto' }}>
           <table className="w-full text-sm">
             <thead className="sticky top-0 z-10">
-              <tr className="bg-blue-700 text-white text-xs select-none">
+              <tr className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs select-none uppercase tracking-wider">
                 {[
                   { col: 'tipo',         label: 'Tipo',           cls: 'text-left px-3 py-2.5 font-semibold whitespace-nowrap w-20' },
                   { col: 'razao_social', label: 'Razão Social / Nome', cls: 'text-left px-3 py-2.5 font-semibold min-w-[240px]' },
@@ -1735,10 +1736,10 @@ function TabCredor() {
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
               {credoresFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-14 text-gray-400 dark:text-gray-500">
+                  <td colSpan={7} className="text-center py-14 text-gray-400 dark:text-slate-500">
                     <User className="w-10 h-10 mx-auto mb-2 opacity-30" />
                     Nenhum credor encontrado
                   </td>
@@ -1753,22 +1754,22 @@ function TabCredor() {
                     className={`cursor-pointer transition-colors text-xs ${
                       sel
                         ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100'
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-700/30 text-gray-700 dark:text-gray-300'
+                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 text-gray-700 dark:text-slate-300'
                     }`}
                   >
-                    <td className="px-3 py-2 text-gray-500 dark:text-gray-400">{c.tipo === 'Jurídica' ? 'PJ' : 'PF'}</td>
+                    <td className="px-3 py-2 text-gray-500 dark:text-slate-400">{c.tipo === 'Jurídica' ? 'PJ' : 'PF'}</td>
                     <td className="px-3 py-2 max-w-xs truncate font-medium">
                       {c.razao_social}
                       {c.nome_fantasia && <span className="ml-1 text-gray-400 font-normal">({c.nome_fantasia})</span>}
                     </td>
-                    <td className="px-3 py-2 font-mono text-gray-600 dark:text-gray-400">{c.cnpj_cpf}</td>
+                    <td className="px-3 py-2 font-mono text-gray-600 dark:text-slate-400">{c.cnpj_cpf}</td>
                     <td className="px-3 py-2">{c.cidade ? `${c.cidade}${c.uf ? '/' + c.uf : ''}` : '—'}</td>
                     <td className="px-3 py-2">{c.telefone || c.celular || '—'}</td>
                     <td className="px-3 py-2 text-center">
                       <span className={`font-bold px-2 py-0.5 rounded-full text-xs ${
                         c.status === 'ATIVO'
                           ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                          : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                          : 'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-400'
                       }`}>{c.status}</span>
                     </td>
                   </tr>
@@ -1779,10 +1780,10 @@ function TabCredor() {
         </div>
 
         {/* Rodapé da tabela */}
-        <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700/20 border-t border-gray-200 dark:border-gray-600 flex items-center justify-between">
+        <div className="px-4 py-2 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700/50 flex items-center justify-between">
           <span className="text-xs text-gray-500">
             {credorSelecionado
-              ? <span className="text-blue-600 dark:text-blue-400 font-medium">✓ {credorSelecionado.razao_social}</span>
+              ? <span className="text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1"><Check className="w-3 h-3" /> {credorSelecionado.razao_social}</span>
               : <span className="text-gray-400">Clique para selecionar · Duplo clique para visualizar</span>}
           </span>
           <span className="text-xs text-gray-500">
@@ -1811,7 +1812,7 @@ function TabCredor() {
         </button>
         <button onClick={syncDids} disabled={syncando}
           className="flex items-center gap-1.5 px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-60 ml-auto">
-          {syncando ? '⏳ Importando...' : '🔄 Importar do DID'}
+          {syncando ? <><Loader2 className="w-4 h-4 animate-spin" /> Importando...</> : <><RefreshCw className="w-4 h-4" /> Importar do DID</>}
         </button>
       </div>
 
@@ -1855,10 +1856,10 @@ function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl flex flex-col" style={{ maxHeight: '86vh' }}>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col" style={{ maxHeight: '86vh' }}>
 
         {/* Cabeçalho */}
-        <div className="flex items-center justify-between bg-indigo-700 px-5 py-3 rounded-t-xl shrink-0">
+        <div className="flex items-center justify-between bg-slate-900 dark:bg-slate-900 px-5 py-3 rounded-t-2xl shrink-0">
           <div className="flex items-center gap-2">
             <Search className="w-4 h-4 text-white/80" />
             <span className="text-sm font-semibold text-white">Selecionar Item do Catálogo</span>
@@ -1869,7 +1870,7 @@ function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
         </div>
 
         {/* Filtros + Busca */}
-        <div className="px-5 pt-3 pb-2.5 border-b border-gray-200 dark:border-gray-700 shrink-0 space-y-2">
+        <div className="px-5 pt-3 pb-2.5 border-b border-gray-200 dark:border-slate-700/50 shrink-0 space-y-2">
           {/* Campo de busca */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -1893,7 +1894,7 @@ function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
                 className={`px-3 py-0.5 text-xs font-semibold rounded-full border transition-colors ${
                   catFiltro === cat
                     ? 'bg-indigo-600 border-indigo-600 text-white'
-                    : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400'
+                    : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400'
                 }`}>
                 {cat || 'Todos'}
               </button>
@@ -1911,26 +1912,26 @@ function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
             </div>
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-700/50 sticky top-0 z-10">
+              <thead className="bg-slate-100 dark:bg-slate-800 sticky top-0 z-10">
                 <tr>
-                  <th className="text-left px-4 py-2.5 font-semibold text-gray-500 text-xs w-24">Código</th>
-                  <th className="text-left px-4 py-2.5 font-semibold text-gray-500 text-xs">Descrição / Especificação</th>
-                  <th className="text-left px-4 py-2.5 font-semibold text-gray-500 text-xs w-28">Unidade</th>
-                  <th className="text-left px-4 py-2.5 font-semibold text-gray-500 text-xs w-28">Categoria</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-slate-500 dark:text-slate-300 text-xs w-24 uppercase tracking-wider">Código</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-slate-500 dark:text-slate-300 text-xs uppercase tracking-wider">Descrição / Especificação</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-slate-500 dark:text-slate-300 text-xs w-28 uppercase tracking-wider">Unidade</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-slate-500 dark:text-slate-300 text-xs w-28 uppercase tracking-wider">Categoria</th>
                   <th className="w-24"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
                 {filtrados.map(item => (
                   <tr key={item.id}
                     className="hover:bg-indigo-50 dark:hover:bg-indigo-900/20 cursor-pointer group"
                     onClick={() => { onSelect(item); onClose() }}>
                     <td className="px-4 py-2.5 font-mono text-xs text-indigo-600 dark:text-indigo-400 font-bold align-top">{item.codigo}</td>
                     <td className="px-4 py-2.5 align-top max-w-xs">
-                      <p className="text-gray-800 dark:text-gray-200 font-medium leading-snug">{item.descricao}</p>
+                      <p className="text-gray-800 dark:text-slate-200 font-medium leading-snug">{item.descricao}</p>
                       {item.especificacao && (
                         <>
-                          <p className={`text-xs text-gray-400 dark:text-gray-500 mt-0.5 leading-snug ${expId === item.id ? '' : 'line-clamp-2'}`}>
+                          <p className={`text-xs text-gray-400 dark:text-slate-500 mt-0.5 leading-snug ${expId === item.id ? '' : 'line-clamp-2'}`}>
                             {item.especificacao}
                           </p>
                           {item.especificacao.length > 100 && (
@@ -1950,7 +1951,7 @@ function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
                           ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
                           : (item.categoria || '').toUpperCase() === 'SERVIÇOS'
                           ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-500'
+                          : 'bg-gray-100 dark:bg-slate-700 text-gray-500'
                       }`}>{item.categoria || '—'}</span>
                     </td>
                     <td className="px-4 py-2.5 text-right align-top">
@@ -1966,10 +1967,10 @@ function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
         </div>
 
         {/* Rodapé */}
-        <div className="border-t border-gray-200 dark:border-gray-700 px-5 py-2.5 shrink-0 flex items-center justify-between">
+        <div className="border-t border-gray-200 dark:border-slate-700/50 px-5 py-2.5 shrink-0 flex items-center justify-between">
           <p className="text-xs text-gray-400">Clique em um item para selecioná-lo</p>
           <button onClick={onClose}
-            className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded text-sm font-medium transition-colors">
+            className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 rounded text-sm font-medium transition-colors">
             Fechar
           </button>
         </div>
@@ -2261,19 +2262,19 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded shadow-2xl w-full max-w-3xl flex flex-col" style={{ maxHeight: '94vh' }}>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col" style={{ maxHeight: '94vh' }}>
 
         {/* Título */}
-        <div className="flex items-center justify-between bg-blue-700 px-4 py-2.5 rounded-t shrink-0">
+        <div className="flex items-center justify-between bg-slate-900 dark:bg-slate-900 px-5 py-3 rounded-t-2xl shrink-0">
           <div className="flex items-center gap-3">
             <span className="text-sm font-semibold text-white">Cadastro de Contratos — {titulo}</span>
             {alertaVencimento && (
               <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${alertaCor[alertaVencimento.tipo]}`}>
-                {alertaVencimento.tipo === 'vencido' ? '🔴' : alertaVencimento.tipo === 'proximo' ? '🟡' : '🟢'} {alertaVencimento.texto}
+                <span className={`w-2 h-2 rounded-full inline-block mr-1 ${alertaVencimento.tipo === 'vencido' ? 'bg-red-500' : alertaVencimento.tipo === 'proximo' ? 'bg-amber-400' : 'bg-green-500'}`} /> {alertaVencimento.texto}
               </span>
             )}
           </div>
-          <button onClick={onClose} className="p-0.5 rounded hover:bg-blue-600 text-white/80 hover:text-white">
+          <button onClick={onClose} className="p-0.5 rounded hover:bg-slate-700 text-white/80 hover:text-white">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -2341,19 +2342,19 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
 
             <FieldRow label="Credor *">
               {readonly ? (
-                <div className="text-sm text-gray-800 dark:text-gray-200 font-medium">
+                <div className="text-sm text-gray-800 dark:text-slate-200 font-medium">
                   {credorSel ? credorSel.razao_social : '—'}
                 </div>
               ) : (
                 <div className="relative w-full">
                   {credorSel ? (
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 input-field text-sm bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700 text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                      <div className="flex-1 input-field text-sm bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700 text-gray-800 dark:text-slate-100 flex items-center gap-2">
                         <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
                         <span className="truncate">{credorSel.razao_social}</span>
                         <span className="text-gray-400 font-mono text-xs ml-1 shrink-0">{credorSel.cnpj_cpf}</span>
                       </div>
-                      <button type="button" onClick={limparCredor} className="p-1.5 rounded border border-gray-300 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
+                      <button type="button" onClick={limparCredor} className="p-1.5 rounded border border-gray-300 dark:border-slate-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -2369,7 +2370,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                         placeholder="Buscar credor por nome ou CNPJ..."
                       />
                       {dropdownCredor && (
-                        <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl max-h-56 overflow-y-auto">
+                        <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg shadow-xl max-h-56 overflow-y-auto">
                           {credoresFiltradosModal.length === 0 ? (
                             <p className="px-3 py-3 text-sm text-gray-400">
                               {buscaCredor.trim() ? 'Nenhum credor encontrado.' : 'Nenhum credor cadastrado.'}
@@ -2377,9 +2378,9 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                           ) : (
                             credoresFiltradosModal.map(c => (
                               <button key={c.id} type="button" onMouseDown={() => selecionarCredor(c)}
-                                className="w-full text-left px-3 py-2.5 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                                className="w-full text-left px-3 py-2.5 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-3 border-b border-gray-100 dark:border-slate-700/50 last:border-0">
                                 <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-gray-800 dark:text-gray-200 truncate">{c.razao_social}</p>
+                                  <p className="font-medium text-gray-800 dark:text-slate-200 truncate">{c.razao_social}</p>
                                   <p className="text-xs text-gray-400 font-mono mt-0.5">{c.cnpj_cpf} · {c.tipo}</p>
                                 </div>
                                 <span className={`text-xs px-1.5 py-0.5 rounded font-medium shrink-0 ${
@@ -2420,7 +2421,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                 <span className="text-xs text-gray-500">dias antes do vencimento</span>
                 {alertaVencimento && (
                   <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${alertaCor[alertaVencimento.tipo]}`}>
-                    {alertaVencimento.tipo === 'vencido' ? '🔴 Vencido' : alertaVencimento.tipo === 'proximo' ? '🟡 Próximo do vencimento' : '🟢 Vigente'} — {alertaVencimento.texto}
+                    <span className={`w-2 h-2 rounded-full inline-block mr-1 ${alertaVencimento.tipo === 'vencido' ? 'bg-red-500' : alertaVencimento.tipo === 'proximo' ? 'bg-amber-400' : 'bg-green-500'}`} />{alertaVencimento.tipo === 'vencido' ? 'Vencido' : alertaVencimento.tipo === 'proximo' ? 'Próximo do vencimento' : 'Vigente'} — {alertaVencimento.texto}
                   </span>
                 )}
               </div>
@@ -2444,9 +2445,9 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                 {readonly ? 'Nenhum item registrado.' : 'Clique em "Adicionar Item" para incluir itens do contrato.'}
               </p>
             ) : (
-              <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-slate-700/50">
                 <table className="w-full text-xs">
-                  <thead className="bg-gray-50 dark:bg-gray-700/50">
+                  <thead className="bg-slate-100 dark:bg-slate-800">
                     <tr>
                       <th className="px-2 py-2 text-left font-semibold text-gray-500 w-16">Lote<br/><span className="font-normal text-gray-400">(opcional)</span></th>
                       <th className="px-2 py-2 text-left font-semibold text-gray-500 min-w-[220px]">Descrição do Item</th>
@@ -2457,12 +2458,12 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                       {!readonly && <th className="w-8"></th>}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                  <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
                     {itensContrato.map((it, idx) => {
                       const busca = itemBusca[idx] ?? it.descricao ?? ''
                       const catalogFiltrado = itemCatalogFiltrado(busca)
                       return (
-                        <tr key={it._id ?? idx} className="bg-white dark:bg-gray-800 hover:bg-blue-50/30 dark:hover:bg-blue-900/10">
+                        <tr key={it._id ?? idx} className="bg-white dark:bg-slate-800 hover:bg-blue-50/30 dark:hover:bg-blue-900/10">
                           {/* Lote */}
                           <td className="px-2 py-1.5">
                             <input value={it.lote} onChange={e => setItem(idx, 'lote', e.target.value)}
@@ -2472,7 +2473,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                           {/* Descrição com busca */}
                           <td className="px-2 py-1.5 relative">
                             {readonly ? (
-                              <span className="text-gray-800 dark:text-gray-200">{it.descricao || '—'}</span>
+                              <span className="text-gray-800 dark:text-slate-200">{it.descricao || '—'}</span>
                             ) : (
                               <div className="relative">
                                 <div className="flex items-center gap-1">
@@ -2498,13 +2499,13 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                                   />
                                 </div>
                                 {itemDrop === idx && catalogFiltrado.length > 0 && (
-                                  <div className="absolute z-30 top-full left-0 w-80 mt-0.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-2xl max-h-44 overflow-y-auto">
+                                  <div className="absolute z-30 top-full left-0 w-80 mt-0.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg shadow-2xl max-h-44 overflow-y-auto">
                                     {catalogFiltrado.map(ci => (
                                       <button key={ci.id} type="button"
                                         onMouseDown={() => selecionarItemCatalogo(idx, ci)}
-                                        className="w-full text-left px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                                        className="w-full text-left px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b border-gray-100 dark:border-slate-700/50 last:border-0">
                                         <span className="font-mono text-blue-600 dark:text-blue-400 text-xs mr-2">{ci.codigo}</span>
-                                        <span className="text-gray-800 dark:text-gray-200 text-xs">{ci.descricao}</span>
+                                        <span className="text-gray-800 dark:text-slate-200 text-xs">{ci.descricao}</span>
                                         <span className="ml-2 text-gray-400 text-xs">({ci.unidade_medida})</span>
                                       </button>
                                     ))}
@@ -2542,7 +2543,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                           </td>
 
                           {/* Valor Total */}
-                          <td className="px-2 py-1.5 text-right font-semibold text-gray-700 dark:text-gray-300 font-mono">
+                          <td className="px-2 py-1.5 text-right font-semibold text-gray-700 dark:text-slate-300 font-mono">
                             {it.valor_total
                               ? parseFloat(it.valor_total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
                               : '—'}
@@ -2561,9 +2562,9 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                     })}
                   </tbody>
                   {itensContrato.length > 0 && (
-                    <tfoot className="bg-gray-50 dark:bg-gray-700/50 border-t-2 border-gray-200 dark:border-gray-600">
+                    <tfoot className="bg-slate-50 dark:bg-slate-800/50 border-t-2 border-slate-200 dark:border-slate-700/50">
                       <tr>
-                        <td colSpan={readonly ? 5 : 5} className="px-2 py-2 text-right text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+                        <td colSpan={readonly ? 5 : 5} className="px-2 py-2 text-right text-xs font-bold text-gray-600 dark:text-slate-300 uppercase tracking-wide">
                           Total do Contrato:
                         </td>
                         <td className="px-2 py-2 text-right font-bold text-blue-700 dark:text-blue-400 font-mono whitespace-nowrap">
@@ -2586,7 +2587,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                 <input value={valorExibido}
                   onChange={e => { if (itensContrato.length === 0) set('valor', e.target.value) }}
                   readOnly={readonly || itensContrato.length > 0}
-                  className={`input-field text-sm w-52 font-mono ${itensContrato.length > 0 ? 'bg-gray-50 dark:bg-gray-700 cursor-default font-bold text-blue-700 dark:text-blue-400' : ''}`}
+                  className={`input-field text-sm w-52 font-mono ${itensContrato.length > 0 ? 'bg-gray-50 dark:bg-slate-700 cursor-default font-bold text-blue-700 dark:text-blue-400' : ''}`}
                   placeholder="R$ 0,00" />
                 {itensContrato.length > 0 && (
                   <span className="text-xs text-gray-500">Calculado automaticamente com base nos itens</span>
@@ -2601,18 +2602,18 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
 
             <FieldRow label="Secretaria">
               {readonly ? (
-                <span className="text-sm text-gray-800 dark:text-gray-200">{form.secretaria || '—'}</span>
+                <span className="text-sm text-gray-800 dark:text-slate-200">{form.secretaria || '—'}</span>
               ) : (
                 <div className="relative w-full">
                   {secSel ? (
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 input-field text-sm bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700 text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                      <div className="flex-1 input-field text-sm bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700 text-gray-800 dark:text-slate-100 flex items-center gap-2">
                         <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
                         <span className="truncate font-medium">{secSel.nome}</span>
                         {secSel.sigla && <span className="text-gray-400 text-xs ml-1 shrink-0">({secSel.sigla})</span>}
                       </div>
                       <button type="button" onClick={limparSecretaria}
-                        className="p-1.5 rounded border border-gray-300 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
+                        className="p-1.5 rounded border border-gray-300 dark:border-slate-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -2628,15 +2629,15 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                         placeholder="Buscar ou digitar secretaria..."
                       />
                       {dropdownSec && secretarias.length > 0 && (
-                        <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl max-h-52 overflow-y-auto">
+                        <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg shadow-xl max-h-52 overflow-y-auto">
                           {secFiltradas.length === 0 ? (
                             <p className="px-3 py-3 text-sm text-gray-400">Nenhuma secretaria encontrada.</p>
                           ) : (
                             secFiltradas.map(s => (
                               <button key={s.id} type="button" onMouseDown={() => selecionarSecretaria(s)}
-                                className="w-full text-left px-3 py-2.5 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                                className="w-full text-left px-3 py-2.5 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-3 border-b border-gray-100 dark:border-slate-700/50 last:border-0">
                                 <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-gray-800 dark:text-gray-200 truncate">{s.nome}</p>
+                                  <p className="font-medium text-gray-800 dark:text-slate-200 truncate">{s.nome}</p>
                                   {s.sigla && <p className="text-xs text-gray-400 mt-0.5 font-mono">{s.sigla}</p>}
                                 </div>
                                 {(s.responsaveis || []).length > 0 && (
@@ -2657,7 +2658,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
 
             <FieldRow label="Fiscal">
               {readonly ? (
-                <span className="text-sm text-gray-800 dark:text-gray-200">{form.fiscal || '—'}</span>
+                <span className="text-sm text-gray-800 dark:text-slate-200">{form.fiscal || '—'}</span>
               ) : (
                 <div className="flex items-center gap-2 w-full">
                   <select
@@ -2684,7 +2685,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                         <option key={idx} value={label} disabled={!r.vigente}>
                           {r.vigente
                             ? label
-                            : `⛔ ${label}${per ? ' — ' + per : ''} (fora do período)`}
+                            : `${label}${per ? ' — ' + per : ''} (fora do período)`}
                         </option>
                       )
                     })}
@@ -2692,7 +2693,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                   {form.fiscal && (
                     <button type="button" onClick={() => set('fiscal', '')}
                       title="Limpar fiscal"
-                      className="p-1.5 rounded border border-gray-300 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 shrink-0">
+                      className="p-1.5 rounded border border-gray-300 dark:border-slate-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700 shrink-0">
                       <X className="w-3.5 h-3.5" />
                     </button>
                   )}
@@ -2716,7 +2717,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                   />
                   {!readonly && fontesRecurso.length > 1 && (
                     <button type="button" onClick={() => setFontesRecurso(p => p.filter((_, j) => j !== i))}
-                      className="p-1.5 rounded border border-gray-300 dark:border-gray-600 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
+                      className="p-1.5 rounded border border-gray-300 dark:border-slate-600 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
                       <X className="w-3.5 h-3.5" />
                     </button>
                   )}
@@ -2747,7 +2748,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                   />
                   {!readonly && dotacoes.length > 1 && (
                     <button type="button" onClick={() => setDotacoes(p => p.filter((_, j) => j !== i))}
-                      className="p-1.5 rounded border border-gray-300 dark:border-gray-600 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
+                      className="p-1.5 rounded border border-gray-300 dark:border-slate-600 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
                       <X className="w-3.5 h-3.5" />
                     </button>
                   )}
@@ -2794,15 +2795,15 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
         )}
 
         {/* Rodapé */}
-        <div className="border-t border-gray-200 dark:border-gray-700 px-5 py-3 flex items-center gap-2 shrink-0">
+        <div className="border-t border-gray-200 dark:border-slate-700/50 px-5 py-3 flex items-center gap-2 shrink-0">
           {!readonly && (
             <button onClick={salvar}
-              className="flex items-center gap-1.5 px-5 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-semibold transition-colors shadow-sm">
+              className="flex items-center gap-1.5 px-5 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
               <Check className="w-4 h-4" /> Salvar
             </button>
           )}
           <button onClick={onClose}
-            className="flex items-center gap-1.5 px-5 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded text-sm font-semibold transition-colors">
+            className="flex items-center gap-1.5 px-5 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 rounded-lg text-sm font-semibold transition-colors">
             {readonly ? 'Fechar' : 'Cancelar'}
           </button>
           {itensContrato.length > 0 && (
@@ -2819,14 +2820,14 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
 function ConfirmModalContrato({ contrato, onConfirm, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md">
         <div className="p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center shrink-0">
               <AlertTriangle className="w-5 h-5 text-red-600" />
             </div>
             <div>
-              <h3 className="font-bold text-gray-800 dark:text-gray-100">Excluir Contrato</h3>
+              <h3 className="font-bold text-gray-800 dark:text-slate-100">Excluir Contrato</h3>
               <p className="text-sm text-gray-500">Esta ação não pode ser desfeita.</p>
             </div>
           </div>
@@ -2940,7 +2941,7 @@ function TabContratos() {
 
   const statusCor = (s) => {
     if (s === 'ATIVO')      return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-    if (s === 'ENCERRADO')  return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+    if (s === 'ENCERRADO')  return 'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-400'
     if (s === 'SUSPENSO')   return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
     if (s === 'RESCINDIDO') return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
     return 'bg-gray-100 text-gray-600'
@@ -2954,13 +2955,13 @@ function TabContratos() {
         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Opções para filtro</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">N° Contrato</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">N° Contrato</label>
             <input value={filtros.numero} onChange={e => setF('numero', e.target.value)}
               onKeyDown={e => e.key === 'Enter' && pesquisar()}
               placeholder="Ex: 001/2026" className="input-field text-sm" />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Objeto</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Objeto</label>
             <input value={filtros.objeto} onChange={e => setF('objeto', e.target.value)}
               onKeyDown={e => e.key === 'Enter' && pesquisar()}
               placeholder="Pesquisar pelo objeto" className="input-field text-sm" />
@@ -2968,20 +2969,20 @@ function TabContratos() {
         </div>
         <div className="flex flex-wrap gap-3 items-end">
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Credor</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Credor</label>
             <input value={filtros.credor} onChange={e => setF('credor', e.target.value)}
               onKeyDown={e => e.key === 'Enter' && pesquisar()}
               placeholder="Nome do credor..." className="input-field text-sm" />
           </div>
           <div className="w-48">
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Modalidade</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Modalidade</label>
             <select value={filtros.modalidade} onChange={e => setF('modalidade', e.target.value)} className="input-field text-sm">
               <option value="">Todas</option>
               {MODALIDADES.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
           </div>
           <div className="w-36">
-            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Status</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Status</label>
             <select value={filtros.status} onChange={e => setF('status', e.target.value)} className="input-field text-sm">
               <option value="">Todos</option>
               {STATUS_CONTRATO.map(s => <option key={s} value={s}>{s}</option>)}
@@ -2989,7 +2990,7 @@ function TabContratos() {
           </div>
           <div className="flex gap-2 pb-0.5 ml-auto">
             <button onClick={limpar}
-              className="px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+              className="px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
               Limpar
             </button>
             <button onClick={pesquisar}
@@ -3005,7 +3006,7 @@ function TabContratos() {
         <div className="overflow-x-auto" style={{ maxHeight: '380px', overflowY: 'auto' }}>
           <table className="w-full text-sm">
             <thead className="sticky top-0 z-10">
-              <tr className="bg-blue-700 text-white text-xs select-none">
+              <tr className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs select-none uppercase tracking-wider">
                 {[
                   { col: 'tipo_contrato',   label: 'Tipo',        cls: 'text-left px-3 py-2.5 font-semibold whitespace-nowrap w-24' },
                   { col: 'numero_contrato', label: 'N° Contrato', cls: 'text-left px-3 py-2.5 font-semibold whitespace-nowrap w-32' },
@@ -3022,10 +3023,10 @@ function TabContratos() {
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
               {contratosFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center py-14 text-gray-400 dark:text-gray-500">
+                  <td colSpan={8} className="text-center py-14 text-gray-400 dark:text-slate-500">
                     <FileText className="w-10 h-10 mx-auto mb-2 opacity-30" />
                     Nenhum contrato encontrado
                   </td>
@@ -3040,7 +3041,7 @@ function TabContratos() {
                     className={`cursor-pointer transition-colors text-xs ${
                       sel
                         ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100'
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-700/30 text-gray-700 dark:text-gray-300'
+                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 text-gray-700 dark:text-slate-300'
                     }`}
                   >
                     <td className="px-3 py-2 text-gray-500">{c.tipo_contrato || '—'}</td>
@@ -3062,10 +3063,10 @@ function TabContratos() {
           </table>
         </div>
 
-        <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700/20 border-t border-gray-200 dark:border-gray-600 flex items-center justify-between">
+        <div className="px-4 py-2 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700/50 flex items-center justify-between">
           <span className="text-xs text-gray-500">
             {contratoSelecionado
-              ? <span className="text-blue-600 dark:text-blue-400 font-medium">✓ {contratoSelecionado.numero_contrato}</span>
+              ? <span className="text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1"><Check className="w-3 h-3" /> {contratoSelecionado.numero_contrato}</span>
               : <span className="text-gray-400">Clique para selecionar · Duplo clique para visualizar</span>}
           </span>
           <span className="text-xs text-gray-500">
@@ -3133,17 +3134,18 @@ export default function Contratos() {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      {/* Header */}
-      <div>
-        <h1 className="page-title flex items-center gap-2">📝 Contratos</h1>
-        <p className="page-subtitle">Gestão de itens, credores e contratos</p>
-      </div>
+      <PageHeader
+        icon={FileText}
+        title="Contratos"
+        subtitle="Gestão de itens, credores e contratos"
+      />
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-700">
+      <div className="border-b border-gray-200 dark:border-slate-700/50">
         <nav className="flex gap-1 overflow-x-auto scrollbar-none">
           {TABS.map(t => {
             const active = tab === t.key
+            const Icon = t.icon
             return (
               <button
                 key={t.key}
@@ -3151,10 +3153,10 @@ export default function Contratos() {
                 className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap ${
                   active
                     ? 'border-blue-600 text-blue-700 dark:text-blue-400'
-                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300'
+                    : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:border-gray-300'
                 }`}
               >
-                <span>{t.emoji}</span>
+                <Icon className="w-4 h-4" />
                 {t.label}
               </button>
             )

@@ -3,9 +3,10 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
-const { masterDb, getTenantConnection } = require('./config/database');
+const { masterDb, getTenantConnection, ensureMasterRefreshTokensTable, ensureAdminsEmailColumn } = require('./config/database');
 const Tenant = require('./models/Tenant');
 const { migrarTodosOsSchemas } = require('./controllers/tenantController');
 const routes = require('./routes');
@@ -15,11 +16,48 @@ const app = express();
 // Railway usa proxy reverso — necessário para express-rate-limit funcionar corretamente
 app.set('trust proxy', 1);
 
-// CORS deve ser o primeiro middleware garantir cabeçalhos mesmo em erros
-// Em desenvolvimento, usar CLIENT_URL; em produção, permitir todos (endpoints públicos)
+// ── CORS allowlist ─────────────────────────────────────────────────────────
+// Origens permitidas: CLIENT_URL + ALLOWED_ORIGINS (separadas por vírgula no env)
+// Em desenvolvimento, localhost é sempre permitido.
+const buildAllowlist = () => {
+  const list = new Set();
+
+  // Sempre permitir localhost em qualquer porta (desenvolvimento)
+  list.add('http://localhost:3000');
+  list.add('http://localhost:5173');
+  list.add('http://127.0.0.1:3000');
+
+  if (process.env.CLIENT_URL) {
+    process.env.CLIENT_URL.split(',').map(s => s.trim()).filter(Boolean).forEach(o => list.add(o));
+  }
+
+  if (process.env.ALLOWED_ORIGINS) {
+    process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim()).filter(Boolean).forEach(o => list.add(o));
+  }
+
+  return list;
+};
+
+const allowedOrigins = buildAllowlist();
+
 const corsOptions = {
-  origin: true, // Permitir todas as origins - endpoints específicos validam autenticação
-  credentials: true
+  origin: (origin, callback) => {
+    // Requisições sem origin (mobile apps, Postman, curl, SSR server-side) — permitir
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.has(origin)) {
+      return callback(null, true);
+    }
+
+    // Em desenvolvimento, qualquer localhost é permitido (porta variável)
+    if (process.env.NODE_ENV !== 'production' && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      return callback(null, true);
+    }
+
+    callback(new Error(`CORS: origem não permitida — ${origin}`));
+  },
+  credentials: true,
+  optionsSuccessStatus: 200, // suporte a IE11
 };
 
 app.use(cors(corsOptions));
@@ -39,6 +77,7 @@ app.use(helmet({
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
 if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 }
@@ -71,15 +110,36 @@ app.get('/health', (req, res) => {
 // Endpoint leve de keepalive — usado pelo auto-ping abaixo
 app.get('/ping', (req, res) => res.send('pong'));
 
-// Error handler global — garante CORS mesmo em erros 500
+// ── 404 — rota não encontrada ────────────────────────────────────────────────
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Rota não encontrada — ${req.method} ${req.originalUrl}`,
+  });
+});
+
+// ── Error handler global ─────────────────────────────────────────────────────
+// Deve ser o ÚLTIMO middleware (4 parâmetros obrigatórios no Express)
+// eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
-  const origin = req.headers.origin;
-  if (!allowedOrigins || (origin && allowedOrigins.includes(origin))) {
-    res.header('Access-Control-Allow-Origin', origin || '*');
-    res.header('Access-Control-Allow-Credentials', 'true');
+  // Erros de CORS gerados pelo middleware acima chegam aqui como 403
+  if (err.message && err.message.startsWith('CORS:')) {
+    return res.status(403).json({ success: false, message: err.message });
   }
-  console.error('Erro interno:', err.message);
-  res.status(err.status || 500).json({ error: 'Erro interno do servidor' });
+
+  const statusCode = err.status || err.statusCode || 500;
+
+  // Nunca expor stack trace em produção
+  if (process.env.NODE_ENV !== 'production') {
+    console.error('[ERROR]', err.stack || err.message);
+  } else {
+    console.error('[ERROR]', err.message);
+  }
+
+  res.status(statusCode).json({
+    success: false,
+    message: statusCode === 500 ? 'Erro interno do servidor' : (err.message || 'Erro'),
+  });
 });
 
 const PORT = process.env.PORT || 5000;
@@ -94,7 +154,16 @@ const initDatabase = async () => {
   try {
     await masterDb.authenticate();
     console.log('✅ Conectado ao banco de dados PostgreSQL');
+    // Guard: REFRESH_TOKEN_SECRET obrigatório em produção
+    if (process.env.NODE_ENV === 'production' && !process.env.REFRESH_TOKEN_SECRET) {
+      console.error('\u274c FATAL: REFRESH_TOKEN_SECRET é obrigatório em NODE_ENV=production. Configure a variável no Railway.');
+      process.exit(1);
+    }
 
+    // Garantir tabela public.refresh_tokens para tokens de admin
+    await ensureMasterRefreshTokensTable();
+    // Garantir coluna email em public.admins (login SuperAdmin por email)
+    await ensureAdminsEmailColumn();
     // Migração automática: garantir colunas ausentes em todos os schemas
     await migrarTodosOsSchemas();
 

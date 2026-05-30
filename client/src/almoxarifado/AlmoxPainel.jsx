@@ -6,6 +6,10 @@ import {
 } from 'lucide-react'
 import api from '../services/api'
 import { fmt, fmtMoney } from './almoxConstants'
+import PageHeader from '../components/ui/PageHeader'
+import StatCard from '../components/ui/StatCard'
+import SectionTitle from '../components/ui/SectionTitle'
+import EmptyState from '../components/ui/EmptyState'
 
 export default function AlmoxPainel() {
   const [dados, setDados] = useState(null)
@@ -28,50 +32,43 @@ export default function AlmoxPainel() {
       </div>
     )
   }
-  if (!dados) return null
-
-  const cards = [
-    { label: 'Total de Itens',    value: dados.totalItens,                    icon: Package,       color: 'blue' },
-    { label: 'Valor do Estoque',  value: fmtMoney(dados.valorTotalEstoque),   icon: DollarSign,    color: 'green' },
-    { label: 'Itens Críticos',    value: dados.itensCriticos?.length || 0,    icon: AlertTriangle, color: 'red' },
-    { label: 'Req. Pendentes',    value: dados.requisicoesPendentes,          icon: ClipboardList, color: 'yellow' },
-    { label: 'Ressuprimento',     value: dados.itensRessuprimento || 0,       icon: ShoppingCart,  color: 'orange' },
-    { label: 'Lotes Vencendo',    value: dados.lotesVencendo || 0,            icon: Clock,         color: 'pink' },
-  ]
-
-  const colorMap = {
-    blue:   'bg-blue-50 text-blue-700 border-blue-100',
-    green:  'bg-green-50 text-green-700 border-green-100',
-    red:    'bg-red-50 text-red-700 border-red-100',
-    yellow: 'bg-yellow-50 text-yellow-700 border-yellow-100',
-    orange: 'bg-orange-50 text-orange-700 border-orange-100',
-    pink:   'bg-pink-50 text-pink-700 border-pink-100',
-  }
+  if (!dados) return (
+    <EmptyState
+      icon={Package}
+      title="Sem dados disponíveis"
+      description="Não foi possível carregar os dados do painel."
+      action={<button onClick={load} className="btn-primary text-sm">Tentar novamente</button>}
+    />
+  )
 
   return (
     <div className="space-y-6">
+      <PageHeader
+        icon={Package}
+        eyebrow="Almoxarifado"
+        title="Painel"
+        subtitle="Visão geral do estoque, movimentações e indicadores operacionais"
+        actions={
+          <button onClick={load} className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+            <RefreshCw className="h-4 w-4" /> Atualizar
+          </button>
+        }
+      />
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        {cards.map(c => (
-          <div key={c.label} className={`rounded-xl border p-4 ${colorMap[c.color]}`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium opacity-80">{c.label}</span>
-              <c.icon className="h-5 w-5 opacity-60" />
-            </div>
-            <p className="text-2xl font-bold">{c.value ?? 0}</p>
-          </div>
-        ))}
+        <StatCard icon={Package}       label="Total de Itens"   value={dados.totalItens ?? 0}              tone="blue" />
+        <StatCard icon={DollarSign}    label="Valor do Estoque" value={fmtMoney(dados.valorTotalEstoque)}  tone="green" />
+        <StatCard icon={AlertTriangle} label="Itens Críticos"   value={dados.itensCriticos?.length || 0}  tone="red" />
+        <StatCard icon={ClipboardList} label="Req. Pendentes"   value={dados.requisicoesPendentes ?? 0}   tone="amber" />
+        <StatCard icon={ShoppingCart}  label="Ressuprimento"    value={dados.itensRessuprimento || 0}      tone="violet" />
+        <StatCard icon={Clock}         label="Lotes Vencendo"   value={dados.lotesVencendo || 0}           tone="cyan" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Itens críticos */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-          <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-red-500" /> ⚠️ Estoque Crítico
-          </h3>
+          <SectionTitle icon={AlertTriangle} title="Estoque Crítico" />
           {dados.itensCriticos?.length === 0 ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
-              Nenhum item com estoque crítico
-            </p>
+            <EmptyState icon={Package} title="Nenhum item crítico" description="Todos os itens estão acima do estoque mínimo." />
           ) : (
             <div className="space-y-2">
               {dados.itensCriticos?.map(item => (
@@ -95,11 +92,9 @@ export default function AlmoxPainel() {
 
         {/* Últimas movimentações */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-          <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-            <BarChart2 className="h-4 w-4 text-blue-500" /> 📊 Últimas Movimentações
-          </h3>
+          <SectionTitle icon={BarChart2} title="Últimas Movimentações" />
           {dados.ultimasMovimentacoes?.length === 0 ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">Sem movimentações</p>
+            <EmptyState icon={ArrowDownCircle} title="Sem movimentações" description="Nenhuma movimentação registrada recentemente." />
           ) : (
             <div className="space-y-2">
               {dados.ultimasMovimentacoes?.map(mov => (
@@ -130,9 +125,7 @@ export default function AlmoxPainel() {
       {/* Ressuprimento */}
       {dados.itensRessuprimento > 0 && dados.itensRessuprimentoList?.length > 0 && (
         <div className="bg-orange-50 dark:bg-orange-900/10 rounded-xl border border-orange-200 dark:border-orange-700 p-5">
-          <h3 className="font-semibold text-orange-800 dark:text-orange-300 mb-3 flex items-center gap-2">
-            <ShoppingCart className="h-4 w-4" /> Sugestão de Compra — Ponto de Ressuprimento Atingido
-          </h3>
+          <SectionTitle icon={ShoppingCart} title="Sugestão de Compra — Ponto de Ressuprimento Atingido" />
           <div className="space-y-1">
             {dados.itensRessuprimentoList.map(item => (
               <div key={item.id} className="flex items-center justify-between py-1.5 border-b border-orange-100 dark:border-orange-800 last:border-0 text-sm">
@@ -153,9 +146,7 @@ export default function AlmoxPainel() {
       {/* Lotes vencendo */}
       {dados.lotesVencendo > 0 && dados.lotesVencendoList?.length > 0 && (
         <div className="bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-200 dark:border-red-700 p-5">
-          <h3 className="font-semibold text-red-800 dark:text-red-300 mb-3 flex items-center gap-2">
-            <Clock className="h-4 w-4" /> Lotes com Validade Próxima ou Vencida
-          </h3>
+          <SectionTitle icon={Clock} title="Lotes com Validade Próxima ou Vencida" />
           <div className="space-y-1">
             {dados.lotesVencendoList.map(lote => {
               const dias = Math.ceil((new Date(lote.data_validade) - new Date()) / 86400000)
@@ -181,9 +172,7 @@ export default function AlmoxPainel() {
       {/* Predição de demanda */}
       {dados.predicaoConsumoMensal && Object.keys(dados.predicaoConsumoMensal).length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-          <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-indigo-500" /> Predição de Demanda — Média Mensal (últimos 3 meses)
-          </h3>
+          <SectionTitle icon={TrendingUp} title="Predição de Demanda" subtitle="Média mensal dos últimos 3 meses" />
           <table className="w-full text-sm">
             <thead>
               <tr className="text-xs text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">

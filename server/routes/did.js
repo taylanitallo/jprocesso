@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { authenticate, tenantMiddleware } = require('../middleware/auth');
+const { authenticate, tenantMiddleware, requireTenant } = require('../middleware/auth');
 const { getByProcesso, createOrUpdate, getProximoNumero, getEstoque, getAlmEstoque } = require('../controllers/didController');
 
-const mid = [tenantMiddleware, authenticate];
+const mid = [tenantMiddleware, requireTenant, authenticate];
 
 router.get('/proximo-numero', mid, getProximoNumero);
 router.get('/alm-estoque', mid, getAlmEstoque);

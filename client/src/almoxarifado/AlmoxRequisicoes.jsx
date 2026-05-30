@@ -2,12 +2,17 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   Plus, ChevronLeft, ChevronRight, RefreshCw, X,
   CheckCircle, Clock, AlertTriangle, XCircle, Package,
-  Send, Truck, ShieldCheck, Key, Zap
+  Send, Truck, ShieldCheck, Key, Zap, ClipboardList
 } from 'lucide-react'
 import api from '../services/api'
 import AlmoxModal from './AlmoxModal'
 import { fmt, fmtMoney, STATUS_REQ, PRIORIDADE } from './almoxConstants'
 import { useAuth } from '../context/AuthContext'
+import PageHeader from '../components/ui/PageHeader'
+import FilterBar from '../components/ui/FilterBar'
+import SectionTitle from '../components/ui/SectionTitle'
+import EmptyState from '../components/ui/EmptyState'
+import ActionBar from '../components/ui/ActionBar'
 
 // ─── Ícones por status ────────────────────────────────────────────────────────
 const STATUS_ICONS = {
@@ -490,25 +495,36 @@ export default function AlmoxRequisicoes() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-        <select value={statusFiltro} onChange={e => { setStatusFiltro(e.target.value); setPage(1) }}
-          className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-          <option value="">Todos os status</option>
-          {Object.entries(STATUS_REQ).filter(([, v]) => v.step !== undefined).map(([k, v]) => (
-            <option key={k} value={k}>{v.label}</option>
-          ))}
-        </select>
-        <div className="flex items-center gap-2">
-          <button onClick={() => load(page, statusFiltro)} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-            <RefreshCw className="h-4 w-4" />
-          </button>
-          <button onClick={() => { setNovaReq(true); setErro('') }}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
-            <Plus className="h-4 w-4" /> Nova Requisição
-          </button>
+      <PageHeader
+        icon={ClipboardList}
+        eyebrow="Almoxarifado"
+        title="Requisições de Material"
+        subtitle="Gerencie solicitações de materiais, autorizações e entregas com controle por token OTP"
+        actions={
+          <ActionBar>
+            <button onClick={() => load(page, statusFiltro)} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+              <RefreshCw className="h-4 w-4" />
+            </button>
+            <button onClick={() => { setNovaReq(true); setErro('') }}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+              <Plus className="h-4 w-4" /> Nova Requisição
+            </button>
+          </ActionBar>
+        }
+      />
+
+      <FilterBar>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Status</label>
+          <select value={statusFiltro} onChange={e => { setStatusFiltro(e.target.value); setPage(1) }}
+            className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+            <option value="">Todos os status</option>
+            {Object.entries(STATUS_REQ).filter(([, v]) => v.step !== undefined).map(([k, v]) => (
+              <option key={k} value={k}>{v.label}</option>
+            ))}
+          </select>
         </div>
-      </div>
+      </FilterBar>
 
       {loading ? (
         <div className="flex justify-center py-12">
@@ -516,6 +532,9 @@ export default function AlmoxRequisicoes() {
         </div>
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="px-4 pt-4">
+            <SectionTitle icon={ClipboardList} title="Lista de Requisições" subtitle={`${total} requisição(ões)`} />
+          </div>
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
               <tr>
@@ -527,8 +546,12 @@ export default function AlmoxRequisicoes() {
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {reqs.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-gray-400 dark:text-gray-500">
-                    Nenhuma requisição encontrada
+                  <td colSpan={7} className="px-4 py-0">
+                    <EmptyState
+                      icon={ClipboardList}
+                      title="Nenhuma requisição encontrada"
+                      description="Tente ajustar o filtro de status ou crie uma nova requisição."
+                    />
                   </td>
                 </tr>
               )}

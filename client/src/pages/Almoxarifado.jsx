@@ -54,7 +54,7 @@ export default function Almoxarifado() {
         </div>
       </div>
 
-      <div className="border-b border-gray-200 dark:border-gray-700">
+      <div className="border-b border-gray-200 dark:border-slate-700/50">
         <nav className="flex space-x-1 overflow-x-auto scrollbar-none">
           {TABS.map(tab => {
             const Icon = tab.icon
@@ -66,7 +66,7 @@ export default function Almoxarifado() {
                 className={`flex-shrink-0 flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                   active
                     ? 'border-amber-500 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20'
-                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
+                    : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:border-gray-300 dark:hover:border-slate-600'
                 }`}
               >
                 <Icon className="h-4 w-4" />

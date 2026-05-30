@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { RefreshCw, Plus, ClipboardList, CheckCircle, AlertCircle, XCircle } from 'lucide-react'
 import api from '../services/api'
+import PageHeader from '../components/ui/PageHeader'
+import SectionTitle from '../components/ui/SectionTitle'
+import EmptyState from '../components/ui/EmptyState'
+import ActionBar from '../components/ui/ActionBar'
 
 const fmtDate = (d) => d ? new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') : '–'
 
@@ -98,23 +102,25 @@ export default function PatInventario({ userRole }) {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-semibold text-gray-900 dark:text-white">Inventário Patrimonial</h3>
-          <p className="text-sm text-gray-500">Conformidade TCE-Ceará</p>
-        </div>
-        {podeEditar && (
+      <PageHeader
+        icon={ClipboardList}
+        eyebrow="Patrimônio"
+        title="Inventário Patrimonial"
+        subtitle="Conformidade TCE-Ceará"
+        actions={podeEditar && (
           <button onClick={() => setShowNovo(true)}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
             <Plus className="h-4 w-4" /> Novo Inventário
           </button>
         )}
-      </div>
+      />
 
       {/* Formulário novo inventário */}
       {showNovo && (
         <div className="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-xl p-5">
-          <h4 className="font-medium text-gray-900 dark:text-white mb-3">📋 Novo Inventário Patrimonial</h4>
+          <h4 className="font-medium text-gray-900 dark:text-white mb-3">
+            <SectionTitle icon={ClipboardList} title="Novo Inventário Patrimonial" />
+          </h4>
           <form onSubmit={criarInventario} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ano</label>
@@ -153,7 +159,11 @@ export default function PatInventario({ userRole }) {
             <RefreshCw className="h-6 w-6 animate-spin text-blue-500" />
           </div>
         ) : inventarios.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">Nenhum inventário cadastrado</div>
+          <EmptyState
+            icon={ClipboardList}
+            title="Nenhum inventário cadastrado"
+            description="Crie um novo inventário para iniciar a conferência dos bens patrimoniais."
+          />
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
@@ -186,11 +196,13 @@ export default function PatInventario({ userRole }) {
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${si.color}`}>{si.label}</span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <button onClick={() => abrirInventario(inv)}
-                        className="p-1.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600"
-                        title="Abrir">
-                        <ClipboardList className="h-4 w-4" />
-                      </button>
+                      <ActionBar align="left">
+                        <button onClick={() => abrirInventario(inv)}
+                          className="p-1.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600"
+                          title="Abrir">
+                          <ClipboardList className="h-4 w-4" />
+                        </button>
+                      </ActionBar>
                     </td>
                   </tr>
                 )

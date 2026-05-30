@@ -6,12 +6,12 @@ const {
   listDocumentos,
   deleteDocumento
 } = require('../controllers/documentoController');
-const { authenticate, tenantMiddleware } = require('../middleware/auth');
+const { authenticate, tenantMiddleware, requireTenant } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
-router.post('/upload', tenantMiddleware, authenticate, upload.single('file'), uploadDocumento);
-router.get('/download/:id', tenantMiddleware, authenticate, downloadDocumento);
-router.get('/', tenantMiddleware, authenticate, listDocumentos);
-router.delete('/:id', tenantMiddleware, authenticate, deleteDocumento);
+router.post('/upload', tenantMiddleware, requireTenant, authenticate, upload.single('file'), uploadDocumento);
+router.get('/download/:id', tenantMiddleware, requireTenant, authenticate, downloadDocumento);
+router.get('/', tenantMiddleware, requireTenant, authenticate, listDocumentos);
+router.delete('/:id', tenantMiddleware, requireTenant, authenticate, deleteDocumento);
 
 module.exports = router;

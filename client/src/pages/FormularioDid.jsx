@@ -30,7 +30,7 @@ import DidVariaveisSecaoXII from './did/variaveis/DidVariaveisSecaoXII'
 function Field({ label, children, half }) {
   return (
     <div className={half ? 'col-span-1' : 'col-span-2'}>
-      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</label>
+      <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">{label}</label>
       {children}
     </div>
   )
@@ -43,8 +43,8 @@ function Input({ value, onChange, type = 'text', placeholder }) {
       value={value ?? ''}
       onChange={onChange}
       placeholder={placeholder}
-      className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600
-        bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+      className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-slate-600
+        bg-white dark:bg-slate-700/30 text-gray-900 dark:text-slate-100
         focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
     />
   )
@@ -57,8 +57,8 @@ function Textarea({ value, onChange, placeholder }) {
       value={value ?? ''}
       onChange={onChange}
       placeholder={placeholder}
-      className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600
-        bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+      className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-slate-600
+        bg-white dark:bg-slate-700/30 text-gray-900 dark:text-slate-100
         focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
     />
   )
@@ -66,7 +66,7 @@ function Textarea({ value, onChange, placeholder }) {
 
 function Checkbox({ label, checked, onChange }) {
   return (
-    <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+    <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-slate-300">
       <input type="checkbox" checked={!!checked} onChange={onChange}
         className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
       {label}
@@ -131,8 +131,8 @@ function ModalItensContrato({ contrato, itensDid, onConfirm, onClose }) {
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-3xl flex flex-col" style={{ maxHeight: '85vh' }}>
-        <div className="flex items-center justify-between bg-gray-800 dark:bg-gray-900 px-4 py-3 rounded-t-xl shrink-0">
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-3xl flex flex-col" style={{ maxHeight: '85vh' }}>
+        <div className="flex items-center justify-between bg-gray-800 dark:bg-slate-950 px-4 py-3 rounded-t-xl shrink-0">
           <div>
             <span className="text-sm font-semibold text-white">Selecionar Itens para o DID</span>
             {contrato && <span className="ml-3 text-xs text-gray-400 font-mono">{contrato.numero_contrato} — {contrato.tipo_contrato}</span>}
@@ -154,31 +154,31 @@ function ModalItensContrato({ contrato, itensDid, onConfirm, onClose }) {
             </div>
             <div className="flex-1 overflow-y-auto">
               <table className="w-full text-xs">
-                <thead className="bg-gray-50 dark:bg-gray-700/50 sticky top-0">
+                <thead className="bg-gray-50 dark:bg-slate-700/30 sticky top-0">
                   <tr>
                     <th className="px-3 py-2 w-10"></th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-500 dark:text-gray-400">Descrição</th>
-                    <th className="px-3 py-2 text-center font-semibold text-gray-500 dark:text-gray-400 w-20">Unid.</th>
-                    <th className="px-3 py-2 text-right font-semibold text-gray-500 dark:text-gray-400 w-32">Vlr. Unit. (R$)</th>
-                    <th className="px-3 py-2 text-right font-semibold text-gray-500 dark:text-gray-400 w-28">Qtd. DID</th>
-                    <th className="px-3 py-2 text-right font-semibold text-gray-500 dark:text-gray-400 w-32">Subtotal</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-500 dark:text-slate-400">Descrição</th>
+                    <th className="px-3 py-2 text-center font-semibold text-gray-500 dark:text-slate-400 w-20">Unid.</th>
+                    <th className="px-3 py-2 text-right font-semibold text-gray-500 dark:text-slate-400 w-32">Vlr. Unit. (R$)</th>
+                    <th className="px-3 py-2 text-right font-semibold text-gray-500 dark:text-slate-400 w-28">Qtd. DID</th>
+                    <th className="px-3 py-2 text-right font-semibold text-gray-500 dark:text-slate-400 w-32">Subtotal</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
                   {selecao.map((it, idx) => {
                     const q = parseFloat(it.qtd_did) || 0
                     const u = parseFloat(it.valor_unit_did) || 0
                     const sub = q * u
                     return (
                       <tr key={idx} onClick={() => toggle(idx)}
-                        className={`cursor-pointer transition-colors ${it.selecionado ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'}`}>
+                        className={`cursor-pointer transition-colors ${it.selecionado ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-slate-700/30'}`}>
                         <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                           <input type="checkbox" checked={it.selecionado} onChange={() => toggle(idx)}
                             className="w-4 h-4 accent-blue-600 cursor-pointer" />
                         </td>
-                        <td className="px-3 py-2 text-gray-800 dark:text-gray-200 font-medium">{it.descricao || '—'}</td>
+                        <td className="px-3 py-2 text-gray-800 dark:text-slate-200 font-medium">{it.descricao || '—'}</td>
                         <td className="px-3 py-2 text-center text-gray-500">{it.unidade || '—'}</td>
-                        <td className="px-3 py-2 text-right font-mono text-gray-600 dark:text-gray-300">
+                        <td className="px-3 py-2 text-right font-mono text-gray-600 dark:text-slate-300">
                           {it.valor_unit_did
                             ? parseFloat(it.valor_unit_did).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
                             : '—'}
@@ -187,7 +187,7 @@ function ModalItensContrato({ contrato, itensDid, onConfirm, onClose }) {
                           <input type="number" min="0" step="any" value={it.qtd_did}
                             onChange={e => { if (!it.selecionado) toggle(idx); setQtd(idx, e.target.value) }}
                             className={`w-full px-2 py-1 text-xs rounded border text-right font-mono outline-none
-                              ${it.selecionado ? 'border-blue-300 dark:border-blue-600 bg-white dark:bg-gray-700 focus:ring-1 focus:ring-blue-500' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 opacity-50'}`}
+                              ${it.selecionado ? 'border-blue-300 dark:border-blue-600 bg-white dark:bg-slate-700/30 focus:ring-1 focus:ring-blue-500' : 'border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-900 opacity-50'}`}
                             placeholder="0" />
                         </td>
                         <td className="px-3 py-2 text-right font-semibold font-mono">
@@ -204,13 +204,13 @@ function ModalItensContrato({ contrato, itensDid, onConfirm, onClose }) {
           </>
         )}
 
-        <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-3 shrink-0">
+        <div className="border-t border-gray-200 dark:border-slate-700/50 px-4 py-3 flex items-center gap-3 shrink-0">
           <button onClick={confirmar} disabled={!selecao.some(it => it.selecionado)}
             className="flex items-center gap-1.5 px-5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
             <Check className="w-4 h-4" /> Confirmar Seleção
           </button>
           <button onClick={onClose}
-            className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded text-sm font-semibold transition-colors">
+            className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-slate-700/30 dark:hover:bg-slate-700/50 text-gray-700 dark:text-slate-200 rounded text-sm font-semibold transition-colors">
             Cancelar
           </button>
           {totalSelecionado > 0 && (
@@ -557,7 +557,7 @@ export default function FormularioDid() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <button onClick={() => navigate(-1)}
-          className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+          className="p-2 rounded-lg text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors">
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div>
@@ -609,9 +609,9 @@ export default function FormularioDid() {
       {/* Tipo DID */}
       <div className="card p-4">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Tipo de DID</p>
+          <p className="text-sm font-semibold text-gray-700 dark:text-slate-300">Tipo de DID</p>
           {tipoBloqueado && (
-            <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2.5 py-1 rounded-full">
+            <span className="text-xs text-gray-500 dark:text-slate-400 bg-gray-100 dark:bg-slate-700/30 px-2.5 py-1 rounded-full">
               🔒 Bloqueado — DID salvo
             </span>
           )}
@@ -643,8 +643,8 @@ export default function FormularioDid() {
               className="w-4 h-4 accent-blue-600"
             />
             <div>
-              <span className="text-sm font-medium text-gray-800 dark:text-gray-200">DID Contas Fixas</span>
-              <p className="text-xs text-gray-400 dark:text-gray-500">Valor fixo mensal · vinculado a contrato</p>
+              <span className="text-sm font-medium text-gray-800 dark:text-slate-200">DID Contas Fixas</span>
+              <p className="text-xs text-gray-400 dark:text-slate-500">Valor fixo mensal · vinculado a contrato</p>
             </div>
           </label>
 
@@ -662,8 +662,8 @@ export default function FormularioDid() {
               className="w-4 h-4 accent-blue-600"
             />
             <div>
-              <span className="text-sm font-medium text-gray-800 dark:text-gray-200">DID Contas Variáveis</span>
-              <p className="text-xs text-gray-400 dark:text-gray-500">Quantidade × Vlr. Unit. · inclui atestado de recebimento</p>
+              <span className="text-sm font-medium text-gray-800 dark:text-slate-200">DID Contas Variáveis</span>
+              <p className="text-xs text-gray-400 dark:text-slate-500">Quantidade × Vlr. Unit. · inclui atestado de recebimento</p>
             </div>
           </label>
         </div>

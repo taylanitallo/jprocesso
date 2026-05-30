@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { RefreshCw, PackageX } from 'lucide-react'
 import api from '../services/api'
+import ActionBar from '../components/ui/ActionBar'
 
 const base = 'w-full border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-300'
 
@@ -110,18 +111,20 @@ export default function PatBaixa({ bem, onSuccess, onCancel }) {
         </div>
       </div>
 
-      <div className="flex justify-end gap-3 pt-2 border-t dark:border-gray-700">
-        {onCancel && (
-          <button type="button" onClick={onCancel}
-            className="px-6 py-2 border rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
-            Cancelar
+      <div className="pt-2 border-t dark:border-gray-700">
+        <ActionBar>
+          {onCancel && (
+            <button type="button" onClick={onCancel}
+              className="px-6 py-2 border rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+              Cancelar
+            </button>
+          )}
+          <button type="submit" disabled={loading}
+            className="flex items-center gap-2 px-6 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 disabled:opacity-60">
+            {loading && <RefreshCw className="h-4 w-4 animate-spin" />}
+            Confirmar Baixa
           </button>
-        )}
-        <button type="submit" disabled={loading}
-          className="flex items-center gap-2 px-6 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 disabled:opacity-60">
-          {loading && <RefreshCw className="h-4 w-4 animate-spin" />}
-          🗑️ Confirmar Baixa
-        </button>
+        </ActionBar>
       </div>
     </form>
   )

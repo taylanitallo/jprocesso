@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
-import { RefreshCw, Plus, Pencil } from 'lucide-react'
+import { RefreshCw, Plus, Pencil, Layers } from 'lucide-react'
 import api from '../services/api'
+import PageHeader from '../components/ui/PageHeader'
+import SectionTitle from '../components/ui/SectionTitle'
+import EmptyState from '../components/ui/EmptyState'
+import ActionBar from '../components/ui/ActionBar'
 
 const base = 'w-full border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-300'
 
@@ -62,23 +66,28 @@ export default function PatGrupos() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-semibold text-gray-900 dark:text-white">Grupos de Bens Permanentes</h3>
-          <p className="text-sm text-gray-500">Classificação TCE-Ceará — Art. 94 Lei 4.320/64</p>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={load} className="p-2 rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-700">
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-          <button onClick={abrirNovo}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
-            <Plus className="h-4 w-4" /> Novo Grupo
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        icon={Layers}
+        eyebrow="Patrimônio"
+        title="Grupos de Bens Permanentes"
+        subtitle="Classificação TCE-Ceará — Art. 94 Lei 4.320/64"
+        actions={
+          <ActionBar>
+            <button onClick={load} className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+            <button onClick={abrirNovo}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+              <Plus className="h-4 w-4" /> Novo Grupo
+            </button>
+          </ActionBar>
+        }
+      />
 
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="px-4 pt-4">
+          <SectionTitle icon={Layers} title="Lista de Grupos" subtitle={`${grupos.length} grupo(s) cadastrado(s)`} />
+        </div>
         <table className="w-full text-sm">
           <thead className="bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
             <tr>
@@ -97,8 +106,8 @@ export default function PatGrupos() {
                 <RefreshCw className="h-6 w-6 animate-spin text-blue-500 mx-auto" />
               </td></tr>
             ) : grupos.length === 0 ? (
-              <tr><td colSpan="7" className="text-center py-8 text-gray-500">
-                Nenhum grupo cadastrado
+              <tr><td colSpan="7" className="px-4 py-0">
+                <EmptyState icon={Layers} title="Nenhum grupo cadastrado" description="Crie grupos para classificar os bens permanentes." />
               </td></tr>
             ) : grupos.map(g => (
               <tr key={g.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">

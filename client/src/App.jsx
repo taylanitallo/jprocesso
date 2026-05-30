@@ -83,11 +83,13 @@ function App() {
         {/* Seletor de Municípios - Rota Raiz */}
         <Route path="/" element={<MunicipioSelector />} />
 
-        {/* Área Restrita - Login Admin */}
-        <Route path="/admin" element={<LoginAdmin />} />
+        {/* Área Restrita - Login SuperAdmin */}
+        <Route path="/superadmin" element={<LoginAdmin />} />
+        <Route path="/admin" element={<Navigate to="/superadmin" replace />} />
         
-        {/* Admin Routes - Gestão de Municípios (após login admin) */}
-        <Route path="/admin" element={<PrivateRoute requireAdmin><AdminTenants /></PrivateRoute>} />
+        {/* SuperAdmin Routes - Gestão de Municípios (após login superadmin) */}
+        <Route path="/superadmin/painel" element={<PrivateRoute requireAdmin><AdminTenants /></PrivateRoute>} />
+        <Route path="/admin/painel" element={<Navigate to="/superadmin/painel" replace />} />
         
         {/* Rotas com subdomínio (cada município) */}
         <Route path="/:subdomain">

@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Search, Filter, Eye, DownloadCloud, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, Eye, DownloadCloud, RefreshCw, ChevronLeft, ChevronRight, Landmark, ArrowLeftRight, ClipboardList } from 'lucide-react'
 import api from '../services/api'
+import PageHeader from '../components/ui/PageHeader'
+import FilterBar from '../components/ui/FilterBar'
+import SectionTitle from '../components/ui/SectionTitle'
+import EmptyState from '../components/ui/EmptyState'
+import ActionBar from '../components/ui/ActionBar'
 
 const statusColor = {
   ATIVO:        'bg-green-100 text-green-700',
@@ -79,19 +84,35 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
 
   return (
     <div className="space-y-4">
-      {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row gap-2">
+      <PageHeader
+        icon={Landmark}
+        eyebrow="Patrimônio"
+        title="Bens Patrimoniais"
+        subtitle="Acervo de bens permanentes com rastreamento de tombamento, localização e responsabilidade"
+        actions={
+          <ActionBar>
+            <button onClick={exportCSV} className="flex items-center gap-1 px-3 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">
+              <DownloadCloud className="h-4 w-4" /> CSV
+            </button>
+            <button onClick={load} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          </ActionBar>
+        }
+      />
+
+      <FilterBar>
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
-            className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 dark:text-white"
             placeholder="Buscar por tombamento, descrição, série, placa..."
             value={q}
             onChange={e => { setQ(e.target.value); setPage(1) }}
           />
         </div>
         <select
-          className="border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+          className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white"
           value={statusFiltro}
           onChange={e => { setStatusF(e.target.value); setPage(1) }}
         >
@@ -103,7 +124,7 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
           <option value="EXTRAVIADO">Extraviado</option>
         </select>
         <select
-          className="border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+          className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white"
           value={grupofiltro}
           onChange={e => { setGrupoF(e.target.value); setPage(1) }}
         >
@@ -111,23 +132,20 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
           {grupos.map(g => <option key={g.id} value={g.id}>{g.nome}</option>)}
         </select>
         <select
-          className="border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+          className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white"
           value={secFiltro}
           onChange={e => { setSecF(e.target.value); setPage(1) }}
         >
           <option value="">Todas as secretarias</option>
           {secretarias.map(s => <option key={s.id} value={s.id}>{s.sigla || s.nome}</option>)}
         </select>
-        <button onClick={exportCSV} className="flex items-center gap-1 px-3 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">
-          <DownloadCloud className="h-4 w-4" /> CSV
-        </button>
-        <button onClick={load} className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-800">
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-        </button>
-      </div>
+      </FilterBar>
 
       {/* Tabela */}
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="px-4 pt-4">
+          <SectionTitle icon={Landmark} title="Lista de Bens" subtitle={`${total} bem(ns) encontrado(s)`} />
+        </div>
         <table className="w-full text-sm">
           <thead className="bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
             <tr>
@@ -147,8 +165,12 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
                 <RefreshCw className="h-6 w-6 animate-spin text-blue-500 mx-auto" />
               </td></tr>
             ) : bens.length === 0 ? (
-              <tr><td colSpan="8" className="text-center py-8 text-gray-500">
-                Nenhum bem encontrado
+              <tr><td colSpan="8" className="px-4 py-0">
+                <EmptyState
+                  icon={Landmark}
+                  title="Nenhum bem encontrado"
+                  description="Ajuste os filtros ou cadastre um novo bem."
+                />
               </td></tr>
             ) : bens.map(b => (
               <tr key={b.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
@@ -179,7 +201,7 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center justify-center gap-1">
+                  <ActionBar align="left">
                     <button
                       onClick={() => abrirDetalhe(b)}
                       className="p-1.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600"
@@ -193,10 +215,10 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
                         className="p-1.5 rounded hover:bg-yellow-50 dark:hover:bg-yellow-900/30 text-yellow-600"
                         title="Transferir"
                       >
-                        <Filter className="h-4 w-4" />
+                        <ArrowLeftRight className="h-4 w-4" />
                       </button>
                     )}
-                  </div>
+                  </ActionBar>
                 </td>
               </tr>
             ))}
@@ -269,7 +291,7 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
 
                 {detalhe.responsabilidades?.length > 0 && (
                   <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">📋 Termos de Responsabilidade</h3>
+                    <SectionTitle icon={ClipboardList} title="Termos de Responsabilidade" />
                     <div className="space-y-2">
                       {detalhe.responsabilidades.map(r => (
                         <div key={r.id} className="border rounded-lg p-3 text-sm bg-gray-50 dark:bg-gray-700/50">
@@ -291,7 +313,7 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
 
                 {detalhe.movimentacoes?.length > 0 && (
                   <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-2">🔄 Histórico de Movimentações</h3>
+                    <SectionTitle icon={ArrowLeftRight} title="Histórico de Movimentações" />
                     <div className="space-y-2">
                       {detalhe.movimentacoes.map(m => (
                         <div key={m.id} className="border rounded-lg p-3 text-sm bg-gray-50 dark:bg-gray-700/50">

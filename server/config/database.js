@@ -57,6 +57,23 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
         ADD COLUMN IF NOT EXISTS tipo_processo VARCHAR(50)
     `),
 
+    // 0d. Refresh tokens persistidos por tenant (substitui Map em memória)
+    run(`
+      CREATE TABLE IF NOT EXISTS refresh_tokens (
+        id         UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id    UUID         NOT NULL,
+        jti        VARCHAR(120) UNIQUE NOT NULL,
+        token_hash TEXT         NOT NULL,
+        expires_at TIMESTAMP    NOT NULL,
+        revoked_at TIMESTAMP    NULL,
+        created_at TIMESTAMP    NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP    NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS refresh_tokens_jti_idx        ON refresh_tokens (jti);
+      CREATE INDEX IF NOT EXISTS refresh_tokens_user_id_idx    ON refresh_tokens (user_id);
+      CREATE INDEX IF NOT EXISTS refresh_tokens_expires_at_idx ON refresh_tokens (expires_at);
+    `),
+
     // 0c. Módulo Registro (Logs de atividade) — tabela de auditoria por tenant
     run(`
       CREATE TABLE IF NOT EXISTS logs (
@@ -391,10 +408,14 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
     // 7. ALTER almoxarifado_movimentacoes
     run(`
       ALTER TABLE almoxarifado_movimentacoes
-        ADD COLUMN IF NOT EXISTS lote_id          UUID,
-        ADD COLUMN IF NOT EXISTS numero_empenho   VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS numero_nf        VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS fornecedor_nome   VARCHAR(500)
+        ADD COLUMN IF NOT EXISTS lote_id               UUID,
+        ADD COLUMN IF NOT EXISTS numero_empenho        VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS numero_nf             VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS fornecedor_nome       VARCHAR(500),
+        ADD COLUMN IF NOT EXISTS valor_total           DECIMAL(10,2) NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS documento_referencia  VARCHAR(300),
+        ADD COLUMN IF NOT EXISTS observacao            TEXT,
+        ADD COLUMN IF NOT EXISTS requisicao_id         UUID
     `),
 
     // 8. ALTER almoxarifado_requisicoes
@@ -411,6 +432,95 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
         ADD COLUMN IF NOT EXISTS token_entrega          VARCHAR(32),
         ADD COLUMN IF NOT EXISTS token_expiry           TIMESTAMP,
         ADD COLUMN IF NOT EXISTS centro_custo           VARCHAR(200)
+    `),
+
+    // 8a. Renomear usuario_id → usuario_solicitante_id em almoxarifado_requisicoes
+    //     (banco criado por SUPABASE_SETUP.sql antigo usava usuario_id)
+    tenantDb.query(`
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = '${tenantSchema}'
+            AND table_name   = 'almoxarifado_requisicoes'
+            AND column_name  = 'usuario_id'
+        ) AND NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = '${tenantSchema}'
+            AND table_name   = 'almoxarifado_requisicoes'
+            AND column_name  = 'usuario_solicitante_id'
+        ) THEN
+          ALTER TABLE "${tenantSchema}"."almoxarifado_requisicoes"
+            RENAME COLUMN usuario_id TO usuario_solicitante_id;
+        END IF;
+      END
+      $$;
+    `).catch(() => {}),
+
+    // 8b. Garantir colunas esperadas pelo modelo AlmoxarifadoRequisicao
+    run(`
+      ALTER TABLE almoxarifado_requisicoes
+        ADD COLUMN IF NOT EXISTS usuario_solicitante_id UUID,
+        ADD COLUMN IF NOT EXISTS data_atendimento       TIMESTAMP,
+        ADD COLUMN IF NOT EXISTS usuario_atendente_id   UUID,
+        ADD COLUMN IF NOT EXISTS observacao             TEXT
+    `),
+
+    // 8c. Garantir colunas esperadas pelo modelo AlmoxarifadoRequisicaoItem
+    run(`
+      ALTER TABLE almoxarifado_requisicao_itens
+        ADD COLUMN IF NOT EXISTS quantidade_atendida    DECIMAL(10,3) DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS observacao             TEXT
+    `),
+
+    // 9a. Renomear colunas divergentes em almoxarifado_itens (criada por SUPABASE_SETUP.sql antigo)
+    //     unidade_medida → unidade   (se já existe unidade, pula; se não, renomeia)
+    //     valor_medio    → valor_unitario  (idem)
+    //     Idempotente: cada bloco só executa se a condição for verdadeira.
+    tenantDb.query(`
+      DO $$
+      BEGIN
+        -- unidade_medida → unidade
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = '${tenantSchema}'
+            AND table_name   = 'almoxarifado_itens'
+            AND column_name  = 'unidade_medida'
+        ) AND NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = '${tenantSchema}'
+            AND table_name   = 'almoxarifado_itens'
+            AND column_name  = 'unidade'
+        ) THEN
+          ALTER TABLE "${tenantSchema}"."almoxarifado_itens"
+            RENAME COLUMN unidade_medida TO unidade;
+        END IF;
+
+        -- valor_medio → valor_unitario
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = '${tenantSchema}'
+            AND table_name   = 'almoxarifado_itens'
+            AND column_name  = 'valor_medio'
+        ) AND NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = '${tenantSchema}'
+            AND table_name   = 'almoxarifado_itens'
+            AND column_name  = 'valor_unitario'
+        ) THEN
+          ALTER TABLE "${tenantSchema}"."almoxarifado_itens"
+            RENAME COLUMN valor_medio TO valor_unitario;
+        END IF;
+      END
+      $$;
+    `).catch(() => {}),
+
+    // 9b. Garantir colunas esperadas pelo modelo (cobre banco em qualquer estado)
+    run(`
+      ALTER TABLE almoxarifado_itens
+        ADD COLUMN IF NOT EXISTS unidade       VARCHAR(10)  NOT NULL DEFAULT 'UN',
+        ADD COLUMN IF NOT EXISTS valor_unitario DECIMAL(10,2) NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS localizacao   VARCHAR(200)
     `),
 
     // 9. ALTER almoxarifado_itens + ALTER almoxarifado_requisicao_itens
@@ -606,9 +716,39 @@ const closeTenantConnection = (tenantSchema) => {
   }
 };
 
+// Garante que a tabela public.refresh_tokens existe no masterDb (para admin users)
+const ensureMasterRefreshTokensTable = async () => {
+  await masterDb.query(`
+    CREATE TABLE IF NOT EXISTS public.refresh_tokens (
+      id         UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id    TEXT         NOT NULL,
+      jti        VARCHAR(120) UNIQUE NOT NULL,
+      token_hash TEXT         NOT NULL,
+      expires_at TIMESTAMP    NOT NULL,
+      revoked_at TIMESTAMP    NULL,
+      created_at TIMESTAMP    NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP    NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS public_refresh_tokens_jti_idx        ON public.refresh_tokens (jti);
+    CREATE INDEX IF NOT EXISTS public_refresh_tokens_user_id_idx    ON public.refresh_tokens (user_id);
+    CREATE INDEX IF NOT EXISTS public_refresh_tokens_expires_at_idx ON public.refresh_tokens (expires_at);
+  `).catch(() => {});
+};
+
+// Garante coluna email na tabela public.admins (migração para login por email)
+const ensureAdminsEmailColumn = async () => {
+  await masterDb.query(`
+    ALTER TABLE IF EXISTS public.admins
+      ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_admins_email ON public.admins (email) WHERE email IS NOT NULL;
+  `).catch(() => {});
+};
+
 module.exports = {
   masterDb,
   getTenantConnection,
   getCachedModels,
-  closeTenantConnection
+  closeTenantConnection,
+  ensureMasterRefreshTokensTable,
+  ensureAdminsEmailColumn,
 };

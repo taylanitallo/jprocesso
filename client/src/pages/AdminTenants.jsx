@@ -52,7 +52,12 @@ export default function AdminTenants() {
 
   const resetAdminForm = () => setAdminForm({ nome: '', cpf: '', email: '', senha: '', confirmaSenha: '' });
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await api.post('/auth/logout')
+    } catch {
+      // falha silenciosa — logout local sempre prossegue
+    }
     localStorage.removeItem('token');
     localStorage.removeItem('subdomain');
     localStorage.removeItem('isAdmin');

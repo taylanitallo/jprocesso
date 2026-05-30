@@ -25,7 +25,7 @@ export default function ModalDevolver({ processoId, destinoDevolucao, onClose, o
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-lg w-full shadow-xl">
+      <div className="bg-white dark:bg-slate-900 rounded-xl p-6 max-w-lg w-full shadow-xl">
         <h3 className="text-2xl font-bold mb-4 text-red-600 flex items-center gap-2">
           <ArrowLeftCircle className="h-7 w-7" />
           Devolver Processo
@@ -42,8 +42,8 @@ export default function ModalDevolver({ processoId, destinoDevolucao, onClose, o
                 <div className="flex items-start gap-2">
                   <Building2 className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Secretaria</p>
-                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                    <p className="text-xs text-gray-500 dark:text-slate-400">Secretaria</p>
+                    <p className="text-sm font-semibold text-gray-800 dark:text-slate-200">
                       {destinoDevolucao.setor.secretaria.nome || destinoDevolucao.setor.secretaria.sigla}
                     </p>
                   </div>
@@ -53,8 +53,8 @@ export default function ModalDevolver({ processoId, destinoDevolucao, onClose, o
                 <div className="flex items-start gap-2">
                   <LayoutGrid className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Setor</p>
-                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                    <p className="text-xs text-gray-500 dark:text-slate-400">Setor</p>
+                    <p className="text-sm font-semibold text-gray-800 dark:text-slate-200">
                       {destinoDevolucao.setor.nome}
                     </p>
                   </div>
@@ -64,8 +64,8 @@ export default function ModalDevolver({ processoId, destinoDevolucao, onClose, o
                 <div className="flex items-start gap-2 col-span-2">
                   <User className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Usuário</p>
-                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                    <p className="text-xs text-gray-500 dark:text-slate-400">Usuário</p>
+                    <p className="text-sm font-semibold text-gray-800 dark:text-slate-200">
                       {destinoDevolucao.usuario.nome}
                     </p>
                   </div>
@@ -90,7 +90,7 @@ export default function ModalDevolver({ processoId, destinoDevolucao, onClose, o
           )}
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
               Justificativa da Devolução *
             </label>
             <textarea
@@ -104,7 +104,7 @@ export default function ModalDevolver({ processoId, destinoDevolucao, onClose, o
             <p className="text-xs text-gray-400 mt-1 text-right">{justificativa.length} caracteres</p>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-2 border-t dark:border-gray-700">
+          <div className="flex justify-end space-x-3 pt-2 border-t dark:border-slate-700/50">
             <button type="button" onClick={onClose} className="btn-secondary">
               Cancelar
             </button>

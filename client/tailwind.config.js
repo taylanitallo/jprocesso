@@ -54,10 +54,18 @@ module.exports = {
         },
       },
       boxShadow: {
-        'glow-blue': '0 0 15px rgba(59,130,246,0.4)',
+        'glow-blue':  '0 0 15px rgba(59,130,246,0.4)',
         'glow-green': '0 0 15px rgba(34,197,94,0.4)',
-        'card': '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05)',
-        'card-hover': '0 4px 12px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.08)',
+        // Card padrão — sombra suave e neutra
+        'card':       '0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04)',
+        'card-hover': '0 4px 16px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06)',
+        // Sombra de painel/sidebar
+        'panel':      '4px 0 16px rgba(0,0,0,0.06)',
+        // Elevação para modais e dropdowns
+        'modal':      '0 20px 48px rgba(0,0,0,0.18), 0 8px 16px rgba(0,0,0,0.10)',
+        // Botão com leve elevação
+        'btn':        '0 1px 2px rgba(0,0,0,0.10)',
+        'btn-hover':  '0 3px 8px rgba(0,0,0,0.14)',
       }
     },
   },

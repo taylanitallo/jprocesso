@@ -366,19 +366,19 @@ function MsgBolha({ msg }) {
       <AylaAvatar size={28} ring className="shrink-0 mt-0.5" />
       <div className="flex-1 min-w-0">
         {msg.loading ? (
-          <div className="bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded-xl rounded-tl-sm inline-flex items-center gap-1.5">
+          <div className="bg-gray-100 dark:bg-slate-700/30 px-3 py-2 rounded-xl rounded-tl-sm inline-flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
             <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
             <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
           </div>
         ) : (
           <div className="group relative">
-            <div className="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-3 py-2 rounded-xl rounded-tl-sm text-xs leading-relaxed shadow-sm">
+            <div className="bg-gray-100 dark:bg-slate-700/30 text-gray-800 dark:text-slate-100 px-3 py-2 rounded-xl rounded-tl-sm text-xs leading-relaxed shadow-sm">
               <Markdown texto={msg.texto} />
             </div>
             <button
               onClick={copiar}
-              className="absolute -bottom-0.5 right-0 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 bg-white dark:bg-gray-600 rounded shadow-sm border border-gray-200 dark:border-gray-500"
+              className="absolute -bottom-0.5 right-0 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 bg-white dark:bg-slate-600 rounded shadow-sm border border-gray-200 dark:border-slate-500"
               title="Copiar">
               {copiado
                 ? <CheckCheck className="w-3 h-3 text-green-500" />
@@ -505,7 +505,7 @@ export default function JAI() {
       {aberto && (
         <div className={`
           fixed right-4 z-[65] flex flex-col
-          bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700
+          bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700/50
           transition-all duration-300 overflow-hidden
           ${minimized ? 'bottom-14 h-12 w-72' : 'bottom-14 w-80 h-[480px] max-h-[calc(100vh-6rem)]'}
         `}>
@@ -556,22 +556,22 @@ export default function JAI() {
               </div>
 
               {/* Input */}
-              <div className="px-3 pb-3 shrink-0 border-t border-gray-100 dark:border-gray-700 pt-2">
-                <div className="flex gap-2 items-center bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-600 px-3 py-1.5">
+              <div className="px-3 pb-3 shrink-0 border-t border-gray-100 dark:border-slate-700/50 pt-2">
+                <div className="flex gap-2 items-center bg-gray-50 dark:bg-slate-700/30 rounded-xl border border-gray-200 dark:border-slate-600 px-3 py-1.5">
                   <input
                     ref={inputRef}
                     value={input}
                     onChange={e => setInput(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), enviar())}
                     placeholder="Pergunte algo..."
-                    className="flex-1 bg-transparent text-xs text-gray-700 dark:text-gray-200 placeholder-gray-400 outline-none"
+                    className="flex-1 bg-transparent text-xs text-gray-700 dark:text-slate-200 placeholder-gray-400 outline-none"
                   />
                   <button onClick={() => enviar()} disabled={!input.trim()}
                     className="p-1 rounded-lg bg-violet-600 hover:bg-violet-700 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
                     <Send className="w-3 h-3" />
                   </button>
                 </div>
-                <p className="text-center text-[9px] text-gray-300 dark:text-gray-600 mt-1.5">
+                <p className="text-center text-[9px] text-gray-300 dark:text-slate-600 mt-1.5">
                   Ayla · JEOS Sistemas de Governo
                 </p>
               </div>
@@ -686,7 +686,7 @@ export function JAIButton({ campo, valorAtual, onSugestao, label, className = ''
       </button>
 
       {aberto && (
-        <div className="absolute z-[60] bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 w-72 overflow-hidden"
+        <div className="absolute z-[60] bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-gray-200 dark:border-slate-700/50 w-72 overflow-hidden"
           style={popoverStyle}>
           {/* Header do popover */}
           <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-violet-600 to-purple-700">
@@ -699,19 +699,19 @@ export function JAIButton({ campo, valorAtual, onSugestao, label, className = ''
             </button>
           </div>
           <div className="p-2">
-            <p className="text-[10px] text-gray-400 dark:text-gray-500 px-1 mb-1.5">
+            <p className="text-[10px] text-gray-400 dark:text-slate-500 px-1 mb-1.5">
               Clique para usar a sugestão no campo:
             </p>
             <div className="space-y-1 max-h-48 overflow-y-auto">
               {sugestoes.map((s, i) => (
                 <button key={i} onClick={() => usar(s)}
-                  className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-900/20 text-xs text-gray-700 dark:text-gray-300 border border-transparent hover:border-violet-200 dark:hover:border-violet-700 transition-colors leading-snug">
+                  className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-900/20 text-xs text-gray-700 dark:text-slate-300 border border-transparent hover:border-violet-200 dark:hover:border-violet-700 transition-colors leading-snug">
                   <Wand2 className="w-3 h-3 inline mr-1.5 text-violet-400 shrink-0" />
                   {s}
                 </button>
               ))}
             </div>
-            <p className="text-[9px] text-gray-300 dark:text-gray-600 text-center mt-2">
+            <p className="text-[9px] text-gray-300 dark:text-slate-600 text-center mt-2">
               Ayla · JEOS Sistemas
             </p>
           </div>

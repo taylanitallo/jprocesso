@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticate, tenantMiddleware } = require('../middleware/auth');
+const { authenticate, tenantMiddleware, requireTenant } = require('../middleware/auth');
 const {
   getDashboard,
   getDashboardOptions,
@@ -9,7 +9,7 @@ const {
   getRelatorio
 } = require('../controllers/financeiroController');
 
-const mid = [tenantMiddleware, authenticate];
+const mid = [tenantMiddleware, requireTenant, authenticate];
 
 // Painel
 router.get('/dashboard', mid, getDashboard);

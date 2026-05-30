@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { authenticate, tenantMiddleware } = require('../middleware/auth');
+const { authenticate, tenantMiddleware, requireTenant } = require('../middleware/auth');
 const { getCachedModels } = require('../config/database');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
@@ -56,7 +56,7 @@ const sendFile = (res, data, filename, formato) => {
 // ─── EXPORTAÇÃO ──────────────────────────────────────────────────────────────
 
 // GET /api/export/processos?formato=json|csv
-router.get('/processos', tenantMiddleware, authenticate, async (req, res) => {
+router.get('/processos', tenantMiddleware, requireTenant, authenticate, async (req, res) => {
   try {
     const { Processo, Tramitacao, Setor, Secretaria } = getCachedModels(req.tenant.subdominio);
     const processos = await Processo.findAll({
@@ -83,7 +83,7 @@ router.get('/processos', tenantMiddleware, authenticate, async (req, res) => {
 });
 
 // GET /api/export/usuarios?formato=json|csv
-router.get('/usuarios', tenantMiddleware, authenticate, async (req, res) => {
+router.get('/usuarios', tenantMiddleware, requireTenant, authenticate, async (req, res) => {
   try {
     const { Usuario } = getCachedModels(req.tenant.subdominio);
     const usuarios = await Usuario.findAll({
@@ -99,7 +99,7 @@ router.get('/usuarios', tenantMiddleware, authenticate, async (req, res) => {
 });
 
 // GET /api/export/setores?formato=json|csv
-router.get('/setores', tenantMiddleware, authenticate, async (req, res) => {
+router.get('/setores', tenantMiddleware, requireTenant, authenticate, async (req, res) => {
   try {
     const { Setor, Secretaria } = getCachedModels(req.tenant.subdominio);
     const setores = await Setor.findAll({
@@ -115,7 +115,7 @@ router.get('/setores', tenantMiddleware, authenticate, async (req, res) => {
 });
 
 // GET /api/export/documentos?formato=json|csv
-router.get('/documentos', tenantMiddleware, authenticate, async (req, res) => {
+router.get('/documentos', tenantMiddleware, requireTenant, authenticate, async (req, res) => {
   try {
     const { Documento, Processo } = getCachedModels(req.tenant.subdominio);
     const docs = await Documento.findAll({
@@ -131,7 +131,7 @@ router.get('/documentos', tenantMiddleware, authenticate, async (req, res) => {
 });
 
 // GET /api/export/itens?formato=json|csv
-router.get('/itens', tenantMiddleware, authenticate, async (req, res) => {
+router.get('/itens', tenantMiddleware, requireTenant, authenticate, async (req, res) => {
   try {
     const { ContratoItem } = getCachedModels(req.tenant.subdominio);
     const itens = await ContratoItem.findAll({ order: [['descricao', 'ASC']] });
@@ -144,7 +144,7 @@ router.get('/itens', tenantMiddleware, authenticate, async (req, res) => {
 });
 
 // GET /api/export/contratos?formato=json|csv
-router.get('/contratos', tenantMiddleware, authenticate, async (req, res) => {
+router.get('/contratos', tenantMiddleware, requireTenant, authenticate, async (req, res) => {
   try {
     const { Contrato, Credor } = getCachedModels(req.tenant.subdominio);
     const contratos = await Contrato.findAll({
@@ -160,7 +160,7 @@ router.get('/contratos', tenantMiddleware, authenticate, async (req, res) => {
 });
 
 // GET /api/export/credores?formato=json|csv
-router.get('/credores', tenantMiddleware, authenticate, async (req, res) => {
+router.get('/credores', tenantMiddleware, requireTenant, authenticate, async (req, res) => {
   try {
     const { Credor } = getCachedModels(req.tenant.subdominio);
     const credores = await Credor.findAll({ order: [['razao_social', 'ASC']] });
@@ -219,7 +219,7 @@ router.get('/modelo/:tipo', tenantMiddleware, authenticate, (req, res) => {
 
 
 // POST /api/import  (multipart/form-data: file + tipo)
-router.post('/', tenantMiddleware, authenticate, upload.single('file'), async (req, res) => {
+router.post('/', tenantMiddleware, requireTenant, authenticate, upload.single('file'), async (req, res) => {
   try {
     const { tipo } = req.body;
     if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado.' });

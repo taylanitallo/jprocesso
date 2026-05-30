@@ -69,6 +69,7 @@ const defineDocumentoModel = (sequelize) => {
   }, {
     tableName: 'anexos',
     timestamps: true,
+    underscored: true,
     indexes: [
       { fields: ['processo_id'] },
       { fields: ['upload_por_id'] },

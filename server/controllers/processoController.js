@@ -658,7 +658,7 @@ const getDashboardStats = async (req, res) => {
 const getProcessoById = async (req, res) => {
   try {
     const { id } = req.params;
-    const { Processo, User, Setor, Tramitacao, Secretaria } = req.models;
+    const { Processo, User, Setor, Tramitacao, Secretaria, Documento } = req.models;
 
     const processo = await Processo.findByPk(id, {
       include: [
@@ -678,8 +678,14 @@ const getProcessoById = async (req, res) => {
             },
             { model: Setor, as: 'destinoSetor', attributes: ['id', 'nome', 'sigla'] }
           ]
+        },
+        {
+          model: Documento,
+          as: 'documentos',
+          include: [{ model: User, as: 'uploadPor', attributes: ['id', 'nome'] }],
+          order: [['data_upload', 'DESC']],
+          separate: true
         }
-        // Documentos/anexos serão implementados futuramente
       ]
     });
 

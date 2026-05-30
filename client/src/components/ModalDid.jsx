@@ -249,10 +249,10 @@ export default function ModalDid({ processo, onClose }) {
   // ══════════════════════════════════════════════════════════
   return (
     <div className="fixed inset-0 bg-black/60 flex items-start justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-5xl my-6 shadow-2xl">
+      <div className="bg-white dark:bg-slate-900 rounded-xl w-full max-w-5xl my-6 shadow-2xl">
 
         {/* Cabeçalho */}
-        <div className="flex items-center justify-between p-6 border-b dark:border-gray-700">
+        <div className="flex items-center justify-between p-6 border-b dark:border-slate-700/50">
           <div className="flex items-center space-x-3">
             <div className="bg-indigo-100 dark:bg-indigo-900/40 p-2 rounded-lg">
               <FileText className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
@@ -261,12 +261,12 @@ export default function ModalDid({ processo, onClose }) {
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                 📄 DID — Documento de Intenção de Despesas
               </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-gray-500 dark:text-slate-400">
                 Processo: {processo.numero}
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700/50 rounded-lg transition-colors">
             <X className="h-6 w-6 text-gray-500" />
           </button>
         </div>
@@ -290,7 +290,7 @@ export default function ModalDid({ processo, onClose }) {
           {loading && (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-              <span className="ml-3 text-gray-600 dark:text-gray-400">Carregando DID...</span>
+              <span className="ml-3 text-gray-600 dark:text-slate-400">Carregando DID...</span>
             </div>
           )}
 
@@ -307,7 +307,7 @@ export default function ModalDid({ processo, onClose }) {
               <form onSubmit={handleCriarDid} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">
                       Objeto * <span className="text-xs font-normal text-gray-500">(ex: LOCAÇÃO DE IMPRESSORA)</span>
                     </label>
                     <input
@@ -320,7 +320,7 @@ export default function ModalDid({ processo, onClose }) {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">
                       Período de Referência *
                     </label>
                     <input
@@ -333,7 +333,7 @@ export default function ModalDid({ processo, onClose }) {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">
                       Observações
                     </label>
                     <input
@@ -348,7 +348,7 @@ export default function ModalDid({ processo, onClose }) {
 
                 {/* Seleção de secretarias participantes */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
                     Secretarias Participantes
                     <span className="ml-2 text-xs font-normal text-gray-500">(selecione as que preencherão sua intenção)</span>
                   </label>
@@ -359,14 +359,14 @@ export default function ModalDid({ processo, onClose }) {
                       {secretariasDisponiveis.map(sec => {
                         const selecionada = formCriar.secretarias_participantes.includes(sec.id)
                         return (
-                          <label key={sec.id} className={`flex items-center space-x-2 p-2 rounded-lg border-2 cursor-pointer transition-all ${selecionada ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300'}`}>
+                          <label key={sec.id} className={`flex items-center space-x-2 p-2 rounded-lg border-2 cursor-pointer transition-all ${selecionada ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' : 'border-gray-200 dark:border-slate-600 hover:border-gray-300'}`}>
                             <input
                               type="checkbox"
                               checked={selecionada}
                               onChange={() => toggleSecretaria(sec.id)}
                               className="rounded"
                             />
-                            <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{sec.sigla}</span>
+                            <span className="text-sm font-medium text-gray-800 dark:text-slate-200">{sec.sigla}</span>
                             <span className="text-xs text-gray-500 truncate">{sec.nome}</span>
                           </label>
                         )
@@ -375,7 +375,7 @@ export default function ModalDid({ processo, onClose }) {
                   )}
                 </div>
 
-                <div className="flex justify-end space-x-3 pt-4 border-t dark:border-gray-700">
+                <div className="flex justify-end space-x-3 pt-4 border-t dark:border-slate-700/50">
                   <button type="button" onClick={onClose} className="btn-secondary">
                     Cancelar
                   </button>
@@ -404,14 +404,14 @@ export default function ModalDid({ processo, onClose }) {
                         {STATUS_LABELS[did.did.status]}
                       </span>
                     </div>
-                    <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">{did.did.objeto}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Período: <strong>{did.did.periodo_referencia}</strong></p>
+                    <p className="text-lg font-semibold text-gray-800 dark:text-slate-200">{did.did.objeto}</p>
+                    <p className="text-sm text-gray-600 dark:text-slate-400">Período: <strong>{did.did.periodo_referencia}</strong></p>
                     {did.did.secretariaOrigem && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Origem: <strong>{did.did.secretariaOrigem.sigla} — {did.did.secretariaOrigem.nome}</strong></p>
+                      <p className="text-sm text-gray-600 dark:text-slate-400">Origem: <strong>{did.did.secretariaOrigem.sigla} — {did.did.secretariaOrigem.nome}</strong></p>
                     )}
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Total Geral</p>
+                    <p className="text-sm text-gray-500 dark:text-slate-400">Total Geral</p>
                     <p className="text-3xl font-bold text-indigo-700 dark:text-indigo-300">
                       {formatMoeda(did.totalGeral)}
                     </p>
@@ -452,7 +452,7 @@ export default function ModalDid({ processo, onClose }) {
 
                 {/* Adicionar secretaria (admin) */}
                 {adicionandoSecretaria && (
-                  <div className="mb-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex items-center space-x-3">
+                  <div className="mb-3 p-3 bg-gray-50 dark:bg-slate-700/30 rounded-lg flex items-center space-x-3">
                     <select
                       value={novaSecretariaId}
                       onChange={e => setNovaSecretariaId(e.target.value)}
@@ -475,17 +475,17 @@ export default function ModalDid({ processo, onClose }) {
                 )}
 
                 {/* Tabela de entradas */}
-                <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
+                <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-slate-700/50">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 w-32">Secretaria</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Descrição</th>
-                        <th className="text-right p-3 font-semibold text-gray-700 dark:text-gray-300 w-20">Qtd</th>
-                        <th className="text-center p-3 font-semibold text-gray-700 dark:text-gray-300 w-16">Un</th>
-                        <th className="text-right p-3 font-semibold text-gray-700 dark:text-gray-300 w-28">Vlr. Unit.</th>
-                        <th className="text-right p-3 font-semibold text-gray-700 dark:text-gray-300 w-28">Total</th>
-                        <th className="text-center p-3 font-semibold text-gray-700 dark:text-gray-300 w-20">Ação</th>
+                      <tr className="bg-gray-50 dark:bg-slate-700/30 border-b border-gray-200 dark:border-slate-600">
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-slate-300 w-32">Secretaria</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-slate-300">Descrição</th>
+                        <th className="text-right p-3 font-semibold text-gray-700 dark:text-slate-300 w-20">Qtd</th>
+                        <th className="text-center p-3 font-semibold text-gray-700 dark:text-slate-300 w-16">Un</th>
+                        <th className="text-right p-3 font-semibold text-gray-700 dark:text-slate-300 w-28">Vlr. Unit.</th>
+                        <th className="text-right p-3 font-semibold text-gray-700 dark:text-slate-300 w-28">Total</th>
+                        <th className="text-center p-3 font-semibold text-gray-700 dark:text-slate-300 w-20">Ação</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -498,10 +498,10 @@ export default function ModalDid({ processo, onClose }) {
                         return (
                           <tr
                             key={entrada.id}
-                            className={`border-b dark:border-gray-700 transition-colors ${
+                            className={`border-b dark:border-slate-700/50 transition-colors ${
                               eMinhaSecretaria && !isAdminOuGestor
                                 ? 'bg-blue-50/40 dark:bg-blue-900/10'
-                                : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
+                                : 'hover:bg-gray-50 dark:hover:bg-slate-700/30'
                             }`}
                           >
                             {/* ── Linha em modo visualização ── */}
@@ -521,7 +521,7 @@ export default function ModalDid({ processo, onClose }) {
                                 </td>
                                 <td className="p-3">
                                   {entrada.descricao ? (
-                                    <span className="text-gray-800 dark:text-gray-200">{entrada.descricao}</span>
+                                    <span className="text-gray-800 dark:text-slate-200">{entrada.descricao}</span>
                                   ) : (
                                     <span className="text-gray-400 italic text-xs">Não preenchido</span>
                                   )}
@@ -529,13 +529,13 @@ export default function ModalDid({ processo, onClose }) {
                                     <div className="text-xs text-gray-400 mt-0.5">Dotação: {entrada.dotacao_orcamentaria}</div>
                                   )}
                                 </td>
-                                <td className="p-3 text-right text-gray-700 dark:text-gray-300">
+                                <td className="p-3 text-right text-gray-700 dark:text-slate-300">
                                   {entrada.quantidade > 0 ? parseFloat(entrada.quantidade).toLocaleString('pt-BR') : '—'}
                                 </td>
-                                <td className="p-3 text-center text-gray-600 dark:text-gray-400 text-xs">
+                                <td className="p-3 text-center text-gray-600 dark:text-slate-400 text-xs">
                                   {entrada.unidade || '—'}
                                 </td>
-                                <td className="p-3 text-right text-gray-700 dark:text-gray-300">
+                                <td className="p-3 text-right text-gray-700 dark:text-slate-300">
                                   {entrada.valor_unitario > 0 ? formatMoeda(entrada.valor_unitario) : '—'}
                                 </td>
                                 <td className="p-3 text-right font-semibold text-gray-900 dark:text-white">
@@ -569,7 +569,7 @@ export default function ModalDid({ processo, onClose }) {
                                   </div>
                                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                                     <div className="md:col-span-2">
-                                      <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 block mb-1">Descrição</label>
+                                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 block mb-1">Descrição</label>
                                       <input
                                         type="text"
                                         value={formEntrada.descricao}
@@ -579,7 +579,7 @@ export default function ModalDid({ processo, onClose }) {
                                       />
                                     </div>
                                     <div>
-                                      <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 block mb-1">Quantidade</label>
+                                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 block mb-1">Quantidade</label>
                                       <input
                                         type="number"
                                         min="0"
@@ -591,7 +591,7 @@ export default function ModalDid({ processo, onClose }) {
                                       />
                                     </div>
                                     <div>
-                                      <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 block mb-1">Unidade</label>
+                                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 block mb-1">Unidade</label>
                                       <select
                                         value={formEntrada.unidade}
                                         onChange={e => setFormEntrada(p => ({ ...p, unidade: e.target.value }))}
@@ -603,7 +603,7 @@ export default function ModalDid({ processo, onClose }) {
                                       </select>
                                     </div>
                                     <div>
-                                      <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 block mb-1">Valor Unitário (R$)</label>
+                                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 block mb-1">Valor Unitário (R$)</label>
                                       <input
                                         type="number"
                                         min="0"
@@ -615,13 +615,13 @@ export default function ModalDid({ processo, onClose }) {
                                       />
                                     </div>
                                     <div>
-                                      <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 block mb-1">Total Calculado</label>
-                                      <div className="input-field text-sm bg-gray-100 dark:bg-gray-600 font-bold text-indigo-700 dark:text-indigo-300">
+                                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 block mb-1">Total Calculado</label>
+                                      <div className="input-field text-sm bg-gray-100 dark:bg-slate-600 font-bold text-indigo-700 dark:text-indigo-300">
                                         {formatMoeda(valorTotalCalculado)}
                                       </div>
                                     </div>
                                     <div className="md:col-span-2">
-                                      <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 block mb-1">Dotação Orçamentária</label>
+                                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 block mb-1">Dotação Orçamentária</label>
                                       <input
                                         type="text"
                                         value={formEntrada.dotacao_orcamentaria}
@@ -631,7 +631,7 @@ export default function ModalDid({ processo, onClose }) {
                                       />
                                     </div>
                                     <div className="md:col-span-4">
-                                      <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 block mb-1">Observações</label>
+                                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 block mb-1">Observações</label>
                                       <input
                                         type="text"
                                         value={formEntrada.observacoes}
@@ -664,7 +664,7 @@ export default function ModalDid({ processo, onClose }) {
                       {/* Total geral */}
                       {(did.did.entradas || []).length > 0 && (
                         <tr className="bg-indigo-50 dark:bg-indigo-900/20 font-bold border-t-2 border-indigo-200 dark:border-indigo-700">
-                          <td colSpan={5} className="p-3 text-right text-gray-700 dark:text-gray-300">
+                          <td colSpan={5} className="p-3 text-right text-gray-700 dark:text-slate-300">
                             TOTAL GERAL
                           </td>
                           <td className="p-3 text-right text-indigo-700 dark:text-indigo-300 text-base">
@@ -688,8 +688,8 @@ export default function ModalDid({ processo, onClose }) {
 
               {/* Ações de status (admin/gestor) */}
               {isAdminOuGestor && (
-                <div className="flex flex-wrap items-center gap-3 pt-4 border-t dark:border-gray-700">
-                  <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">Alterar status:</span>
+                <div className="flex flex-wrap items-center gap-3 pt-4 border-t dark:border-slate-700/50">
+                  <span className="text-sm font-semibold text-gray-600 dark:text-slate-400">Alterar status:</span>
                   {didStatus === 'aberto' && (
                     <button
                       onClick={() => handleAlterarStatus('fechado')}

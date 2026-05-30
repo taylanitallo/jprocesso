@@ -66,15 +66,32 @@ export default function AuthProvider({ children }) {
     return data
   }
 
-  const logout = () => {
+  const logout = async () => {
+    // Capturar subdomain antes de limpar (necessário para o redirect)
+    const subdomain = localStorage.getItem('subdomain')
+
+    // Revogar refresh token no backend — ignorar falha (cookie ainda será limpo pelo servidor)
+    try {
+      await api.post('/auth/logout')
+    } catch {
+      // Falha silenciosa — logout local sempre prossegue
+    }
+
     localStorage.removeItem('token')
     localStorage.removeItem('subdomain')
-    
+
     setUser(null)
     setTenant(null)
-    
+
     delete api.defaults.headers.common['Authorization']
     delete api.defaults.headers.common['x-tenant-subdomain']
+
+    // Redirecionar para a tela de login do tenant (ou raiz para admin)
+    const currentPath = window.location.pathname
+    if (!currentPath.includes('/login')) {
+      window.location.href =
+        subdomain && subdomain !== 'admin' ? `/${subdomain}/login` : '/login'
+    }
   }
 
   const updateTenantConfig = async (novoConf) => {

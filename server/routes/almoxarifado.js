@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticate, tenantMiddleware, authorize } = require('../middleware/auth');
+const { authenticate, tenantMiddleware, requireTenant, authorize } = require('../middleware/auth');
 const {
   getDashboard,
   listItens, createItem, updateItem, deleteItem, getCategorias,
@@ -18,8 +18,8 @@ const {
   exportarTransparencia
 } = require('../controllers/almoxarifadoController');
 
-const mid = [tenantMiddleware, authenticate];
-const midGestor = [tenantMiddleware, authenticate, authorize('admin', 'gestor')];
+const mid = [tenantMiddleware, requireTenant, authenticate];
+const midGestor = [tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor')];
 
 // Dashboard
 router.get('/dashboard', mid, getDashboard);

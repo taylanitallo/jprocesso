@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from 'react-query'
-import { BarChart3, Download, TrendingUp, FileText, Building2, Clock, CheckCircle } from 'lucide-react'
+import { BarChart3, TrendingUp, FileText, Building2, Clock, CheckCircle, ClipboardList, Calendar, ListFilter, FileDown, FileSpreadsheet, Trash2, Loader2, Inbox } from 'lucide-react'
 import api from '../services/api'
+import { PageHeader, SectionTitle } from '../components/ui'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
@@ -530,23 +531,20 @@ export default function Relatorios() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Cabeçalho */}
-      <div className="flex items-center gap-3">
-        <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-2.5 rounded-xl">
-          <BarChart3 className="h-6 w-6 text-white" />
-        </div>
-        <div>
-          <h1 className="page-title">📊 Relatórios e Estatísticas</h1>
-          <p className="page-subtitle">Visualize e exporte relatórios sobre a tramitação de processos</p>
-        </div>
-      </div>
+      <PageHeader
+        icon={BarChart3}
+        eyebrow="Administração"
+        title="Relatórios e Estatísticas"
+        subtitle="Visualize e exporte relatórios sobre a tramitação de processos"
+      />
 
       {/* Filtros */}
       <div className="card p-6">
-        <h2 className="section-header">📋 Gerar Relatório</h2>
+        <SectionTitle icon={ClipboardList} title="Gerar Relatório" />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              📅 Data Inicial
+            <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+              <Calendar className="h-3.5 w-3.5" />Data Inicial
             </label>
             <input
               type="date"
@@ -556,8 +554,8 @@ export default function Relatorios() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              📅 Data Final
+            <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+              <Calendar className="h-3.5 w-3.5" />Data Final
             </label>
             <input
               type="date"
@@ -567,8 +565,8 @@ export default function Relatorios() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              🗂️ Tipo de Relatório
+            <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+              <ListFilter className="h-3.5 w-3.5" />Tipo de Relatório
             </label>
             <select 
               value={tipoRelatorio}
@@ -587,18 +585,18 @@ export default function Relatorios() {
           <button
             onClick={exportarPDF}
             disabled={isLoading || estatisticas.totalProcessos === 0}
-            className="btn-primary flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Download className="h-4 w-4" />
-            <span>📄 Exportar PDF</span>
+            <FileDown className="h-4 w-4" />
+            <span>Exportar PDF</span>
           </button>
           <button
             onClick={exportarExcel}
             disabled={isLoading || estatisticas.totalProcessos === 0}
-            className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Download className="h-4 w-4" />
-            <span>📊 Exportar Excel</span>
+            <FileSpreadsheet className="h-4 w-4" />
+            <span>Exportar Excel</span>
           </button>
           {(dataInicio || dataFim) && (
             <button
@@ -606,67 +604,65 @@ export default function Relatorios() {
                 setDataInicio('')
                 setDataFim('')
               }}
-              className="btn-secondary"
+              className="btn-secondary inline-flex items-center gap-2"
             >
-              🗑️ Limpar Filtros
+              <Trash2 className="h-4 w-4" />Limpar Filtros
             </button>
           )}
         </div>
         {isLoading && (
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">⏳ Carregando dados...</p>
+          <p className="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400 mt-3">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />Carregando dados...
+          </p>
         )}
       </div>
 
       {/* Cards de Estatísticas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="card p-6 hover:shadow-md transition-shadow animate-bounce-in">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center mb-4">
             <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-lg">
               <FileText className="h-6 w-6 text-blue-600" />
             </div>
-            <span className="text-2xl">📄</span>
           </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total de Processos</p>
+          <p className="text-sm text-gray-600 dark:text-slate-400 mb-1">Total de Processos</p>
           <p className="text-3xl font-bold text-gray-900 dark:text-white">{estatisticas.totalProcessos}</p>
         </div>
 
         <div className="card p-6 hover:shadow-md transition-shadow animate-bounce-in" style={{animationDelay: '75ms'}}>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center mb-4">
             <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-lg">
               <CheckCircle className="h-6 w-6 text-green-600" />
             </div>
-            <span className="text-2xl">✅</span>
           </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Concluídos</p>
+          <p className="text-sm text-gray-600 dark:text-slate-400 mb-1">Concluídos</p>
           <p className="text-3xl font-bold text-gray-900 dark:text-white">{estatisticas.processosConcluidos}</p>
         </div>
 
         <div className="card p-6 hover:shadow-md transition-shadow animate-bounce-in" style={{animationDelay: '150ms'}}>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center mb-4">
             <div className="bg-yellow-100 dark:bg-yellow-900/30 p-3 rounded-lg">
               <TrendingUp className="h-6 w-6 text-yellow-600" />
             </div>
-            <span className="text-2xl">🔄</span>
           </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Em Andamento</p>
+          <p className="text-sm text-gray-600 dark:text-slate-400 mb-1">Em Andamento</p>
           <p className="text-3xl font-bold text-gray-900 dark:text-white">{estatisticas.processosAbertos + estatisticas.processosEmAnalise}</p>
         </div>
 
         <div className="card p-6 hover:shadow-md transition-shadow animate-bounce-in" style={{animationDelay: '225ms'}}>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center mb-4">
             <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-lg">
               <Clock className="h-6 w-6 text-red-600" />
             </div>
-            <span className="text-2xl">⏰</span>
           </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Atrasados</p>
+          <p className="text-sm text-gray-600 dark:text-slate-400 mb-1">Atrasados</p>
           <p className="text-3xl font-bold text-gray-900 dark:text-white">{estatisticas.processosAtrasados}</p>
         </div>
       </div>
 
       {/* Processos por Setor */}
       <div className="card p-6">
-        <h2 className="section-header">🏛️ Processos por Setor</h2>
+        <SectionTitle icon={Building2} title="Processos por Setor" />
         {estatisticas.processosPorSecretaria.length > 0 ? (
           <div className="space-y-4">
             {estatisticas.processosPorSecretaria
@@ -675,11 +671,11 @@ export default function Relatorios() {
               .map((setor, index) => (
                 <div key={index} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3 flex-1">
-                    <Building2 className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{setor.nome}</span>
+                    <Building2 className="h-5 w-5 text-gray-400 dark:text-slate-500" />
+                    <span className="text-sm font-medium text-gray-700 dark:text-slate-300">{setor.nome}</span>
                   </div>
                   <div className="flex items-center space-x-4">
-                    <div className="w-48 bg-gray-200 dark:bg-gray-600 rounded-full h-2.5">
+                    <div className="w-48 bg-gray-200 dark:bg-slate-600 rounded-full h-2.5">
                       <div
                         className="bg-blue-600 h-2.5 rounded-full transition-all"
                         style={{ width: `${Math.min((setor.total / estatisticas.totalProcessos) * 100, 100)}%` }}
@@ -693,20 +689,22 @@ export default function Relatorios() {
               ))}
           </div>
         ) : (
-          <p className="text-gray-500 dark:text-gray-400 text-center py-8">📭 Nenhum dado disponível para exibir</p>
+          <p className="flex items-center justify-center gap-2 text-gray-500 dark:text-slate-400 text-center py-8">
+            <Inbox className="h-5 w-5" />Nenhum dado disponível para exibir
+          </p>
         )}
       </div>
 
       {/* Tempo Médio */}
       <div className="card p-6">
-        <h2 className="section-header">⏱️ Tempo Médio de Conclusão</h2>
+        <SectionTitle icon={Clock} title="Tempo Médio de Conclusão" />
         <div className="flex items-center space-x-4">
           <div className="bg-blue-100 dark:bg-blue-900/30 p-4 rounded-xl">
             <Clock className="h-8 w-8 text-blue-600" />
           </div>
           <div>
             <p className="text-3xl font-bold text-gray-900 dark:text-white">{estatisticas.tempoMedioConclusao}</p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Tempo médio para concluir processos</p>
+            <p className="text-sm text-gray-600 dark:text-slate-400">Tempo médio para concluir processos</p>
           </div>
         </div>
       </div>

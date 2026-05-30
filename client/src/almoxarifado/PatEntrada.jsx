@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
-import { RefreshCw, Hash } from 'lucide-react'
+import { RefreshCw, Hash, FileText, DollarSign, TrendingDown, MapPin } from 'lucide-react'
 import api from '../services/api'
+import SectionTitle from '../components/ui/SectionTitle'
+import ActionBar from '../components/ui/ActionBar'
 
 const required = 'border-red-400 focus:ring-red-300'
 const base = 'w-full border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-300'
@@ -155,9 +157,7 @@ export default function PatEntrada({ onSuccess, onCancel }) {
 
       {/* Identificação */}
       <section>
-        <h3 className="font-semibold text-gray-800 dark:text-white mb-3 pb-1 border-b dark:border-gray-700">
-          📝 Identificação do Bem
-        </h3>
+        <SectionTitle icon={FileText} title="Identificação do Bem" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
             <Label required>Descrição</Label>
@@ -230,9 +230,7 @@ export default function PatEntrada({ onSuccess, onCancel }) {
 
       {/* Aquisição */}
       <section>
-        <h3 className="font-semibold text-gray-800 dark:text-white mb-3 pb-1 border-b dark:border-gray-700">
-          💰 Aquisição e Contabilidade
-        </h3>
+        <SectionTitle icon={DollarSign} title="Aquisição e Contabilidade" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label required>Data de Aquisição</Label>
@@ -285,9 +283,7 @@ export default function PatEntrada({ onSuccess, onCancel }) {
 
       {/* Depreciação */}
       <section>
-        <h3 className="font-semibold text-gray-800 dark:text-white mb-3 pb-1 border-b dark:border-gray-700">
-          📉 Depreciação
-        </h3>
+        <SectionTitle icon={TrendingDown} title="Depreciação" />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <Label>Vida Útil (anos)</Label>
@@ -309,9 +305,7 @@ export default function PatEntrada({ onSuccess, onCancel }) {
 
       {/* Localização */}
       <section>
-        <h3 className="font-semibold text-gray-800 dark:text-white mb-3 pb-1 border-b dark:border-gray-700">
-          📍 Localização e Responsabilidade
-        </h3>
+        <SectionTitle icon={MapPin} title="Localização e Responsabilidade" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label required>Secretaria</Label>
@@ -367,18 +361,20 @@ export default function PatEntrada({ onSuccess, onCancel }) {
       </section>
 
       {/* Ações */}
-      <div className="flex justify-end gap-3 pt-2 border-t dark:border-gray-700">
-        {onCancel && (
-          <button type="button" onClick={onCancel}
-            className="px-6 py-2 border rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
-            Cancelar
+      <div className="pt-2 border-t dark:border-gray-700">
+        <ActionBar>
+          {onCancel && (
+            <button type="button" onClick={onCancel}
+              className="px-6 py-2 border rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+              Cancelar
+            </button>
+          )}
+          <button type="submit" disabled={loading}
+            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-60">
+            {loading && <RefreshCw className="h-4 w-4 animate-spin" />}
+            Registrar Tombamento
           </button>
-        )}
-        <button type="submit" disabled={loading}
-          className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-60">
-          {loading && <RefreshCw className="h-4 w-4 animate-spin" />}
-          🏷️ Registrar Tombamento
-        </button>
+        </ActionBar>
       </div>
     </form>
   )

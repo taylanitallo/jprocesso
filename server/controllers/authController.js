@@ -1,9 +1,95 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const { QueryTypes } = require('sequelize');
+const { v4: uuidv4 } = require('uuid');
 const Tenant = require('../models/Tenant');
 const { getTenantConnection, masterDb } = require('../config/database');
 const initTenantModels = require('../models');
 const { registrarLog } = require('../middleware/activityLogger');
+
+// ── Refresh Tokens — persistidos em PostgreSQL (por schema) ──────────────────
+// Tenant users  → tabela refresh_tokens no schema do tenant
+// Admin users   → tabela public.refresh_tokens no masterDb
+// Substitui o Map em memória anterior que era perdido a cada redeploy.
+
+const REFRESH_EXPIRE_MS = 30 * 24 * 60 * 60 * 1000; // 30 dias
+
+// Retorna o segredo do refresh token; lança erro em produção se a variável
+// obrigatória REFRESH_TOKEN_SECRET não estiver definida.
+const _getRefreshSecret = () => {
+  if (process.env.NODE_ENV === 'production' && !process.env.REFRESH_TOKEN_SECRET) {
+    throw new Error(
+      '[SEGURANÇA] REFRESH_TOKEN_SECRET é obrigatório em NODE_ENV=production. '
+      + 'Configure a variável de ambiente com um segredo distinto de JWT_SECRET.'
+    );
+  }
+  return process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET;
+};
+
+// Gera o JWT do refresh token e calcula seu hash (sem gravar no banco).
+const _buildRefreshToken = (payload) => {
+  const jti = uuidv4();
+  const token = jwt.sign({ ...payload, jti }, _getRefreshSecret(), { expiresIn: '30d' });
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  return { token, jti, tokenHash };
+};
+
+// Retorna { db, isAdmin } com a conexão correta para refresh_tokens.
+const _getRefreshDb = async (decoded) => {
+  if (decoded.isAdmin) return { db: masterDb, isAdmin: true };
+  if (!decoded.subdomain) throw new Error('subdomain ausente no refresh token');
+  const tenant = await Tenant.findOne({ where: { subdominio: decoded.subdomain, ativo: true } });
+  if (!tenant) throw new Error('Tenant não encontrado');
+  const db = await getTenantConnection(tenant.schema);
+  return { db, isAdmin: false };
+};
+
+// Helpers de tabela (admin usa schema public explícito)
+const _tbl = (isAdmin) => isAdmin ? '"public"."refresh_tokens"' : 'refresh_tokens';
+
+const _saveRefreshToken = (db, isAdmin, { jti, userId, tokenHash, expiresAt }) =>
+  db.query(
+    `INSERT INTO ${_tbl(isAdmin)} (jti, user_id, token_hash, expires_at)
+     VALUES (:jti, :userId, :tokenHash, :expiresAt)`,
+    { replacements: { jti, userId: String(userId), tokenHash, expiresAt: new Date(expiresAt) } }
+  );
+
+const _findRefreshToken = async (db, isAdmin, jti) => {
+  const rows = await db.query(
+    `SELECT id, jti, revoked_at, expires_at
+     FROM ${_tbl(isAdmin)} WHERE jti = :jti LIMIT 1`,
+    { replacements: { jti }, type: QueryTypes.SELECT }
+  );
+  return rows[0] || null;
+};
+
+const _revokeRefreshToken = (db, isAdmin, jti) =>
+  db.query(
+    `UPDATE ${_tbl(isAdmin)}
+     SET revoked_at = NOW(), updated_at = NOW()
+     WHERE jti = :jti`,
+    { replacements: { jti } }
+  );
+
+// Gera access token (payload e expiração sem alterações)
+const generateAccessToken = (payload) =>
+  jwt.sign(payload, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRE || '7d',
+  });
+const REFRESH_COOKIE_OPTS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  maxAge: REFRESH_EXPIRE_MS,
+  path: '/api/auth', // restringe o cookie apenas às rotas de auth
+};
+
+const setRefreshTokenCookie = (res, token) =>
+  res.cookie('refreshToken', token, REFRESH_COOKIE_OPTS);
+
+const clearRefreshTokenCookie = (res) =>
+  res.clearCookie('refreshToken', { ...REFRESH_COOKIE_OPTS, maxAge: 0 });
 
 const register = async (req, res) => {
   try {
@@ -78,16 +164,25 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { cpf, senha, subdomain } = req.body;
+    const { cpf, email, senha, subdomain } = req.body;
 
     // Se o subdomain for 'admin', fazer login na tabela global de admins
     if (subdomain === 'admin') {
-      const result = await masterDb.query(
-        'SELECT * FROM public.admins WHERE cpf = :cpf',
-        { replacements: { cpf }, type: masterDb.QueryTypes.SELECT }
-      );
-
-      const rows = result;
+      // Queries separadas para email e CPF (evita ambiguidade de named replacements)
+      let rows;
+      if (email) {
+        rows = await masterDb.query(
+          'SELECT * FROM public.admins WHERE email = :email AND ativo = true',
+          { replacements: { email }, type: QueryTypes.SELECT }
+        );
+      } else if (cpf) {
+        rows = await masterDb.query(
+          'SELECT * FROM public.admins WHERE cpf = :cpf AND ativo = true',
+          { replacements: { cpf }, type: QueryTypes.SELECT }
+        );
+      } else {
+        return res.status(400).json({ error: 'E-mail ou CPF é obrigatório' });
+      }
 
       if (rows.length === 0) {
         return res.status(401).json({ error: 'Credenciais inválidas' });
@@ -110,6 +205,13 @@ const login = async (req, res) => {
         process.env.JWT_SECRET,
         { expiresIn: process.env.JWT_EXPIRE || '7d' }
       );
+
+      // Setar refresh token em cookie httpOnly (aditivo — não altera resposta existente)
+      const { token: rtAdmin, jti: jtiAdmin, tokenHash: hashAdmin } = _buildRefreshToken({ id: admin.id, isAdmin: true });
+      await _saveRefreshToken(masterDb, true, {
+        jti: jtiAdmin, userId: admin.id, tokenHash: hashAdmin, expiresAt: Date.now() + REFRESH_EXPIRE_MS,
+      });
+      setRefreshTokenCookie(res, rtAdmin);
 
       return res.json({
         message: 'Login admin realizado com sucesso',
@@ -164,6 +266,17 @@ const login = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRE || '7d' }
     );
+
+    // Setar refresh token em cookie httpOnly (aditivo — não altera resposta existente)
+    const { token: rtTenant, jti: jtiTenant, tokenHash: hashTenant } = _buildRefreshToken({
+      id: user.id,
+      tenantId: tenant.id,
+      subdomain: tenant.subdominio,
+    });
+    await _saveRefreshToken(tenantDb, false, {
+      jti: jtiTenant, userId: user.id, tokenHash: hashTenant, expiresAt: Date.now() + REFRESH_EXPIRE_MS,
+    });
+    setRefreshTokenCookie(res, rtTenant);
 
     res.json({
       message: 'Login realizado com sucesso',
@@ -312,11 +425,88 @@ const deleteUser = async (req, res) => {
   }
 };
 
+// ── Refresh Token ─────────────────────────────────────────────────────────────
+const refreshToken = async (req, res) => {
+  try {
+    const cookieToken = req.cookies?.refreshToken;
+    if (!cookieToken) {
+      return res.status(401).json({ error: 'Refresh token não encontrado' });
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(cookieToken, _getRefreshSecret());
+    } catch {
+      return res.status(401).json({ error: 'Refresh token inválido ou expirado' });
+    }
+
+    const { jti } = decoded;
+    if (!jti) {
+      return res.status(401).json({ error: 'Refresh token inválido' });
+    }
+
+    // Obter conexão de banco para o schema correto (tenant ou public/admin)
+    let dbCtx;
+    try {
+      dbCtx = await _getRefreshDb(decoded);
+    } catch {
+      return res.status(401).json({ error: 'Refresh token inválido' });
+    }
+
+    // Verificar se o token existe, não foi revogado e não está expirado
+    const record = await _findRefreshToken(dbCtx.db, dbCtx.isAdmin, jti);
+    if (!record) {
+      return res.status(401).json({ error: 'Refresh token revogado ou inexistente' });
+    }
+    if (record.revoked_at) {
+      return res.status(401).json({ error: 'Refresh token revogado' });
+    }
+    if (new Date(record.expires_at) < new Date()) {
+      return res.status(401).json({ error: 'Refresh token expirado' });
+    }
+
+    // Montar novo access token sem campos internos do JWT
+    const { iat, exp, jti: _jti, ...cleanPayload } = decoded;
+    const newAccessToken = generateAccessToken(cleanPayload);
+
+    res.json({ success: true, token: newAccessToken });
+  } catch (error) {
+    console.error('[refreshToken] Erro:', error.message);
+    res.status(500).json({ error: 'Erro ao renovar token' });
+  }
+};
+
+// ── Logout ────────────────────────────────────────────────────────────────────
+const logoutUser = async (req, res) => {
+  try {
+    const cookieToken = req.cookies?.refreshToken;
+    if (cookieToken) {
+      try {
+        const decoded = jwt.verify(cookieToken, _getRefreshSecret());
+        if (decoded?.jti) {
+          const dbCtx = await _getRefreshDb(decoded);
+          await _revokeRefreshToken(dbCtx.db, dbCtx.isAdmin, decoded.jti);
+        }
+      } catch {
+        // Token inválido/expirado — apenas limpar o cookie
+      }
+    }
+    clearRefreshTokenCookie(res);
+    res.json({ success: true, message: 'Logout realizado com sucesso' });
+  } catch (error) {
+    console.error('[logoutUser] Erro:', error.message);
+    clearRefreshTokenCookie(res);
+    res.status(500).json({ error: 'Erro ao fazer logout' });
+  }
+};
+
 module.exports = {
   register,
   login,
   getProfile,
   listUsers,
   updateUser,
-  deleteUser
+  deleteUser,
+  refreshToken,
+  logoutUser,
 };

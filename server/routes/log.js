@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticate, tenantMiddleware } = require('../middleware/auth');
+const { authenticate, tenantMiddleware, requireTenant } = require('../middleware/auth');
 const { listLogs, listModulos } = require('../controllers/logController');
 
 // Verifica se o usuário tem acesso ao módulo de registros

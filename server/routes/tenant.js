@@ -10,22 +10,28 @@ const {
   deleteTenant,
   getStatistics
 } = require('../controllers/tenantController');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, requireSuperAdmin } = require('../middleware/auth');
 
-// Estatísticas gerais do sistema multi-tenant
-router.get('/statistics', getStatistics);
+// Atalho: garante que o caller é SuperAdmin autenticado
+const superAdmin = [authenticate, requireSuperAdmin];
 
-// Info pública por subdomain (usada na tela de Login — deve vir ANTES de /:id)
+// ── Rotas PÚBLICAS ────────────────────────────────────────────────────────────
+// Info por subdomain — usada na tela de Login antes de qualquer autenticação
 router.get('/info', getTenantInfo);
 
-// Atualizar configurações gerais (logos, cores) — requer autenticação
+// ── Rotas PROTEGIDAS (SuperAdmin apenas) ─────────────────────────────────────
+// Estatísticas do painel admin
+router.get('/statistics', ...superAdmin, getStatistics);
+
+// Atualizar configurações do tenant autenticado (logo, cores etc.)
+// Mantém apenas `authenticate` — qualquer admin do próprio tenant pode configurar
 router.put('/configuracoes', authenticate, updateTenantConfiguracoes);
 
-// CRUD de tenants
-router.post('/', createTenant);
-router.get('/', listTenants);
-router.get('/:id', getTenantById);
-router.put('/:id', updateTenant);
-router.delete('/:id', deleteTenant);
+// CRUD completo de tenants
+router.post('/',    ...superAdmin, createTenant);
+router.get('/',     ...superAdmin, listTenants);
+router.get('/:id',  ...superAdmin, getTenantById);
+router.put('/:id',  ...superAdmin, updateTenant);
+router.delete('/:id', ...superAdmin, deleteTenant);
 
 module.exports = router;

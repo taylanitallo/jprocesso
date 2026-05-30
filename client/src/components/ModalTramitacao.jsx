@@ -130,9 +130,9 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-slate-900 rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-600 to-blue-700">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-slate-700/50 bg-gradient-to-r from-blue-600 to-blue-700">
           <div className="flex items-center space-x-3">
             <Send className="h-6 w-6 text-white" />
             <div>
@@ -154,9 +154,9 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
               </div>
               <span className="ml-2 text-sm font-medium hidden sm:inline">Dados</span>
             </div>
-            <div className={`w-16 h-0.5 ${step >= 2 ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
+            <div className={`w-16 h-0.5 ${step >= 2 ? 'bg-blue-600' : 'bg-gray-300 dark:bg-slate-700'}`}></div>
             <div className={`flex items-center ${step >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-600 dark:text-gray-300'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-slate-700/50 dark:text-slate-300'}`}>
                 2
               </div>
               <span className="ml-2 text-sm font-medium hidden sm:inline">Assinatura</span>
@@ -166,7 +166,7 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
 
         {/* Error message */}
         {error && (
-          <div className="mx-6 mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center space-x-2">
+          <div className="mx-6 mt-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg flex items-center space-x-2">
             <AlertTriangle className="h-5 w-5 flex-shrink-0" />
             <span className="text-sm">{error}</span>
           </div>
@@ -176,26 +176,26 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
         {step === 1 && (
           <form onSubmit={handleSubmitStep1} className="p-6 space-y-4">
             {/* Alerta de Assinatura Obrigatória */}
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start space-x-3">
-              <Lock className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-amber-800">
+            <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg p-4 flex items-start space-x-3">
+              <Lock className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-amber-800 dark:text-amber-300">
                 <strong>Assinatura Eletrônica Obrigatória:</strong> Após preencher os dados, você precisará confirmar com sua senha para tramitar o processo.
               </div>
             </div>
 
             {/* Aviso para operadores restritos */}
             {isOperadorRestrito && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start space-x-2">
+              <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-lg p-3 flex items-start space-x-2">
                 <AlertTriangle className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-blue-700">
+                <p className="text-xs text-blue-700 dark:text-blue-300">
                   Como operador, você só pode tramitar para setores da sua secretaria. Para tramitar entre secretarias, solicite a um gestor.
                 </p>
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Despacho * <span className="text-gray-500 dark:text-gray-400 font-normal">(mínimo 10 caracteres)</span>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+                Despacho * <span className="text-gray-500 dark:text-slate-400 font-normal">(mínimo 10 caracteres)</span>
               </label>
               <textarea
                 name="despacho"
@@ -212,7 +212,7 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                 Secretaria de Destino *
               </label>
               {isOperadorRestrito ? (
@@ -220,7 +220,7 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
                   type="text"
                   value={secretarias.find(s => s.id === formData.destinoSecretariaId)?.nome || '...'}
                   disabled
-                  className="input-field bg-gray-100 dark:bg-gray-700 cursor-not-allowed text-gray-500"
+                  className="input-field bg-gray-100 dark:bg-slate-700/50 cursor-not-allowed text-gray-500"
                 />
               ) : (
               <select
@@ -242,7 +242,7 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
 
             {formData.destinoSecretariaId && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                   Setor de Destino *
                 </label>
                 <select
@@ -264,8 +264,8 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
 
             {formData.destinoSetorId && usuarios.length > 0 && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Usuário Específico <span className="text-gray-500 dark:text-gray-400 font-normal">(opcional)</span>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+                  Usuário Específico <span className="text-gray-500 dark:text-slate-400 font-normal">(opcional)</span>
                 </label>
                 <select
                   name="destinoUsuarioId"
@@ -283,7 +283,7 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
               </div>
             )}
 
-            <div className="flex justify-end space-x-3 pt-4 border-t dark:border-gray-700">
+            <div className="flex justify-end space-x-3 pt-4 border-t dark:border-slate-700/50">
               <button
                 type="button"
                 onClick={onClose}
@@ -313,7 +313,7 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
                   <p className="text-sm text-blue-800 dark:text-blue-400 mb-3">
                     Para garantir a autenticidade e rastreabilidade da tramitação, é necessário confirmar com sua senha.
                   </p>
-                  <div className="bg-white dark:bg-gray-700 rounded p-3 text-sm text-gray-700 dark:text-gray-300 space-y-1">
+                  <div className="bg-white dark:bg-slate-800/70 rounded p-3 text-sm text-gray-700 dark:text-slate-300 space-y-1">
                     <p><strong>Despacho:</strong> {formData.despacho.substring(0, 100)}{formData.despacho.length > 100 ? '...' : ''}</p>
                     <p><strong>Destino:</strong> {secretarias.find(s => s.id === formData.destinoSecretariaId)?.nome} › {setores.find(s => s.id === formData.destinoSetorId)?.nome}</p>
                     {formData.destinoUsuarioId && (
@@ -325,7 +325,7 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                 Digite sua senha para confirmar *
               </label>
               <input
@@ -338,12 +338,12 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
                 className="input-field"
                 autoFocus
               />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-2">
                 Sua senha será verificada para gerar a assinatura digital desta tramitação.
               </p>
             </div>
 
-            <div className="flex justify-between pt-4 border-t dark:border-gray-700">
+            <div className="flex justify-between pt-4 border-t dark:border-slate-700/50">
               <button
                 type="button"
                 onClick={() => {

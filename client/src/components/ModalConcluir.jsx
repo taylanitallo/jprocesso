@@ -22,10 +22,10 @@ export default function ModalConcluir({ processoId, onClose, onSuccess }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-lg w-full shadow-xl">
+      <div className="bg-white dark:bg-slate-900 rounded-xl p-6 max-w-lg w-full shadow-xl">
         <h3 className="text-2xl font-bold mb-6 text-green-600 flex items-center">
           <CheckCircle className="h-7 w-7 mr-2" />
-          ✅ Concluir Processo
+          Concluir Processo
         </h3>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-4 mb-4">
@@ -36,7 +36,7 @@ export default function ModalConcluir({ processoId, onClose, onSuccess }) {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
               Despacho Final *
             </label>
             <textarea
@@ -49,15 +49,15 @@ export default function ModalConcluir({ processoId, onClose, onSuccess }) {
             />
           </div>
 
-          <div className="flex justify-end space-x-3 pt-4 border-t dark:border-gray-700">
+          <div className="flex justify-end space-x-3 pt-4 border-t dark:border-slate-700/50">
             <button type="button" onClick={onClose} className="btn-secondary">
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold shadow-md transition-all"
+              className="btn-primary bg-green-600 hover:bg-green-700"
             >
-              ✅ Confirmar Conclusão
+              Confirmar Conclusão
             </button>
           </div>
         </form>

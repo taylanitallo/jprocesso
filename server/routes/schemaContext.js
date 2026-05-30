@@ -1,9 +1,9 @@
 const express = require('express')
 const router  = express.Router()
-const { tenantMiddleware, authenticate } = require('../middleware/auth')
+const { tenantMiddleware, requireTenant, authenticate } = require('../middleware/auth')
 const { getSchemaContext } = require('../controllers/schemaContextController')
 
-const mid = [tenantMiddleware, authenticate]
+const mid = [tenantMiddleware, requireTenant, authenticate]
 
 // GET /api/schema-context
 // Retorna todas as tabelas e colunas do schema do tenant atual.
