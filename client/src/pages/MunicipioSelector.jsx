@@ -91,7 +91,7 @@ export default function MunicipioSelector() {
           </div>
 
           {/* lista de órgãos */}
-          <div className="flex flex-col gap-2 max-h-72 overflow-y-auto pr-0.5">
+          <div className="flex flex-col gap-2 max-h-96 overflow-y-auto pr-0.5">
             {error && (
               <p className="text-red-400 text-xs text-center py-3">{error}</p>
             )}
@@ -114,10 +114,20 @@ export default function MunicipioSelector() {
               </p>
             )}
 
-            {!loading && municipiosFiltrados.map(m => (
+            {!loading && municipiosFiltrados.map(m => {
+              const logoUrl =
+                m.configuracoes?.logo_url ||
+                m.configuracoes?.brasao_url ||
+                m.configuracoes?.imagem_url ||
+                m.logo_url ||
+                m.brasao_url ||
+                m.imagem_url ||
+                null
+
+              return (
               <div
                 key={m.id}
-                className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 cursor-pointer"
+                className="flex items-center gap-4 px-3 py-3 rounded-xl transition-all duration-150 cursor-pointer"
                 style={{
                   background: 'rgba(255,255,255,0.04)',
                   border: '1px solid rgba(255,255,255,0.07)',
@@ -132,31 +142,31 @@ export default function MunicipioSelector() {
                 }}
                 onClick={() => handleAcessar(m.subdominio)}
               >
-                {/* ícone / brasão */}
+                {/* brasão / logo */}
                 <div
-                  className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center overflow-hidden"
+                  className="flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center overflow-hidden"
                   style={{
-                    background: 'rgba(139,92,246,0.18)',
+                    background: 'rgba(139,92,246,0.12)',
                     border: '1px solid rgba(139,92,246,0.30)',
                   }}
                 >
-                  {m.configuracoes?.logo_url ? (
+                  {logoUrl ? (
                     <img
-                      src={m.configuracoes.logo_url}
+                      src={logoUrl}
                       alt={m.nome_municipio}
-                      className="w-full h-full object-cover rounded-lg"
+                      className="w-full h-full object-contain p-1.5"
                     />
                   ) : (
-                    <Building2 className="h-4 w-4 text-violet-400" />
+                    <Building2 className="h-6 w-6 text-violet-400" />
                   )}
                 </div>
 
                 {/* nome + subdomínio */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-white text-sm font-semibold truncate leading-tight">
+                  <p className="text-white text-sm font-semibold leading-tight" style={{ wordBreak: 'break-word' }}>
                     {m.nome_municipio}
                   </p>
-                  <p className="text-white/35 text-xs mt-0.5 truncate">
+                  <p className="text-white/35 text-xs mt-0.5">
                     /{m.subdominio}
                   </p>
                 </div>
@@ -181,7 +191,8 @@ export default function MunicipioSelector() {
                   ACESSAR
                 </button>
               </div>
-            ))}
+              )
+            })}
           </div>
 
         </div>
