@@ -1,18 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Sun, Moon } from 'lucide-react'
-import { useTheme } from '../context/ThemeContext'
+import { Search, Building2, Settings } from 'lucide-react'
 import api from '../services/api'
 
 export default function MunicipioSelector() {
   const [municipios, setMunicipios] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [selectedMunicipio, setSelectedMunicipio] = useState('')
-  const { theme, toggleTheme } = useTheme()
+  const [busca, setBusca] = useState('')
   const navigate = useNavigate()
 
-  // Buscar municípios na montagem
   useEffect(() => {
     fetchMunicipios()
   }, [])
@@ -28,175 +25,225 @@ export default function MunicipioSelector() {
         setMunicipios(ordenados)
       }
     } catch (err) {
-      setError('Erro ao carregar municípios. Tente novamente.')
+      setError('Erro ao carregar órgãos. Tente novamente.')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleSelect = (e) => {
-    const subdomain = e.target.value
-    setSelectedMunicipio(subdomain)
-  }
-
-  const handleEnter = () => {
-    if (selectedMunicipio) {
-      navigate(`/${selectedMunicipio}/login`)
-    }
+  const handleAcessar = (subdominio) => {
+    navigate(`/${subdominio}/login`)
   }
 
   const handleAdminAccess = () => {
     navigate('/admin')
   }
 
+  const municipiosFiltrados = municipios.filter(m =>
+    m.nome_municipio.toLowerCase().includes(busca.toLowerCase()) ||
+    (m.cidade && m.cidade.toLowerCase().includes(busca.toLowerCase()))
+  )
+
   return (
-    <div className="min-h-screen lg:h-screen lg:overflow-hidden">
-      <div
-        className="relative overflow-x-hidden min-h-screen lg:h-full"
-        style={{
-          backgroundImage: "url('/tela de login.png')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
-        }}
-      >
-        <div
-          className="absolute inset-0"
-          style={{ backgroundColor: 'rgba(10, 20, 40, 0.70)' }}
-        />
+    <div
+      className="min-h-screen flex flex-col relative"
+      style={{
+        backgroundImage: "url('/background_geral.png')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
+      {/* overlay escuro */}
+      <div className="absolute inset-0 bg-[#050b18]/70" />
 
-        {/* Botão de tema — canto superior direito */}
-        <div className="absolute top-4 right-4 z-50">
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-xl bg-white/15 hover:bg-white/25 text-white transition-all"
-            title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
-          >
-            {theme === 'dark' ? (
-              <Sun className="h-5 w-5 text-yellow-400" />
-            ) : (
-              <Moon className="h-5 w-5" />
-            )}
-          </button>
-        </div>
+      {/* conteúdo principal */}
+      <div className="relative flex-1 flex flex-col lg:flex-row items-center justify-center min-h-screen px-6 py-10 gap-12 max-w-6xl mx-auto w-full">
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-14 pb-6 lg:py-0 lg:h-full lg:flex lg:flex-col lg:justify-center">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-10 items-start lg:items-center">
-            {/* Left: Branding */}
-            <div className="lg:col-span-2 order-2 lg:order-1">
-              <div className="mb-3 hidden sm:block">
-                <img
-                  src="/logo jprocessos 2.png"
-                  alt="jProcesso"
-                  className="h-20 sm:h-28 lg:h-40 object-contain mb-2"
+        {/* ── Coluna esquerda — Branding ── */}
+        <div className="flex flex-col items-center lg:items-start text-center lg:text-left lg:flex-1 gap-6">
+          <img
+            src="/logo_jprocesso.png"
+            alt="jProcesso"
+            className="w-64 sm:w-80 lg:w-96 object-contain drop-shadow-[0_0_32px_rgba(139,92,246,0.5)]"
+          />
+
+          <div>
+            <p className="mt-1 text-white/60 text-base sm:text-lg font-medium tracking-widest uppercase">
+              Sistema de Tramitação Digital
+            </p>
+            <div
+              className="mt-2 h-px w-16 mx-auto lg:mx-0 rounded"
+              style={{ background: 'linear-gradient(90deg, #8b5cf6, #ec4899)' }}
+            />
+            <p className="mt-4 text-white/55 text-sm sm:text-base max-w-sm leading-relaxed">
+              Tecnologia inteligente para uma{' '}
+              <span
+                style={{
+                  background: 'linear-gradient(90deg, #a78bfa, #f472b6)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}
+              >
+                gestão pública
+              </span>{' '}
+              mais eficiente.
+            </p>
+          </div>
+
+          <div className="hidden lg:flex flex-col gap-2.5 mt-2">
+            {[
+              { color: '#8b5cf6', label: 'Ambiente Multi-Tenant Isolado' },
+              { color: '#34d399', label: 'Dados Completamente Isolados' },
+              { color: '#60a5fa', label: 'Infraestrutura em Nuvem' },
+            ].map(item => (
+              <div key={item.label} className="flex items-center gap-2.5 text-white/50 text-xs">
+                <span
+                  className="w-2 h-2 rounded-full flex-shrink-0"
+                  style={{ background: item.color, boxShadow: `0 0 6px ${item.color}` }}
                 />
+                {item.label}
               </div>
-
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
-                <p className="text-white font-semibold mb-3 tracking-wide uppercase text-xs">
-                  ℹ️ Selecione seu Município
-                </p>
-                <p className="text-white/80 text-sm leading-relaxed">
-                  Escolha abaixo o município em que você deseja acessar o jProcessos. Cada município possui seu próprio ambiente isolado com dados e usuários específicos.
-                </p>
-              </div>
-
-              {/* Info Box */}
-              <div className="mt-3 grid grid-cols-1 gap-2">
-                <div className="flex items-center gap-2 bg-white/8 border border-white/15 rounded-lg px-3 py-2">
-                  <span className="text-base">🏢</span>
-                  <span className="text-xs text-gray-200 font-medium">Ambiente Multi-Tenant Isolado</span>
-                </div>
-                <div className="flex items-center gap-2 bg-white/8 border border-white/15 rounded-lg px-3 py-2">
-                  <span className="text-base">🔐</span>
-                  <span className="text-xs text-gray-200 font-medium">Dados Completamente Isolados</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Right: Seletor */}
-            <div className="lg:col-span-1 order-1 lg:order-2">
-              <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-4 sm:p-5 border border-gray-100 dark:border-slate-700/50 animate-bounce-in">
-                <div className="text-center mb-2">
-                  <div className="text-3xl mb-1">🏛️</div>
-                  <h2 className="text-base sm:text-xl font-bold text-gray-900 dark:text-white">
-                    Acesso ao Sistema
-                  </h2>
-                  <p className="text-xs text-gray-400 dark:text-slate-500">
-                    Escolha um município para continuar
-                  </p>
-                </div>
-
-                {error && (
-                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 p-3 rounded-xl mb-4 text-sm flex items-center gap-2">
-                    <span>⚠️</span>
-                    {error}
-                  </div>
-                )}
-
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-600 dark:text-slate-400 mb-1.5 uppercase tracking-wide">
-                      🏙️ Município
-                    </label>
-
-                    {loading ? (
-                      <div className="px-3 py-2.5 bg-gray-100 dark:bg-slate-700/30 border border-gray-300 dark:border-slate-600 rounded-xl text-sm text-gray-500 dark:text-slate-400 text-center">
-                        ⏳ Carregando municípios...
-                      </div>
-                    ) : municipios.length === 0 ? (
-                      <div className="px-3 py-2.5 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl text-sm text-yellow-800 dark:text-yellow-300 text-center">
-                        Nenhum município disponível
-                      </div>
-                    ) : (
-                      <select
-                        value={selectedMunicipio}
-                        onChange={handleSelect}
-                        className="w-full px-3 py-2.5 border-2 border-gray-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700/30 text-gray-900 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/40 transition-all text-sm font-medium"
-                      >
-                        <option value="">-- Selecione um município --</option>
-                        {municipios.map(municipio => (
-                          <option key={municipio.id} value={municipio.subdominio}>
-                            {municipio.nome_municipio} ({municipio.estado})
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={handleEnter}
-                    disabled={!selectedMunicipio || loading}
-                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white py-2.5 px-4 rounded-xl font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 text-sm"
-                  >
-                    {loading ? '⏳ Carregando...' : '🚀 Entrar no Sistema'}
-                  </button>
-                </div>
-
-                <div className="mt-3 pt-3 border-t border-gray-100 dark:border-slate-700/50 text-center">
-                  <button
-                    onClick={handleAdminAccess}
-                    className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-slate-300 transition-colors"
-                  >
-                    🔧 Área de Administração
-                  </button>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* Copyright */}
-        <p className="relative lg:absolute lg:bottom-3 lg:left-1/2 lg:-translate-x-1/2 text-center pb-4 pt-2 text-xs text-white/40 whitespace-nowrap">
-          🏢 © JEOS Sistemas e Assessorias - Todos os direitos reservados. <a
-            href="https://jeossistemas.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-          >
-            jeossistemas.com
-          </a>
-        </p>
+        {/* ── Coluna direita — Card de seleção ── */}
+        <div
+          className="w-full max-w-sm lg:flex-shrink-0 rounded-2xl p-6 sm:p-8 flex flex-col gap-5"
+          style={{
+            background: 'rgba(10, 8, 28, 0.80)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            border: '1px solid rgba(139, 92, 246, 0.30)',
+            boxShadow: '0 0 60px rgba(139, 92, 246, 0.12), 0 0 120px rgba(139, 92, 246, 0.06), 0 30px 60px rgba(0,0,0,0.6)',
+          }}
+        >
+          {/* cabeçalho card */}
+          <p className="text-white/80 text-sm text-center">
+            Selecione seu órgão para acessar o sistema
+          </p>
+
+          {/* campo de busca */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Pesquisar órgão..."
+              value={busca}
+              onChange={e => setBusca(e.target.value)}
+              className="w-full pl-9 pr-3 py-2.5 rounded-xl text-sm text-white placeholder-white/30 outline-none transition-all"
+              style={{
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.10)',
+              }}
+              onFocus={e => { e.currentTarget.style.borderColor = 'rgba(139,92,246,0.60)' }}
+              onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}
+            />
+          </div>
+
+          {/* lista de órgãos */}
+          <div className="flex flex-col gap-2 max-h-72 overflow-y-auto pr-0.5">
+            {error && (
+              <p className="text-red-400 text-xs text-center py-3">{error}</p>
+            )}
+
+            {loading && (
+              <div className="flex flex-col gap-2">
+                {[1, 2, 3].map(i => (
+                  <div
+                    key={i}
+                    className="h-14 rounded-xl animate-pulse"
+                    style={{ background: 'rgba(255,255,255,0.05)' }}
+                  />
+                ))}
+              </div>
+            )}
+
+            {!loading && !error && municipiosFiltrados.length === 0 && (
+              <p className="text-white/40 text-xs text-center py-4">
+                {busca ? 'Nenhum órgão encontrado.' : 'Nenhum órgão disponível.'}
+              </p>
+            )}
+
+            {!loading && municipiosFiltrados.map(m => (
+              <div
+                key={m.id}
+                className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 cursor-pointer"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.07)',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(139,92,246,0.12)'
+                  e.currentTarget.style.borderColor = 'rgba(139,92,246,0.40)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'
+                }}
+                onClick={() => handleAcessar(m.subdominio)}
+              >
+                {/* ícone */}
+                <div
+                  className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
+                  style={{
+                    background: 'rgba(139,92,246,0.18)',
+                    border: '1px solid rgba(139,92,246,0.30)',
+                  }}
+                >
+                  <Building2 className="h-4 w-4 text-violet-400" />
+                </div>
+
+                {/* nome + subdomínio */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm font-semibold truncate leading-tight">
+                    {m.nome_municipio}
+                  </p>
+                  <p className="text-white/35 text-xs mt-0.5 truncate">
+                    /{m.subdominio}
+                  </p>
+                </div>
+
+                {/* botão ACESSAR */}
+                <button
+                  onClick={e => { e.stopPropagation(); handleAcessar(m.subdominio) }}
+                  className="flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg transition-all duration-150 text-white"
+                  style={{
+                    background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                    boxShadow: '0 0 12px rgba(139,92,246,0.35)',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, #8b5cf6, #7c3aed)'
+                    e.currentTarget.style.boxShadow = '0 0 20px rgba(139,92,246,0.55)'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, #7c3aed, #6d28d9)'
+                    e.currentTarget.style.boxShadow = '0 0 12px rgba(139,92,246,0.35)'
+                  }}
+                >
+                  ACESSAR
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* rodapé card */}
+          <div className="pt-1 border-t border-white/[0.07] text-center">
+            <button
+              onClick={handleAdminAccess}
+              className="inline-flex items-center gap-1.5 text-xs text-white/25 hover:text-violet-400 transition-colors"
+            >
+              <Settings className="h-3 w-3" />
+              Área de Administração
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* copyright */}
+      <div className="relative text-center pb-4 text-xs text-white/20">
+        © 2026&nbsp;&nbsp;JEOS SISTEMAS E ASSESSORIAS LTDA&nbsp;&nbsp;•&nbsp;&nbsp;V1.0.0
       </div>
     </div>
   )
