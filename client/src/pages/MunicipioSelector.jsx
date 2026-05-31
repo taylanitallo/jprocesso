@@ -54,18 +54,9 @@ export default function MunicipioSelector() {
       <div className="absolute inset-0 bg-[#050b18]/70" />
 
       {/* conteúdo principal */}
-      <div className="relative flex-1 flex flex-col lg:flex-row items-center justify-center min-h-screen px-6 py-10 gap-12 max-w-6xl mx-auto w-full">
+      <div className="relative flex-1 flex items-center justify-end min-h-screen px-8 py-10 max-w-6xl mx-auto w-full">
 
-        {/* ── Coluna esquerda — Branding ── */}
-        <div className="flex flex-col items-center lg:items-start lg:flex-1">
-          <img
-            src="/logo_jprocesso.png"
-            alt="jProcesso"
-            className="w-64 sm:w-80 lg:w-96 object-contain drop-shadow-[0_0_32px_rgba(139,92,246,0.5)]"
-          />
-        </div>
-
-        {/* ── Coluna direita — Card de seleção ── */}
+        {/* ── Card de seleção ── */}
         <div
           className="w-full max-w-sm lg:flex-shrink-0 rounded-2xl p-6 sm:p-8 flex flex-col gap-5"
           style={{
