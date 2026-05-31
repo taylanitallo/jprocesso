@@ -273,7 +273,7 @@ export default function ConsultaPublica() {
 
       {/* ── HEADER ── */}
       <header
-        className={`relative z-20 flex-shrink-0 backdrop-blur-xl border-b ${bdPg} transition-colors duration-300`}
+        className={`no-print relative z-20 flex-shrink-0 backdrop-blur-xl border-b ${bdPg} transition-colors duration-300`}
         style={{ background: hdrBg }}
       >
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
@@ -337,7 +337,7 @@ export default function ConsultaPublica() {
 
           {/* Toolbar de busca */}
           <div
-            className={`flex-shrink-0 backdrop-blur-xl border-b ${bdPg} transition-colors duration-300`}
+            className={`no-print flex-shrink-0 backdrop-blur-xl border-b ${bdPg} transition-colors duration-300`}
             style={{ background: tbrBg }}
           >
             <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3">
@@ -383,21 +383,21 @@ export default function ConsultaPublica() {
 
           {/* Conteúdo rolável */}
           <div className="flex-1 overflow-y-auto">
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-5 pb-10">
+            <div className="print-area max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-5 pb-10">
 
               {/* ── CARD DADOS DO PROCESSO ── */}
               <div
-                className={`rounded-2xl border ${bdCard} overflow-hidden transition-colors duration-300`}
+                className={`print-card rounded-2xl border ${bdCard} overflow-hidden transition-colors duration-300`}
                 style={{ background: bgCard, backdropFilter: 'blur(20px)' }}
               >
                 {/* Cabeçalho do card */}
-                <div className={`flex items-center justify-between px-5 py-3.5 border-b ${bdHdr}`}
+                <div className={`print-card-header flex items-center justify-between px-5 py-3.5 border-b ${bdHdr}`}
                   style={{ background: bgCardHdr }}>
                   <div className="flex items-center gap-2">
                     <Building className={`h-4 w-4 ${txtV}`} />
-                    <span className={`text-xs font-bold ${txtV} uppercase tracking-widest`}>Dados do Processo</span>
+                    <span className={`print-title-violet text-xs font-bold ${txtV} uppercase tracking-widest`}>Dados do Processo</span>
                   </div>
-                  <span className={`text-[11px] ${txt3}`}>
+                  <span className={`print-label text-[11px] ${txt3}`}>
                     Consulta: {new Date().toLocaleDateString('pt-BR')}
                   </span>
                 </div>
@@ -405,37 +405,37 @@ export default function ConsultaPublica() {
                 <div className="px-5 py-5 space-y-5">
                   {/* NUP + assunto */}
                   <div>
-                    <h2 className={`text-xl font-bold ${txt1} tracking-tight leading-tight`}>
+                    <h2 className={`print-value text-xl font-bold ${txt1} tracking-tight leading-tight`}>
                       NUP {processo.numero}
                     </h2>
-                    <p className={`mt-1 text-sm ${txt3}`}>
-                      Assunto: <span className={txt2}>{processo.assunto}</span>
+                    <p className={`print-label mt-1 text-sm ${txt3}`}>
+                      Assunto: <span className={`print-value ${txt2}`}>{processo.assunto}</span>
                     </p>
                   </div>
 
                   {/* Grid de campos */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div className="space-y-0.5">
-                      <p className={`text-[11px] font-semibold ${txt3} uppercase tracking-wider`}>Órgão</p>
-                      <p className={`text-sm font-medium ${txt1}`}>
+                      <p className={`print-label text-[11px] font-semibold ${txt3} uppercase tracking-wider`}>Órgão</p>
+                      <p className={`print-value text-sm font-medium ${txt1}`}>
                         {processo.setorAtual?.secretaria?.nome || processo.setorAtual?.nome || 'Não identificado'}
                       </p>
                     </div>
                     <div className="space-y-0.5">
-                      <p className={`text-[11px] font-semibold ${txt3} uppercase tracking-wider`}>Unidade</p>
-                      <p className={`text-sm font-medium ${txt1}`}>
+                      <p className={`print-label text-[11px] font-semibold ${txt3} uppercase tracking-wider`}>Unidade</p>
+                      <p className={`print-value text-sm font-medium ${txt1}`}>
                         {processo.setorAtual?.nome || 'Não identificado'}
                       </p>
                     </div>
                     <div className="space-y-0.5">
-                      <p className={`text-[11px] font-semibold ${txt3} uppercase tracking-wider`}>Interessado</p>
-                      <p className={`text-sm font-medium ${txt1}`}>
+                      <p className={`print-label text-[11px] font-semibold ${txt3} uppercase tracking-wider`}>Interessado</p>
+                      <p className={`print-value text-sm font-medium ${txt1}`}>
                         {processo.interessado_nome || 'Não informado'}
                       </p>
                     </div>
                     <div className="space-y-0.5">
-                      <p className={`text-[11px] font-semibold ${txt3} uppercase tracking-wider`}>Data de Abertura</p>
-                      <p className={`text-sm font-medium ${txt1}`}>
+                      <p className={`print-label text-[11px] font-semibold ${txt3} uppercase tracking-wider`}>Data de Abertura</p>
+                      <p className={`print-value text-sm font-medium ${txt1}`}>
                         {new Date(processo.data_abertura || processo.created_at).toLocaleDateString('pt-BR', {
                           day: '2-digit', month: '2-digit', year: 'numeric',
                           hour: '2-digit', minute: '2-digit'
@@ -443,13 +443,13 @@ export default function ConsultaPublica() {
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <p className={`text-[11px] font-semibold ${txt3} uppercase tracking-wider`}>Nível de Acesso</p>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold bg-amber-500/15 text-amber-600 border border-amber-500/30">
+                      <p className={`print-label text-[11px] font-semibold ${txt3} uppercase tracking-wider`}>Nível de Acesso</p>
+                      <span className="print-badge inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold bg-amber-500/15 text-amber-600 border border-amber-500/30">
                         Restrito
                       </span>
                     </div>
                     <div className="space-y-1">
-                      <p className={`text-[11px] font-semibold ${txt3} uppercase tracking-wider`}>Prioridade</p>
+                      <p className={`print-label text-[11px] font-semibold ${txt3} uppercase tracking-wider`}>Prioridade</p>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold border ${
                         processo.prioridade === 'urgente'
                           ? 'bg-red-500/15 text-red-600 border-red-500/25'
@@ -478,15 +478,15 @@ export default function ConsultaPublica() {
 
               {/* ── HISTÓRICO DE TRAMITAÇÕES ── */}
               <div
-                className={`rounded-2xl border ${bdCard} overflow-hidden transition-colors duration-300`}
+                className={`print-card rounded-2xl border ${bdCard} overflow-hidden transition-colors duration-300`}
                 style={{ background: bgCard, backdropFilter: 'blur(20px)' }}
               >
                 {/* Cabeçalho */}
-                <div className={`flex items-center justify-between px-5 py-3.5 border-b ${bdHdr}`}
+                <div className={`print-card-header flex items-center justify-between px-5 py-3.5 border-b ${bdHdr}`}
                   style={{ background: bgCardHdr }}>
                   <div className="flex items-center gap-2">
                     <Clock className={`h-4 w-4 ${txtV}`} />
-                    <span className={`text-xs font-bold ${txtV} uppercase tracking-widest`}>
+                    <span className={`print-title-violet text-xs font-bold ${txtV} uppercase tracking-widest`}>
                       Histórico de Tramitações
                     </span>
                   </div>
@@ -516,7 +516,7 @@ export default function ConsultaPublica() {
                             <div className={`flex-1 min-w-0 ${index < arr.length - 1 ? 'pb-6' : 'pb-1'}`}>
                               {/* Data/hora + situação */}
                               <div className="flex flex-wrap items-center gap-2 mb-2">
-                                <span className={`text-sm font-bold ${txt1}`}>
+                                <span className={`print-value text-sm font-bold ${txt1}`}>
                                   {new Date(tramitacao.data_hora || tramitacao.created_at).toLocaleDateString('pt-BR', {
                                     day: '2-digit', month: '2-digit', year: 'numeric'
                                   })}
@@ -543,8 +543,8 @@ export default function ConsultaPublica() {
 
                               {/* Órgão/Unidade + badge ATUAL */}
                               <div className="flex flex-wrap items-center gap-2 mb-2">
-                                <span className={`text-xs font-semibold uppercase tracking-wide ${txt3}`}>Orgão/Unidade:</span>
-                                <span className={`text-sm ${txt2}`}>
+                                <span className={`print-label text-xs font-semibold uppercase tracking-wide ${txt3}`}>Orgão/Unidade:</span>
+                                <span className={`print-value text-sm ${txt2}`}>
                                   {tramitacao.destinoSetor
                                     ? `${tramitacao.destinoSetor.sigla ? tramitacao.destinoSetor.sigla + ' — ' : ''}${tramitacao.destinoSetor.nome}`
                                     : tramitacao.origemSetor
@@ -553,7 +553,7 @@ export default function ConsultaPublica() {
                                   }
                                 </span>
                                 {index === 0 && (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-emerald-500/15 text-emerald-600 border border-emerald-500/35">
+                                  <span className="print-badge-atual inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-emerald-500/15 text-emerald-600 border border-emerald-500/35">
                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
                                     ATUAL
                                   </span>
@@ -563,8 +563,8 @@ export default function ConsultaPublica() {
                               {/* Despacho */}
                               {tramitacao.despacho && (
                                 <div className={`rounded-xl border px-4 py-3 ${bgDesp}`}>
-                                  <p className={`text-[11px] font-semibold ${txt3} uppercase tracking-wider mb-1.5`}>Despacho</p>
-                                  <p className={`text-sm ${txt2} leading-relaxed`}>{tramitacao.despacho}</p>
+                                  <p className={`print-label text-[11px] font-semibold ${txt3} uppercase tracking-wider mb-1.5`}>Despacho</p>
+                                  <p className={`print-value text-sm ${txt2} leading-relaxed`}>{tramitacao.despacho}</p>
                                 </div>
                               )}
 
@@ -807,7 +807,7 @@ export default function ConsultaPublica() {
 
       {/* ── FOOTER ── */}
       <footer
-        className={`relative z-20 flex-shrink-0 backdrop-blur-xl border-t ${bdPg} transition-colors duration-300`}
+        className={`no-print relative z-20 flex-shrink-0 backdrop-blur-xl border-t ${bdPg} transition-colors duration-300`}
         style={{ background: ftrBg }}
       >
         <div className="max-w-7xl mx-auto px-6 py-2.5 flex items-center justify-center">

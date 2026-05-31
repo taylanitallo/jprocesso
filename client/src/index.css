@@ -1,4 +1,4 @@
-@tailwind base;
+﻿@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -163,3 +163,18 @@ button, a, input, select, textarea {
   .prio-baixa   { @apply badge bg-gray-100   dark:bg-gray-700      text-gray-600   dark:text-gray-400; }
 }
 
+
+/* print */
+@media print {
+  *,*::before,*::after { box-shadow:none !important; text-shadow:none !important; }
+  html,body,#root { background:#fff !important; background-image:none !important; color:#111827 !important; height:auto !important; overflow:visible !important; }
+  .no-print,header,nav,footer,button,input,select,textarea,form { display:none !important; }
+  .print-area { display:block !important; background:#fff !important; color:#111827 !important; width:100% !important; max-width:none !important; margin:0 !important; padding:24px !important; }
+  .print-card { background:#fff !important; border:1px solid #d1d5db !important; color:#111827 !important; break-inside:avoid; page-break-inside:avoid; margin-bottom:20px; border-radius:12px; }
+  .print-card-header { background:#f9fafb !important; border-bottom:1px solid #e5e7eb !important; }
+  .print-label { color:#6b7280 !important; }
+  .print-value { color:#111827 !important; font-weight:600 !important; }
+  .print-badge { color:#111827 !important; background:#f3f4f6 !important; border:1px solid #d1d5db !important; }
+  .print-badge-atual { background:#d1fae5 !important; color:#065f46 !important; border:1px solid #6ee7b7 !important; }
+  .print-title-violet { color:#4c1d95 !important; }
+}
