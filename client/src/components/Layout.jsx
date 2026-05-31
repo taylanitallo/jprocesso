@@ -6,7 +6,7 @@ import {
   Users, Package, Sun, Moon, ChevronRight, DollarSign, ScrollText,
   Lock, Landmark, ClipboardList,
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import JAI from './JAI'
 import api from '../services/api'
 
@@ -20,6 +20,9 @@ export default function Layout() {
   const [now, setNow] = useState(new Date())
   const [nomeEntidade, setNomeEntidade] = useState('')
   const [moduloBloqueado, setModuloBloqueado] = useState(null)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [showJAI, setShowJAI] = useState(true)
+  const profileRef = useRef(null)
 
   // Atualiza o relógio a cada minuto (sem segundos)
   useEffect(() => {
@@ -36,6 +39,17 @@ export default function Layout() {
     window.addEventListener('entidade-updated', handler)
     return () => window.removeEventListener('entidade-updated', handler)
   }, [])
+
+  useEffect(() => {
+    if (!profileOpen) return
+    const handle = (e) => {
+      if (profileRef.current && !profileRef.current.contains(e.target)) setProfileOpen(false)
+    }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [profileOpen])
+
+  useEffect(() => { setProfileOpen(false) }, [location.pathname])
 
   const fmtHora = (d) => d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
   const fmtData = (d) => d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -199,29 +213,6 @@ export default function Layout() {
           )}
         </nav>
 
-        {/* Rodapé da sidebar â€” usuário + logout */}
-        <div className="px-3 py-3 border-t border-gray-200 dark:border-slate-700/50 flex-shrink-0">
-          <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-gray-50 dark:bg-white/5 dark:ring-1 dark:ring-white/10">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-fuchsia-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 ring-2 ring-white/20">
-              {user?.nome?.charAt(0)?.toUpperCase() || '?'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900 dark:text-slate-100 truncate leading-tight">
-                {user?.nomeReduzido || user?.nome?.split(' ')[0]}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-slate-500 truncate leading-tight">
-                {tipoLabel[user?.tipo] || user?.tipo}
-              </p>
-            </div>
-            <button
-              onClick={handleLogout}
-              title="Sair do sistema"
-              className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
       </aside>
 
       {/* Mobile overlay */}
@@ -255,31 +246,67 @@ export default function Layout() {
                 )}
               </div>
 
-              {/* Direita: tema + usuário */}
-              <div className="flex items-center gap-1 flex-shrink-0">
+                {/* Perfil */}
+              <div ref={profileRef} className="relative flex-shrink-0">
                 <button
-                  onClick={toggleTheme}
-                  title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
-                  className="p-2 rounded-lg text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors"
+                  onClick={() => setProfileOpen(v => !v)}
+                  className="flex items-center gap-2.5 pl-3 border-l border-gray-200 dark:border-slate-700/50 hover:opacity-80 transition-opacity"
                 >
-                  {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                </button>
-
-                <div className="flex items-center gap-2.5 ml-1 pl-3 border-l border-gray-200 dark:border-slate-700/50">
                   <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-fuchsia-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                     {user?.nome?.charAt(0)?.toUpperCase() || '?'}
                   </div>
-                  <div className="hidden sm:block leading-tight">
-                  <p className="text-xs font-semibold text-gray-800 dark:text-slate-200">
-                    {user?.nomeReduzido || user?.nome?.split(' ')[0]}
-                  </p>
-                  <p className="text-[10px] text-gray-400 dark:text-slate-500">
+                  <div className="hidden sm:block leading-tight text-left">
+                    <p className="text-xs font-semibold text-gray-800 dark:text-slate-200">
+                      {user?.nomeReduzido || user?.nome?.split(' ')[0]}
+                    </p>
+                    <p className="text-[10px] text-gray-400 dark:text-slate-500">
                       {tipoLabel[user?.tipo] || user?.tipo}
                     </p>
                   </div>
-                </div>
-              </div>
-            </div>
+                </button>
+                {profileOpen && (
+                  <div className="absolute right-0 top-full mt-3 w-80 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700/50 rounded-2xl shadow-2xl z-[100] overflow-hidden">
+                    <div className="p-5 flex items-center gap-4 border-b border-gray-100 dark:border-slate-700/50">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-fuchsia-600 flex items-center justify-center text-white text-base font-bold flex-shrink-0">
+                        {user?.nome?.charAt(0)?.toUpperCase() || '?'}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-gray-900 dark:text-slate-100 truncate">{user?.nome}</p>
+                        <p className="text-xs text-gray-400 dark:text-slate-400 truncate mt-0.5">{user?.email}</p>
+                      </div>
+                    </div>
+                    <div className="py-2">
+                      <div className="flex items-center justify-between px-5 py-2.5">
+                        <span className="text-sm text-gray-700 dark:text-slate-300">Modo escuro</span>
+                        <button
+                          onClick={toggleTheme}
+                          className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors ${theme === 'dark' ? 'bg-blue-500' : 'bg-gray-200'}`}
+                        >
+                          <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${theme === 'dark' ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                        </button>
+                      </div>
+                      <div className="flex items-center justify-between px-5 py-2.5">
+                        <span className="text-sm text-gray-700 dark:text-slate-300">{showJAI ? 'Ocultar Ayla IA' : 'Mostrar Ayla IA'}</span>
+                        <button
+                          onClick={() => setShowJAI(v => !v)}
+                          className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors ${showJAI ? 'bg-blue-500' : 'bg-gray-200 dark:bg-slate-600'}`}
+                        >
+                          <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${showJAI ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="border-t border-gray-100 dark:border-slate-700/50 py-2">
+                      <button
+                        onClick={() => { setProfileOpen(false); handleLogout() }}
+                        className="w-full flex items-center gap-3 px-5 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        <span>Sair do sistema</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>            </div>
           </div>
         </header>
 
@@ -291,7 +318,7 @@ export default function Layout() {
         </main>
 
         {/* Assistente JAI */}
-        <JAI />
+        {showJAI && <JAI />}
 
         {/* Rodapé fixo â€” marca + data/hora */}
         <footer className="flex-shrink-0 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700/50 px-4 py-1.5">

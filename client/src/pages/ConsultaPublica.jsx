@@ -278,7 +278,11 @@ export default function ConsultaPublica() {
       >
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
           <Link to={`/${subdomain}/login`}>
-            <img src="/logo_jprocesso.png" alt="jProcesso" className="h-8 w-auto object-contain" />
+            <img
+              src={mc ? '/logo_dark.png' : '/logo_jprocesso.png'}
+              alt="jProcesso"
+              className="h-8 w-auto object-contain"
+            />
           </Link>
 
           <nav className={`hidden md:flex items-center gap-7 text-[11px] font-semibold tracking-widest uppercase`}>
