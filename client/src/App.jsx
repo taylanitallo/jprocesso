@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
+import { Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom'
 import MunicipioSelector from './pages/MunicipioSelector'
 import LoginAdmin from './pages/LoginAdmin'
 import Login from './pages/Login'
@@ -65,6 +65,19 @@ function LoginRoute() {
   return <Login />
 }
 
+// Slugs reservados que nunca são tenants
+const RESERVED = new Set([
+  'login', 'admin', 'superadmin', 'api', 'www', 'app',
+  'static', 'assets', 'public', 'health', 'ping',
+])
+
+// Guard: bloqueia subdomains reservados e redireciona para /
+function TenantGuard() {
+  const { subdomain } = useParams()
+  if (RESERVED.has(subdomain?.toLowerCase())) return <Navigate to="/" replace />
+  return <Outlet />
+}
+
 function EnviadosRedirect() {
   const { subdomain } = useParams()
   return <Navigate to={`/${subdomain}/processos/enviados`} replace />
@@ -92,7 +105,7 @@ function App() {
         <Route path="/admin/painel" element={<Navigate to="/superadmin/painel" replace />} />
         
         {/* Rotas com subdomínio (cada município) */}
-        <Route path="/:subdomain">
+        <Route path="/:subdomain" element={<TenantGuard />}>
           <Route path="login" element={<LoginRoute />} />
           <Route path="consulta/:numero?" element={<ConsultaPublica />} />
           
