@@ -7,22 +7,44 @@ import ModalTramitacao from '../components/ModalTramitacao'
 import ModalDevolver from '../components/ModalDevolver'
 import ModalConcluir from '../components/ModalConcluir'
 import { gerarDespachoPDF, gerarPautaPDF, gerarRequisicaoPDF } from '../utils/gerarDocumentoPDF'
-import { 
-  ArrowLeft, Send, ArrowLeftCircle, CheckCircle, Paperclip, 
+import {
+  ArrowLeft, Send, ArrowLeftCircle, CheckCircle, Paperclip,
   FileText, Calendar, User, Clock, MapPin, AlertCircle, Download, ClipboardList,
-  FileDown, FileCheck, Trash2, QrCode
+  FileDown, Trash2, QrCode, Shield, Zap, ChevronRight
 } from 'lucide-react'
 import { PageHeader, SectionTitle, EmptyState, ActionBar } from '../components/ui'
+
+/* ── helpers de cor por tipo de tramitação ─────────────────────────────── */
+const TIPO_CONFIG = {
+  abertura:  { label: 'Abertura',   icon: FileText,        dot: 'bg-blue-500',   badge: 'bg-blue-100   dark:bg-blue-900/40   text-blue-700   dark:text-blue-300'  },
+  tramite:   { label: 'Tramitação', icon: Send,            dot: 'bg-indigo-500', badge: 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300' },
+  devolucao: { label: 'Devolução',  icon: ArrowLeftCircle, dot: 'bg-red-500',    badge: 'bg-red-100    dark:bg-red-900/40    text-red-700    dark:text-red-300'    },
+  conclusao: { label: 'Conclusão',  icon: CheckCircle,     dot: 'bg-green-500',  badge: 'bg-green-100  dark:bg-green-900/40  text-green-700  dark:text-green-300'  },
+}
+
+function InfoField({ icon: Icon, label, value, sub }) {
+  if (!value) return null
+  return (
+    <div className="space-y-0.5">
+      <p className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+        {Icon && <Icon className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />}
+        {label}
+      </p>
+      <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">{value}</p>
+      {sub && <p className="text-xs text-gray-500 dark:text-slate-500">{sub}</p>}
+    </div>
+  )
+}
 
 export default function DetalhesProcesso() {
   const { id, subdomain } = useParams()
   const navigate = useNavigate()
-  const [showTramitar, setShowTramitar] = useState(false)
-  const [showDevolver, setShowDevolver] = useState(false)
-  const [showConcluir, setShowConcluir] = useState(false)
+  const [showTramitar, setShowTramitar]           = useState(false)
+  const [showDevolver, setShowDevolver]           = useState(false)
+  const [showConcluir, setShowConcluir]           = useState(false)
   const [showConfirmDelete, setShowConfirmDelete] = useState(false)
-  const [deletando, setDeletando] = useState(false)
-  const [successMessage, setSuccessMessage] = useState('')
+  const [deletando, setDeletando]                 = useState(false)
+  const [successMessage, setSuccessMessage]       = useState('')
 
   const { data: processo, refetch } = useQuery(['processo', id], async () => {
     const { data } = await api.get(`/processos/${id}`)
@@ -44,7 +66,7 @@ export default function DetalhesProcesso() {
     ?.filter(t => t.tipo_acao === 'tramite' || t.tipo_acao === 'devolucao')
     .sort((a, b) => new Date(b.data_hora) - new Date(a.data_hora))[0] ?? null
   const destinoDevolucao = ultimaTramitacaoValida ? {
-    setor: ultimaTramitacaoValida.origemSetor,
+    setor:   ultimaTramitacaoValida.origemSetor,
     usuario: ultimaTramitacaoValida.origemUsuario
   } : null
 
@@ -52,36 +74,6 @@ export default function DetalhesProcesso() {
     setSuccessMessage(`Processo tramitado com sucesso! Assinatura: ${data.assinatura_digital.substring(0, 16)}...`)
     setTimeout(() => setSuccessMessage(''), 5000)
     refetch()
-  }
-
-  const statusLabels = {
-    aberto: 'Aberto',
-    em_analise: 'Em Análise',
-    pendente: 'Pendente',
-    devolvido: 'Devolvido',
-    concluido: 'Concluído'
-  }
-
-  const statusColors = {
-    aberto: 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-700',
-    em_analise: 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-700',
-    pendente: 'bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-300 border-orange-200 dark:border-orange-700',
-    devolvido: 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300 border-red-200 dark:border-red-700',
-    concluido: 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300 border-green-200 dark:border-green-700'
-  }
-
-  const tipoTramitacaoLabels = {
-    abertura: 'Abertura',
-    tramite: 'Tramitação',
-    devolucao: 'Devolução',
-    conclusao: 'Conclusão'
-  }
-
-  const tipoIcons = {
-    abertura: FileText,
-    tramite: Send,
-    devolucao: ArrowLeftCircle,
-    conclusao: CheckCircle
   }
 
   const handleDevolverSuccess = (msg) => {
@@ -128,31 +120,65 @@ export default function DetalhesProcesso() {
     }
   }
 
+  /* ── loading ─────────────────────────────────────────────────────────── */
   if (!processo) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-slate-400">⏳ Carregando processo...</p>
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center space-y-3">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto" />
+          <p className="text-sm text-gray-500 dark:text-slate-400">Carregando processo...</p>
         </div>
       </div>
     )
   }
 
+  /* ── helpers locais ──────────────────────────────────────────────────── */
+  const statusCls = {
+    aberto:     'status-aberto',
+    em_analise: 'status-em_analise',
+    pendente:   'status-pendente',
+    devolvido:  'status-devolvido',
+    concluido:  'status-concluido',
+  }
+
+  const statusLabels = {
+    aberto:     'Aberto',
+    em_analise: 'Em Análise',
+    pendente:   'Pendente',
+    devolvido:  'Devolvido',
+    concluido:  'Concluído',
+  }
+
+  const nivelAcessoLabels = { publico: 'Público', restrito: 'Restrito', sigiloso: 'Sigiloso' }
+
+  const formatDate = (d) => d
+    ? new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+    : null
+
+  const formatTime = (d) => d
+    ? new Date(d).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    : null
+
+  /* ── render ─────────────────────────────────────────────────────────── */
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Success Message */}
+    <div className="space-y-5 animate-fade-in">
+
+      {/* ── Mensagem de sucesso ───────────────────────────────────────── */}
       {successMessage && (
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 text-green-700 dark:text-green-400 px-4 py-3 rounded-lg flex items-center space-x-2 animate-fade-in">
-          <CheckCircle className="h-5 w-5" />
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700
+                        text-green-700 dark:text-green-400 px-4 py-3 rounded-xl
+                        flex items-center gap-2 text-sm animate-fade-in">
+          <CheckCircle className="h-4 w-4 shrink-0" />
           <span className="font-medium">{successMessage}</span>
         </div>
       )}
 
-      {/* Alerta quando não é responsável */}
+      {/* ── Alerta de não-responsável ─────────────────────────────────── */}
       {processo.status !== 'concluido' && !isResponsavel && (
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 text-yellow-800 dark:text-yellow-300 px-4 py-2 rounded-lg text-sm flex items-center space-x-2">
-          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700
+                        text-amber-800 dark:text-amber-300 px-4 py-2.5 rounded-xl
+                        text-sm flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 shrink-0" />
           <span>
             Este processo está com{' '}
             <strong>
@@ -164,327 +190,426 @@ export default function DetalhesProcesso() {
         </div>
       )}
 
+      {/* ── Page Header ──────────────────────────────────────────────── */}
       <PageHeader
         icon={FileText}
-        title={`Processo ${processo.numero}`}
-        subtitle={processo.assunto || processo.interessado_nome || processo.interessadoNome}
+        eyebrow={processo.tipo_processo ? `Processo · ${processo.tipo_processo}` : 'Processo'}
+        title={processo.numero}
+        subtitle={processo.assunto}
         actions={
           <ActionBar>
-            <span className={`px-3 py-1 rounded-full text-sm font-semibold border-2 ${statusColors[processo.status]}`}>
-              {statusLabels[processo.status]}
+            {/* badges */}
+            <span className={statusCls[processo.status] || 'badge bg-gray-100 text-gray-600'}>
+              {statusLabels[processo.status] || processo.status}
             </span>
             {processo.prioridade === 'urgente' && (
-              <span className="px-3 py-1 rounded-full text-sm font-semibold bg-red-500 text-white">
-                URGENTE
-              </span>
+              <span className="badge bg-red-500 text-white">URGENTE</span>
             )}
-            <button
-              onClick={() => navigate(-1)}
-              className="btn-ghost p-2"
-              title="Voltar"
-            >
-              <ArrowLeft className="h-5 w-5" />
+
+            {/* Voltar */}
+            <button onClick={() => navigate(-1)} className="btn-ghost gap-1.5" title="Voltar">
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Voltar</span>
             </button>
+
+            {/* Ações de tramitação */}
             {processo.status !== 'concluido' && (
               <>
                 {podeDevolver && (
-                  <button
-                    onClick={() => setShowDevolver(true)}
-                    className="px-4 py-2 rounded-lg flex items-center space-x-2 shadow-md transition-all bg-red-600 text-white hover:bg-red-700 hover:shadow-lg"
-                  >
-                    <ArrowLeftCircle className="h-5 w-5" />
+                  <button onClick={() => setShowDevolver(true)} className="btn-danger">
+                    <ArrowLeftCircle className="h-4 w-4" />
                     <span>Devolver</span>
                   </button>
                 )}
                 <button
                   onClick={() => setShowTramitar(true)}
                   disabled={!isResponsavel}
-                  className={`px-4 py-2 rounded-lg flex items-center space-x-2 shadow-md transition-all ${
-                    isResponsavel
-                      ? 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg'
-                      : 'bg-gray-200 dark:bg-slate-700/50 text-gray-400 dark:text-slate-500 cursor-not-allowed'
-                  }`}
+                  className={isResponsavel ? 'btn-primary' : 'btn-secondary opacity-50 cursor-not-allowed'}
                 >
-                  <Send className="h-5 w-5" />
+                  <Send className="h-4 w-4" />
                   <span>Tramitar</span>
                 </button>
                 <button
                   onClick={() => setShowConcluir(true)}
                   disabled={!isResponsavel}
-                  className={`px-4 py-2 rounded-lg flex items-center space-x-2 shadow-md transition-all ${
+                  className={
                     isResponsavel
-                      ? 'bg-green-600 text-white hover:bg-green-700 hover:shadow-lg'
-                      : 'bg-gray-200 dark:bg-slate-700/50 text-gray-400 dark:text-slate-500 cursor-not-allowed'
-                  }`}
+                      ? 'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 shadow-sm hover:shadow-md active:scale-95'
+                      : 'btn-secondary opacity-50 cursor-not-allowed'
+                  }
                 >
-                  <CheckCircle className="h-5 w-5" />
+                  <CheckCircle className="h-4 w-4" />
                   <span>Concluir</span>
                 </button>
               </>
             )}
-            {/* Botão dinâmico por tipo de processo */}
+
+            {/* Botões dinâmicos por tipo */}
             {processo.tipo_processo === 'Did' && (
               <button
                 onClick={() => navigate(`/${subdomain}/processos/${id}/did`, { state: { readOnly: !isResponsavel } })}
-                className="px-4 py-2 rounded-lg flex items-center space-x-2 shadow-md transition-all bg-purple-600 text-white hover:bg-purple-700 hover:shadow-lg"
-                title={isResponsavel ? 'Abrir Documento de Intenção de Despesas' : 'Visualizar DID (somente leitura)'}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-purple-600 text-white hover:bg-purple-700 shadow-sm hover:shadow-md active:scale-95"
+                title={isResponsavel ? 'Abrir DID' : 'Visualizar DID (somente leitura)'}
               >
-                <ClipboardList className="h-5 w-5" />
+                <ClipboardList className="h-4 w-4" />
                 <span>DID</span>
               </button>
             )}
             {processo.tipo_processo === 'Despacho' && (
               <button
                 onClick={() => gerarDespachoPDF(processo)}
-                className="px-4 py-2 rounded-lg flex items-center space-x-2 shadow-md transition-all bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-lg"
-                title="Gerar PDF do Despacho"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm hover:shadow-md active:scale-95"
               >
-                <FileDown className="h-5 w-5" />
+                <FileDown className="h-4 w-4" />
                 <span>Despacho</span>
               </button>
             )}
             {processo.tipo_processo === 'Pauta' && (
               <button
                 onClick={() => gerarPautaPDF(processo)}
-                className="px-4 py-2 rounded-lg flex items-center space-x-2 shadow-md transition-all bg-teal-600 text-white hover:bg-teal-700 hover:shadow-lg"
-                title="Gerar PDF da Pauta"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-teal-600 text-white hover:bg-teal-700 shadow-sm hover:shadow-md active:scale-95"
               >
-                <FileDown className="h-5 w-5" />
+                <FileDown className="h-4 w-4" />
                 <span>Pauta</span>
               </button>
             )}
             {processo.tipo_processo === 'Requisição' && (
               <button
                 onClick={() => gerarRequisicaoPDF(processo)}
-                className="px-4 py-2 rounded-lg flex items-center space-x-2 shadow-md transition-all bg-orange-600 text-white hover:bg-orange-700 hover:shadow-lg"
-                title="Gerar PDF da Requisição"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-orange-600 text-white hover:bg-orange-700 shadow-sm hover:shadow-md active:scale-95"
               >
-                <FileDown className="h-5 w-5" />
+                <FileDown className="h-4 w-4" />
                 <span>Requisição</span>
               </button>
             )}
-            {/* Botão Excluir — somente admin */}
+
+            {/* Excluir — somente admin */}
             {currentUser?.tipo === 'admin' && (
               <button
                 onClick={() => setShowConfirmDelete(true)}
-                className="px-4 py-2 rounded-lg flex items-center space-x-2 shadow-md transition-all bg-red-700 text-white hover:bg-red-800 hover:shadow-lg"
+                className="btn-danger"
                 title="Excluir processo permanentemente"
               >
-                <Trash2 className="h-5 w-5" />
-                <span>Excluir</span>
+                <Trash2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Excluir</span>
               </button>
             )}
           </ActionBar>
         }
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
+      {/* ── Layout principal ─────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+        {/* ── Coluna principal (2/3) ──────────────────────────────────── */}
+        <div className="lg:col-span-2 space-y-5">
+
+          {/* Card: Informações do Processo */}
           <div className="card p-6">
             <SectionTitle icon={FileText} title="Informações do Processo" />
-            
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-6">
-              <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-2">{processo.assunto}</h3>
-              <p className="text-gray-700 dark:text-slate-300">{processo.descricao}</p>
+
+            {/* Assunto em destaque */}
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 rounded-xl p-4 mb-5">
+              <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">Assunto</p>
+              <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm leading-relaxed">{processo.assunto}</p>
+              {processo.descricao && (
+                <p className="text-sm text-gray-600 dark:text-slate-400 mt-1.5 leading-relaxed">{processo.descricao}</p>
+              )}
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div>
-                  <div className="flex items-center text-sm text-gray-600 dark:text-slate-400 mb-1">
-                    <User className="h-4 w-4 mr-2" />
-                    Interessado
-                  </div>
-                  <p className="font-semibold text-gray-900 dark:text-white">{processo.interessado_nome || processo.interessadoNome}</p>
-                  <p className="text-sm text-gray-600 dark:text-slate-400">{processo.interessado_cpf_cnpj || processo.interessadoCpfCnpj}</p>
-                </div>
-                
-                <div>
-                  <div className="flex items-center text-sm text-gray-600 dark:text-slate-400 mb-1">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Data de Abertura
-                  </div>
-                  <p className="font-semibold text-gray-900 dark:text-white">
-                    {processo.data_abertura || processo.created_at ? (
-                      new Date(processo.data_abertura || processo.created_at).toLocaleDateString('pt-BR', {
-                        day: '2-digit',
-                        month: 'long',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })
-                    ) : 'Data não disponível'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                {(processo.interessado_email || processo.interessadoEmail) && (
-                  <div>
-                    <div className="text-sm text-gray-600 dark:text-slate-400 mb-1">Email</div>
-                    <p className="font-semibold text-gray-900 dark:text-white">{processo.interessado_email || processo.interessadoEmail}</p>
-                  </div>
-                )}
-                
-                {(processo.interessado_telefone || processo.interessadoTelefone) && (
-                  <div>
-                    <div className="text-sm text-gray-600 dark:text-slate-400 mb-1">Telefone</div>
-                    <p className="font-semibold text-gray-900 dark:text-white">{processo.interessado_telefone || processo.interessadoTelefone}</p>
-                  </div>
-                )}
-
-                {processo.setorAtual && (
-                  <div>
-                    <div className="flex items-center text-sm text-gray-600 dark:text-slate-400 mb-1">
-                      <MapPin className="h-4 w-4 mr-2" />
-                      Localização Atual
-                    </div>
-                    <p className="font-semibold text-gray-900 dark:text-white">
-                      {processo.setorAtual.nome}
-                    </p>
-                  </div>
-                )}
-              </div>
+            {/* Grid de campos */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-5">
+              <InfoField
+                icon={User}
+                label="Interessado"
+                value={processo.interessado_nome || processo.interessadoNome}
+                sub={processo.interessado_cpf_cnpj || processo.interessadoCpfCnpj}
+              />
+              <InfoField
+                icon={MapPin}
+                label="Localização Atual"
+                value={processo.setorAtual?.nome}
+              />
+              <InfoField
+                icon={Calendar}
+                label="Data de Abertura"
+                value={formatDate(processo.data_abertura || processo.created_at)}
+                sub={formatTime(processo.data_abertura || processo.created_at)}
+              />
+              <InfoField
+                icon={Shield}
+                label="Nível de Acesso"
+                value={nivelAcessoLabels[processo.nivel_acesso] || processo.nivel_acesso}
+              />
+              <InfoField
+                icon={Zap}
+                label="Prioridade"
+                value={processo.prioridade
+                  ? processo.prioridade.charAt(0).toUpperCase() + processo.prioridade.slice(1)
+                  : null}
+              />
+              <InfoField
+                icon={Clock}
+                label="Status"
+                value={statusLabels[processo.status] || processo.status}
+              />
+              {(processo.interessado_email || processo.interessadoEmail) && (
+                <InfoField
+                  label="E-mail"
+                  value={processo.interessado_email || processo.interessadoEmail}
+                />
+              )}
+              {(processo.interessado_telefone || processo.interessadoTelefone) && (
+                <InfoField
+                  label="Telefone"
+                  value={processo.interessado_telefone || processo.interessadoTelefone}
+                />
+              )}
             </div>
           </div>
 
-          {processo.documentos && processo.documentos.length > 0 ? (
-            <div className="card p-6">
-              <SectionTitle icon={Paperclip} title={`Documentos Anexados (${processo.documentos.length})`} />
+          {/* Card: Documentos */}
+          <div className="card p-6">
+            <SectionTitle
+              icon={Paperclip}
+              title={
+                processo.documentos?.length
+                  ? `Documentos Anexados (${processo.documentos.length})`
+                  : 'Documentos Anexados'
+              }
+            />
+            {processo.documentos && processo.documentos.length > 0 ? (
               <div className="space-y-2">
                 {processo.documentos.map((doc) => (
-                  <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700/30 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700/60 transition-colors">
-                    <div className="flex items-center space-x-3 flex-1">
-                      <div className="bg-red-100 p-2 rounded">
-                        <FileText className="h-5 w-5 text-red-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 dark:text-white truncate">{doc.nome_arquivo}</p>
-                        <p className="text-xs text-gray-600 dark:text-slate-400">
-                          {(doc.tamanho_bytes / 1024).toFixed(2)} KB • {new Date(doc.data_upload || doc.createdAt).toLocaleDateString('pt-BR')}
-                        </p>
-                      </div>
+                  <div
+                    key={doc.id}
+                    className="flex items-center gap-3 px-3 py-2.5
+                               bg-gray-50 dark:bg-slate-700/30
+                               border border-gray-100 dark:border-slate-700/40
+                               rounded-xl hover:bg-gray-100 dark:hover:bg-slate-700/60
+                               transition-colors group"
+                  >
+                    <div className="shrink-0 flex items-center justify-center w-9 h-9 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-100 dark:border-red-800/40">
+                      <FileText className="h-4 w-4 text-red-500 dark:text-red-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-slate-100 truncate">{doc.nome_arquivo}</p>
+                      <p className="text-xs text-gray-500 dark:text-slate-500">
+                        {(doc.tamanho_bytes / 1024).toFixed(1)} KB
+                        {' · '}
+                        {new Date(doc.data_upload || doc.createdAt).toLocaleDateString('pt-BR')}
+                      </p>
                     </div>
                     <button
                       onClick={() => handleDownloadDocumento(doc)}
-                      className="p-2 hover:bg-white dark:hover:bg-slate-600/60 rounded-lg transition-colors"
+                      className="shrink-0 p-1.5 rounded-lg text-gray-400 dark:text-slate-500
+                                 hover:bg-white dark:hover:bg-slate-600/60
+                                 hover:text-gray-700 dark:hover:text-slate-200
+                                 opacity-0 group-hover:opacity-100 transition-all"
                       title={`Baixar ${doc.nome_arquivo}`}
                     >
-                      <Download className="h-5 w-5 text-gray-600 dark:text-slate-400" />
+                      <Download className="h-4 w-4" />
                     </button>
                   </div>
                 ))}
               </div>
-            </div>
-          ) : (
-            <div className="card p-6">
-              <SectionTitle icon={Paperclip} title="Documentos Anexados" />
+            ) : (
               <EmptyState
                 icon={Paperclip}
-                title="Sem documentos anexados"
-                description="Nenhum arquivo foi anexado a este processo."
+                title="Nenhum arquivo anexado"
+                description="Ainda não há documentos vinculados a este processo."
               />
-            </div>
-          )}
+            )}
+          </div>
 
+          {/* Card: Linha do Tempo */}
           <div className="card p-6">
             <SectionTitle icon={Clock} title="Linha do Tempo" />
-            <div className="relative">
-              <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-slate-700"></div>
-              <div className="space-y-6">
-                {processo.tramitacoes?.map((tramitacao, index) => {
-                  const Icon = tipoIcons[tramitacao.tipo] || FileText
-                  const isLast = index === processo.tramitacoes.length - 1
-                  
-                  return (
-                    <div key={tramitacao.id} className="relative pl-14">
-                      <div className={`
-                        absolute left-0 w-12 h-12 rounded-full flex items-center justify-center
-                        ${isLast ? 'bg-blue-500' : 'bg-gray-300'}
-                        shadow-md
-                      `}>
-                        <Icon className="h-6 w-6 text-white" />
-                      </div>
-                      
-                      <div className={`
-                        p-4 rounded-lg border-2 transition-all
-                        ${isLast ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700' : 'bg-white dark:bg-slate-800/50 border-gray-200 dark:border-slate-700/50'}
-                      `}>
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <span className="font-semibold text-gray-900 dark:text-white">
-                              {tipoTramitacaoLabels[tramitacao.tipo_acao || tramitacao.tipo]}
-                            </span>
-                            {tramitacao.origemSetor && (
-                              <p className="text-sm text-gray-600 dark:text-slate-400 mt-1">
-                                {tramitacao.origemSetor.nome}
-                                {tramitacao.destinoSetor && (
-                                  <span> → {tramitacao.destinoSetor.nome}</span>
+
+            {(!processo.tramitacoes || processo.tramitacoes.length === 0) ? (
+              <EmptyState
+                icon={Clock}
+                title="Sem registros de tramitação"
+                description="Nenhuma movimentação foi registrada ainda."
+              />
+            ) : (
+              <div className="relative">
+                {/* Linha vertical */}
+                <div className="absolute left-[18px] top-5 bottom-5 w-px bg-gray-200 dark:bg-slate-700" />
+
+                <div className="space-y-4">
+                  {processo.tramitacoes.map((tramitacao, index) => {
+                    const tipo  = tramitacao.tipo_acao || tramitacao.tipo
+                    const cfg   = TIPO_CONFIG[tipo] || TIPO_CONFIG.tramite
+                    const Icon  = cfg.icon
+                    const isFirst = index === 0
+                    const dt = tramitacao.data_hora || tramitacao.dataHora
+
+                    return (
+                      <div key={tramitacao.id} className="relative flex gap-4">
+                        {/* Dot com ícone */}
+                        <div className={`
+                          relative z-10 shrink-0
+                          flex items-center justify-center
+                          w-9 h-9 rounded-full shadow-sm
+                          ${cfg.dot} text-white
+                          ${isFirst ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-slate-800 ring-current' : ''}
+                        `}>
+                          <Icon className="w-4 h-4" strokeWidth={2} />
+                        </div>
+
+                        {/* Card do evento */}
+                        <div className="flex-1 min-w-0 pb-1">
+                          <div className={`
+                            rounded-xl border p-4 transition-colors
+                            ${isFirst
+                              ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/50'
+                              : 'bg-white dark:bg-slate-800/50 border-gray-100 dark:border-slate-700/40'}
+                          `}>
+                            {/* Topo: badge + data */}
+                            <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`badge text-xs ${cfg.badge}`}>{cfg.label}</span>
+                                {tramitacao.origemSetor && (
+                                  <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-slate-400">
+                                    <span className="font-medium text-gray-700 dark:text-slate-300">
+                                      {tramitacao.origemSetor.nome}
+                                    </span>
+                                    {tramitacao.destinoSetor && (
+                                      <>
+                                        <ChevronRight className="w-3 h-3 shrink-0" />
+                                        <span className="font-medium text-gray-700 dark:text-slate-300">
+                                          {tramitacao.destinoSetor.nome}
+                                        </span>
+                                      </>
+                                    )}
+                                  </span>
                                 )}
+                              </div>
+                              {dt && (
+                                <div className="text-right shrink-0">
+                                  <p className="text-xs font-semibold text-gray-600 dark:text-slate-300 whitespace-nowrap">
+                                    {new Date(dt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                  </p>
+                                  <p className="text-xs text-gray-400 dark:text-slate-500">
+                                    {new Date(dt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Despacho */}
+                            {tramitacao.despacho && (
+                              <blockquote className="text-sm text-gray-700 dark:text-slate-300
+                                                     bg-gray-50 dark:bg-slate-800/80
+                                                     border-l-2 border-gray-300 dark:border-slate-600
+                                                     rounded-r-lg px-3 py-2 mb-2.5
+                                                     leading-relaxed italic">
+                                {tramitacao.despacho}
+                              </blockquote>
+                            )}
+
+                            {/* Autor */}
+                            {tramitacao.origemUsuario?.nome && (
+                              <p className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-slate-500">
+                                <User className="w-3 h-3 shrink-0" />
+                                {tramitacao.origemUsuario.nome}
                               </p>
                             )}
                           </div>
-                          <div className="text-right text-xs text-gray-500 dark:text-slate-400 whitespace-nowrap ml-4">
-                            <div className="font-semibold">
-                              {new Date(tramitacao.data_hora || tramitacao.dataHora).toLocaleDateString('pt-BR', {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric'
-                              })}
-                            </div>
-                            <div className="text-gray-400 dark:text-slate-500">
-                              {new Date(tramitacao.data_hora || tramitacao.dataHora).toLocaleTimeString('pt-BR', {
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </div>
-                          </div>
                         </div>
-                        
-                        {tramitacao.despacho && (
-                          <p className="text-sm text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-800 p-3 rounded border border-gray-200 dark:border-slate-700/50 mb-2">
-                            {tramitacao.despacho}
-                          </p>
-                        )}
-                        
-                        <p className="text-xs text-gray-600 dark:text-slate-400 flex items-center">
-                          <User className="h-3 w-3 mr-1" />
-                          {tramitacao.origemUsuario?.nome}
-                        </p>
                       </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
-        <div className="space-y-6">
-          <div className="card p-6">
-            <SectionTitle icon={QrCode} title="QR Code de Acompanhamento" />
-            <div className="bg-gray-50 dark:bg-slate-700/30 p-4 rounded-lg">
-              {processo.qrcode && (
-                <img src={processo.qrcode} alt="QR Code" className="w-full h-auto mx-auto" />
-              )}
-            </div>
-            <p className="text-xs text-center text-gray-600 mt-3">
-              Compartilhe este código para consulta pública
-            </p>
-          </div>
+        {/* ── Sidebar (1/3) ───────────────────────────────────────────── */}
+        <div className="space-y-5">
 
-          {processo.status !== 'concluido' && (
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border-2 border-blue-200 dark:border-blue-700 p-6">
-              <SectionTitle icon={AlertCircle} title="Ações Rápidas" />
-              <p className="text-sm text-gray-700 dark:text-slate-300 mb-3">
-                Use os botões no topo para tramitar, devolver, concluir ou preencher o DID do processo.
+          {/* QR Code — compacto */}
+          {processo.qrcode && (
+            <div className="card p-4">
+              <SectionTitle icon={QrCode} title="QR Code" />
+              <div className="flex justify-center">
+                <div className="bg-white dark:bg-slate-900 p-2 rounded-xl border border-gray-100 dark:border-slate-700 inline-block">
+                  <img
+                    src={processo.qrcode}
+                    alt="QR Code do processo"
+                    className="w-32 h-32 object-contain"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-center text-gray-400 dark:text-slate-500 mt-3 leading-snug">
+                Compartilhe para consulta pública
               </p>
+            </div>
+          )}
+
+          {/* Ações Rápidas */}
+          {processo.status !== 'concluido' && (
+            <div className="card p-4">
+              <SectionTitle icon={Zap} title="Ações Rápidas" />
+              <div className="space-y-2">
+                {isResponsavel ? (
+                  <>
+                    <button
+                      onClick={() => setShowTramitar(true)}
+                      className="w-full btn-primary justify-start"
+                    >
+                      <Send className="h-4 w-4" />
+                      Tramitar processo
+                    </button>
+                    <button
+                      onClick={() => setShowConcluir(true)}
+                      className="w-full inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
+                                 bg-green-600 text-white hover:bg-green-700 shadow-sm hover:shadow-md
+                                 active:scale-95 justify-start"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      Concluir processo
+                    </button>
+                    {podeDevolver && (
+                      <button
+                        onClick={() => setShowDevolver(true)}
+                        className="w-full btn-danger justify-start"
+                      >
+                        <ArrowLeftCircle className="h-4 w-4" />
+                        Devolver processo
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed">
+                    Você não é o responsável atual. As ações estão disponíveis nos botões do cabeçalho quando aplicável.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Localização atual */}
+          {processo.setorAtual && (
+            <div className="card p-4">
+              <SectionTitle icon={MapPin} title="Localização Atual" />
+              <div className="space-y-1.5">
+                <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">{processo.setorAtual.nome}</p>
+                {processo.usuarioAtual?.nome && (
+                  <p className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-slate-400">
+                    <User className="w-3.5 h-3.5" />
+                    {processo.usuarioAtual.nome}
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Modal de Tramitação com Assinatura Eletrônica */}
+      {/* ── Modais ───────────────────────────────────────────────────── */}
       {showTramitar && (
         <ModalTramitacao
           processo={processo}
@@ -493,7 +618,6 @@ export default function DetalhesProcesso() {
         />
       )}
 
-      {/* Modal de Devolução */}
       {showDevolver && (
         <ModalDevolver
           processoId={id}
@@ -503,7 +627,6 @@ export default function DetalhesProcesso() {
         />
       )}
 
-      {/* Modal de Conclusão */}
       {showConcluir && (
         <ModalConcluir
           processoId={id}
@@ -515,35 +638,35 @@ export default function DetalhesProcesso() {
       {/* Modal de confirmação de exclusão — somente admin */}
       {showConfirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-md p-6">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md p-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-red-100 dark:bg-red-900/40 rounded-full">
-                <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400" />
+              <div className="p-2 bg-red-100 dark:bg-red-900/40 rounded-xl">
+                <Trash2 className="h-5 w-5 text-red-600 dark:text-red-400" />
               </div>
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Excluir Processo</h2>
+              <h2 className="text-base font-bold text-gray-900 dark:text-white">Excluir Processo</h2>
             </div>
-            <p className="text-gray-600 dark:text-slate-300 mb-2">
+            <p className="text-sm text-gray-600 dark:text-slate-300 mb-2">
               Você está prestes a excluir permanentemente o processo:
             </p>
-            <p className="font-mono font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded px-3 py-2 mb-4">
+            <p className="font-mono font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2 mb-4 text-sm">
               {processo.numero}
             </p>
-            <p className="text-sm text-gray-500 dark:text-slate-400 mb-6">
-              Esta ação <strong>não pode ser desfeita</strong>. Todos os dados vinculados
-              (tramitações, documentos, DID) serão removidos permanentemente.
+            <p className="text-xs text-gray-500 dark:text-slate-400 mb-6">
+              Esta ação <strong>não pode ser desfeita</strong>. Tramitações, documentos e DID
+              vinculados serão removidos permanentemente.
             </p>
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setShowConfirmDelete(false)}
                 disabled={deletando}
-                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors"
+                className="btn-secondary"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleDeleteProcesso}
                 disabled={deletando}
-                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold flex items-center gap-2 transition-colors disabled:opacity-60"
+                className="btn-danger"
               >
                 <Trash2 className="h-4 w-4" />
                 {deletando ? 'Excluindo...' : 'Confirmar Exclusão'}
