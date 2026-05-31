@@ -100,11 +100,11 @@ export default function Layout() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-gray-50 dark:bg-slate-950 transition-colors duration-200">
+    <div className="min-h-screen w-full bg-[#f8fafc] dark:bg-[#020617] transition-colors duration-200">
 
       {/* â”€â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900
+        fixed inset-y-0 left-0 z-50 w-[260px] bg-white dark:bg-slate-900
         border-r border-gray-200 dark:border-slate-700/50
         flex flex-col transform transition-transform duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -112,10 +112,10 @@ export default function Layout() {
       `}>
 
         {/* Logo */}
-        <div className="h-16 px-5 flex items-center justify-between border-b border-gray-200 dark:border-slate-700/50 flex-shrink-0">
+        <div className="h-[70px] px-5 flex items-center justify-between border-b border-gray-200 dark:border-slate-700/50 flex-shrink-0">
           {tenant?.configuracoes?.logo_sidebar
             ? <img src={tenant.configuracoes.logo_sidebar} alt="logo" className="h-9 object-contain" />
-            : <img src="/logo_jprocesso.png" alt="jProcesso" className="h-9 object-contain brightness-0 invert" />
+            : <img src="/logo_jprocesso.png" alt="jProcesso" className="h-9 object-contain dark:brightness-0 dark:invert" />
           }
           <button
             onClick={() => setSidebarOpen(false)}
@@ -129,6 +129,7 @@ export default function Layout() {
         <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-6">
 
           {/* Menu principal */}
+          <p className="px-3 mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400 dark:text-slate-500">Principal</p>
           <div className="space-y-0.5">
             {menuItems.map((item) => {
               const active = isActive(item.path, item.exact)
@@ -224,12 +225,12 @@ export default function Layout() {
       )}
 
       {/* â”€â”€â”€ Ãrea principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <div className="lg:pl-64 flex flex-col min-h-screen">
+      <div className="lg:pl-[260px] flex flex-col min-h-screen">
 
         {/* Topbar */}
         <header className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700/50 sticky top-0 z-30 flex-shrink-0">
           <div className="px-4 sm:px-6">
-            <div className="flex items-center justify-between h-14 gap-4">
+            <div className="flex items-center justify-between h-[72px] gap-4">
 
               {/* Esquerda: hamburger + nome da entidade */}
               <div className="flex items-center gap-3 min-w-0">
@@ -246,7 +247,16 @@ export default function Layout() {
                 )}
               </div>
 
-                {/* Perfil */}
+              {/* Tema */}
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
+                title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+              >
+                {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </button>
+
+              {/* Perfil */}
               <div ref={profileRef} className="relative flex-shrink-0">
                 <button
                   onClick={() => setProfileOpen(v => !v)}
@@ -312,7 +322,7 @@ export default function Layout() {
 
         {/* Conteúdo */}
         <main className="flex-1 overflow-auto">
-          <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-full animate-fade-in">
+          <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-7xl mx-auto animate-fade-in">
             <Outlet />
           </div>
         </main>
