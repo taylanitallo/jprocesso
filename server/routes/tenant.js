@@ -19,6 +19,21 @@ const superAdmin = [authenticate, requireSuperAdmin];
 // Info por subdomain — usada na tela de Login antes de qualquer autenticação
 router.get('/info', getTenantInfo);
 
+// Lista pública de tenants ativos — usada no seletor de município
+router.get('/public', async (req, res) => {
+  try {
+    const tenants = await require('../models/Tenant').findAll({
+      where: { ativo: true },
+      order: [['nome_municipio', 'ASC']],
+      attributes: ['id', 'nome_municipio', 'subdominio', 'cidade', 'estado', 'configuracoes']
+    });
+    res.json({ success: true, tenants });
+  } catch (e) {
+    console.error('❌ Erro ao listar tenants públicos:', e);
+    res.status(500).json({ error: 'Erro ao listar municípios' });
+  }
+});
+
 // ── Rotas PROTEGIDAS (SuperAdmin apenas) ─────────────────────────────────────
 // Estatísticas do painel admin
 router.get('/statistics', ...superAdmin, getStatistics);

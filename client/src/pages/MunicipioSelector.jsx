@@ -16,10 +16,9 @@ export default function MunicipioSelector() {
 
   const fetchMunicipios = async () => {
     try {
-      const res = await api.get('/tenants')
+      const res = await api.get('/tenants/public')
       if (res.data.tenants && Array.isArray(res.data.tenants)) {
-        const ativos = res.data.tenants.filter(t => t.ativo)
-        const ordenados = ativos.sort((a, b) =>
+        const ordenados = res.data.tenants.sort((a, b) =>
           a.nome_municipio.localeCompare(b.nome_municipio)
         )
         setMunicipios(ordenados)
