@@ -31,7 +31,12 @@ export default function MunicipioSelector() {
   }
 
   const handleAcessar = (subdominio) => {
-    navigate(`/${subdominio}/login`)
+    // Limpa sessão ativa antes de abrir o login do tenant selecionado
+    localStorage.removeItem('token')
+    localStorage.removeItem('subdomain')
+    delete api.defaults.headers.common['Authorization']
+    delete api.defaults.headers.common['x-tenant-subdomain']
+    window.location.href = `/${subdominio}/login`
   }
 
   const municipiosFiltrados = municipios.filter(m =>
@@ -57,7 +62,7 @@ export default function MunicipioSelector() {
 
         {/* ── Card de seleção ── */}
         <div
-          className="w-full max-w-sm lg:flex-shrink-0 rounded-2xl p-6 sm:p-8 flex flex-col gap-5"
+          className="w-full max-w-md lg:flex-shrink-0 rounded-2xl p-6 sm:p-8 flex flex-col gap-5"
           style={{
             background: 'rgba(10, 8, 28, 0.80)',
             backdropFilter: 'blur(24px)',
