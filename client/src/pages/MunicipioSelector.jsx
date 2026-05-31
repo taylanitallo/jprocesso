@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Building2, Settings } from 'lucide-react'
+import { Search, Building2 } from 'lucide-react'
 import api from '../services/api'
 
 export default function MunicipioSelector() {
@@ -35,10 +35,6 @@ export default function MunicipioSelector() {
     navigate(`/${subdominio}/login`)
   }
 
-  const handleAdminAccess = () => {
-    navigate('/admin')
-  }
-
   const municipiosFiltrados = municipios.filter(m =>
     m.nome_municipio.toLowerCase().includes(busca.toLowerCase()) ||
     (m.cidade && m.cidade.toLowerCase().includes(busca.toLowerCase()))
@@ -61,51 +57,12 @@ export default function MunicipioSelector() {
       <div className="relative flex-1 flex flex-col lg:flex-row items-center justify-center min-h-screen px-6 py-10 gap-12 max-w-6xl mx-auto w-full">
 
         {/* ── Coluna esquerda — Branding ── */}
-        <div className="flex flex-col items-center lg:items-start text-center lg:text-left lg:flex-1 gap-6">
+        <div className="flex flex-col items-center lg:items-start lg:flex-1">
           <img
             src="/logo_jprocesso.png"
             alt="jProcesso"
             className="w-64 sm:w-80 lg:w-96 object-contain drop-shadow-[0_0_32px_rgba(139,92,246,0.5)]"
           />
-
-          <div>
-            <p className="mt-1 text-white/60 text-base sm:text-lg font-medium tracking-widest uppercase">
-              Sistema de Tramitação Digital
-            </p>
-            <div
-              className="mt-2 h-px w-16 mx-auto lg:mx-0 rounded"
-              style={{ background: 'linear-gradient(90deg, #8b5cf6, #ec4899)' }}
-            />
-            <p className="mt-4 text-white/55 text-sm sm:text-base max-w-sm leading-relaxed">
-              Tecnologia inteligente para uma{' '}
-              <span
-                style={{
-                  background: 'linear-gradient(90deg, #a78bfa, #f472b6)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
-                gestão pública
-              </span>{' '}
-              mais eficiente.
-            </p>
-          </div>
-
-          <div className="hidden lg:flex flex-col gap-2.5 mt-2">
-            {[
-              { color: '#8b5cf6', label: 'Ambiente Multi-Tenant Isolado' },
-              { color: '#34d399', label: 'Dados Completamente Isolados' },
-              { color: '#60a5fa', label: 'Infraestrutura em Nuvem' },
-            ].map(item => (
-              <div key={item.label} className="flex items-center gap-2.5 text-white/50 text-xs">
-                <span
-                  className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{ background: item.color, boxShadow: `0 0 6px ${item.color}` }}
-                />
-                {item.label}
-              </div>
-            ))}
-          </div>
         </div>
 
         {/* ── Coluna direita — Card de seleção ── */}
@@ -184,15 +141,23 @@ export default function MunicipioSelector() {
                 }}
                 onClick={() => handleAcessar(m.subdominio)}
               >
-                {/* ícone */}
+                {/* ícone / brasão */}
                 <div
-                  className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
+                  className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center overflow-hidden"
                   style={{
                     background: 'rgba(139,92,246,0.18)',
                     border: '1px solid rgba(139,92,246,0.30)',
                   }}
                 >
-                  <Building2 className="h-4 w-4 text-violet-400" />
+                  {m.configuracoes?.logo_url ? (
+                    <img
+                      src={m.configuracoes.logo_url}
+                      alt={m.nome_municipio}
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                  ) : (
+                    <Building2 className="h-4 w-4 text-violet-400" />
+                  )}
                 </div>
 
                 {/* nome + subdomínio */}
@@ -228,16 +193,6 @@ export default function MunicipioSelector() {
             ))}
           </div>
 
-          {/* rodapé card */}
-          <div className="pt-1 border-t border-white/[0.07] text-center">
-            <button
-              onClick={handleAdminAccess}
-              className="inline-flex items-center gap-1.5 text-xs text-white/25 hover:text-violet-400 transition-colors"
-            >
-              <Settings className="h-3 w-3" />
-              Área de Administração
-            </button>
-          </div>
         </div>
       </div>
 
