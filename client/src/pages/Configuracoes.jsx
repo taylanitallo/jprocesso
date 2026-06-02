@@ -325,7 +325,10 @@ export default function Configuracoes() {
 
       <div className="card">
         {/* Tabs — overflow-x-auto no wrapper para funcionar no WebKit (border-radius + overflow-hidden bloqueia filhos) */}
-        <div className="border-b border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-800/50 overflow-x-auto overflow-y-hidden scrollbar-none touch-pan-x">
+        <div
+          className="border-b border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-800/50 overflow-x-auto overflow-y-hidden scrollbar-none touch-pan-x"
+          style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
+        >
           <nav className="flex min-w-max">
             {tabs.map((tab) => {
               const Icon = tab.icon;

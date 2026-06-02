@@ -3420,8 +3420,11 @@ export default function Contratos() {
       />
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 dark:border-slate-700/50 overflow-hidden">
-        <nav className="flex gap-1 overflow-x-auto scrollbar-none touch-pan-x">
+      <div
+        className="border-b border-gray-200 dark:border-slate-700/50 overflow-x-auto overflow-y-hidden scrollbar-none touch-pan-x"
+        style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
+      >
+        <nav className="flex gap-1 min-w-max">
           {TABS.map(t => {
             const active = tab === t.key
             const Icon = t.icon
@@ -3429,7 +3432,7 @@ export default function Contratos() {
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
-                className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap ${
+                className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                   active
                     ? 'border-blue-600 text-blue-700 dark:text-blue-400'
                     : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:border-gray-300'

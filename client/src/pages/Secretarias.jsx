@@ -822,8 +822,11 @@ export default function Secretarias() {
       />
 
       {/* Abas do módulo */}
-      <div className="border-b border-gray-200 dark:border-slate-700/50 -mt-1 overflow-hidden">
-        <nav className="flex overflow-x-auto scrollbar-none touch-pan-x -mb-px">
+      <div
+        className="border-b border-gray-200 dark:border-slate-700/50 -mt-1 overflow-x-auto overflow-y-hidden scrollbar-none touch-pan-x"
+        style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
+      >
+        <nav className="flex min-w-max">
           {[
             { key: 'entidade',     label: 'Entidade',              Icon: Building2  },
             { key: 'secretarias',  label: 'Secretarias e Setores', Icon: Network    },
