@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   ClipboardList, Plus, RefreshCw, ChevronDown, ChevronRight,
-  CheckCircle2, AlertTriangle, X, Eye
+  CheckCircle2, AlertTriangle, X, Eye, Pencil, Trash2
 } from 'lucide-react'
 import api from '../services/api'
 import AlmoxModal from './AlmoxModal'
@@ -212,13 +212,91 @@ function NovoInventarioModal({ onClose, onSave, saving, erro }) {
   )
 }
 
+
+// ─── Modal: Editar Inventário ─────────────────────────────────────────────────
+function EditarInventarioModal({ inventario, onClose, onSave, saving, erro }) {
+  const [obs, setObs] = React.useState(inventario.observacao || '')
+  return (
+    <AlmoxModal title={`Editar Inventário ${inventario.numero}`} onClose={onClose}>
+      <div className="space-y-4">
+        {erro && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 rounded-lg px-4 py-2 text-sm">{erro}</div>
+        )}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Observação</label>
+          <textarea
+            value={obs}
+            onChange={e => setObs(e.target.value)}
+            rows={3}
+            placeholder="Observação do inventário..."
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 resize-none"
+          />
+        </div>
+        <div className="flex justify-end gap-3 pt-2">
+          <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
+          <button
+            onClick={() => onSave({ observacao: obs })}
+            disabled={saving}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          >
+            {saving ? 'Salvando...' : 'Salvar'}
+          </button>
+        </div>
+      </div>
+    </AlmoxModal>
+  )
+}
+
+// ─── Modal: Confirmação de exclusão ─────────────────────────────────────────
+function ConfirmarExclusaoModal({ inventario, onClose, onConfirm, deleting }) {
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm">
+        <div className="p-6">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+              <Trash2 className="h-5 w-5 text-red-600 dark:text-red-400" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white">Excluir inventário</h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Tem certeza que deseja excluir o inventário <span className="font-semibold text-gray-700 dark:text-gray-300">{inventario.numero}</span>? Esta ação não pode ser desfeita.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 px-6 pb-5">
+          <button
+            onClick={onClose}
+            disabled={deleting}
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={deleting}
+            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+          >
+            {deleting ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+            {deleting ? 'Excluindo...' : 'Excluir'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function AlmoxInventario() {
   const [inventarios, setInventarios] = useState([])
   const [loading,     setLoading]     = useState(true)
   const [novoModal,   setNovoModal]   = useState(false)
   const [detalhe,     setDetalhe]     = useState(null)
+  const [editando,    setEditando]    = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(null)
   const [saving,      setSaving]      = useState(false)
+  const [deleting,    setDeleting]    = useState(false)
   const [erro,        setErro]        = useState('')
   const [filtroStatus, setFiltroStatus] = useState('')
 
@@ -243,6 +321,30 @@ export default function AlmoxInventario() {
     } catch (e) {
       setErro(e.response?.data?.error || 'Erro ao criar inventario')
     } finally { setSaving(false) }
+  }
+
+  const handleEdit = async (form) => {
+    setSaving(true); setErro('')
+    try {
+      await api.put(`/almoxarifado/inventarios/${editando.id}`, form)
+      setEditando(null)
+      load()
+    } catch (e) {
+      setErro(e.response?.data?.error || 'Erro ao editar inventário')
+    } finally { setSaving(false) }
+  }
+
+  const handleDelete = async () => {
+    if (!confirmDelete) return
+    setDeleting(true)
+    try {
+      await api.delete(`/almoxarifado/inventarios/${confirmDelete.id}`)
+      setConfirmDelete(null)
+      load()
+    } catch (e) {
+      setErro(e.response?.data?.error || 'Erro ao excluir inventário')
+      setConfirmDelete(null)
+    } finally { setDeleting(false) }
   }
 
   return (
@@ -313,13 +415,33 @@ export default function AlmoxInventario() {
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">{inv.responsavel?.nome || '—'}</td>
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => setDetalhe(inv)}
-                      className="p-1.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600"
-                      title="Ver / contar"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setDetalhe(inv)}
+                        className="p-1.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600"
+                        title="Ver / contar"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      {inv.status !== 'CONCLUIDO' && (
+                        <button
+                          onClick={() => { setEditando(inv); setErro('') }}
+                          className="p-1.5 rounded hover:bg-amber-50 dark:hover:bg-amber-900/30 text-amber-600"
+                          title="Editar observação"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                      )}
+                      {inv.status !== 'CONCLUIDO' && (
+                        <button
+                          onClick={() => setConfirmDelete(inv)}
+                          className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/30 text-red-400"
+                          title="Excluir inventário"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -337,11 +459,30 @@ export default function AlmoxInventario() {
         />
       )}
 
+      {editando && (
+        <EditarInventarioModal
+          inventario={editando}
+          onClose={() => setEditando(null)}
+          onSave={handleEdit}
+          saving={saving}
+          erro={erro}
+        />
+      )}
+
       {detalhe && (
         <InventarioDetalheModal
           inventario={detalhe}
           onClose={() => setDetalhe(null)}
           onRefresh={load}
+        />
+      )}
+
+      {confirmDelete && (
+        <ConfirmarExclusaoModal
+          inventario={confirmDelete}
+          onClose={() => setConfirmDelete(null)}
+          onConfirm={handleDelete}
+          deleting={deleting}
         />
       )}
     </div>

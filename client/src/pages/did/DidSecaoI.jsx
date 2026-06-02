@@ -704,11 +704,12 @@ export default function DidSecaoI({
         <Field label="Certidões">
           <div className="flex flex-wrap gap-5 pt-1">
             {[
-              { key: 'cert_sec1_municipal',   label: 'Municipal' },
-              { key: 'cert_sec1_trabalhista', label: 'Trabalhista' },
-              { key: 'cert_sec1_fgts',        label: 'FGTS' },
-              { key: 'cert_sec1_estadual',    label: 'Estadual' },
-              { key: 'cert_sec1_federal',     label: 'Federal' },
+              { key: 'cert_sec1_municipal',        label: 'Municipal' },
+              { key: 'cert_sec1_trabalhista',    label: 'Trabalhista' },
+              { key: 'cert_sec1_fgts',           label: 'FGTS' },
+              { key: 'cert_sec1_estadual',       label: 'Estadual' },
+              { key: 'cert_sec1_federal',        label: 'Federal' },
+              { key: 'cert_sec1_simples_nac',    label: 'Simples Nacional' },
             ].map(({ key, label }) => (
               <label key={key} className={`flex items-center gap-2 text-sm select-none
                 ${locked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}

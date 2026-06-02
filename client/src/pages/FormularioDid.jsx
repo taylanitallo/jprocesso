@@ -400,7 +400,7 @@ export default function FormularioDid() {
     'objeto', 'data_did', 'secretario_nome', 'secretaria_sec1', 'fonte_recurso', 'detalhes_em_anexo',
     'contrato_ref', 'credor_sec1', 'cnpj_cpf_credor_sec1', 'nro_licitacao_sec1', 'tipo_licitacao_sec1', 'valor_did',
     'mes_referencia', 'nf_sec1',
-    'cert_sec1_municipal', 'cert_sec1_trabalhista', 'cert_sec1_fgts', 'cert_sec1_estadual', 'cert_sec1_federal',
+    'cert_sec1_municipal', 'cert_sec1_trabalhista', 'cert_sec1_fgts', 'cert_sec1_estadual', 'cert_sec1_federal', 'cert_sec1_simples_nac',
   ]
 
   const criarProcessoSeNovo = async () => {

@@ -608,6 +608,7 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
       ADD COLUMN IF NOT EXISTS cert_sec1_fgts                BOOLEAN DEFAULT false,
       ADD COLUMN IF NOT EXISTS cert_sec1_estadual            BOOLEAN DEFAULT false,
       ADD COLUMN IF NOT EXISTS cert_sec1_federal             BOOLEAN DEFAULT false,
+      ADD COLUMN IF NOT EXISTS cert_sec1_simples_nac         BOOLEAN DEFAULT false,
       ADD COLUMN IF NOT EXISTS contabil_auditor              VARCHAR(500),
       ADD COLUMN IF NOT EXISTS data_empenho                  DATE,
       ADD COLUMN IF NOT EXISTS liquidacao_numero             VARCHAR(200),

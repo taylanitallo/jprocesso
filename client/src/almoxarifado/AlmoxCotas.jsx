@@ -4,6 +4,14 @@ import api from '../services/api'
 import AlmoxModal from './AlmoxModal'
 import { fmt } from './almoxConstants'
 
+// Normaliza resposta da API para garantir array
+const toArray = (res, keys = []) => {
+  if (Array.isArray(res)) return res
+  for (const k of keys) { if (Array.isArray(res?.[k])) return res[k] }
+  if (Array.isArray(res?.data)) return res.data
+  return []
+}
+
 // ─── Modal: Nova Cota ─────────────────────────────────────────────────────────
 function NovaCotaModal({ itens, setores, onClose, onSave, saving, erro }) {
   const mesAtual = new Date().toISOString().slice(0, 7) // YYYY-MM
@@ -31,7 +39,9 @@ function NovaCotaModal({ itens, setores, onClose, onSave, saving, erro }) {
               className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-teal-500"
             >
               <option value="">Selecione o setor...</option>
-              {setores.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
+              {(Array.isArray(setores) ? setores : []).length === 0
+                ? <option disabled>Nenhum setor disponível</option>
+                : (Array.isArray(setores) ? setores : []).map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
             </select>
           </div>
           <div>
@@ -132,8 +142,8 @@ export default function AlmoxCotas() {
   }, [filtroSetor, filtroMes])
 
   useEffect(() => {
-    api.get('/almoxarifado/itens').then(r => setItens(r.data || [])).catch(() => {})
-    api.get('/organizacao/setores').then(r => setSetores(r.data || [])).catch(() => {})
+    api.get('/almoxarifado/itens').then(r => setItens(toArray(r.data, ['itens']))).catch(() => {})
+    api.get('/organizacao/setores').then(r => setSetores(toArray(r.data, ['setores', 'secretarias']))).catch(() => {})
   }, [])
 
   useEffect(() => { load() }, [load])
@@ -174,7 +184,7 @@ export default function AlmoxCotas() {
             className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
           >
             <option value="">Todos os setores</option>
-            {setores.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
+            {(Array.isArray(setores) ? setores : []).map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
           </select>
           <button onClick={load} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
             <RefreshCw className="h-4 w-4" />

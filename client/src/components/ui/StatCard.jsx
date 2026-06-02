@@ -54,7 +54,7 @@ export default function StatCard({ icon: Icon, label, value, hint, tone = 'blue'
 
   return (
     <div className={`
-      flex items-center gap-4 p-4
+      flex items-center gap-5 px-5 py-5 min-h-[104px]
       bg-white dark:bg-slate-800/70
       rounded-2xl border ${t.border}
       shadow-sm hover:shadow-md hover:-translate-y-0.5
@@ -62,17 +62,17 @@ export default function StatCard({ icon: Icon, label, value, hint, tone = 'blue'
     `}>
       {/* Ícone */}
       {Icon && (
-        <div className={`shrink-0 flex items-center justify-center w-10 h-10 rounded-xl ${t.icon}`}>
-          <Icon className="w-5 h-5" strokeWidth={1.75} />
+        <div className={`shrink-0 flex items-center justify-center w-12 h-12 rounded-xl ${t.icon}`}>
+          <Icon className="w-6 h-6" strokeWidth={1.75} />
         </div>
       )}
 
       {/* Textos */}
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium text-gray-500 dark:text-slate-400 truncate mb-0.5">
+        <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 leading-tight mb-1 uppercase tracking-wide">
           {label}
         </p>
-        <p className={`text-2xl font-bold leading-none ${t.value}`}>
+        <p className={`text-3xl font-bold leading-none ${t.value}`}>
           {value ?? '—'}
         </p>
         {(hint || trend) && (

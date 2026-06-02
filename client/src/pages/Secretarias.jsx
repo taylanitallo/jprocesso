@@ -8,6 +8,8 @@ import FilterBar from '../components/ui/FilterBar';
 import { 
   Plus, 
   Building2, 
+  Network,
+  Users,
   Edit2, 
   Trash2, 
   Briefcase,
@@ -15,12 +17,300 @@ import {
   CheckCircle,
   UserCheck,
   X,
-  UserCog
+  UserCog,
+  Wallet,
+  Database,
+  Tag,
+  Calendar,
+  Mail,
+  Phone,
+  MapPin,
+  Shield,
+  User,
+  Save,
+  ChevronRight
 } from 'lucide-react';
 
 
+
+// ── SectionCard — card de seção para modais ───────────────────────────────────
+function SectionCard({ icon: Icon, title, subtitle, children }) {
+  return (
+    <div className="rounded-2xl border border-gray-100 dark:border-slate-700/60 bg-white dark:bg-slate-800/50 shadow-sm overflow-hidden">
+      <div className="px-5 py-3.5 border-b border-gray-100 dark:border-slate-700/60 bg-gradient-to-r from-gray-50 to-white dark:from-slate-800 dark:to-slate-800/80">
+        <div className="flex items-center gap-3">
+          {Icon && (
+            <div className="w-7 h-7 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+              <Icon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            </div>
+          )}
+          <div>
+            <p className="text-sm font-semibold text-gray-800 dark:text-slate-200">{title}</p>
+            {subtitle && <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{subtitle}</p>}
+          </div>
+        </div>
+      </div>
+      <div className="px-5 py-4">{children}</div>
+    </div>
+  )
+}
+
+// ── ModalShell — shell padrão de modal ────────────────────────────────────────
+function ModalShell({ open, onClose, icon: Icon, iconBg = 'from-blue-500 to-blue-600', title, subtitle, badge, width = 640, children, footer }) {
+  if (!open) return null
+  return (
+    <div className="fixed inset-0 z-[9990] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div
+        className="bg-gray-50 dark:bg-slate-900 rounded-3xl shadow-2xl w-full flex flex-col overflow-hidden"
+        style={{ maxWidth: '90vw', maxHeight: '90vh', width }}
+      >
+        {/* Header */}
+        <div className="bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700/60 px-6 py-4 shrink-0">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-4">
+              <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${iconBg} flex items-center justify-center shadow-md`}>
+                {Icon && <Icon className="w-5 h-5 text-white" />}
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-gray-900 dark:text-white">{title}</h2>
+                {subtitle && <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{subtitle}</p>}
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {badge}
+              <button onClick={onClose}
+                className="w-8 h-8 flex items-center justify-center rounded-xl border border-gray-200 dark:border-slate-600 text-gray-400 hover:text-gray-600 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6 space-y-4">{children}</div>
+        </div>
+
+        {/* Footer */}
+        {footer && (
+          <div className="bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700/60 px-6 py-4 shrink-0 flex items-center justify-end gap-3">
+            {footer}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+const PAGE_SIZE = 10;
+
+function PaginationBar({ total, page, setPage }) {
+  if (total === 0) return null;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const start = (page - 1) * PAGE_SIZE + 1;
+  const end = Math.min(page * PAGE_SIZE, total);
+
+  const getPages = () => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    if (page <= 4) return [1, 2, 3, 4, 5, '...', totalPages];
+    if (page >= totalPages - 3) return [1, '...', totalPages-4, totalPages-3, totalPages-2, totalPages-1, totalPages];
+    return [1, '...', page-1, page, page+1, '...', totalPages];
+  };
+
+  return (
+    <div className="flex items-center justify-between px-4 py-2 border-t border-gray-100 dark:border-slate-700/50 bg-white dark:bg-slate-900/50 text-xs">
+      <span className="text-gray-500 dark:text-slate-400">
+        Mostrando {start}–{end} de {total} registro{total !== 1 ? 's' : ''}
+      </span>
+      {totalPages > 1 && (
+        <div className="flex items-center gap-1">
+          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+            className="px-2 py-0.5 rounded border border-gray-200 dark:border-slate-600 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-slate-700/50 text-gray-600 dark:text-slate-300">
+            Anterior
+          </button>
+          {getPages().map((pg, i) =>
+            pg === '...'
+              ? <span key={`dots-${i}`} className="px-1.5 text-gray-400">...</span>
+              : <button key={pg} onClick={() => setPage(pg)}
+                  className={`w-7 h-6 rounded border text-xs font-medium transition-colors ${pg === page ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700/50 text-gray-600 dark:text-slate-300'}`}>
+                  {pg}
+                </button>
+          )}
+          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}
+            className="px-2 py-0.5 rounded border border-gray-200 dark:border-slate-600 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-slate-700/50 text-gray-600 dark:text-slate-300">
+            Próximo
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Helpers de status de vigência ────────────────────────────────────────────
+function getStatusVigencia(dataInicio, dataFim) {
+  const hoje = new Date();
+  const ini = dataInicio ? new Date(dataInicio + 'T00:00:00') : null;
+  const fim = dataFim    ? new Date(dataFim    + 'T23:59:59') : null;
+  if (ini && ini > hoje) return 'futuro';
+  if (fim && fim < hoje) return 'encerrado';
+  return 'ativo';
+}
+
+function StatusBadge({ status }) {
+  const cfg = {
+    ativo:     { label: 'Ativo',     cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+    encerrado: { label: 'Encerrado', cls: 'bg-gray-100 text-gray-600 dark:bg-slate-700/40 dark:text-slate-400' },
+    futuro:    { label: 'Futuro',    cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+    ativa:     { label: 'Ativa',     cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+    inativa:   { label: 'Inativa',   cls: 'bg-gray-100 text-gray-600 dark:bg-slate-700/40 dark:text-slate-400' },
+  };
+  const cf = cfg[status] || { label: status || '—', cls: 'bg-gray-100 text-gray-600 dark:bg-slate-700/40 dark:text-slate-400' };
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${cf.cls}`}>
+      {cf.label}
+    </span>
+  );
+}
+
 export default function Secretarias() {
-  // â”€â”€ DotaÃ§Ãµes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const { subdomain, tab: tabParam } = useParams()
+  const navigate = useNavigate()
+
+  // Aba
+  const [activeTab, setActiveTab] = useState(tabParam || 'secretarias')
+
+  useEffect(() => {
+    if (tabParam && tabParam !== activeTab) setActiveTab(tabParam)
+  }, [tabParam])
+
+  // Secretarias
+  const [secretarias, setSecretarias]               = useState([])
+  const [loading, setLoading]                       = useState(false)
+  const [successMessage, setSuccessMessage]         = useState('')
+  const [selectedSecretaria, setSelectedSecretaria] = useState(null)
+  const [expandedSecretarias, setExpandedSecretarias] = useState([])
+  const [showModalSecretaria, setShowModalSecretaria] = useState(false)
+  const [editingSecretaria, setEditingSecretaria]   = useState(null)
+  const [formSecretaria, setFormSecretaria]         = useState({
+    nome: '', sigla: '', descricao: '',
+    data_inicio: '', data_fim: '', email: '', whatsapp: '',
+    outros_sistemas: false, cnpj: '', razao_social: '', codigo_unidade: '',
+    responsaveis: [], setores: []
+  })
+  const [showModalSetor, setShowModalSetor]   = useState(false)
+  const [editingSetor, setEditingSetor]       = useState(null)
+  const [formSetor, setFormSetor]             = useState({ nome: '', descricao: '', secretariaId: null })
+  const [deleteTarget, setDeleteTarget]       = useState(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [secFiltroDescricao, setSecFiltroDescricao] = useState('')
+  const [secFiltroSigla, setSecFiltroSigla]         = useState('')
+  const [secFiltroVigor, setSecFiltroVigor]         = useState('')
+
+  // Paginação
+  const [secPage, setSecPage]   = useState(1)
+  const [agPage, setAgPage]     = useState(1)
+  const [respPage, setRespPage] = useState(1)
+
+  // Reset páginas quando filtros mudarem
+  useEffect(() => { setSecPage(1) }, [secFiltroDescricao, secFiltroSigla, secFiltroVigor])
+  useEffect(() => { setAgPage(1) }, [])
+
+  // Setores panel
+  const [showSetoresPanel, setShowSetoresPanel]         = useState(false)
+  const [selectedSetorInPanel, setSelectedSetorInPanel] = useState(null)
+
+  // Orcamento panel
+  const [showOrcamentoPanel, setShowOrcamentoPanel] = useState(false)
+  const [orcamentoEditing, setOrcamentoEditing]     = useState(false)
+  const [orcamentoOriginal, setOrcamentoOriginal]   = useState(null)
+  const [formOrcamento, setFormOrcamento]           = useState({ exercicio: '', valor_loa: '', valor_suplementado: '', valor_reduzido: '' })
+
+  const openOrcamentoPanel = () => {
+    const orc = selectedSecretaria?.orcamento || {}
+    const form = {
+      exercicio:          String(orc.exercicio          || new Date().getFullYear()),
+      valor_loa:          String(orc.valor_loa          || ''),
+      valor_suplementado: String(orc.valor_suplementado || ''),
+      valor_reduzido:     String(orc.valor_reduzido     || ''),
+    }
+    setFormOrcamento(form)
+    setOrcamentoOriginal(form)
+    setOrcamentoEditing(false)
+    setShowOrcamentoPanel(true)
+  }
+
+  const saveOrcamento = async () => {
+    try {
+      setLoading(true)
+      await api.put(`/organizacao/secretarias/${selectedSecretaria.id}`, {
+        nome: selectedSecretaria.nome,
+        sigla: selectedSecretaria.sigla,
+        descricao: selectedSecretaria.descricao,
+        ativo: selectedSecretaria.ativo,
+        orcamento: formOrcamento
+      })
+      await fetchSecretarias()
+      setOrcamentoEditing(false)
+      setOrcamentoOriginal({...formOrcamento})
+      setSuccessMessage('Orçamento salvo com sucesso!')
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch { alert('Erro ao salvar orçamento.') }
+    finally { setLoading(false) }
+  }
+
+  // Agentes
+  const [agentes, setAgentes]                   = useState([])
+  const [agenteSearch, setAgenteSearch]         = useState('')
+  // Reset paginação dos agentes quando filtro mudar
+  useEffect(() => { setAgPage(1) }, [agenteSearch])
+  const [selectedAgente, setSelectedAgente]     = useState(null)
+  const [showModalAgente, setShowModalAgente]   = useState(false)
+  const [editingAgente, setEditingAgente]       = useState(null)
+  const [formAgente, setFormAgente]             = useState({ nome: '', nome_reduzido: '', cpf: '', nascimento: '', telefone: '', email: '', matricula: '' })
+  const [deleteAgenteTarget, setDeleteAgenteTarget]       = useState(null)
+  const [showDeleteAgenteModal, setShowDeleteAgenteModal] = useState(false)
+
+  // Responsaveis
+  const [showModalResp, setShowModalResp] = useState(false)
+  const [editingResp, setEditingResp]     = useState(null)
+  const [formResp, setFormResp]           = useState({ secretaria_id: '', agente_id: '', nome: '', cargo: '', data_inicio: '', data_fim: '', amparo: '' })
+  const [selectedResp, setSelectedResp]   = useState(null)
+  const [respFiltroVigor, setRespFiltroVigor]   = useState('')
+  const [respFiltroNome, setRespFiltroNome]     = useState('')
+  const [respFiltroSec, setRespFiltroSec]       = useState('')
+  const [respFiltroCargo, setRespFiltroCargo]   = useState('')
+  const [respFiltroStatus, setRespFiltroStatus] = useState('')
+  // Reset paginação dos responsáveis quando filtros mudarem
+  useEffect(() => { setRespPage(1) }, [respFiltroVigor, respFiltroNome, respFiltroSec, respFiltroCargo, respFiltroStatus])
+
+  const fetchSecretarias = async () => {
+    try {
+      const [secRes, agRes] = await Promise.all([
+        api.get('/organizacao/secretarias'),
+        api.get('/organizacao/agentes').catch(() => ({ data: [] }))
+      ])
+      const rawSec = secRes.data
+      setSecretarias(
+        Array.isArray(rawSec)              ? rawSec :
+        Array.isArray(rawSec?.secretarias) ? rawSec.secretarias :
+        Array.isArray(rawSec?.data)        ? rawSec.data :
+        []
+      )
+      const rawAg = agRes.data
+      setAgentes(
+        Array.isArray(rawAg)           ? rawAg :
+        Array.isArray(rawAg?.agentes)  ? rawAg.agentes :
+        Array.isArray(rawAg?.data)     ? rawAg.data :
+        []
+      )
+    } catch (err) {
+      console.error('Erro ao carregar organizacao:', err)
+    }
+  }
+
+  useEffect(() => { fetchSecretarias() }, [])
+
+  // ── Dotações ────────────────────────────────────────────────────────────────
   const [showDotacoesPanel, setShowDotacoesPanel] = useState(false);
   const [dotacoesList, setDotacoesList] = useState([]);
   const [selectedDotacao, setSelectedDotacao] = useState(null);
@@ -45,9 +335,9 @@ export default function Secretarias() {
       });
       await fetchSecretarias();
       setDotacoesList(lista);
-      setSuccessMessage('DotaÃ§Ãµes salvas com sucesso!');
+      setSuccessMessage('Dotações salvas com sucesso!');
       setTimeout(() => setSuccessMessage(''), 3000);
-    } catch { alert('Erro ao salvar dotaÃ§Ãµes.'); }
+    } catch { alert('Erro ao salvar dotações.'); }
     finally { setLoading(false); }
   };
 
@@ -67,7 +357,7 @@ export default function Secretarias() {
 
   const deleteDotacao = () => {
     if (!selectedDotacao) return;
-    if (!window.confirm(`Excluir a dotaÃ§Ã£o "${selectedDotacao.codigo || selectedDotacao.descricao}"?`)) return;
+    if (!window.confirm(`Excluir a dotação "${selectedDotacao.codigo || selectedDotacao.descricao}"?`)) return;
     const nova = dotacoesList.filter(d => d.id !== selectedDotacao.id);
     saveDotacoes(nova);
     setSelectedDotacao(null);
@@ -78,7 +368,7 @@ export default function Secretarias() {
     return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
-  // â”€â”€ Entidade â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Entidade ──────────────────────────────────────────────────────────────
   const [entidadeLoading, setEntidadeLoading] = useState(false);
   const [entidadeSaved,   setEntidadeSaved]   = useState(false);
   const [entidadeEditing, setEntidadeEditing] = useState(false);
@@ -192,7 +482,7 @@ export default function Secretarias() {
     setShowModalSecretaria(true);
   };
 
-  // â”€â”€ GestÃ£o de responsÃ¡veis â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Gestão de responsáveis ────────────────────────────────────────────────
   const addResponsavel = () => {
     setFormSecretaria(p => ({
       ...p,
@@ -221,7 +511,7 @@ export default function Secretarias() {
   };
 
   const handleCreateSetor = (secretariaId) => {
-    console.log('ðŸ” Criando setor para secretaria ID:', secretariaId);
+
     setEditingSetor(null);
     setFormSetor({
       nome: '',
@@ -309,7 +599,7 @@ export default function Secretarias() {
       setShowModalSecretaria(false);
       setEditingSecretaria(null);
       
-      // Limpar mensagem apÃ³s 3 segundos
+      // Limpar mensagem após 3 segundos
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
       console.error('Erro ao salvar secretaria:', error);
@@ -345,7 +635,7 @@ export default function Secretarias() {
       setShowModalSetor(false);
       setEditingSetor(null);
       
-      // Limpar mensagem apÃ³s 3 segundos
+      // Limpar mensagem após 3 segundos
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
       console.error('Erro ao salvar setor:', error);
@@ -375,7 +665,7 @@ export default function Secretarias() {
     setFormSecretaria({ ...formSecretaria, setores: newSetores });
   };
 
-  // â”€â”€ Agentes functions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Agentes functions ──────────────────────────────────────────────────────
   const openModalAgente = (agente = null) => {
     setEditingAgente(agente);
     setFormAgente(agente ? { ...agente } : {
@@ -414,8 +704,8 @@ export default function Secretarias() {
     } catch { alert('Erro ao remover agente.'); }
   };
 
-  // â”€â”€ ResponsÃ¡veis functions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  const todosResponsaveis = secretarias.flatMap(sec =>
+  // ── Responsáveis functions ─────────────────────────────────────────────────
+  const todosResponsaveis = (Array.isArray(secretarias) ? secretarias : []).flatMap(sec =>
     (sec.responsaveis || []).map((r, i) => ({
       ...r, _secId: sec.id, _secNome: sec.nome, _secSigla: sec.sigla, _idx: i
     }))
@@ -454,17 +744,17 @@ export default function Secretarias() {
       await fetchSecretarias();
       setShowModalResp(false);
       setEditingResp(null);
-      setSuccessMessage('ResponsÃ¡vel salvo com sucesso!');
+      setSuccessMessage('Responsável salvo com sucesso!');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch {
-      alert('Erro ao salvar responsÃ¡vel. Tente novamente.');
+      alert('Erro ao salvar responsável. Tente novamente.');
     } finally {
       setLoading(false);
     }
   };
 
   const deleteResponsavel = async (resp) => {
-    if (!window.confirm(`Remover "${resp.nome}" como responsÃ¡vel de ${resp._secSigla}?`)) return;
+    if (!window.confirm(`Remover "${resp.nome}" como responsável de ${resp._secSigla}?`)) return;
     try {
       const sec = secretarias.find(s => s.id === resp._secId);
       if (!sec) return;
@@ -473,14 +763,14 @@ export default function Secretarias() {
         nome: sec.nome, sigla: sec.sigla, descricao: sec.descricao, ativo: sec.ativo, responsaveis
       });
       await fetchSecretarias();
-      setSuccessMessage('ResponsÃ¡vel removido com sucesso.');
+      setSuccessMessage('Responsável removido com sucesso.');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch {
-      alert('Erro ao remover responsÃ¡vel.');
+      alert('Erro ao remover responsável.');
     }
   };
 
-  // â”€â”€ Helpers de formataÃ§Ã£o â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Helpers de formatação ─────────────────────────────────────────────────
   const formatCNPJ = (v) => {
     const d = v.replace(/\D/g, '').slice(0, 14);
     if (d.length <= 2) return d;
@@ -507,9 +797,9 @@ export default function Secretarias() {
   };
 
   const maskCPF = (cpf) => {
-    if (!cpf) return 'â€”';
+    if (!cpf) return '—';
     const d = cpf.replace(/\D/g, '');
-    if (d.length < 11) return cpf || 'â€”';
+    if (d.length < 11) return cpf || '—';
     return `***.${d.slice(3,6)}.${d.slice(6,9)}-**`;
   };
 
@@ -526,48 +816,57 @@ export default function Secretarias() {
       {/* Header */}
       <PageHeader
         icon={Building2}
-        eyebrow="OrganizaÃ§Ã£o"
-        title="GestÃ£o de OrganizaÃ§Ã£o"
-        subtitle="Gerencie secretarias, agentes e responsÃ¡veis do municÃ­pio"
+        eyebrow="Organização"
+        title="Gestão de Organização"
+        subtitle="Gerencie secretarias, agentes e responsáveis do município"
       />
 
-      {/* Abas do mÃ³dulo */}
+      {/* Abas do módulo */}
       <div className="border-b border-gray-200 dark:border-slate-700/50 -mt-1">
         <nav className="flex overflow-x-auto scrollbar-none -mb-px">
           {[
-            { key: 'entidade',     label: 'Entidade',              icon: 'ðŸ¢'  },
-            { key: 'secretarias',  label: 'Secretarias e Setores', icon: 'ðŸ›ï¸' },
-            { key: 'agentes',      label: 'Cadastro de Agentes',   icon: 'ðŸªª'  },
-            { key: 'responsaveis', label: 'ResponsÃ¡veis',          icon: 'ðŸ‘¤'  },
+            { key: 'entidade',     label: 'Entidade',              Icon: Building2  },
+            { key: 'secretarias',  label: 'Secretarias e Setores', Icon: Network    },
+            { key: 'agentes',      label: 'Cadastro de Agentes',   Icon: Users      },
+            { key: 'responsaveis', label: 'Responsáveis',          Icon: UserCheck  },
           ].map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-              className={`flex-shrink-0 px-3 sm:px-5 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+              className={`flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-5 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab.key
                   ? 'border-blue-600 text-blue-600 dark:text-blue-400'
                   : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200'
               }`}>
-              {tab.icon} {tab.label}
+              <tab.Icon className="h-4 w-4" /> {tab.label}
             </button>
           ))}
         </nav>
       </div>
 
-      {/* â”€â”€ Tab: Secretarias e Setores â”€â”€ */}
+      {/* ── Tab: Secretarias e Setores ── */}
       {activeTab === 'secretarias' && (
         <div className="space-y-3">
           {/* Campos para pesquisa */}
           <FilterBar>
             <div className="flex-1 min-w-48">
-              <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">DescriÃ§Ã£o</label>
+              <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Descrição</label>
               <input
                 value={secFiltroDescricao}
                 onChange={e => setSecFiltroDescricao(e.target.value)}
                 className="input-field text-sm"
-                placeholder="PESQUISAR POR DESCRIÃ‡ÃƒO"
+                placeholder="Buscar por descrição..."
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">VigÃªncia</label>
+              <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Sigla</label>
+              <input
+                value={secFiltroSigla}
+                onChange={e => setSecFiltroSigla(e.target.value)}
+                className="input-field text-sm w-28"
+                placeholder="Ex: SMAD"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Vigência</label>
               <input
                 type="date"
                 value={secFiltroVigor}
@@ -587,16 +886,18 @@ export default function Secretarias() {
                 <thead className="bg-gray-100 dark:bg-slate-700/30 border-b border-gray-200 dark:border-slate-700/50">
                   <tr>
                     <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-8"></th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">DescriÃ§Ã£o</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-32">Data inÃ­cio</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-32">Data fim</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-28">CÃ³digo</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Descrição</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-24">Sigla</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-28">Status</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-28">Início</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-28">Fim</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
                   {(() => {
                     const filtradas = secretarias.filter(sec => {
                       if (secFiltroDescricao && !sec.nome.toLowerCase().includes(secFiltroDescricao.toLowerCase())) return false;
+                      if (secFiltroSigla && !(sec.sigla||'').toLowerCase().includes(secFiltroSigla.toLowerCase())) return false;
                       if (secFiltroVigor) {
                         const vigor = new Date(secFiltroVigor + 'T12:00:00');
                         const ini = sec.data_inicio ? new Date(sec.data_inicio + 'T00:00:00') : null;
@@ -606,11 +907,12 @@ export default function Secretarias() {
                       }
                       return true;
                     });
+                    const pageItems = filtradas.slice((secPage - 1) * PAGE_SIZE, secPage * PAGE_SIZE);
 
                     if (filtradas.length === 0) {
                       return (
                         <tr>
-                          <td colSpan={5}>
+                          <td colSpan={6}>
                             <EmptyState
                               icon={Building2}
                               title={secretarias.length === 0 ? 'Nenhuma secretaria cadastrada' : 'Nenhum resultado para o filtro'}
@@ -620,7 +922,7 @@ export default function Secretarias() {
                       );
                     }
 
-                    return filtradas.map(sec => {
+                    return pageItems.map(sec => {
                       const isSelected = selectedSecretaria?.id === sec.id;
                       return (
                         <tr
@@ -634,19 +936,26 @@ export default function Secretarias() {
                           }`}
                         >
                           <td className="px-4 py-2.5 text-center">
-                            {isSelected && <span className="text-white text-xs">â–¶</span>}
+                            {isSelected && <span className="text-white text-xs">▶</span>}
                           </td>
                           <td className={`px-4 py-2.5 font-medium ${isSelected ? 'text-white' : 'text-gray-900 dark:text-slate-100'}`}>
                             {sec.nome}
                           </td>
-                          <td className={`px-4 py-2.5 ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-slate-400'}`}>
-                            {sec.data_inicio ? new Date(sec.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR') : 'â€”'}
+                          <td className="px-4 py-2.5">
+                            {sec.sigla
+                              ? <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono font-semibold ${isSelected ? 'bg-blue-500/40 text-blue-100' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'}`}>{sec.sigla}</span>
+                              : <span className={isSelected ? 'text-blue-200 text-xs' : 'text-gray-400 text-xs'}>—</span>}
                           </td>
-                          <td className={`px-4 py-2.5 ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-slate-400'}`}>
-                            {sec.data_fim ? new Date(sec.data_fim + 'T00:00:00').toLocaleDateString('pt-BR') : 'â€”'}
+                          <td className="px-4 py-2.5">
+                            {isSelected
+                              ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-500/30 text-blue-100">{sec.ativo !== false ? 'Ativa' : 'Inativa'}</span>
+                              : <StatusBadge status={sec.ativo !== false ? 'ativa' : 'inativa'} />}
                           </td>
-                          <td className={`px-4 py-2.5 font-mono text-xs ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-slate-400'}`}>
-                            {sec.codigo_unidade || 'â€”'}
+                          <td className={`px-4 py-2.5 text-xs ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-slate-400'}`}>
+                            {sec.data_inicio ? new Date(sec.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
+                          </td>
+                          <td className={`px-4 py-2.5 text-xs ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-slate-400'}`}>
+                            {sec.data_fim ? new Date(sec.data_fim + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
                           </td>
                         </tr>
                       );
@@ -656,21 +965,26 @@ export default function Secretarias() {
               </table>
             </div>
 
+            {/* Paginação */}
+            <PaginationBar
+              total={secretarias.filter(sec => {
+                if (secFiltroDescricao && !sec.nome.toLowerCase().includes(secFiltroDescricao.toLowerCase())) return false;
+                if (secFiltroSigla && !(sec.sigla||'').toLowerCase().includes(secFiltroSigla.toLowerCase())) return false;
+                if (secFiltroVigor) {
+                  const vigor = new Date(secFiltroVigor + 'T12:00:00');
+                  const ini = sec.data_inicio ? new Date(sec.data_inicio + 'T00:00:00') : null;
+                  const fim = sec.data_fim    ? new Date(sec.data_fim    + 'T23:59:59') : null;
+                  if (ini && ini > vigor) return false;
+                  if (fim && fim < vigor)  return false;
+                }
+                return true;
+              }).length}
+              page={secPage}
+              setPage={setSecPage}
+            />
+
             {/* Toolbar inferior */}
-            <div className="px-4 py-2.5 border-t border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-700/20 flex items-center justify-between flex-wrap gap-2">
-              <span className="text-xs text-gray-500 dark:text-slate-400">
-                Foram encontrados {secretarias.filter(sec => {
-                  if (secFiltroDescricao && !sec.nome.toLowerCase().includes(secFiltroDescricao.toLowerCase())) return false;
-                  if (secFiltroVigor) {
-                    const vigor = new Date(secFiltroVigor + 'T12:00:00');
-                    const ini = sec.data_inicio ? new Date(sec.data_inicio + 'T00:00:00') : null;
-                    const fim = sec.data_fim    ? new Date(sec.data_fim    + 'T23:59:59') : null;
-                    if (ini && ini > vigor) return false;
-                    if (fim && fim < vigor)  return false;
-                  }
-                  return true;
-                }).length} registro(s)
-              </span>
+            <div className="px-4 py-2.5 border-t border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-700/20 flex items-center justify-end flex-wrap gap-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={() => { setSelectedSecretaria(null); handleCreateSecretaria(); }}
@@ -704,14 +1018,14 @@ export default function Secretarias() {
                   disabled={!selectedSecretaria}
                   className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  ðŸ’° OrÃ§amento
+                  <Wallet className="h-4 w-4" /> Orçamento
                 </button>
                 <button
                   onClick={() => selectedSecretaria && openDotacoesPanel()}
                   disabled={!selectedSecretaria}
                   className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  ðŸ“Š DotaÃ§Ãµes
+                  <Database className="h-4 w-4" /> Dotações
                 </button>
               </div>
             </div>
@@ -719,18 +1033,18 @@ export default function Secretarias() {
         </div>
       )}
 
-      {/* â”€â”€ Tab: Cadastro de Agentes â”€â”€ */}
+      {/* ── Tab: Cadastro de Agentes ── */}
       {activeTab === 'agentes' && (
         <div className="space-y-3">
-          {/* OpÃ§Ãµes de filtro */}
+          {/* Opções de filtro */}
           <FilterBar>
-            <div className="flex items-center gap-3">
-              <label className="text-sm font-medium text-gray-600 dark:text-slate-400 whitespace-nowrap">Nome/CPF</label>
+            <div className="flex-1 min-w-48">
+              <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Nome / CPF</label>
               <input
                 value={agenteSearch}
                 onChange={e => setAgenteSearch(e.target.value)}
-                className="input-field w-80"
-                placeholder="PESQUISAR POR NOME OU CPF"
+                className="input-field text-sm"
+                placeholder="Buscar por nome ou CPF..."
               />
             </div>
           </FilterBar>
@@ -746,34 +1060,31 @@ export default function Secretarias() {
                   <tr>
                     <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-8"></th>
                     <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Nome</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">CPF</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Nascimento</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Telefone</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">e-mail</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-32">CPF</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Cargo Atual</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Secretaria</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-28">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
-                  {agentes.filter(a =>
-                    !agenteSearch
-                    || a.nome.toLowerCase().includes(agenteSearch.toLowerCase())
-                    || (a.cpf||'').replace(/\D/g,'').includes(agenteSearch.replace(/\D/g,''))
-                  ).length === 0 ? (
-                    <tr>
-                      <td colSpan={6}>
-                        <EmptyState
-                          icon={UserCog}
-                          title={agentes.length === 0 ? 'Nenhum agente cadastrado' : 'Nenhum resultado para o filtro'}
-                        />
-                      </td>
-                    </tr>
-                  ) : (
-                    agentes
-                      .filter(a =>
-                        !agenteSearch
-                        || a.nome.toLowerCase().includes(agenteSearch.toLowerCase())
-                        || (a.cpf||'').replace(/\D/g,'').includes(agenteSearch.replace(/\D/g,''))
-                      )
-                      .map(agente => {
+                  {(() => {
+                    const filteredAg = agentes.filter(a =>
+                      !agenteSearch
+                      || a.nome.toLowerCase().includes(agenteSearch.toLowerCase())
+                      || (a.cpf||'').replace(/\D/g,'').includes(agenteSearch.replace(/\D/g,''))
+                    );
+                    const pageAg = filteredAg.slice((agPage - 1) * PAGE_SIZE, agPage * PAGE_SIZE);
+                    if (filteredAg.length === 0) return (
+                      <tr>
+                        <td colSpan={6}>
+                          <EmptyState
+                            icon={UserCog}
+                            title={agentes.length === 0 ? 'Nenhum agente cadastrado' : 'Nenhum resultado para o filtro'}
+                          />
+                        </td>
+                      </tr>
+                    );
+                    return pageAg.map(agente => {
                         const isSelected = selectedAgente?.id === agente.id;
                         return (
                           <tr
@@ -787,7 +1098,7 @@ export default function Secretarias() {
                             }`}
                           >
                             <td className="px-4 py-2.5 text-center">
-                              {isSelected && <span className="text-white text-xs">â–¶</span>}
+                              {isSelected && <span className="text-white text-xs">▶</span>}
                             </td>
                             <td className={`px-4 py-2.5 font-medium ${isSelected ? 'text-white' : 'text-gray-900 dark:text-slate-100'}`}>
                               {agente.nome}
@@ -795,34 +1106,54 @@ export default function Secretarias() {
                             <td className={`px-4 py-2.5 font-mono text-xs ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-slate-400'}`}>
                               {maskCPF(agente.cpf)}
                             </td>
-                            <td className={`px-4 py-2.5 ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-slate-400'}`}>
-                              {agente.nascimento
-                                ? new Date(agente.nascimento + 'T00:00:00').toLocaleDateString('pt-BR')
-                                : 'â€”'}
-                            </td>
-                            <td className={`px-4 py-2.5 ${isSelected ? 'text-blue-100' : 'text-gray-600 dark:text-slate-400'}`}>
-                              {agente.telefone || 'â€”'}
-                            </td>
-                            <td className={`px-4 py-2.5 ${isSelected ? 'text-blue-100' : 'text-gray-600 dark:text-slate-400'}`}>
-                              {agente.email || 'â€”'}
-                            </td>
+                            {(() => {
+                              const hj = new Date();
+                              const assigns = todosResponsaveis.filter(r => r.agente_id === agente.id);
+                              const curr = assigns.find(r => {
+                                const ini = r.data_inicio ? new Date(r.data_inicio + 'T00:00:00') : null;
+                                const fim = r.data_fim    ? new Date(r.data_fim    + 'T23:59:59') : null;
+                                return (!ini || ini <= hj) && (!fim || fim >= hj);
+                              }) || assigns.sort((a, b) => new Date(b.data_inicio||0) - new Date(a.data_inicio||0))[0];
+                              const st = assigns.length === 0 ? null : getStatusVigencia(curr?.data_inicio, curr?.data_fim);
+                              return (<>
+                                <td className={`px-4 py-2.5 text-xs ${isSelected ? 'text-blue-100' : 'text-gray-600 dark:text-slate-400'}`}>
+                                  {curr?.cargo || <span className="text-gray-300 dark:text-slate-600">—</span>}
+                                </td>
+                                <td className="px-4 py-2.5 text-xs">
+                                  {curr?._secSigla
+                                    ? <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono font-semibold ${isSelected ? 'bg-blue-500/40 text-blue-100' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'}`}>{curr._secSigla}</span>
+                                    : <span className="text-gray-300 dark:text-slate-600">—</span>}
+                                </td>
+                                <td className="px-4 py-2.5">
+                                  {st === null
+                                    ? <span className="text-gray-400 dark:text-slate-500 text-xs">Sem vínculo</span>
+                                    : isSelected
+                                      ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-500/30 text-blue-100">{st === 'ativo' ? 'Ativo' : st === 'futuro' ? 'Futuro' : 'Encerrado'}</span>
+                                      : <StatusBadge status={st} />}
+                                </td>
+                              </>);
+                            })()}
                           </tr>
                         );
-                      })
-                  )}
+                      });
+                  })()}
                 </tbody>
               </table>
             </div>
 
+            {/* Paginação */}
+            <PaginationBar
+              total={agentes.filter(a =>
+                !agenteSearch
+                || a.nome.toLowerCase().includes(agenteSearch.toLowerCase())
+                || (a.cpf||'').replace(/\D/g,'').includes(agenteSearch.replace(/\D/g,''))
+              ).length}
+              page={agPage}
+              setPage={setAgPage}
+            />
+
             {/* Toolbar inferior */}
-            <div className="px-4 py-2.5 border-t border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-700/20 flex items-center justify-between">
-              <span className="text-xs text-gray-500 dark:text-slate-400">
-                Foram encontrados {agentes.filter(a =>
-                  !agenteSearch
-                  || a.nome.toLowerCase().includes(agenteSearch.toLowerCase())
-                  || (a.cpf||'').replace(/\D/g,'').includes(agenteSearch.replace(/\D/g,''))
-                ).length} registro(s)
-              </span>
+            <div className="px-4 py-2.5 border-t border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-700/20 flex items-center justify-end">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => { setSelectedAgente(null); openModalAgente(); }}
@@ -855,28 +1186,19 @@ export default function Secretarias() {
         </div>
       )}
 
-      {/* â”€â”€ Tab: ResponsÃ¡veis â”€â”€ */}
+      {/* ── Tab: Responsáveis ── */}
       {activeTab === 'responsaveis' && (
         <div className="space-y-3">
           {/* Campos para pesquisa */}
           <FilterBar>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 items-end flex-1">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">VigÃªncia</label>
-                <input
-                  type="date"
-                  value={respFiltroVigor}
-                  onChange={e => setRespFiltroVigor(e.target.value)}
-                  className="input-field text-sm"
-                />
-              </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 items-end flex-1">
               <div>
                 <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Nome</label>
                 <input
                   value={respFiltroNome}
                   onChange={e => setRespFiltroNome(e.target.value)}
                   className="input-field text-sm"
-                  placeholder="PESQUISAR POR NOME"
+                  placeholder="Buscar por nome..."
                 />
               </div>
               <div>
@@ -885,25 +1207,47 @@ export default function Secretarias() {
                   value={respFiltroSec}
                   onChange={e => setRespFiltroSec(e.target.value)}
                   className="input-field text-sm"
-                  placeholder="PESQUISAR POR SECRETARIA"
+                  placeholder="Secretaria..."
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Cargo</label>
+                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Cargo / Função</label>
                 <input
                   value={respFiltroCargo}
                   onChange={e => setRespFiltroCargo(e.target.value)}
                   className="input-field text-sm"
-                  placeholder="PESQUISAR POR CARGO"
+                  placeholder="Filtrar cargo..."
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Status</label>
+                <select
+                  value={respFiltroStatus}
+                  onChange={e => setRespFiltroStatus(e.target.value)}
+                  className="input-field text-sm"
+                >
+                  <option value="">Todos</option>
+                  <option value="ativo">Ativo</option>
+                  <option value="encerrado">Encerrado</option>
+                  <option value="futuro">Futuro</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Vigência</label>
+                <input
+                  type="date"
+                  value={respFiltroVigor}
+                  onChange={e => setRespFiltroVigor(e.target.value)}
+                  className="input-field text-sm"
                 />
               </div>
             </div>
           </FilterBar>
 
-          {/* Tabela de ResponsÃ¡vel */}
+          {/* Tabela de Responsável */}
           <div className="card overflow-hidden">
             <div className="px-4 py-2 border-b border-gray-200 dark:border-slate-700/50">
-              <SectionTitle icon={UserCheck} title="Tabela de ResponsÃ¡vel" />
+              <SectionTitle icon={UserCheck} title="Tabela de Responsável" />
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -911,10 +1255,11 @@ export default function Secretarias() {
                   <tr>
                     <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-8"></th>
                     <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Nome</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Cargo</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Cargo / Função</th>
                     <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Secretaria</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Data inÃ­cio</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Data final</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-28">Início</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-28">Fim</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-28">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
@@ -930,23 +1275,26 @@ export default function Secretarias() {
                       if (respFiltroNome  && !r.nome.toLowerCase().includes(respFiltroNome.toLowerCase())) return false;
                       if (respFiltroSec   && !r._secNome.toLowerCase().includes(respFiltroSec.toLowerCase()) && !(r._secSigla||'').toLowerCase().includes(respFiltroSec.toLowerCase())) return false;
                       if (respFiltroCargo && !(r.cargo||'').toLowerCase().includes(respFiltroCargo.toLowerCase())) return false;
+                      if (respFiltroStatus && getStatusVigencia(r.data_inicio, r.data_fim) !== respFiltroStatus) return false;
                       return true;
                     });
+
+                    const pageResp = filtrados.slice((respPage - 1) * PAGE_SIZE, respPage * PAGE_SIZE);
 
                     if (filtrados.length === 0) {
                       return (
                         <tr>
-                          <td colSpan={6}>
+                          <td colSpan={7}>
                             <EmptyState
                               icon={UserCheck}
-                              title={todosResponsaveis.length === 0 ? 'Nenhum responsÃ¡vel cadastrado' : 'Nenhum resultado para o filtro'}
+                              title={todosResponsaveis.length === 0 ? 'Nenhum responsável cadastrado' : 'Nenhum resultado para o filtro'}
                             />
                           </td>
                         </tr>
                       );
                     }
 
-                    return filtrados.map(resp => {
+                    return pageResp.map(resp => {
                       const isSelected = selectedResp && selectedResp._secId === resp._secId && selectedResp._idx === resp._idx;
                       return (
                         <tr
@@ -960,26 +1308,31 @@ export default function Secretarias() {
                           }`}
                         >
                           <td className="px-4 py-2.5 text-center">
-                            {isSelected && <span className="text-white text-xs">â–¶</span>}
+                            {isSelected && <span className="text-white text-xs">▶</span>}
                           </td>
                           <td className={`px-4 py-2.5 font-medium ${isSelected ? 'text-white' : 'text-gray-900 dark:text-slate-100'}`}>
                             {resp.nome}
                           </td>
                           <td className={`px-4 py-2.5 ${isSelected ? 'text-blue-100' : 'text-gray-600 dark:text-slate-400'}`}>
-                            {resp.cargo || 'â€”'}
+                            {resp.cargo || '—'}
                           </td>
                           <td className={`px-4 py-2.5 ${isSelected ? 'text-blue-100' : 'text-gray-600 dark:text-slate-400'}`}>
                             {resp._secNome}
                           </td>
-                          <td className={`px-4 py-2.5 ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-slate-400'}`}>
+                          <td className={`px-4 py-2.5 text-xs ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-slate-400'}`}>
                             {resp.data_inicio
                               ? new Date(resp.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR')
-                              : 'â€”'}
+                              : '—'}
                           </td>
-                          <td className={`px-4 py-2.5 ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-slate-400'}`}>
+                          <td className={`px-4 py-2.5 text-xs ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-slate-400'}`}>
                             {resp.data_fim
                               ? new Date(resp.data_fim + 'T00:00:00').toLocaleDateString('pt-BR')
-                              : 'â€”'}
+                              : '—'}
+                          </td>
+                          <td className="px-4 py-2.5">
+                            {isSelected
+                              ? (() => { const s=getStatusVigencia(resp.data_inicio,resp.data_fim); return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-500/30 text-blue-100">{s==='ativo'?'Ativo':s==='futuro'?'Futuro':'Encerrado'}</span>; })()
+                              : <StatusBadge status={getStatusVigencia(resp.data_inicio, resp.data_fim)} />}
                           </td>
                         </tr>
                       );
@@ -989,23 +1342,28 @@ export default function Secretarias() {
               </table>
             </div>
 
+            {/* Paginação */}
+            <PaginationBar
+              total={todosResponsaveis.filter(r => {
+                const vigor = respFiltroVigor ? new Date(respFiltroVigor + 'T12:00:00') : null;
+                if (vigor) {
+                  const ini = r.data_inicio ? new Date(r.data_inicio + 'T00:00:00') : null;
+                  const fim = r.data_fim    ? new Date(r.data_fim    + 'T23:59:59') : null;
+                  if (ini && ini > vigor) return false;
+                  if (fim && fim < vigor)  return false;
+                }
+                if (respFiltroNome  && !r.nome.toLowerCase().includes(respFiltroNome.toLowerCase())) return false;
+                if (respFiltroSec   && !r._secNome.toLowerCase().includes(respFiltroSec.toLowerCase()) && !(r._secSigla||'').toLowerCase().includes(respFiltroSec.toLowerCase())) return false;
+                if (respFiltroCargo && !(r.cargo||'').toLowerCase().includes(respFiltroCargo.toLowerCase())) return false;
+                if (respFiltroStatus && getStatusVigencia(r.data_inicio, r.data_fim) !== respFiltroStatus) return false;
+                return true;
+              }).length}
+              page={respPage}
+              setPage={setRespPage}
+            />
+
             {/* Toolbar inferior */}
-            <div className="px-4 py-2.5 border-t border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-700/20 flex items-center justify-between">
-              <span className="text-xs text-gray-500 dark:text-slate-400">
-                Foram encontrados {todosResponsaveis.filter(r => {
-                  const vigor = respFiltroVigor ? new Date(respFiltroVigor + 'T12:00:00') : null;
-                  if (vigor) {
-                    const ini = r.data_inicio ? new Date(r.data_inicio + 'T00:00:00') : null;
-                    const fim = r.data_fim    ? new Date(r.data_fim    + 'T23:59:59') : null;
-                    if (ini && ini > vigor) return false;
-                    if (fim && fim < vigor)  return false;
-                  }
-                  if (respFiltroNome  && !r.nome.toLowerCase().includes(respFiltroNome.toLowerCase())) return false;
-                  if (respFiltroSec   && !r._secNome.toLowerCase().includes(respFiltroSec.toLowerCase()) && !(r._secSigla||'').toLowerCase().includes(respFiltroSec.toLowerCase())) return false;
-                  if (respFiltroCargo && !(r.cargo||'').toLowerCase().includes(respFiltroCargo.toLowerCase())) return false;
-                  return true;
-                }).length} registro(s)
-              </span>
+            <div className="px-4 py-2.5 border-t border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-700/20 flex items-center justify-end">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => { setSelectedResp(null); openModalResp(); }}
@@ -1033,15 +1391,15 @@ export default function Secretarias() {
         </div>
       )}
 
-      {/* â”€â”€ Tab: Entidade â”€â”€ */}
+      {/* ── Tab: Entidade ── */}
       {activeTab === 'entidade' && (
         <div className="space-y-3">
           <form onSubmit={handleSubmitEntidade} className="space-y-3">
 
-            {/* â”€â”€ InformaÃ§Ãµes da entidade â”€â”€ */}
+            {/* ── Informações da entidade ── */}
             <div className="card overflow-hidden">
               <div className="px-6 py-3 bg-gray-50 dark:bg-slate-700/20 border-b border-gray-200 dark:border-slate-700/50">
-                <SectionTitle icon={Building2} title="InformaÃ§Ãµes da entidade" />
+                <SectionTitle icon={Building2} title="Informações da entidade" />
               </div>
               <div className="p-6 space-y-4">
 
@@ -1076,7 +1434,7 @@ export default function Secretarias() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">RazÃ£o social</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">Razão social</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.razao_social}
                       onChange={e => setFormEntidade(p => ({...p, razao_social: e.target.value}))}
@@ -1086,7 +1444,7 @@ export default function Secretarias() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">CÃ³digo unidade</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">Código unidade</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.codigo_unidade}
                       onChange={e => setFormEntidade(p => ({...p, codigo_unidade: e.target.value}))}
@@ -1120,8 +1478,8 @@ export default function Secretarias() {
                       <option value="">Selecione...</option>
                       <option value="Executivo">Executivo</option>
                       <option value="Legislativo">Legislativo</option>
-                      <option value="JudiciÃ¡rio">JudiciÃ¡rio</option>
-                      <option value="MinistÃ©rio PÃºblico">MinistÃ©rio PÃºblico</option>
+                      <option value="Judiciário">Judiciário</option>
+                      <option value="Ministério Público">Ministério Público</option>
                     </select>
                   </div>
                 </div>
@@ -1147,7 +1505,7 @@ export default function Secretarias() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">Whatsapp notificaÃ§Ã£o</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">Whatsapp notificação</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.whatsapp}
                       onChange={e => setFormEntidade(p => ({...p, whatsapp: formatTelefone(e.target.value)}))}
@@ -1159,10 +1517,10 @@ export default function Secretarias() {
               </div>
             </div>
 
-            {/* â”€â”€ EndereÃ§o â”€â”€ */}
+            {/* ── Endereço ── */}
             <div className="card overflow-hidden">
               <div className="px-6 py-3 bg-gray-50 dark:bg-slate-700/20 border-b border-gray-200 dark:border-slate-700/50">
-                <SectionTitle icon={Building2} title="EndereÃ§o" />
+                <SectionTitle icon={Building2} title="Endereço" />
               </div>
               <div className="p-6 space-y-4">
 
@@ -1186,12 +1544,12 @@ export default function Secretarias() {
                     <input type="text" value={formEntidade.logradouro}
                       onChange={e => setFormEntidade(p => ({...p, logradouro: e.target.value}))}
                       disabled={!entidadeEditing}
-                      className="input-field disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30" placeholder="Rua, Avenida, PraÃ§a..." />
+                      className="input-field disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30" placeholder="Rua, Avenida, Praça..." />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">NÃºmero</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">Número</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.numero}
                       onChange={e => setFormEntidade(p => ({...p, numero: e.target.value}))}
@@ -1248,7 +1606,7 @@ export default function Secretarias() {
               </div>
             </div>
 
-            {/* BotÃµes */}
+            {/* Botões */}
             <div className="flex items-center justify-end gap-3">
               {entidadeSaved && (
                 <span className="text-sm text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
@@ -1287,229 +1645,221 @@ export default function Secretarias() {
         </div>
       )}
 
-      {/* Modal Importar do Portal de IrauÃ§uba */}
+      {/* Modal Importar do Portal de Irauçuba */}
 
-      {/* Modal Criar/Editar Secretaria */}
-      {showModalSecretaria && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-xl max-w-2xl w-full my-8 shadow-xl">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700/50 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
-                Cadastro de secretarias â€” {editingSecretaria ? 'EdiÃ§Ã£o' : 'InclusÃ£o'}
-              </h2>
-              <button onClick={() => { setShowModalSecretaria(false); setEditingSecretaria(null); }}
-                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmitSecretaria} className="max-h-[calc(90vh-120px)] overflow-y-auto">
-              {/* â”€â”€ InformaÃ§Ãµes da secretaria â”€â”€ */}
-              <div className="px-6 py-3 bg-gray-50 dark:bg-slate-700/20 border-b border-gray-200 dark:border-slate-700/50">
-                <SectionTitle icon={Building2} title="InformaÃ§Ãµes da secretaria" />
-              </div>
-              <div className="p-6 space-y-4">
-                <div className="grid grid-cols-3 gap-4 items-start">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 pt-2 text-right col-span-1">DescriÃ§Ã£o *</label>
-                  <div className="col-span-2">
-                    <input
-                      type="text"
-                      value={formSecretaria.nome}
-                      onChange={e => setFormSecretaria(p => ({...p, nome: e.target.value}))}
-                      required
-                      autoFocus
-                      className="input-field"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4 items-start">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 pt-2 text-right col-span-1">AbreviaÃ§Ã£o</label>
-                  <div className="col-span-2">
-                    <input
-                      type="text"
-                      value={formSecretaria.sigla}
-                      onChange={e => setFormSecretaria(p => ({...p, sigla: e.target.value.toUpperCase()}))}
-                      maxLength={10}
-                      className="input-field"
-                      placeholder="Ex: SEMAD"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4 items-start">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 pt-2 text-right col-span-1">Data inÃ­cio</label>
-                  <div className="col-span-2">
-                    <input
-                      type="date"
-                      value={formSecretaria.data_inicio}
-                      onChange={e => setFormSecretaria(p => ({...p, data_inicio: e.target.value}))}
-                      className="input-field w-44"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4 items-start">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 pt-2 text-right col-span-1">Data fim</label>
-                  <div className="col-span-2">
-                    <input
-                      type="date"
-                      value={formSecretaria.data_fim}
-                      onChange={e => setFormSecretaria(p => ({...p, data_fim: e.target.value}))}
-                      className="input-field w-44"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4 items-start">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 pt-2 text-right col-span-1">E-mail</label>
-                  <div className="col-span-2">
-                    <input
-                      type="email"
-                      value={formSecretaria.email}
-                      onChange={e => setFormSecretaria(p => ({...p, email: e.target.value}))}
-                      className="input-field"
-                      placeholder="email@municipio.gov.br"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4 items-start">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 pt-2 text-right col-span-1">Whatsapp notificaÃ§Ã£o</label>
-                  <div className="col-span-2">
-                    <input
-                      type="text"
-                      value={formSecretaria.whatsapp}
-                      onChange={e => setFormSecretaria(p => ({...p, whatsapp: formatTelefone(e.target.value)}))}
-                      maxLength={15}
-                      className="input-field w-44"
-                      placeholder="(00) 00000-0000"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4 items-start">
-                  <label className="col-span-1" />
-                  <div className="col-span-2 flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="outros_sistemas"
-                      checked={formSecretaria.outros_sistemas}
-                      onChange={e => setFormSecretaria(p => ({...p, outros_sistemas: e.target.checked}))}
-                      className="w-4 h-4 rounded border-gray-300 text-blue-600 cursor-pointer"
-                    />
-                    <label htmlFor="outros_sistemas" className="text-sm text-gray-600 dark:text-slate-400 cursor-pointer select-none">
-                      Secretaria de outros sistemas - NÃ£o mostra na lista de secretarias
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              {/* â”€â”€ InformaÃ§Ãµes para o PNCP â”€â”€ */}
-              <div className="px-6 py-3 bg-gray-50 dark:bg-slate-700/20 border-t border-b border-gray-200 dark:border-slate-700/50">
-                <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">InformaÃ§Ãµes para o PNCP</p>
-              </div>
-              <div className="p-6 space-y-4">
-                <div className="grid grid-cols-3 gap-4 items-start">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 pt-2 text-right col-span-1">CNPJ</label>
-                  <div className="col-span-2">
-                    <input
-                      type="text"
-                      value={formSecretaria.cnpj}
-                      onChange={e => setFormSecretaria(p => ({...p, cnpj: formatCNPJ(e.target.value)}))}
-                      maxLength={18}
-                      className="input-field w-52 font-mono"
-                      placeholder="00.000.000/0000-00"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4 items-start">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 pt-2 text-right col-span-1">RazÃ£o social</label>
-                  <div className="col-span-2">
-                    <input
-                      type="text"
-                      value={formSecretaria.razao_social}
-                      onChange={e => setFormSecretaria(p => ({...p, razao_social: e.target.value}))}
-                      className="input-field"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4 items-start">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 pt-2 text-right col-span-1">CÃ³digo unidade</label>
-                  <div className="col-span-2">
-                    <input
-                      type="text"
-                      value={formSecretaria.codigo_unidade}
-                      onChange={e => setFormSecretaria(p => ({...p, codigo_unidade: e.target.value}))}
-                      className="input-field w-44"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* BotÃµes */}
-              <div className="px-6 py-4 border-t border-gray-200 dark:border-slate-700/50 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (editingSecretaria) {
-                      handleEditSecretaria(editingSecretaria);
-                    } else {
-                      setFormSecretaria({ nome:'', sigla:'', descricao:'', data_inicio:'', data_fim:'', email:'', whatsapp:'', outros_sistemas:false, cnpj:'', razao_social:'', codigo_unidade:'', responsaveis:[], setores:[] });
-                    }
-                  }}
-                  className="btn-secondary"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowModalSecretaria(false); setEditingSecretaria(null); }}
-                  className="btn-secondary"
-                >
-                  Sair
-                </button>
-                <button type="submit" disabled={loading} className="btn-primary">
-                  {loading ? 'Salvando...' : 'Salvar'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Criar/Editar Setor */}
-      {showModalSetor && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-xl max-w-lg w-full my-8 shadow-xl">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700/50 sticky top-0 bg-white dark:bg-slate-900 z-10">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100">
-                {editingSetor ? 'Editar Setor' : 'Novo Setor'}
-              </h2>
-            </div>
-
-            <form onSubmit={handleSubmitSetor} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Nome do Setor *</label>
-                <input type="text" value={formSetor.nome} onChange={(e) => setFormSetor({ ...formSetor, nome: e.target.value })} required className="input-field" placeholder="Ex: Protocolo Geral" />
+      {/* ── Modal Criar/Editar Secretaria ── */}
+      <ModalShell
+        open={showModalSecretaria}
+        onClose={() => { setShowModalSecretaria(false); setEditingSecretaria(null); }}
+        icon={Building2}
+        iconBg="from-blue-500 to-blue-600"
+        title={`Secretaria — ${editingSecretaria ? 'Alteração' : 'Inclusão'}`}
+        subtitle="Cadastre e gerencie os dados da secretaria municipal."
+        width={700}
+        badge={
+          editingSecretaria ? (
+            <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
+              editingSecretaria.ativo !== false
+                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                : 'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-400'
+            }`}>
+              {editingSecretaria.ativo !== false ? 'ATIVA' : 'INATIVA'}
+            </span>
+          ) : null
+        }
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => { setShowModalSecretaria(false); setEditingSecretaria(null); }}
+              className="btn-secondary px-5 py-2 text-sm"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => document.getElementById('form-secretaria').requestSubmit()}
+              className="btn-primary flex items-center gap-2 px-5 py-2 text-sm"
+            >
+              <Save className="w-4 h-4" />
+              {loading ? 'Salvando...' : 'Salvar Secretaria'}
+            </button>
+          </>
+        }
+      >
+        <form id="form-secretaria" onSubmit={handleSubmitSecretaria}>
+          {/* Card: Informações principais */}
+          <SectionCard icon={Tag} title="Informações principais" subtitle="Descrição, sigla e código da secretaria">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Descrição *</label>
+                <input
+                  type="text"
+                  value={formSecretaria.nome}
+                  onChange={e => setFormSecretaria(p => ({...p, nome: e.target.value}))}
+                  required
+                  autoFocus
+                  className="input-field"
+                  placeholder="Nome completo da secretaria"
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">DescriÃ§Ã£o</label>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Sigla / Abreviação</label>
+                <input
+                  type="text"
+                  value={formSecretaria.sigla}
+                  onChange={e => setFormSecretaria(p => ({...p, sigla: e.target.value.toUpperCase()}))}
+                  maxLength={10}
+                  className="input-field"
+                  placeholder="Ex: SEMAD"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Código de unidade</label>
+                <input
+                  type="text"
+                  value={formSecretaria.codigo_unidade}
+                  onChange={e => setFormSecretaria(p => ({...p, codigo_unidade: e.target.value}))}
+                  className="input-field"
+                  placeholder="Ex: 02.001"
+                />
+              </div>
+            </div>
+            <div className="mt-3 flex items-start gap-2">
+              <input
+                type="checkbox"
+                id="outros_sistemas"
+                checked={formSecretaria.outros_sistemas}
+                onChange={e => setFormSecretaria(p => ({...p, outros_sistemas: e.target.checked}))}
+                className="w-4 h-4 mt-0.5 rounded border-gray-300 text-blue-600 cursor-pointer"
+              />
+              <label htmlFor="outros_sistemas" className="text-sm text-gray-600 dark:text-slate-400 cursor-pointer select-none">
+                Secretaria de outros sistemas — não mostrar na lista de secretarias
+              </label>
+            </div>
+          </SectionCard>
+
+          {/* Card: Vigência */}
+          <SectionCard icon={Calendar} title="Vigência" subtitle="Período de atuação da secretaria">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Data início</label>
+                <input
+                  type="date"
+                  value={formSecretaria.data_inicio}
+                  onChange={e => setFormSecretaria(p => ({...p, data_inicio: e.target.value}))}
+                  className="input-field"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Data fim <span className="normal-case font-normal text-gray-400">(vazio = vigente)</span></label>
+                <input
+                  type="date"
+                  value={formSecretaria.data_fim}
+                  onChange={e => setFormSecretaria(p => ({...p, data_fim: e.target.value}))}
+                  className="input-field"
+                />
+              </div>
+            </div>
+          </SectionCard>
+
+          {/* Card: Contato */}
+          <SectionCard icon={Mail} title="Contato" subtitle="E-mail e WhatsApp para notificações">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">E-mail</label>
+                <input
+                  type="email"
+                  value={formSecretaria.email}
+                  onChange={e => setFormSecretaria(p => ({...p, email: e.target.value}))}
+                  className="input-field"
+                  placeholder="email@municipio.gov.br"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">WhatsApp notificação</label>
+                <input
+                  type="text"
+                  value={formSecretaria.whatsapp}
+                  onChange={e => setFormSecretaria(p => ({...p, whatsapp: formatTelefone(e.target.value)}))}
+                  maxLength={15}
+                  className="input-field"
+                  placeholder="(00) 00000-0000"
+                />
+              </div>
+            </div>
+          </SectionCard>
+
+          {/* Card: Integrações PNCP */}
+          <SectionCard icon={Shield} title="Integrações PNCP" subtitle="Dados para integração com o Portal Nacional de Compras Públicas">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">CNPJ</label>
+                <input
+                  type="text"
+                  value={formSecretaria.cnpj}
+                  onChange={e => setFormSecretaria(p => ({...p, cnpj: formatCNPJ(e.target.value)}))}
+                  maxLength={18}
+                  className="input-field font-mono"
+                  placeholder="00.000.000/0000-00"
+                />
+              </div>
+              <div className="md:col-span-2 md:max-w-none">
+                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Razão social</label>
+                <input
+                  type="text"
+                  value={formSecretaria.razao_social}
+                  onChange={e => setFormSecretaria(p => ({...p, razao_social: e.target.value}))}
+                  className="input-field"
+                />
+              </div>
+            </div>
+          </SectionCard>
+        </form>
+      </ModalShell>
+      {/* ── Modal Criar/Editar Setor ── */}
+      <ModalShell
+        open={showModalSetor}
+        onClose={() => { setShowModalSetor(false); setEditingSetor(null); }}
+        icon={Network}
+        iconBg="from-violet-500 to-violet-600"
+        title={`Setor — ${editingSetor ? 'Alteração' : 'Inclusão'}`}
+        subtitle="Defina os setores internos da secretaria selecionada."
+        width={520}
+        footer={
+          <>
+            <button type="button" onClick={() => { setShowModalSetor(false); setEditingSetor(null); }} className="btn-secondary px-5 py-2 text-sm">Cancelar</button>
+            <button type="button" disabled={loading} onClick={() => document.getElementById('form-setor').requestSubmit()} className="btn-primary flex items-center gap-2 px-5 py-2 text-sm">
+              <Save className="w-4 h-4" />
+              {loading ? 'Salvando...' : (editingSetor ? 'Salvar Setor' : 'Criar Setor')}
+            </button>
+          </>
+        }
+      >
+        <form id="form-setor" onSubmit={handleSubmitSetor}>
+          <SectionCard icon={Network} title="Dados do setor">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Nome do Setor *</label>
+                <input type="text" value={formSetor.nome} onChange={(e) => setFormSetor({ ...formSetor, nome: e.target.value })} required autoFocus className="input-field" placeholder="Ex: Protocolo Geral" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Descrição</label>
                 <textarea
                   value={formSetor.descricao}
                   onChange={(e) => setFormSetor({ ...formSetor, descricao: e.target.value })}
                   rows="3"
                   className="input-field resize-none"
-                  placeholder="Breve descriÃ§Ã£o do setor"
+                  placeholder="Breve descrição do setor"
                 />
               </div>
+            </div>
+          </SectionCard>
+        </form>
+      </ModalShell>
 
-              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100 dark:border-slate-700/50">
-                <button type="button" onClick={() => { setShowModalSetor(false); setEditingSetor(null); }} className="btn-secondary">Cancelar</button>
-                <button type="submit" disabled={loading} className="btn-primary">
-                  {loading ? 'Salvando...' : (editingSetor ? 'Salvar' : 'Criar Setor')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de ConfirmaÃ§Ã£o de ExclusÃ£o */}
+      {/* Modal de Confirmação de Exclusão */}
       {showDeleteModal && deleteTarget && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl max-w-md w-full shadow-xl">
@@ -1519,7 +1869,7 @@ export default function Secretarias() {
                   <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
                 </div>
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100">
-                  Confirmar ExclusÃ£o
+                  Confirmar Exclusão
                 </h2>
               </div>
             </div>
@@ -1531,7 +1881,7 @@ export default function Secretarias() {
                     Tem certeza que deseja excluir a secretaria <strong>{deleteTarget.data.nome}</strong>?
                     {deleteTarget.data.setores?.length > 0 && (
                       <span className="block mt-2 text-red-600 text-sm">
-                        âš ï¸ Todos os {deleteTarget.data.setores.length} setores vinculados tambÃ©m serÃ£o excluÃ­dos.
+                        ⚠️ Todos os {deleteTarget.data.setores.length} setores vinculados também serão excluídos.
                       </span>
                     )}
                   </>
@@ -1542,7 +1892,7 @@ export default function Secretarias() {
                 )}
               </p>
               <p className="text-sm text-gray-600">
-                Esta aÃ§Ã£o nÃ£o pode ser desfeita.
+                Esta ação não pode ser desfeita.
               </p>
             </div>
 
@@ -1550,14 +1900,14 @@ export default function Secretarias() {
               <button onClick={() => { setShowDeleteModal(false); setDeleteTarget(null); }} className="btn-secondary">Cancelar</button>
               <button onClick={confirmDelete} className="btn-danger flex items-center gap-2">
                 <Trash2 className="h-4 w-4" />
-                Confirmar ExclusÃ£o
+                Confirmar Exclusão
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* â”€â”€ Painel de Setores â”€â”€ */}
+      {/* ── Painel de Setores ── */}
       {showSetoresPanel && selectedSecretaria && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl max-w-2xl w-full shadow-xl flex flex-col max-h-[80vh]">
@@ -1565,7 +1915,7 @@ export default function Secretarias() {
             <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700/50 flex items-center justify-between shrink-0">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
-                  Setores â€” {selectedSecretaria.nome}
+                  Setores — {selectedSecretaria.nome}
                   {selectedSecretaria.sigla && <span className="text-gray-400 font-normal text-base ml-1">({selectedSecretaria.sigla})</span>}
                 </h2>
               </div>
@@ -1581,7 +1931,7 @@ export default function Secretarias() {
                 <thead className="bg-gray-100 dark:bg-slate-700/30 border-b border-gray-200 dark:border-slate-700/50">
                   <tr>
                     <th className="w-8 px-4 py-2.5"></th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">DescriÃ§Ã£o</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Descrição</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
@@ -1606,7 +1956,7 @@ export default function Secretarias() {
                           }`}
                         >
                           <td className="px-4 py-2.5 text-center">
-                            {isSel && <span className="text-white text-xs">â–¶</span>}
+                            {isSel && <span className="text-white text-xs">▶</span>}
                           </td>
                           <td className={`px-4 py-2.5 font-medium ${isSel ? 'text-white' : 'text-gray-900 dark:text-slate-100'}`}>
                             {setor.nome}
@@ -1651,122 +2001,70 @@ export default function Secretarias() {
         </div>
       )}
 
-      {/* â”€â”€ Modal Novo/Editar Agente â”€â”€ */}
-      {showModalAgente && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-xl max-w-lg w-full my-8 shadow-xl">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700/50 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
-                Cadastro de agentes â€” {editingAgente ? 'EdiÃ§Ã£o' : 'InclusÃ£o'}
-              </h2>
-              <button onClick={() => { setShowModalAgente(false); setEditingAgente(null); }}
-                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="px-6 py-3 bg-gray-50 dark:bg-slate-700/20 border-b border-gray-200 dark:border-slate-700/50">
-              <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">InformaÃ§Ãµes informaÃ§Ãµes</p>
-            </div>
-            <form onSubmit={saveAgente} className="p-6 space-y-4">
+      {/* ── Modal Novo/Editar Agente ── */}
+      <ModalShell
+        open={showModalAgente}
+        onClose={() => { setShowModalAgente(false); setEditingAgente(null); }}
+        icon={UserCog}
+        iconBg="from-emerald-500 to-emerald-600"
+        title={`Agente — ${editingAgente ? 'Alteração' : 'Inclusão'}`}
+        subtitle="Cadastre os servidores que atuam como agentes públicos."
+        width={580}
+        footer={
+          <>
+            <button type="button" onClick={() => { setShowModalAgente(false); setEditingAgente(null); }} className="btn-secondary px-5 py-2 text-sm">Cancelar</button>
+            <button type="button" disabled={loading} onClick={() => document.getElementById('form-agente').requestSubmit()} className="btn-primary flex items-center gap-2 px-5 py-2 text-sm">
+              <Save className="w-4 h-4" />
+              {loading ? 'Salvando...' : 'Salvar Agente'}
+            </button>
+          </>
+        }
+      >
+        <form id="form-agente" onSubmit={saveAgente}>
+          <SectionCard icon={User} title="Dados pessoais" subtitle="Nome, CPF e data de nascimento">
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Nome *</label>
-                <input
-                  type="text"
-                  value={formAgente.nome}
-                  onChange={e => setFormAgente(p => ({...p, nome: e.target.value}))}
-                  required
-                  autoFocus
-                  className="input-field"
-                />
+                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Nome *</label>
+                <input type="text" value={formAgente.nome} onChange={e => setFormAgente(p => ({...p, nome: e.target.value}))} required autoFocus className="input-field" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Nome reduzido</label>
-                <input
-                  type="text"
-                  value={formAgente.nome_reduzido || ''}
-                  onChange={e => setFormAgente(p => ({...p, nome_reduzido: e.target.value}))}
-                  className="input-field"
-                />
+                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Nome reduzido</label>
+                <input type="text" value={formAgente.nome_reduzido || ''} onChange={e => setFormAgente(p => ({...p, nome_reduzido: e.target.value}))} className="input-field" placeholder="Como é chamado usualmente" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">CPF</label>
-                  <input
-                    type="text"
-                    value={formAgente.cpf || ''}
-                    onChange={e => setFormAgente(p => ({...p, cpf: formatCPF(e.target.value)}))}
-                    maxLength={14}
-                    className="input-field font-mono"
-                    placeholder="000.000.000-00"
-                  />
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">CPF</label>
+                  <input type="text" value={formAgente.cpf || ''} onChange={e => setFormAgente(p => ({...p, cpf: formatCPF(e.target.value)}))} maxLength={14} className="input-field font-mono" placeholder="000.000.000-00" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Nascimento</label>
-                  <input
-                    type="date"
-                    value={formAgente.nascimento || ''}
-                    onChange={e => setFormAgente(p => ({...p, nascimento: e.target.value}))}
-                    className="input-field"
-                  />
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Nascimento</label>
+                  <input type="date" value={formAgente.nascimento || ''} onChange={e => setFormAgente(p => ({...p, nascimento: e.target.value}))} className="input-field" />
+                </div>
+              </div>
+            </div>
+          </SectionCard>
+          <SectionCard icon={Phone} title="Contato e identificação" subtitle="Telefone, e-mail e matrícula">
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Telefone</label>
+                  <input type="text" value={formAgente.telefone || ''} onChange={e => setFormAgente(p => ({...p, telefone: formatTelefone(e.target.value)}))} maxLength={15} className="input-field" placeholder="(00) 00000-0000" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Telefone</label>
-                  <input
-                    type="text"
-                    value={formAgente.telefone || ''}
-                    onChange={e => setFormAgente(p => ({...p, telefone: formatTelefone(e.target.value)}))}
-                    maxLength={15}
-                    className="input-field"
-                    placeholder="(00) 00000-0000"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">MatrÃ­cula</label>
-                  <input
-                    type="text"
-                    value={formAgente.matricula || ''}
-                    onChange={e => setFormAgente(p => ({...p, matricula: e.target.value}))}
-                    className="input-field font-mono"
-                  />
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Matrícula</label>
+                  <input type="text" value={formAgente.matricula || ''} onChange={e => setFormAgente(p => ({...p, matricula: e.target.value}))} className="input-field font-mono" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">E-mail</label>
-                <input
-                  type="email"
-                  value={formAgente.email || ''}
-                  onChange={e => setFormAgente(p => ({...p, email: e.target.value}))}
-                  className="input-field"
-                  placeholder="email@exemplo.com.br"
-                />
+                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">E-mail</label>
+                <input type="email" value={formAgente.email || ''} onChange={e => setFormAgente(p => ({...p, email: e.target.value}))} className="input-field" placeholder="email@exemplo.com.br" />
               </div>
-              <div className="flex justify-end gap-2 pt-3 border-t border-gray-100 dark:border-slate-700/50">
-                <button
-                  type="button"
-                  onClick={() => setFormAgente(editingAgente ? { ...editingAgente } : {
-                    nome: '', nome_reduzido: '', cpf: '', nascimento: '', telefone: '', email: '', matricula: ''
-                  })}
-                  className="btn-secondary"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowModalAgente(false); setEditingAgente(null); }}
-                  className="btn-secondary"
-                >
-                  Sair
-                </button>
-                <button type="submit" className="btn-primary">
-                  {editingAgente ? 'Salvar' : 'Salvar'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            </div>
+          </SectionCard>
+        </form>
+      </ModalShell>
 
-      {/* â”€â”€ ConfirmaÃ§Ã£o exclusÃ£o Agente â”€â”€ */}
+      {/* ── Confirmação exclusão Agente ── */}
       {showDeleteAgenteModal && deleteAgenteTarget && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl max-w-md w-full shadow-xl">
@@ -1774,11 +2072,11 @@ export default function Secretarias() {
               <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center shrink-0">
                 <AlertTriangle className="h-5 w-5 text-red-600" />
               </div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Confirmar ExclusÃ£o</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Confirmar Exclusão</h2>
             </div>
             <div className="p-6">
               <p className="text-gray-700 dark:text-slate-300">
-                Excluir o agente <strong>{deleteAgenteTarget.nome}</strong>? Esta aÃ§Ã£o nÃ£o pode ser desfeita.
+                Excluir o agente <strong>{deleteAgenteTarget.nome}</strong>? Esta ação não pode ser desfeita.
               </p>
             </div>
             <div className="px-6 py-4 bg-gray-50 dark:bg-slate-700/30 border-t border-gray-200 dark:border-slate-700/50 flex justify-end gap-3">
@@ -1792,279 +2090,176 @@ export default function Secretarias() {
         </div>
       )}
 
-      {/* â”€â”€ Modal Novo/Editar ResponsÃ¡vel â”€â”€ */}
-      {showModalResp && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-xl max-w-lg w-full my-8 shadow-xl">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700/50 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
-                Cadastro de responsÃ¡vel â€” {editingResp ? 'EdiÃ§Ã£o' : 'InclusÃ£o'}
-              </h2>
-              <button onClick={() => { setShowModalResp(false); setEditingResp(null); }}
-                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="px-6 py-2.5 bg-gray-50 dark:bg-slate-700/20 border-b border-gray-200 dark:border-slate-700/50">
-              <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">InformaÃ§Ãµes do responsÃ¡vel</p>
-            </div>
-            <form onSubmit={saveResponsavel} className="p-6 space-y-4">
-              {/* Datas */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Data inÃ­cio *</label>
-                  <input
-                    type="date"
-                    value={formResp.data_inicio}
-                    onChange={e => setFormResp(p => ({...p, data_inicio: e.target.value}))}
-                    required
-                    autoFocus
-                    className="input-field"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
-                    Data fim <span className="font-normal text-gray-400">(vazio = atual)</span>
-                  </label>
-                  <input
-                    type="date"
-                    value={formResp.data_fim}
-                    onChange={e => setFormResp(p => ({...p, data_fim: e.target.value}))}
-                    className="input-field"
-                  />
-                </div>
-              </div>
-
-              {/* Agente: seleciona do cadastro de agentes */}
+      {/* ── Modal Novo/Editar Responsável ── */}
+      <ModalShell
+        open={showModalResp}
+        onClose={() => { setShowModalResp(false); setEditingResp(null); }}
+        icon={UserCheck}
+        iconBg="from-amber-500 to-amber-600"
+        title={`Responsável — ${editingResp ? 'Alteração' : 'Inclusão'}`}
+        subtitle="Defina os responsáveis de cada secretaria e suas funções."
+        width={600}
+        footer={
+          <>
+            <button type="button" onClick={() => { setShowModalResp(false); setEditingResp(null); }} className="btn-secondary px-5 py-2 text-sm">Cancelar</button>
+            <button type="button" disabled={loading} onClick={() => document.getElementById('form-resp').requestSubmit()} className="btn-primary flex items-center gap-2 px-5 py-2 text-sm">
+              <Save className="w-4 h-4" />
+              {loading ? 'Salvando...' : 'Salvar Responsável'}
+            </button>
+          </>
+        }
+      >
+        <form id="form-resp" onSubmit={saveResponsavel}>
+          <SectionCard icon={Users} title="Vínculo" subtitle="Agente e secretaria vinculados">
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Agente</label>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Agente</label>
                 <select
                   value={formResp.agente_id}
                   onChange={e => {
                     const ag = agentes.find(a => a.id === e.target.value);
-                    setFormResp(p => ({
-                      ...p,
-                      agente_id: e.target.value,
-                      nome: ag ? ag.nome : p.nome
-                    }));
+                    setFormResp(p => ({ ...p, agente_id: e.target.value, nome: ag ? ag.nome : p.nome }));
                   }}
                   className="input-field"
                 >
-                  <option value="">â€” selecionar do cadastro de agentes â€”</option>
-                  {agentes.map(a => (
-                    <option key={a.id} value={a.id}>{a.nome}</option>
-                  ))}
+                  <option value="">— selecionar do cadastro de agentes —</option>
+                  {agentes.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}
                 </select>
                 {!formResp.agente_id && (
-                  <div className="mt-2">
-                    <input
-                      type="text"
-                      value={formResp.nome}
-                      onChange={e => setFormResp(p => ({...p, nome: e.target.value}))}
-                      required={!formResp.agente_id}
-                      className="input-field"
-                      placeholder="Ou digite o nome manualmente *"
-                    />
-                  </div>
+                  <input type="text" value={formResp.nome} onChange={e => setFormResp(p => ({...p, nome: e.target.value}))} required={!formResp.agente_id} className="input-field mt-2" placeholder="Ou digite o nome manualmente *" />
                 )}
-                {formResp.agente_id && (
-                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
-                    Nome: <strong>{formResp.nome}</strong>
-                  </p>
-                )}
+                {formResp.agente_id && <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">Nome: <strong>{formResp.nome}</strong></p>}
               </div>
-
-              {/* Cargo */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Cargo</label>
-                <select
-                  value={formResp.cargo}
-                  onChange={e => setFormResp(p => ({...p, cargo: e.target.value}))}
-                  className="input-field"
-                >
+                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Secretaria / Órgão *</label>
+                <select value={formResp.secretaria_id} onChange={e => setFormResp(p => ({...p, secretaria_id: e.target.value}))} required className="input-field" disabled={!!editingResp}>
+                  <option value="">Selecione...</option>
+                  {secretarias.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
+                </select>
+                {editingResp && <p className="text-xs text-gray-400 mt-1">Para trocar a secretaria, remova e re-cadastre.</p>}
+              </div>
+            </div>
+          </SectionCard>
+          <SectionCard icon={Shield} title="Função e amparo" subtitle="Cargo e instrumento legal">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Cargo</label>
+                <select value={formResp.cargo} onChange={e => setFormResp(p => ({...p, cargo: e.target.value}))} className="input-field">
                   <option value="">Selecione...</option>
                   <option value="Gestores">Gestores</option>
                   <option value="Ordenadores">Ordenadores</option>
                   <option value="Setor de compra">Setor de compra</option>
-                  <option value="ComissÃ£o de licitaÃ§Ã£o">ComissÃ£o de licitaÃ§Ã£o</option>
+                  <option value="Comissão de licitação">Comissão de licitação</option>
                   <option value="Fiscais de contratos">Fiscais de contratos</option>
-                  <option value="Equipe de planejamento das contrataÃ§Ãµes">Equipe de planejamento das contrataÃ§Ãµes</option>
-                  <option value="Agentes de contrataÃ§Ãµes">Agentes de contrataÃ§Ãµes</option>
+                  <option value="Equipe de planejamento das contratações">Equipe de planejamento das contratações</option>
+                  <option value="Agentes de contratações">Agentes de contratações</option>
                   <option value="Gestor de contratos">Gestor de contratos</option>
                 </select>
               </div>
-
-              {/* Secretaria\Ã³rgÃ£o */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Secretaria\Ã³rgÃ£o *</label>
-                <select
-                  value={formResp.secretaria_id}
-                  onChange={e => setFormResp(p => ({...p, secretaria_id: e.target.value}))}
-                  required
-                  className="input-field"
-                  disabled={!!editingResp}
-                >
-                  <option value="">Selecione...</option>
-                  {secretarias.map(s => (
-                    <option key={s.id} value={s.id}>{s.nome}</option>
-                  ))}
-                </select>
-                {editingResp && (
-                  <p className="text-xs text-gray-400 mt-1">Para trocar a secretaria, remova e re-cadastre.</p>
-                )}
+                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Amparo legal</label>
+                <input type="text" value={formResp.amparo} onChange={e => setFormResp(p => ({...p, amparo: e.target.value}))} className="input-field" placeholder="Ex: Portaria: 001/2024" />
               </div>
-
-              {/* Amparo legal */}
+            </div>
+          </SectionCard>
+          <SectionCard icon={Calendar} title="Vigência" subtitle="Período de atuação do responsável">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Amparo</label>
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="text"
-                    value={formResp.amparo}
-                    onChange={e => setFormResp(p => ({...p, amparo: e.target.value}))}
-                    className="input-field flex-1"
-                    placeholder="Ex: Portaria: 001/2024"
-                  />
-                </div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Data início *</label>
+                <input type="date" value={formResp.data_inicio} onChange={e => setFormResp(p => ({...p, data_inicio: e.target.value}))} required autoFocus className="input-field" />
               </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-gray-100 dark:border-slate-700/50">
-                <button
-                  type="button"
-                  onClick={() => setFormResp(editingResp
-                    ? { secretaria_id: formResp.secretaria_id, agente_id: formResp.agente_id, nome: formResp.nome, cargo: formResp.cargo, data_inicio: formResp.data_inicio, data_fim: formResp.data_fim, amparo: formResp.amparo }
-                    : { secretaria_id: '', agente_id: '', nome: '', cargo: '', data_inicio: '', data_fim: '', amparo: '' }
-                  )}
-                  className="btn-secondary"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowModalResp(false); setEditingResp(null); }}
-                  className="btn-secondary"
-                >
-                  Sair
-                </button>
-                <button type="submit" disabled={loading} className="btn-primary">
-                  {loading ? 'Salvando...' : 'Salvar'}
-                </button>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Data fim <span className="normal-case font-normal text-gray-400">(vazio = atual)</span></label>
+                <input type="date" value={formResp.data_fim} onChange={e => setFormResp(p => ({...p, data_fim: e.target.value}))} className="input-field" />
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+            </div>
+          </SectionCard>
+        </form>
+      </ModalShell>
 
-      {/* â”€â”€ Painel de OrÃ§amento â”€â”€ */}
+      {/* ── Painel de Orçamento ── */}
       {showOrcamentoPanel && selectedSecretaria && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-xl max-w-lg w-full shadow-xl">
-            {/* Header */}
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700/50 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
-                  ðŸ’° OrÃ§amento â€” {selectedSecretaria.sigla || selectedSecretaria.nome}
-                </h2>
-                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{selectedSecretaria.nome}</p>
-              </div>
-              <button onClick={() => setShowOrcamentoPanel(false)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Corpo */}
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1">ExercÃ­cio</label>
-                  <input
-                    type="number"
-                    min="2000" max="2099"
-                    value={formOrcamento.exercicio}
-                    onChange={e => setFormOrcamento(p => ({...p, exercicio: e.target.value}))}
-                    disabled={!orcamentoEditing}
-                    className="input-field w-28 disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30"
-                    placeholder={new Date().getFullYear()}
-                  />
+        <div className="fixed inset-0 z-[9990] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-gray-50 dark:bg-slate-900 rounded-3xl shadow-2xl w-full flex flex-col overflow-hidden" style={{ maxWidth: '90vw', maxHeight: '90vh', width: 520 }}>
+            <div className="bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700/60 px-6 py-4 shrink-0">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-md">
+                    <Wallet className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-gray-900 dark:text-white">
+                      Orçamento — {selectedSecretaria.sigla || selectedSecretaria.nome}
+                    </h2>
+                    <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{selectedSecretaria.nome}</p>
+                  </div>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1">Valor LOA (Lei OrÃ§amentÃ¡ria Anual)</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">R$</span>
-                  <input
-                    type="number"
-                    min="0" step="0.01"
-                    value={formOrcamento.valor_loa}
-                    onChange={e => setFormOrcamento(p => ({...p, valor_loa: e.target.value}))}
-                    disabled={!orcamentoEditing}
-                    className="input-field pl-9 disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30"
-                    placeholder="0,00"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1">Valor Suplementado</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">R$</span>
-                  <input
-                    type="number"
-                    min="0" step="0.01"
-                    value={formOrcamento.valor_suplementado}
-                    onChange={e => setFormOrcamento(p => ({...p, valor_suplementado: e.target.value}))}
-                    disabled={!orcamentoEditing}
-                    className="input-field pl-9 disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30"
-                    placeholder="0,00"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1">Valor Reduzido</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">R$</span>
-                  <input
-                    type="number"
-                    min="0" step="0.01"
-                    value={formOrcamento.valor_reduzido}
-                    onChange={e => setFormOrcamento(p => ({...p, valor_reduzido: e.target.value}))}
-                    disabled={!orcamentoEditing}
-                    className="input-field pl-9 disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30"
-                    placeholder="0,00"
-                  />
-                </div>
-              </div>
-
-              {/* Valor vigente calculado */}
-              <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4 flex items-center justify-between">
-                <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">Valor Vigente (LOA + Suplementado âˆ’ Reduzido)</span>
-                <span className="text-lg font-bold text-indigo-700 dark:text-indigo-300">
-                  {formatBRL(
-                    (parseFloat(formOrcamento.valor_loa          || '0') || 0) +
-                    (parseFloat(formOrcamento.valor_suplementado || '0') || 0) -
-                    (parseFloat(formOrcamento.valor_reduzido     || '0') || 0)
-                  )}
-                </span>
+                <button onClick={() => setShowOrcamentoPanel(false)}
+                  className="w-8 h-8 flex items-center justify-center rounded-xl border border-gray-200 dark:border-slate-600 text-gray-400 hover:text-gray-600 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all">
+                  <X className="w-4 h-4" />
+                </button>
               </div>
             </div>
-
-            {/* Footer */}
-            <div className="px-6 py-4 border-t border-gray-200 dark:border-slate-700/50 flex justify-end gap-2">
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-6 space-y-4">
+                <SectionCard icon={Wallet} title="Dados orçamentários" subtitle="Exercício e valores da LOA">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Exercício *</label>
+                      <input
+                        type="number"
+                        value={formOrcamento.exercicio}
+                        onChange={e => setFormOrcamento(p => ({...p, exercicio: e.target.value}))}
+                        disabled={!orcamentoEditing}
+                        min="2000" max="2099"
+                        className="input-field w-28"
+                        placeholder={new Date().getFullYear()}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Valor LOA (R$)</label>
+                        <input type="number" value={formOrcamento.valor_loa} onChange={e => setFormOrcamento(p => ({...p, valor_loa: e.target.value}))} disabled={!orcamentoEditing} step="0.01" min="0" className="input-field" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Valor suplementado (R$)</label>
+                        <input type="number" value={formOrcamento.valor_suplementado} onChange={e => setFormOrcamento(p => ({...p, valor_suplementado: e.target.value}))} disabled={!orcamentoEditing} step="0.01" min="0" className="input-field" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Valor reduzido (R$)</label>
+                        <input type="number" value={formOrcamento.valor_reduzido} onChange={e => setFormOrcamento(p => ({...p, valor_reduzido: e.target.value}))} disabled={!orcamentoEditing} step="0.01" min="0" className="input-field" />
+                      </div>
+                    </div>
+                    <div className="rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/40 p-4">
+                      <p className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider mb-1">
+                        Valor Vigente (LOA + Suplementado − Reduzido)
+                      </p>
+                      <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+                        {formatBRL(
+                          (parseFloat(formOrcamento.valor_loa) || 0) +
+                          (parseFloat(formOrcamento.valor_suplementado) || 0) -
+                          (parseFloat(formOrcamento.valor_reduzido) || 0)
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </SectionCard>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700/60 px-6 py-4 shrink-0 flex items-center justify-end gap-3">
               {!orcamentoEditing ? (
                 <>
-                  <button onClick={() => setShowOrcamentoPanel(false)} className="btn-secondary">Fechar</button>
-                  <button onClick={() => setOrcamentoEditing(true)} className="btn-primary flex items-center gap-1.5">
-                    <Edit2 className="h-4 w-4" /> Alterar
+                  <button onClick={() => setShowOrcamentoPanel(false)} className="btn-secondary px-5 py-2 text-sm">Fechar</button>
+                  <button onClick={() => setOrcamentoEditing(true)} className="btn-primary flex items-center gap-2 px-5 py-2 text-sm">
+                    <Edit2 className="w-4 h-4" /> Alterar
                   </button>
                 </>
               ) : (
                 <>
-                  <button onClick={() => { setFormOrcamento(orcamentoOriginal); setOrcamentoEditing(false); }} className="btn-secondary">Cancelar</button>
-                  <button onClick={saveOrcamento} disabled={loading} className="btn-primary">
-                    {loading ? 'Salvando...' : 'Salvar'}
+                  <button onClick={() => { setOrcamentoEditing(false); setFormOrcamento(orcamentoOriginal || { exercicio: new Date().getFullYear(), valor_loa: '0', valor_suplementado: '0', valor_reduzido: '0' }); }} className="btn-secondary px-5 py-2 text-sm">Cancelar</button>
+                  <button onClick={saveOrcamento} disabled={loading} className="btn-primary flex items-center gap-2 px-5 py-2 text-sm">
+                    <Save className="w-4 h-4" />
+                    {loading ? 'Salvando...' : 'Salvar Orçamento'}
                   </button>
                 </>
               )}
@@ -2073,175 +2268,137 @@ export default function Secretarias() {
         </div>
       )}
 
-      {/* â”€â”€ Painel de DotaÃ§Ãµes â”€â”€ */}
+      {/* ── Painel de Dotações ── */}
       {showDotacoesPanel && selectedSecretaria && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-xl max-w-3xl w-full shadow-xl flex flex-col max-h-[85vh]">
-            {/* Header */}
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700/50 flex items-center justify-between shrink-0">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
-                  ðŸ“Š DotaÃ§Ãµes OrÃ§amentÃ¡rias â€” {selectedSecretaria.sigla || selectedSecretaria.nome}
-                </h2>
-                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{selectedSecretaria.nome}</p>
-              </div>
-              <button onClick={() => setShowDotacoesPanel(false)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Tabela */}
-            <div className="overflow-y-auto flex-1">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-100 dark:bg-slate-700/30 border-b border-gray-200 dark:border-slate-700/50 sticky top-0">
-                  <tr>
-                    <th className="w-8 px-3 py-2.5"></th>
-                    <th className="text-left px-3 py-2.5 font-semibold text-gray-600 dark:text-slate-300">CÃ³digo</th>
-                    <th className="text-left px-3 py-2.5 font-semibold text-gray-600 dark:text-slate-300">DescriÃ§Ã£o</th>
-                    <th className="text-left px-3 py-2.5 font-semibold text-gray-600 dark:text-slate-300">El. Despesa</th>
-                    <th className="text-left px-3 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Fonte</th>
-                    <th className="text-right px-3 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Valor Previsto</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
-                  {dotacoesList.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="text-center py-10 text-gray-400 dark:text-slate-500 text-sm">
-                        Nenhuma dotaÃ§Ã£o cadastrada. Use "Incluir" para adicionar.
-                      </td>
-                    </tr>
-                  ) : dotacoesList.map(dot => {
-                    const isSel = selectedDotacao?.id === dot.id;
-                    return (
-                      <tr
-                        key={dot.id}
-                        onClick={() => { setSelectedDotacao(isSel ? null : dot); setShowFormDotacao(false); }}
-                        onDoubleClick={() => { setSelectedDotacao(dot); setEditingDotacao(dot); setFormDotacao({ codigo: dot.codigo||'', descricao: dot.descricao||'', elemento_despesa: dot.elemento_despesa||'', fonte_recurso: dot.fonte_recurso||'', valor_previsto: dot.valor_previsto != null ? String(dot.valor_previsto) : '' }); setShowFormDotacao(true); }}
-                        className={`cursor-pointer transition-colors select-none ${isSel ? 'bg-blue-600 text-white' : 'hover:bg-blue-50 dark:hover:bg-blue-900/10'}`}
-                      >
-                        <td className="px-3 py-2.5 text-center">{isSel && <span className="text-white text-xs">â–¶</span>}</td>
-                        <td className={`px-3 py-2.5 font-mono text-xs ${isSel ? 'text-blue-100' : 'text-gray-700 dark:text-slate-300'}`}>{dot.codigo || 'â€”'}</td>
-                        <td className={`px-3 py-2.5 ${isSel ? 'text-white' : 'text-gray-900 dark:text-slate-100'}`}>{dot.descricao || 'â€”'}</td>
-                        <td className={`px-3 py-2.5 font-mono text-xs ${isSel ? 'text-blue-100' : 'text-gray-500'}`}>{dot.elemento_despesa || 'â€”'}</td>
-                        <td className={`px-3 py-2.5 text-xs ${isSel ? 'text-blue-100' : 'text-gray-500'}`}>{dot.fonte_recurso || 'â€”'}</td>
-                        <td className={`px-3 py-2.5 text-right font-mono text-xs ${isSel ? 'text-blue-100' : 'text-gray-700 dark:text-slate-300'}`}>
-                          {dot.valor_previsto != null ? formatBRL(dot.valor_previsto) : 'â€”'}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                {dotacoesList.length > 0 && (
-                  <tfoot>
-                    <tr className="bg-indigo-50 dark:bg-indigo-900/20 border-t-2 border-indigo-200 dark:border-indigo-700">
-                      <td colSpan={5} className="px-3 py-2.5 text-right text-xs font-bold text-indigo-700 dark:text-indigo-300">Total Geral:</td>
-                      <td className="px-3 py-2.5 text-right font-bold text-indigo-700 dark:text-indigo-300">
-                        {formatBRL(dotacoesList.reduce((acc, d) => acc + (parseFloat(d.valor_previsto) || 0), 0))}
-                      </td>
-                    </tr>
-                  </tfoot>
-                )}
-              </table>
-            </div>
-
-            {/* FormulÃ¡rio inline de inclusÃ£o/ediÃ§Ã£o */}
-            {showFormDotacao && (
-              <div className="border-t border-gray-200 dark:border-slate-700/50 p-4 bg-gray-50 dark:bg-slate-700/20 shrink-0">
-                <h3 className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-3">
-                  {editingDotacao ? 'Editar DotaÃ§Ã£o' : 'Nova DotaÃ§Ã£o'}
-                </h3>
-                <form onSubmit={handleSubmitDotacao} className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">CÃ³digo da DotaÃ§Ã£o *</label>
-                      <input
-                        required
-                        value={formDotacao.codigo}
-                        onChange={e => setFormDotacao(p => ({...p, codigo: e.target.value}))}
-                        className="input-field text-sm font-mono"
-                        placeholder="Ex: 10.301.0007.2.001"
-                        autoFocus
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Elemento de Despesa</label>
-                      <input
-                        value={formDotacao.elemento_despesa}
-                        onChange={e => setFormDotacao(p => ({...p, elemento_despesa: e.target.value}))}
-                        className="input-field text-sm font-mono"
-                        placeholder="Ex: 3.3.90.39"
-                      />
-                    </div>
+        <div className="fixed inset-0 z-[9990] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-gray-50 dark:bg-slate-900 rounded-3xl shadow-2xl w-full flex flex-col overflow-hidden" style={{ maxWidth: '90vw', maxHeight: '90vh', width: 820 }}>
+            <div className="bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700/60 px-6 py-4 shrink-0">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-md">
+                    <Database className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">DescriÃ§Ã£o / AÃ§Ã£o *</label>
-                    <input
-                      required
-                      value={formDotacao.descricao}
-                      onChange={e => setFormDotacao(p => ({...p, descricao: e.target.value}))}
-                      className="input-field text-sm"
-                      placeholder="DescriÃ§Ã£o da aÃ§Ã£o orÃ§amentÃ¡ria"
-                    />
+                    <h2 className="text-base font-bold text-gray-900 dark:text-white">
+                      Dotações Orçamentárias — {selectedSecretaria.sigla || selectedSecretaria.nome}
+                    </h2>
+                    <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{selectedSecretaria.nome}</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Fonte de Recurso</label>
-                      <input
-                        value={formDotacao.fonte_recurso}
-                        onChange={e => setFormDotacao(p => ({...p, fonte_recurso: e.target.value}))}
-                        className="input-field text-sm"
-                        placeholder="Ex: 15"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Valor Previsto (R$)</label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">R$</span>
-                        <input
-                          type="number" min="0" step="0.01"
-                          value={formDotacao.valor_previsto}
-                          onChange={e => setFormDotacao(p => ({...p, valor_previsto: e.target.value}))}
-                          className="input-field pl-9 text-sm"
-                          placeholder="0,00"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex justify-end gap-2 pt-1">
-                    <button type="button" onClick={() => { setShowFormDotacao(false); setEditingDotacao(null); setSelectedDotacao(null); }} className="btn-secondary text-sm px-3 py-1.5">Cancelar</button>
-                    <button type="submit" disabled={loading} className="btn-primary text-sm px-3 py-1.5">
-                      {loading ? 'â³' : (editingDotacao ? 'ðŸ’¾ Salvar' : 'âœ… Adicionar')}
-                    </button>
-                  </div>
-                </form>
+                </div>
+                <button onClick={() => { setShowDotacoesPanel(false); setShowFormDotacao(false); setSelectedDotacao(null); }}
+                  className="w-8 h-8 flex items-center justify-center rounded-xl border border-gray-200 dark:border-slate-600 text-gray-400 hover:text-gray-600 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all">
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-            )}
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-6 space-y-4">
+                <div className="rounded-2xl border border-gray-100 dark:border-slate-700/60 bg-white dark:bg-slate-800/50 shadow-sm overflow-hidden">
+                  <div className="px-5 py-3.5 border-b border-gray-100 dark:border-slate-700/60 bg-gradient-to-r from-gray-50 to-white dark:from-slate-800 dark:to-slate-800/80 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-7 h-7 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center">
+                        <Database className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                      </div>
+                      <p className="text-sm font-semibold text-gray-800 dark:text-slate-200">Dotações cadastradas</p>
+                    </div>
+                    <span className="text-xs text-gray-500 dark:text-slate-400">{dotacoesList.length} dotação(ões)</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 dark:bg-slate-700/30">
+                        <tr>
+                          <th className="w-8 px-3 py-2.5"></th>
+                          <th className="text-left px-3 py-2.5 font-semibold text-gray-600 dark:text-slate-300 text-xs uppercase">Código</th>
+                          <th className="text-left px-3 py-2.5 font-semibold text-gray-600 dark:text-slate-300 text-xs uppercase">Descrição / Ação</th>
+                          <th className="text-left px-3 py-2.5 font-semibold text-gray-600 dark:text-slate-300 text-xs uppercase">El. Despesa</th>
+                          <th className="text-left px-3 py-2.5 font-semibold text-gray-600 dark:text-slate-300 text-xs uppercase">Fonte</th>
+                          <th className="text-right px-3 py-2.5 font-semibold text-gray-600 dark:text-slate-300 text-xs uppercase">Valor Previsto</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
+                        {dotacoesList.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="text-center py-10 text-gray-400 dark:text-slate-500">
+                              <Database className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                              <p className="text-sm">Nenhuma dotação cadastrada</p>
+                            </td>
+                          </tr>
+                        ) : (
+                          dotacoesList.map(dot => {
+                            const isSel = selectedDotacao?.id === dot.id;
+                            return (
+                              <tr
+                                key={dot.id}
+                                onClick={() => setSelectedDotacao(isSel ? null : dot)}
+                                onDoubleClick={() => { setEditingDotacao(dot); setFormDotacao({ codigo: dot.codigo||'', descricao: dot.descricao||'', elemento_despesa: dot.elemento_despesa||'', fonte_recurso: dot.fonte_recurso||'', valor_previsto: dot.valor_previsto||'' }); setShowFormDotacao(true); }}
+                                className={`cursor-pointer select-none transition-colors ${isSel ? 'bg-indigo-600 text-white' : 'hover:bg-indigo-50 dark:hover:bg-indigo-900/10'}`}
+                              >
+                                <td className="px-3 py-2.5 text-center">
+                                  {isSel && <ChevronRight className="w-4 h-4 text-white mx-auto" />}
+                                </td>
+                                <td className={`px-3 py-2.5 font-mono text-xs ${isSel ? 'text-white' : 'text-gray-800 dark:text-slate-200'}`}>{dot.codigo}</td>
+                                <td className={`px-3 py-2.5 max-w-xs truncate ${isSel ? 'text-white' : 'text-gray-700 dark:text-slate-300'}`}>{dot.descricao}</td>
+                                <td className={`px-3 py-2.5 text-xs ${isSel ? 'text-indigo-100' : 'text-gray-500 dark:text-slate-400'}`}>{dot.elemento_despesa}</td>
+                                <td className={`px-3 py-2.5 text-xs ${isSel ? 'text-indigo-100' : 'text-gray-500 dark:text-slate-400'}`}>{dot.fonte_recurso}</td>
+                                <td className={`px-3 py-2.5 text-right font-mono text-xs ${isSel ? 'text-white' : 'text-gray-700 dark:text-slate-300'}`}>
+                                  {dot.valor_previsto ? formatBRL(parseFloat(dot.valor_previsto)) : '—'}
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
 
-            {/* Toolbar */}
-            <div className="px-4 py-2.5 border-t border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-700/20 flex items-center justify-between shrink-0">
-              <span className="text-xs text-gray-500 dark:text-slate-400">
-                {dotacoesList.length} dotaÃ§Ã£o(Ãµes) cadastrada(s)
-              </span>
+                {showFormDotacao && (
+                  <SectionCard icon={Database} title={editingDotacao ? 'Editar Dotação' : 'Nova Dotação'} subtitle="Preencha os campos e confirme">
+                    <form onSubmit={handleSubmitDotacao} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Código da Dotação *</label>
+                          <input type="text" value={formDotacao.codigo} onChange={e => setFormDotacao(p => ({...p, codigo: e.target.value}))} required autoFocus className="input-field font-mono" placeholder="Ex: 02.001.0412200082.049" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Elemento de Despesa</label>
+                          <input type="text" value={formDotacao.elemento_despesa} onChange={e => setFormDotacao(p => ({...p, elemento_despesa: e.target.value}))} className="input-field font-mono" placeholder="Ex: 33.90.39" />
+                        </div>
+                        <div className="col-span-2">
+                          <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Descrição / Ação *</label>
+                          <input type="text" value={formDotacao.descricao} onChange={e => setFormDotacao(p => ({...p, descricao: e.target.value}))} required className="input-field" placeholder="Ex: Manutenção das atividades da secretaria" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Fonte de Recurso</label>
+                          <input type="text" value={formDotacao.fonte_recurso} onChange={e => setFormDotacao(p => ({...p, fonte_recurso: e.target.value}))} className="input-field" placeholder="Ex: 15000000" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Valor Previsto (R$)</label>
+                          <input type="number" value={formDotacao.valor_previsto} onChange={e => setFormDotacao(p => ({...p, valor_previsto: e.target.value}))} step="0.01" min="0" className="input-field" />
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-2 pt-1">
+                        <button type="button" onClick={() => { setShowFormDotacao(false); setEditingDotacao(null); }} className="btn-secondary text-sm px-4 py-2">Cancelar</button>
+                        <button type="submit" disabled={loading} className="btn-primary flex items-center gap-2 text-sm px-4 py-2">
+                          <Save className="w-4 h-4" />
+                          {loading ? 'Salvando...' : (editingDotacao ? 'Salvar Dotação' : 'Adicionar Dotação')}
+                        </button>
+                      </div>
+                    </form>
+                  </SectionCard>
+                )}
+              </div>
+            </div>
+            <div className="bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700/60 px-6 py-4 shrink-0 flex items-center justify-between">
+              <span className="text-xs text-gray-500 dark:text-slate-400">{dotacoesList.length} dotação(ões)</span>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => { setEditingDotacao(null); setFormDotacao({ codigo: '', descricao: '', elemento_despesa: '', fonte_recurso: '', valor_previsto: '' }); setShowFormDotacao(true); setSelectedDotacao(null); }}
-                  className="btn-primary flex items-center gap-1.5 text-sm px-3 py-1.5"
-                >
+                <button onClick={() => { setEditingDotacao(null); setFormDotacao({ codigo:'', descricao:'', elemento_despesa:'', fonte_recurso:'', valor_previsto:'' }); setShowFormDotacao(true); setSelectedDotacao(null); }} className="btn-primary flex items-center gap-1.5 text-sm px-3 py-1.5">
                   <Plus className="h-4 w-4" /> Incluir
                 </button>
-                <button
-                  onClick={() => { if (selectedDotacao) { setEditingDotacao(selectedDotacao); setFormDotacao({ codigo: selectedDotacao.codigo||'', descricao: selectedDotacao.descricao||'', elemento_despesa: selectedDotacao.elemento_despesa||'', fonte_recurso: selectedDotacao.fonte_recurso||'', valor_previsto: selectedDotacao.valor_previsto != null ? String(selectedDotacao.valor_previsto) : '' }); setShowFormDotacao(true); } }}
-                  disabled={!selectedDotacao}
-                  className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
+                <button onClick={() => { if(!selectedDotacao) return; setEditingDotacao(selectedDotacao); setFormDotacao({ codigo: selectedDotacao.codigo||'', descricao: selectedDotacao.descricao||'', elemento_despesa: selectedDotacao.elemento_despesa||'', fonte_recurso: selectedDotacao.fonte_recurso||'', valor_previsto: selectedDotacao.valor_previsto||'' }); setShowFormDotacao(true); }} disabled={!selectedDotacao} className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
                   <Edit2 className="h-4 w-4" /> Alterar
                 </button>
-                <button
-                  onClick={deleteDotacao}
-                  disabled={!selectedDotacao}
-                  className="btn-danger flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
+                <button onClick={() => selectedDotacao && deleteDotacao(selectedDotacao.id)} disabled={!selectedDotacao} className="btn-danger flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
                   <Trash2 className="h-4 w-4" /> Excluir
                 </button>
               </div>
@@ -2250,7 +2407,7 @@ export default function Secretarias() {
         </div>
       )}
 
-    </div>
+        </div>
   );
 }
 

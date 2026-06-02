@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Search, Filter, X, RefreshCw, Download, ChevronLeft, ChevronRight, Clock, User, Building2, Layers } from 'lucide-react'
+import { Search, Filter, X, RefreshCw, Download, ChevronLeft, ChevronRight, Clock, User, Building2, Layers, ClipboardList, Activity, Users, LayoutGrid } from 'lucide-react'
 import api from '../services/api'
+import PageHeader from '../components/ui/PageHeader'
 
 // Mapa de cores e ícones por módulo
 const moduloConfig = {
@@ -158,12 +159,14 @@ export default function Registros() {
     <div className="max-w-7xl mx-auto space-y-5 animate-fade-in">
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="page-title">📋 Registros de Atividade</h1>
-          <p className="page-subtitle">Histórico completo de ações realizadas no sistema</p>
-        </div>
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+        <PageHeader
+          icon={ClipboardList}
+          eyebrow="Sistema"
+          title="Registros de Atividade"
+          subtitle="Histórico completo de ações realizadas no sistema"
+        />
+        <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={() => buscarLogs(page)}
             className="btn-secondary flex items-center gap-2"
@@ -195,6 +198,54 @@ export default function Registros() {
           </button>
         </div>
       </div>
+
+      {/* Cards de resumo */}
+      {!isLoading && total > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="card p-4 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+              <Activity className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">{total.toLocaleString('pt-BR')}</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 truncate">Total de registros</p>
+            </div>
+          </div>
+          <div className="card p-4 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
+              <Users className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">
+                {new Set(logs.map(l => l.usuario?.id).filter(Boolean)).size}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 truncate">Usuários na página</p>
+            </div>
+          </div>
+          <div className="card p-4 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center flex-shrink-0">
+              <LayoutGrid className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">
+                {new Set(logs.map(l => l.modulo).filter(Boolean)).size}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 truncate">Módulos ativos</p>
+            </div>
+          </div>
+          <div className="card p-4 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+              <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
+                {logs[0]?.created_at ? formatarData(logs[0].created_at) : '—'}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 truncate">Última atividade</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Painel de Filtros */}
       {filtrosAbertos && (
@@ -367,7 +418,7 @@ export default function Registros() {
                   {logs.map((log) => {
                     const modCfg = moduloConfig[log.modulo] || { cor: 'gray', label: log.modulo }
                     return (
-                      <tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors">
+                      <tr key={log.id} className="group hover:bg-blue-50/40 dark:hover:bg-slate-700/40 transition-colors cursor-pointer">
                         {/* Data */}
                         <td className="px-4 py-3 whitespace-nowrap">
                           <p className="text-xs text-gray-500 dark:text-slate-400 font-mono">
@@ -399,7 +450,8 @@ export default function Registros() {
 
                         {/* Módulo */}
                         <td className="px-4 py-3">
-                          <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${corClasses[modCfg.cor] || corClasses.gray}`}>
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${corClasses[modCfg.cor] || corClasses.gray}`}>
+                            <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70 flex-shrink-0" />
                             {modCfg.label}
                           </span>
                         </td>

@@ -2,7 +2,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Save, Upload, X, ImageIcon, Download, FileDown, FileUp, Database, Key, RefreshCw, CheckCircle, AlertCircle, Settings } from 'lucide-react';
+import { Save, Upload, X, ImageIcon, Download, FileDown, FileUp, Database, Key, RefreshCw, CheckCircle, AlertCircle, Settings, Building2, Bell, Palette, ArrowLeftRight, Sun, Moon } from 'lucide-react';
 import PageHeader from '../components/ui/PageHeader';
 import SectionTitle from '../components/ui/SectionTitle';
 
@@ -192,10 +192,10 @@ export default function Configuracoes() {
   };
 
   const tabs = [
-    { id: 'gerais',       emoji: '🏛️', label: 'Gerais' },
-    { id: 'notificacoes', emoji: '🔔', label: 'Notificações' },
-    { id: 'tema',         emoji: '🎨', label: 'Tema' },
-    { id: 'importexport', emoji: '🔄', label: 'Importações/Exportações' },
+    { id: 'gerais',       icon: Building2,      label: 'Gerais' },
+    { id: 'notificacoes', icon: Bell,            label: 'Notificações' },
+    { id: 'tema',         icon: Palette,         label: 'Tema' },
+    { id: 'importexport', icon: ArrowLeftRight,  label: 'Import / Export' },
   ];
 
   // ── estados Importações/Exportações
@@ -283,6 +283,33 @@ export default function Configuracoes() {
         subtitle="Gerencie suas preferências e informações pessoais"
       />
 
+      {/* Card de resumo do ambiente */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Tenant', value: tenant?.subdominio || tenant?.nome || '—', icon: Building2, color: 'blue' },
+          { label: 'Ambiente', value: import.meta.env.MODE === 'production' ? 'Produção' : 'Desenvolvimento', icon: Settings, color: import.meta.env.MODE === 'production' ? 'green' : 'amber' },
+          { label: 'Versão', value: '1.0.0', icon: Key, color: 'purple' },
+          { label: 'Última atualização', value: tenant?.updated_at ? new Date(tenant.updated_at).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR'), icon: RefreshCw, color: 'slate' },
+        ].map(({ label, value, icon: Icon, color }) => {
+          const colorMap = {
+            blue:   'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800',
+            green:  'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800',
+            amber:  'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800',
+            purple: 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800',
+            slate:  'bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700',
+          };
+          return (
+            <div key={label} className={`flex items-center gap-3 p-3 rounded-xl border ${colorMap[color]}`}>
+              <Icon className="h-5 w-5 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-wide opacity-70">{label}</p>
+                <p className="text-sm font-semibold truncate">{value}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
       {success && (
         <div className="p-4 bg-green-50 dark:bg-green-900/30 border border-green-300 dark:border-green-700 rounded-lg text-green-800 dark:text-green-300 text-sm flex items-center gap-2">
           {success}
@@ -298,7 +325,9 @@ export default function Configuracoes() {
         {/* Tabs */}
         <div className="border-b border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-800/50">
           <nav className="flex overflow-x-auto">
-            {tabs.map((tab) => (
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
@@ -308,9 +337,10 @@ export default function Configuracoes() {
                     : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:border-gray-300'
                   }`}
               >
-                {tab.emoji} {tab.label}
+                <Icon className="h-4 w-4" /> {tab.label}
               </button>
-            ))}
+              );
+            })}
           </nav>
         </div>
 
@@ -335,7 +365,7 @@ export default function Configuracoes() {
                     />
                     {savingSecretariaLogo && (
                       <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 mt-8">
-                        <span className="animate-spin">⏳</span> Salvando...
+                        <RefreshCw className="h-4 w-4 animate-spin" /> Salvando...
                       </div>
                     )}
                   </div>
@@ -427,14 +457,14 @@ export default function Configuracoes() {
             <form onSubmit={handleNotificacoesSubmit} className="space-y-2">
               <SectionTitle title="Preferências de Notificação" />
               {[
-                { key: 'emailProcesso', emoji: '📧', title: 'E-mail 🔔 Novos Processos', desc: 'Receba um e-mail quando um novo processo for criado' },
-                { key: 'emailTramitacao', emoji: '📧', title: 'E-mail 🔔 Tramitações', desc: 'Receba um e-mail quando um processo for tramitado para você' },
-                { key: 'emailMencao', emoji: '👤', title: 'E-mail 🔔 Menções', desc: 'Receba um e-mail quando for mencionado em um comentário' },
-                { key: 'pushProcesso', emoji: '🔔', title: 'Push 🔔 Notificações do Navegador', desc: 'Receba notificações push no navegador em tempo real' },
-              ].map(({ key, emoji, title, desc }, i, arr) => (
+                { key: 'emailProcesso',   title: 'E-mail — Novos Processos',            desc: 'Receba um e-mail quando um novo processo for criado' },
+                { key: 'emailTramitacao', title: 'E-mail — Tramitações',               desc: 'Receba um e-mail quando um processo for tramitado para você' },
+                { key: 'emailMencao',     title: 'E-mail — Menções',                   desc: 'Receba um e-mail quando for mencionado em um comentário' },
+                { key: 'pushProcesso',    title: 'Push — Notificações do Navegador',   desc: 'Receba notificações push no navegador em tempo real' },
+              ].map(({ key, title, desc }, i, arr) => (
                 <div key={key} className={`flex items-center justify-between py-4 ${i < arr.length - 1 ? 'border-b border-gray-100 dark:border-slate-700/50' : ''}`}>
                   <div className="flex-1 pr-4">
-                    <p className="font-medium text-gray-800 dark:text-slate-200 text-sm">{emoji} {title}</p>
+                    <p className="font-medium text-gray-800 dark:text-slate-200 text-sm">{title}</p>
                     <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{desc}</p>
                   </div>
                   <ToggleSwitch checked={notificacoesData[key]} onChange={(e) => setNotificacoesData({ ...notificacoesData, [key]: e.target.checked })} />
@@ -442,8 +472,9 @@ export default function Configuracoes() {
               ))}
 
               <div className="flex justify-end pt-4">
-                <button type="submit" disabled={loading} className="btn-primary">
-                  {loading ? '⏳ Salvando...' : '✅ Salvar Preferências'}
+                <button type="submit" disabled={loading} className="btn-primary flex items-center gap-2">
+                  <Save className="h-4 w-4" />
+                  {loading ? 'Salvando...' : 'Salvar Preferências'}
                 </button>
               </div>
             </form>
@@ -458,22 +489,22 @@ export default function Configuracoes() {
                   onClick={() => isDark && toggleTheme()}
                   className={`p-5 rounded-xl border-2 text-left transition-all ${!isDark ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30' : 'border-gray-200 dark:border-slate-700/50 hover:border-gray-300 dark:hover:border-slate-500'}`}
                 >
-                  <div className="text-3xl mb-2">☀️</div>
+                  <div className="mb-2"><Sun className="h-7 w-7 text-amber-500" /></div>
                   <p className="font-semibold text-gray-800 dark:text-slate-200">Modo Claro</p>
                   <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Interface clara e brilhante</p>
-                  {!isDark && <span className="mt-2 inline-block badge bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">✅ Ativo</span>}
+                  {!isDark && <span className="mt-2 inline-flex items-center gap-1 badge bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300"><CheckCircle className="h-3 w-3" /> Ativo</span>}
                 </button>
                 <button
                   onClick={() => !isDark && toggleTheme()}
                   className={`p-5 rounded-xl border-2 text-left transition-all ${isDark ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30' : 'border-gray-200 dark:border-slate-700/50 hover:border-gray-300 dark:hover:border-slate-500'}`}
                 >
-                  <div className="text-3xl mb-2">🌙</div>
+                  <div className="mb-2"><Moon className="h-7 w-7 text-indigo-500" /></div>
                   <p className="font-semibold text-gray-800 dark:text-slate-200">Modo Escuro</p>
                   <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Interface escura e confortável</p>
-                  {isDark && <span className="mt-2 inline-block badge bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">✅ Ativo</span>}
+                  {isDark && <span className="mt-2 inline-flex items-center gap-1 badge bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300"><CheckCircle className="h-3 w-3" /> Ativo</span>}
                 </button>
               </div>
-              <p className="text-xs text-gray-400 dark:text-slate-500">ℹ️ A preferência de tema é salva automaticamente no seu navegador.</p>
+              <p className="text-xs text-gray-400 dark:text-slate-500">A preferência de tema é salva automaticamente no seu navegador.</p>
             </div>
           )}
 

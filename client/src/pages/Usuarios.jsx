@@ -38,6 +38,8 @@ export default function Usuarios() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState('todos');
+  const [pageUsuarios, setPageUsuarios] = useState(1);
+  const PER_PAGE_USUARIOS = 20;
   const [showPassword, setShowPassword] = useState(false);
   const [showEditPassword, setShowEditPassword] = useState(false);
   const [editData, setEditData] = useState(null);
@@ -379,7 +381,10 @@ export default function Usuarios() {
                        usuario.cpf.includes(searchTerm);
     const matchTipo = filterTipo === 'todos' || usuario.tipo === filterTipo;
     return matchSearch && matchTipo;
-  }).sort((a, b) => a.nome.localeCompare(b.nome)); // Ordenar alfabeticamente por nome
+  }).sort((a, b) => a.nome.localeCompare(b.nome));
+
+  const totalPagesUsuarios = Math.max(1, Math.ceil(filteredUsuarios.length / PER_PAGE_USUARIOS));
+  const usuariosPaginados = filteredUsuarios.slice((pageUsuarios - 1) * PER_PAGE_USUARIOS, pageUsuarios * PER_PAGE_USUARIOS);
 
   const tiposUsuario = [
     { value: 'admin', label: 'Administrador', color: 'red' },
@@ -489,9 +494,9 @@ export default function Usuarios() {
       <FilterBar>
         <div className="relative flex-1 min-w-48">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <input type="text" placeholder="Buscar por nome, email ou CPF..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="input-field pl-10" />
+          <input type="text" placeholder="Buscar por nome, email ou CPF..." value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setPageUsuarios(1); }} className="input-field pl-10" />
         </div>
-        <select value={filterTipo} onChange={(e) => setFilterTipo(e.target.value)} className="input-field w-48">
+        <select value={filterTipo} onChange={(e) => { setFilterTipo(e.target.value); setPageUsuarios(1); }} className="input-field w-48">
           <option value="todos">Todos os tipos</option>
           <option value="admin">Administradores</option>
           <option value="gestor">Gestores</option>
@@ -523,7 +528,7 @@ export default function Usuarios() {
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700/50">
-            {filteredUsuarios.map((usuario) => (
+            {usuariosPaginados.map((usuario) => (
               <tr key={usuario.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/40 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
@@ -594,6 +599,36 @@ export default function Usuarios() {
 
         {filteredUsuarios.length === 0 && (
           <EmptyState icon={Users} title="Nenhum usuário encontrado" description="Tente ajustar os filtros de busca" />
+        )}
+        {totalPagesUsuarios > 1 && (
+          <div className="px-6 py-3 border-t border-gray-200 dark:border-slate-700/50 flex items-center justify-between bg-gray-50 dark:bg-slate-800/50">
+            <span className="text-xs text-gray-500 dark:text-slate-400">
+              Página {pageUsuarios} de {totalPagesUsuarios} · {filteredUsuarios.length} usuário(s)
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPageUsuarios(1)}
+                disabled={pageUsuarios === 1}
+                className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+              >«</button>
+              <button
+                onClick={() => setPageUsuarios(p => Math.max(1, p - 1))}
+                disabled={pageUsuarios === 1}
+                className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+              >‹</button>
+              <span className="px-3 py-1 text-xs font-semibold bg-blue-600 text-white rounded">{pageUsuarios}</span>
+              <button
+                onClick={() => setPageUsuarios(p => Math.min(totalPagesUsuarios, p + 1))}
+                disabled={pageUsuarios === totalPagesUsuarios}
+                className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+              >›</button>
+              <button
+                onClick={() => setPageUsuarios(totalPagesUsuarios)}
+                disabled={pageUsuarios === totalPagesUsuarios}
+                className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+              >»</button>
+            </div>
+          </div>
         )}
       </div>
 

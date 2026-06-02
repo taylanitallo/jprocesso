@@ -230,7 +230,7 @@ export default function Layout() {
         {/* Topbar */}
         <header className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700/50 sticky top-0 z-30 flex-shrink-0">
           <div className="px-4 sm:px-6">
-            <div className="flex items-center justify-between h-[72px] gap-4">
+            <div className="flex items-center h-[72px] gap-4">
 
               {/* Esquerda: hamburger + nome da entidade */}
               <div className="flex items-center gap-3 min-w-0">
@@ -247,17 +247,18 @@ export default function Layout() {
                 )}
               </div>
 
-              {/* Tema */}
-              <button
-                onClick={toggleTheme}
-                className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
-                title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
-              >
-                {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              </button>
+              {/* Direita: tema + perfil colados */}
+              <div ref={profileRef} className="ml-auto relative flex items-center gap-4 flex-shrink-0">
 
-              {/* Perfil */}
-              <div ref={profileRef} className="relative flex-shrink-0">
+                {/* Botão tema */}
+                <button
+                  onClick={toggleTheme}
+                  className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
+                  title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+                >
+                  {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                </button>
+
                 <button
                   onClick={() => setProfileOpen(v => !v)}
                   className="flex items-center gap-2.5 pl-3 border-l border-gray-200 dark:border-slate-700/50 hover:opacity-80 transition-opacity"
@@ -339,7 +340,7 @@ export default function Layout() {
               rel="noopener noreferrer"
               className="font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
             >
-              JEOS Sistemas de Governo
+              JEOS SISTEMAS E ASSESSORIAS LTDA
             </a>
             <span className="tabular-nums capitalize">
               {fmtData(now)} · {fmtHora(now)}

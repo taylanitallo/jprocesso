@@ -180,21 +180,27 @@ function ItemModal({ item, onClose, onSave, saving, erro }) {
 // Os itens são lidos do catálogo de Contratos (localStorage 'contratos_itens')
 // e combinados com dados de estoque do banco (almoxarifado_itens) pelo código
 export default function AlmoxItens() {
-  const [todosItens, setTodosItens] = useState([])
-  const [busca,      setBusca]      = useState('')
-  const [editando,   setEditando]   = useState(null)
-  const [loading,    setLoading]    = useState(true)
-  const [saving,     setSaving]     = useState(false)
-  const [erro,       setErro]       = useState('')
+  const [todosItens,    setTodosItens]    = useState([])
+  const [busca,         setBusca]         = useState('')
+  const [editando,      setEditando]      = useState(null)
+  const [loading,       setLoading]       = useState(true)
+  const [saving,        setSaving]        = useState(false)
+  const [erro,          setErro]          = useState('')
+  const [paginaAtual,   setPaginaAtual]   = useState(1)
+  const itensPorPagina = 10
 
   // Filtragem client-side sobre o catálogo já carregado
-  const itens = busca
+  const itensFiltrados = busca
     ? todosItens.filter(item =>
         item.nome?.toLowerCase().includes(busca.toLowerCase()) ||
         String(item.codigo || '').toLowerCase().includes(busca.toLowerCase()) ||
         item.categoria?.toLowerCase().includes(busca.toLowerCase())
       )
     : todosItens
+
+  const totalPaginas  = Math.ceil(itensFiltrados.length / itensPorPagina)
+  const inicio        = (paginaAtual - 1) * itensPorPagina
+  const itens         = itensFiltrados.slice(inicio, inicio + itensPorPagina)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -315,7 +321,7 @@ export default function AlmoxItens() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
             value={busca}
-            onChange={e => setBusca(e.target.value)}
+            onChange={e => { setBusca(e.target.value); setPaginaAtual(1) }}
             placeholder="Buscar por nome, código ou categoria..."
             className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
@@ -344,7 +350,7 @@ export default function AlmoxItens() {
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="px-4 pt-4">
-            <SectionTitle icon={Package} title="Lista de Itens" subtitle={`${itens.length} de ${todosItens.length} item(ns)`} />
+            <SectionTitle icon={Package} title="Lista de Itens" subtitle={`${itensFiltrados.length} de ${todosItens.length} item(ns)`} />
           </div>
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
@@ -422,6 +428,91 @@ export default function AlmoxItens() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* ── Paginação ── */}
+      {totalPaginas > 1 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
+          {/* Contagem */}
+          <p className="text-xs text-gray-500 dark:text-slate-400">
+            Mostrando{' '}
+            <span className="font-semibold text-gray-700 dark:text-slate-300">
+              {inicio + 1}–{Math.min(inicio + itensPorPagina, itensFiltrados.length)}
+            </span>{' '}
+            de{' '}
+            <span className="font-semibold text-gray-700 dark:text-slate-300">
+              {itensFiltrados.length}
+            </span>{' '}
+            itens
+          </p>
+
+          {/* Botões de navegação */}
+          <div className="flex items-center gap-1">
+            {/* Anterior */}
+            <button
+              onClick={() => setPaginaAtual(p => Math.max(1, p - 1))}
+              disabled={paginaAtual === 1}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-medium border
+                         border-gray-200 dark:border-slate-600
+                         text-gray-600 dark:text-slate-300
+                         hover:bg-gray-100 dark:hover:bg-slate-700
+                         disabled:opacity-40 disabled:cursor-not-allowed
+                         transition-colors"
+            >
+              ← Anterior
+            </button>
+
+            {/* Páginas numeradas */}
+            {(() => {
+              const pages = []
+              for (let i = 1; i <= totalPaginas; i++) {
+                if (
+                  i === 1 ||
+                  i === totalPaginas ||
+                  (i >= paginaAtual - 1 && i <= paginaAtual + 1)
+                ) {
+                  pages.push(i)
+                } else if (
+                  pages[pages.length - 1] !== '...'
+                ) {
+                  pages.push('...')
+                }
+              }
+              return pages.map((p, idx) =>
+                p === '...' ? (
+                  <span key={`dots-${idx}`} className="px-1.5 text-xs text-gray-400 dark:text-slate-500">…</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setPaginaAtual(p)}
+                    className={`min-w-[32px] px-2 py-1.5 rounded-lg text-xs font-semibold border transition-colors
+                      ${
+                        paginaAtual === p
+                          ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                          : 'border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700'
+                      }`}
+                  >
+                    {p}
+                  </button>
+                )
+              )
+            })()}
+
+            {/* Próximo */}
+            <button
+              onClick={() => setPaginaAtual(p => Math.min(totalPaginas, p + 1))}
+              disabled={paginaAtual === totalPaginas}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-medium border
+                         border-gray-200 dark:border-slate-600
+                         text-gray-600 dark:text-slate-300
+                         hover:bg-gray-100 dark:hover:bg-slate-700
+                         disabled:opacity-40 disabled:cursor-not-allowed
+                         transition-colors"
+            >
+              Próximo →
+            </button>
+          </div>
         </div>
       )}
 

@@ -971,12 +971,13 @@ const listAuditLog = async (req, res) => {
   try {
     await ensureTables(req);
     const { AlmoxAuditLog } = req.models;
-    const { tabela, acao, user_id, page = 1, limit = 50 } = req.query;
+    const { tabela, acao, user_id, user_nome, page = 1, limit = 50 } = req.query;
 
     const where = {};
-    if (tabela)   where.tabela   = tabela;
-    if (acao)     where.acao     = acao;
-    if (user_id)  where.user_id  = user_id;
+    if (tabela)     where.tabela    = tabela;
+    if (acao)       where.acao      = acao;
+    if (user_id)    where.user_id   = user_id;
+    if (user_nome)  where.user_nome = { [Op.iLike]: `%${user_nome}%` };
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const { count, rows } = await AlmoxAuditLog.findAndCountAll({
@@ -1316,6 +1317,50 @@ const concluirInventario = async (req, res) => {
   }
 };
 
+
+// ─── EDITAR INVENTÁRIO ────────────────────────────────────────────────────────
+const updateInventario = async (req, res) => {
+  try {
+    await ensureTables(req);
+    const { AlmoxInventario } = req.models;
+    const inv = await AlmoxInventario.findByPk(req.params.id);
+    if (!inv) return res.status(404).json({ error: 'Inventário não encontrado' });
+    if (inv.status === 'CONCLUIDO') {
+      return res.status(400).json({ error: 'Não é possível editar um inventário concluído' });
+    }
+    const { observacao } = req.body;
+    await inv.update({ observacao });
+    await audit(req.models, {
+      tabela: 'almox_inventarios',
+      registro_id: inv.id,
+      acao: 'ATUALIZOU',
+      descricao: `Inventário ${inv.numero} editado`,
+      user: req.user
+    });
+    res.json(inv);
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao editar inventário' });
+  }
+};
+
+// ─── EXCLUIR INVENTÁRIO ───────────────────────────────────────────────────────
+const deleteInventario = async (req, res) => {
+  try {
+    await ensureTables(req);
+    const { AlmoxInventario, AlmoxInventarioItem } = req.models;
+    const inv = await AlmoxInventario.findByPk(req.params.id);
+    if (!inv) return res.status(404).json({ error: 'Inventário não encontrado' });
+    if (inv.status === 'CONCLUIDO') {
+      return res.status(400).json({ error: 'Não é possível excluir um inventário concluído' });
+    }
+    await AlmoxInventarioItem.destroy({ where: { inventario_id: inv.id } });
+    await inv.destroy();
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao excluir inventário' });
+  }
+};
+
 // ─── EXPORTAR TRANSPARÊNCIA ──────────────────────────────────────────────────
 const exportarTransparencia = async (req, res) => {
   try {
@@ -1427,5 +1472,6 @@ module.exports = {
   getRessuprimento,
   listCotas, createCota, deleteCota,
   listInventarios, createInventario, getInventario, registrarContagem, concluirInventario,
+  updateInventario, deleteInventario,
   exportarTransparencia
 };

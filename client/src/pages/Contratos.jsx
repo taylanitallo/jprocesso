@@ -1,19 +1,22 @@
-import { useState, useRef, useEffect } from 'react'
+﻿import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   FileText, ShoppingBag, User, PackageOpen, Search, X, Plus, Edit3,
-  Trash2, Eye, BarChart2, List, Check, AlertTriangle, Printer, ChevronUp, ChevronDown,
-  Loader2, CheckCircle2, XCircle, Download, RefreshCw
+  Trash2, Eye, BarChart2, BarChart3, List, Check, AlertTriangle, Printer, ChevronUp, ChevronDown,
+  Loader2, CheckCircle2, XCircle, Download, RefreshCw, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
+  DollarSign, TrendingUp, Building2, Award, Tag, Activity
 } from 'lucide-react'
-import { JAIButton } from '../components/JAI'
+
 import api from '../services/api'
 import { PageHeader } from '../components/ui'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const TABS = [
-  { key: 'itens',     label: 'Itens',     icon: ShoppingBag, emoji: '📦' },
-  { key: 'credor',    label: 'Credor',    icon: User,        emoji: '🏢' },
-  { key: 'contratos', label: 'Contratos', icon: FileText,    emoji: '📋' },
+  { key: 'contratos',  label: 'Contratos',  icon: FileText,    emoji: '📋' },
+  { key: 'credor',     label: 'Credores',   icon: User,        emoji: '🏢' },
+  { key: 'itens',      label: 'Itens',      icon: ShoppingBag, emoji: '📦' },
+  { key: 'relatorios', label: 'Relatórios', icon: BarChart2,   emoji: '📊' },
 ]
 
 const UNIDADES      = ['UNIDADE','MÊS','SERVIÇO','SERVIÇOS','CONJUNTO','KG','LITRO','METRO','HORA','DIA','PACOTE','RESMA','CAIXA','PAR','AMPOLA','COMPRIMIDO','FRASCO']
@@ -32,6 +35,7 @@ function proximoCodigo(itens) {
   return String(max + 1).padStart(5, '0')
 }
 
+// ── UI Primitives ─────────────────────────────────────────────────────────────
 function FieldRow({ label, children }) {
   return (
     <div className="flex items-center gap-3 min-h-[34px]">
@@ -49,8 +53,180 @@ function SectionTitle({ children }) {
   )
 }
 
+// ── Card de Seção Premium ──────────────────────────────────────────────────────
+function SectionCard({ icon: Icon, title, subtitle, children, className = '' }) {
+  return (
+    <div className={`rounded-2xl border border-gray-100 dark:border-slate-700/60 bg-white dark:bg-slate-800/50 shadow-sm overflow-hidden ${className}`}>
+      <div className="px-5 py-4 border-b border-gray-100 dark:border-slate-700/60 bg-gradient-to-r from-gray-50 to-white dark:from-slate-800 dark:to-slate-800/80">
+        <div className="flex items-center gap-3">
+          {Icon && (
+            <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+              <Icon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            </div>
+          )}
+          <div>
+            <p className="text-sm font-semibold text-gray-800 dark:text-slate-200">{title}</p>
+            {subtitle && <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{subtitle}</p>}
+          </div>
+        </div>
+      </div>
+      <div className="px-5 py-4">{children}</div>
+    </div>
+  )
+}
+
+// ── PortalDropdown — renderiza o dropdown em document.body via portal ─────────
+// Evita corte por overflow-hidden/overflow-y-auto nos cards e modais.
+function PortalDropdown({ anchorRef, open, children, minWidth = 0, className = '' }) {
+  const [style, setStyle] = useState({})
+  useEffect(() => {
+    if (!open) return
+    const el = anchorRef?.current
+    if (!el) return
+    const update = () => {
+      const r = el.getBoundingClientRect()
+      setStyle({ top: r.bottom + 4, left: r.left, width: Math.max(r.width, minWidth) })
+    }
+    update()
+    window.addEventListener('scroll', update, true)
+    window.addEventListener('resize', update)
+    return () => {
+      window.removeEventListener('scroll', update, true)
+      window.removeEventListener('resize', update)
+    }
+  }, [open, anchorRef, minWidth])
+  if (!open || !style.top) return null
+  return createPortal(
+    <div
+      style={{ position: 'fixed', zIndex: 10000, ...style }}
+      className={`bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl shadow-2xl max-h-52 overflow-y-auto ${className}`}
+    >
+      {children}
+    </div>,
+    document.body
+  )
+}
+
+// ── Campo de Exibição (Visualização) ──────────────────────────────────────────
+function ViewField({ label, value, mono = false, badge = null, className = '' }) {
+  return (
+    <div className={`flex flex-col gap-0.5 ${className}`}>
+      <p className="text-[11px] font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider">{label}</p>
+      {badge ? badge : (
+        <p className={`text-sm font-medium text-gray-800 dark:text-slate-200 ${mono ? 'font-mono' : ''}`}>
+          {value || <span className="text-gray-300 dark:text-slate-600">—</span>}
+        </p>
+      )}
+    </div>
+  )
+}
+
+// ── Input Premium ──────────────────────────────────────────────────────────────
+function PremiumInput({ className = '', ...props }) {
+  return (
+    <input
+      className={`w-full h-11 px-3.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/50 text-sm text-gray-800 dark:text-slate-200 placeholder-gray-300 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${className}`}
+      {...props}
+    />
+  )
+}
+
+// ── Select Premium ─────────────────────────────────────────────────────────────
+function PremiumSelect({ className = '', children, ...props }) {
+  return (
+    <select
+      className={`w-full h-11 px-3.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/50 text-sm text-gray-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${className}`}
+      {...props}
+    >
+      {children}
+    </select>
+  )
+}
+
+// ── Textarea Premium ───────────────────────────────────────────────────────────
+function PremiumTextarea({ className = '', ...props }) {
+  return (
+    <textarea
+      className={`w-full px-3.5 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/50 text-sm text-gray-800 dark:text-slate-200 placeholder-gray-300 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none ${className}`}
+      {...props}
+    />
+  )
+}
+
+// ── Stepper ───────────────────────────────────────────────────────────────────
+function ModalStepper({ steps, currentStep, onStep }) {
+  return (
+    <div className="flex items-center gap-1 overflow-x-auto pb-0.5 scrollbar-hide">
+      {steps.map((s, i) => {
+        const active  = i === currentStep
+        const done    = i < currentStep
+        return (
+          <button
+            key={i}
+            onClick={() => onStep(i)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              active
+                ? 'bg-blue-600 text-white shadow-sm'
+                : done
+                ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-200 dark:border-green-700/50'
+                : 'bg-gray-50 dark:bg-slate-700/50 text-gray-500 dark:text-slate-400 border border-gray-200 dark:border-slate-600 hover:border-blue-300 hover:text-blue-600 dark:hover:text-blue-400'
+            }`}
+          >
+            <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+              active ? 'bg-white/20 text-white' : done ? 'bg-green-500 text-white' : 'bg-gray-200 dark:bg-slate-600 text-gray-500 dark:text-slate-400'
+            }`}>
+              {done ? '✓' : i + 1}
+            </span>
+            {s}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Barra de Progresso de Vigência ────────────────────────────────────────────
+function VigenciaProgress({ inicio, fim, assinatura }) {
+  if (!inicio || !fim) return null
+  const today     = new Date(); today.setHours(0,0,0,0)
+  const dtInicio  = new Date(inicio + 'T00:00:00')
+  const dtFim     = new Date(fim    + 'T00:00:00')
+  const dtAssin   = assinatura ? new Date(assinatura + 'T00:00:00') : dtInicio
+  const total     = dtFim - dtInicio
+  const elapsed   = Math.min(today - dtInicio, total)
+  const pct       = total > 0 ? Math.max(0, Math.min(100, (elapsed / total) * 100)) : 0
+  const diasRest  = Math.floor((dtFim - today) / 86400000)
+  const vencido   = diasRest < 0
+  const proximo   = !vencido && diasRest <= 30
+  const barColor  = vencido ? 'bg-red-500' : proximo ? 'bg-amber-400' : 'bg-green-500'
+  const fmtDate   = (d) => new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')
+  return (
+    <div className="rounded-2xl border border-gray-100 dark:border-slate-700/60 bg-gradient-to-br from-gray-50 to-white dark:from-slate-800 dark:to-slate-800/50 p-4 space-y-3">
+      <div className="grid grid-cols-4 gap-3 text-center">
+        {[
+          { label: 'Assinatura',  value: fmtDate(assinatura || inicio) },
+          { label: 'Início',      value: fmtDate(inicio) },
+          { label: 'Fim',         value: fmtDate(fim) },
+          { label: 'Dias restantes', value: vencido ? `Vencido há ${Math.abs(diasRest)}d` : `${diasRest}d`, highlight: vencido ? 'text-red-600' : proximo ? 'text-amber-600' : 'text-green-600' },
+        ].map(({ label, value, highlight }) => (
+          <div key={label} className="flex flex-col gap-0.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">{label}</p>
+            <p className={`text-sm font-bold ${highlight || 'text-gray-800 dark:text-slate-200'}`}>{value}</p>
+          </div>
+        ))}
+      </div>
+      <div>
+        <div className="h-2 rounded-full bg-gray-100 dark:bg-slate-700 overflow-hidden">
+          <div className={`h-full rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${pct}%` }} />
+        </div>
+        <p className="text-[10px] text-gray-400 mt-1 text-right">{Math.round(pct)}% do período decorrido</p>
+      </div>
+    </div>
+  )
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
-//  MODAL: FORMULÁRIO DE ITEM (Incluir / Alterar / Visualizar)
+//  MODAL: FORMULÁRIO DE ITEM (Incluir / Alterar / Visualizar) — PREMIUM
 // ══════════════════════════════════════════════════════════════════════════════
 function ItemModal({ modo, item, codigoProximo, onSave, onClose }) {
   const readonly = modo === 'visualizar'
@@ -82,241 +258,190 @@ function ItemModal({ modo, item, codigoProximo, onSave, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col" style={{ maxHeight: '92vh' }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in duration-150">
+      <div className="bg-gray-50 dark:bg-slate-900 rounded-3xl shadow-2xl w-full flex flex-col overflow-hidden" style={{ maxWidth: '90vw', maxHeight: '90vh', width: '680px' }}>
 
-        {/* Barra de título */}
-        <div className="flex items-center justify-between bg-slate-900 dark:bg-slate-900 px-5 py-3 rounded-t-2xl shrink-0">
-          <span className="text-sm font-semibold text-white">Cadastro de itens — {titulo}</span>
-          <button onClick={onClose} className="p-0.5 rounded hover:bg-slate-700 text-white/80 hover:text-white">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Corpo */}
-        <div className="flex-1 overflow-y-auto">
-
-          {/* ── Informações principais ── */}
-          <div className="px-6 pt-4 pb-4 space-y-3">
-            <SectionTitle>Informações principais</SectionTitle>
-
-            {/* Código — somente leitura, gerado automaticamente */}
-            <FieldRow label="Código do item">
-              <input
-                value={form.codigo}
-                readOnly
-                className="input-field text-sm w-28 bg-gray-100 dark:bg-slate-700 cursor-default font-mono tracking-widest"
-              />
-            </FieldRow>
-
-            {/* Descrição */}
-            <FieldRow label="Descrição do item">
-              <input
-                value={form.descricao}
-                onChange={e => set('descricao', e.target.value.toUpperCase())}
-                disabled={readonly}
-                className="input-field text-sm uppercase w-full"
-                placeholder="Nomenclatura do item..."
-                autoFocus={!readonly}
-              />
-            </FieldRow>
-
-            {/* Categoria */}
-            <FieldRow label="Categoria">
-              <div className="flex gap-1">
-                <select
-                  value={form.categoria}
-                  onChange={e => set('categoria', e.target.value)}
-                  disabled={readonly}
-                  className="input-field text-sm flex-1"
-                >
-                  <option value="">Selecione...</option>
-                  {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-                {!readonly && (
-                  <button onClick={() => set('categoria', '')} title="Limpar"
-                    className="px-2 rounded border border-gray-300 dark:border-slate-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
+        {/* ── Header Premium ── */}
+        <div className="bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700/60 px-6 py-4 shrink-0">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center shadow-md">
+                <PackageOpen className="w-5 h-5 text-white" />
               </div>
-            </FieldRow>
-
-            {/* Unidade de Medida */}
-            <FieldRow label="Unid. Medida">
-              <div className="flex gap-1">
-                <select
-                  value={form.unidade_medida}
-                  onChange={e => set('unidade_medida', e.target.value)}
-                  disabled={readonly}
-                  className="input-field text-sm flex-1"
-                >
-                  <option value="">Selecione...</option>
-                  {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
-                </select>
-                {!readonly && (
-                  <button onClick={() => set('unidade_medida', '')} title="Limpar"
-                    className="px-2 rounded border border-gray-300 dark:border-slate-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
+              <div>
+                <h2 className="text-base font-bold text-gray-900 dark:text-white">
+                  {readonly ? 'Detalhes do Item' : `Item — ${titulo}`}
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+                  {readonly ? 'Informações completas do item cadastrado' : 'Preencha as informações do item do catálogo'}
+                </p>
               </div>
-            </FieldRow>
-
-            {!readonly && (
-              <div className="flex justify-center pt-1">
-                <JAIButton
-                  campo="descricao_item"
-                  valorAtual={form.descricao}
-                  onSugestao={s => set('descricao', s)}
-                  label="Ayla — Sugerir descrição"
-                />
-              </div>
-            )}
-          </div>
-
-          {/* ── Informações PNCP ── */}
-          <div className="px-6 pb-4 space-y-3">
-            <SectionTitle>Informações PNCP</SectionTitle>
-
-            {/* Catálogo */}
-            <FieldRow label="Catálogo">
-              <div className="flex gap-1 items-center flex-wrap">
-                <input
-                  value={form.catalogo}
-                  onChange={e => set('catalogo', e.target.value)}
-                  disabled={readonly}
-                  className="input-field text-sm w-32"
-                  placeholder="Código"
-                />
-                {!readonly && (
-                  <button onClick={() => set('catalogo', '')} title="Limpar"
-                    className="px-2 py-1.5 rounded border border-gray-300 dark:border-slate-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-                <span className="text-xs text-gray-400 ml-1">CNBS (CATÁLOGO NACIONAL DE BENS E SERVIÇOS)</span>
-              </div>
-            </FieldRow>
-
-            {/* Classificação */}
-            <FieldRow label="Classificação">
-              <div className="flex gap-1">
-                <input
-                  value={form.classificacao}
-                  onChange={e => set('classificacao', e.target.value)}
-                  disabled={readonly}
-                  className="input-field text-sm w-56"
-                  placeholder="Classificação"
-                />
-                {!readonly && (
-                  <button onClick={() => set('classificacao', '')} title="Limpar"
-                    className="px-2 py-1.5 rounded border border-gray-300 dark:border-slate-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            </FieldRow>
-
-            {/* Subclassificação */}
-            <FieldRow label="Subclassificação">
-              <div className="flex gap-1">
-                <input
-                  value={form.subclassificacao}
-                  onChange={e => set('subclassificacao', e.target.value)}
-                  disabled={readonly}
-                  className="input-field text-sm w-56"
-                  placeholder="Subclassificação"
-                />
-                {!readonly && (
-                  <button onClick={() => set('subclassificacao', '')} title="Limpar"
-                    className="px-2 py-1.5 rounded border border-gray-300 dark:border-slate-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            </FieldRow>
-          </div>
-
-          {/* ── Especificação ── */}
-          <div className="px-6 pb-4 space-y-2">
-            <SectionTitle>Especificação do item</SectionTitle>
-            <textarea
-              value={form.especificacao}
-              onChange={e => set('especificacao', e.target.value)}
-              disabled={readonly}
-              rows={4}
-              className="input-field text-sm w-full resize-none mt-2"
-              placeholder="Especificação técnica detalhada do item..."
-            />
-          </div>
-
-          {/* ── Palavras-chave ── */}
-          <div className="px-6 pb-4 space-y-3">
-            <SectionTitle>Informações para busca e ajustes de palavras</SectionTitle>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-2 mt-2">
-              <FieldRow label="Palavra 1">
-                <div className="flex gap-1 items-center">
-                  <input value={form.palavra1} onChange={e => set('palavra1', e.target.value)} disabled={readonly} className="input-field text-sm flex-1" />
-                  {!readonly && <JAIButton campo="palavra1" valorAtual={form.palavra1} onSugestao={s => set('palavra1', s)} label="Ayla" />}
-                </div>
-              </FieldRow>
-              <FieldRow label="Palavra 3">
-                <div className="flex gap-1 items-center">
-                  <input value={form.palavra3} onChange={e => set('palavra3', e.target.value)} disabled={readonly} className="input-field text-sm flex-1" />
-                  {!readonly && <JAIButton campo="palavra3" valorAtual={form.palavra3} onSugestao={s => set('palavra3', s)} label="Ayla" />}
-                </div>
-              </FieldRow>
-              <FieldRow label="Palavra 2">
-                <div className="flex gap-1 items-center">
-                  <input value={form.palavra2} onChange={e => set('palavra2', e.target.value)} disabled={readonly} className="input-field text-sm flex-1" />
-                  {!readonly && <JAIButton campo="palavra2" valorAtual={form.palavra2} onSugestao={s => set('palavra2', s)} label="Ayla" />}
-                </div>
-              </FieldRow>
-              <FieldRow label="Palavra 4">
-                <div className="flex gap-1 items-center">
-                  <input value={form.palavra4} onChange={e => set('palavra4', e.target.value)} disabled={readonly} className="input-field text-sm flex-1" />
-                  {!readonly && <JAIButton campo="palavra4" valorAtual={form.palavra4} onSugestao={s => set('palavra4', s)} label="Ayla" />}
-                </div>
-              </FieldRow>
+            </div>
+            <div className="flex items-center gap-3">
+              {form.status && (
+                <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
+                  form.status === 'ATIVO'
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    : 'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-400'
+                }`}>{form.status}</span>
+              )}
+              {form.validado && (
+                <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                  ✓ Validado
+                </span>
+              )}
+              <button onClick={onClose}
+                className="w-8 h-8 flex items-center justify-center rounded-xl border border-gray-200 dark:border-slate-600 text-gray-400 hover:text-gray-600 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all">
+                <X className="w-4 h-4" />
+              </button>
             </div>
           </div>
-
         </div>
 
-        {/* ── Aviso + Rodapé ── */}
-        <div className="border-t border-gray-200 dark:border-slate-700/50 shrink-0">
-          <div className="bg-red-50 dark:bg-red-900/20 border-b border-red-100 dark:border-red-800 px-4 py-2 flex items-center justify-between gap-4">
-            <p className="text-xs text-red-700 dark:text-red-300 font-medium flex items-start gap-1.5">
-              <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" /> Obs: Atenção! No campo descrição do item, informar a nomenclatura do item e não a especificação!
-            </p>
-            {!readonly && (
-              <JAIButton
-                campo="especificacao"
-                valorAtual={form.especificacao}
-                onSugestao={s => set('especificacao', s)}
-                label="Ayla — Especificação"
-                className="shrink-0"
-              />
-            )}
+        {/* ── Corpo ── */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6">
+            <div className="space-y-4">
+
+              {/* Identificação */}
+              <SectionCard icon={Tag} title="Identificação" subtitle="Código, descrição e classificação do item">
+                <div className="grid grid-cols-12 gap-4">
+                  {/* Código */}
+                  <div className="col-span-3">
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Código</label>
+                    {readonly
+                      ? <p className="font-mono font-bold text-lg text-gray-800 dark:text-slate-200">{form.codigo}</p>
+                      : <PremiumInput value={form.codigo} readOnly className="bg-gray-50 dark:bg-slate-700 cursor-default font-mono font-bold tracking-widest text-center" />
+                    }
+                  </div>
+
+                  {/* Categoria */}
+                  <div className="col-span-4">
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Categoria *</label>
+                    {readonly
+                      ? <p className="text-sm font-medium text-gray-800 dark:text-slate-200">{form.categoria || '—'}</p>
+                      : <PremiumSelect value={form.categoria} onChange={e => set('categoria', e.target.value)}>
+                          <option value="">Selecione...</option>
+                          {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+                        </PremiumSelect>
+                    }
+                  </div>
+
+                  {/* Unidade */}
+                  <div className="col-span-5">
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Unidade de Medida *</label>
+                    {readonly
+                      ? <p className="text-sm font-medium text-gray-800 dark:text-slate-200">{form.unidade_medida || '—'}</p>
+                      : <PremiumSelect value={form.unidade_medida} onChange={e => set('unidade_medida', e.target.value)}>
+                          <option value="">Selecione...</option>
+                          {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
+                        </PremiumSelect>
+                    }
+                  </div>
+
+                  {/* Descrição */}
+                  <div className="col-span-12">
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">
+                      Descrição do Item (Nomenclatura) *
+                    </label>
+                    {readonly
+                      ? <p className="text-sm font-semibold text-gray-900 dark:text-slate-100 uppercase">{form.descricao}</p>
+                      : <PremiumInput
+                          value={form.descricao}
+                          onChange={e => set('descricao', e.target.value.toUpperCase())}
+                          placeholder="NOMENCLATURA DO ITEM..."
+                          className="uppercase font-medium"
+                          autoFocus
+                        />
+                    }
+                  </div>
+                </div>
+              </SectionCard>
+
+              {/* Especificação */}
+              <SectionCard icon={FileText} title="Especificação" subtitle="Detalhamento técnico completo do item">
+                {readonly
+                  ? <p className="text-sm text-gray-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">{form.especificacao || '—'}</p>
+                  : <PremiumTextarea
+                      value={form.especificacao}
+                      onChange={e => set('especificacao', e.target.value)}
+                      rows={4}
+                      placeholder="Especificação técnica detalhada do item..."
+                    />
+                }
+              </SectionCard>
+
+              {/* Palavras-chave */}
+              <SectionCard icon={Search} title="Palavras-chave para busca" subtitle="Termos que facilitam a localização do item">
+                <div className="grid grid-cols-2 gap-4">
+                  {[1, 2, 3, 4].map(n => (
+                    <div key={n}>
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Palavra {n}</label>
+                      {readonly
+                        ? <p className="text-sm text-gray-700 dark:text-slate-300">{form[`palavra${n}`] || '—'}</p>
+                        : <PremiumInput value={form[`palavra${n}`]} onChange={e => set(`palavra${n}`, e.target.value)} placeholder={`Palavra ${n}...`} />
+                      }
+                    </div>
+                  ))}
+                </div>
+              </SectionCard>
+
+              {/* PNCP */}
+              <SectionCard icon={FileText} title="Informações PNCP" subtitle="Portal Nacional de Contratações Públicas">
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Catálogo CNBS</label>
+                    {readonly
+                      ? <p className="text-sm font-mono text-gray-700 dark:text-slate-300">{form.catalogo || '—'}</p>
+                      : <PremiumInput value={form.catalogo} onChange={e => set('catalogo', e.target.value)} placeholder="Código CNBS..." className="font-mono" />
+                    }
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Classificação</label>
+                    {readonly
+                      ? <p className="text-sm text-gray-700 dark:text-slate-300">{form.classificacao || '—'}</p>
+                      : <PremiumInput value={form.classificacao} onChange={e => set('classificacao', e.target.value)} placeholder="Classificação..." />
+                    }
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Subclassificação</label>
+                    {readonly
+                      ? <p className="text-sm text-gray-700 dark:text-slate-300">{form.subclassificacao || '—'}</p>
+                      : <PremiumInput value={form.subclassificacao} onChange={e => set('subclassificacao', e.target.value)} placeholder="Subclassificação..." />
+                    }
+                  </div>
+                </div>
+              </SectionCard>
+
+
+            </div>
           </div>
-          <div className="px-5 py-3 flex items-center gap-2">
-            {!readonly && (
-              <button onClick={salvar}
-                className="flex items-center gap-1.5 px-5 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
-                <Check className="w-4 h-4" /> Salvar
-              </button>
-            )}
-            <button onClick={onClose}
-              className="flex items-center gap-1.5 px-5 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 rounded-lg text-sm font-semibold transition-colors">
-              {readonly ? 'Fechar' : 'Cancelar'}
-            </button>
-            {!readonly && (
+        </div>
+
+        {/* ── Aviso + Footer ── */}
+        <div className="bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700/60 shrink-0">
+          <div className="bg-amber-50 dark:bg-amber-900/15 border-b border-amber-100 dark:border-amber-800/30 px-5 py-2.5 flex items-center justify-between gap-4">
+            <p className="text-xs text-amber-700 dark:text-amber-400 font-medium flex items-start gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+              No campo descrição, informar a <strong>nomenclatura</strong> do item — não a especificação!
+            </p>
+          </div>
+          <div className="px-6 py-4 flex items-center justify-between">
+            <div className="text-xs text-gray-400">
+              {item?.id && <span>ID: <span className="font-mono">{item.id}</span></span>}
+            </div>
+            <div className="flex items-center gap-2">
               <button onClick={onClose}
-                className="flex items-center gap-1.5 px-5 py-1.5 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400 rounded-lg text-sm font-semibold transition-colors">
-                Sair
+                className="px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 text-sm text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 font-medium transition-all">
+                {readonly ? 'Fechar' : 'Cancelar'}
               </button>
-            )}
+              {!readonly && (
+                <button onClick={salvar}
+                  className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm hover:shadow-md">
+                  <Check className="w-4 h-4" /> Salvar Item
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -568,7 +693,7 @@ function validarCPF(cpf) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  MODAL: FORMULÁRIO DE CREDOR (Incluir / Alterar / Visualizar)
+//  MODAL: FORMULÁRIO DE CREDOR (Incluir / Alterar / Visualizar) — PREMIUM
 // ══════════════════════════════════════════════════════════════════════════════
 function CredorModal({ modo, credor, onSave, onClose }) {
   const readonly = modo === 'visualizar'
@@ -593,8 +718,7 @@ function CredorModal({ modo, credor, onSave, onClose }) {
   const titulo = { novo: 'Inclusão', editar: 'Edição', visualizar: 'Visualização' }[modo]
   const isPJ = form.tipo === 'Jurídica'
 
-  // ── Estado da consulta CNPJ/CPF ──────────────────────────────────────────
-  const [docStatus, setDocStatus] = useState('idle') // 'idle'|'loading'|'ok'|'error'
+  const [docStatus, setDocStatus] = useState('idle')
   const [docMsg, setDocMsg]       = useState('')
   const debounceRef               = useRef(null)
 
@@ -605,46 +729,31 @@ function CredorModal({ modo, credor, onSave, onClose }) {
     setDocStatus('idle')
     setDocMsg('')
     clearTimeout(debounceRef.current)
-
     const completo = isPJ ? digits.length === 14 : digits.length === 11
     if (!completo) return
-
-    // Validação algorítmica imediata
     const valido = isPJ ? validarCNPJ(digits) : validarCPF(digits)
     if (!valido) { setDocStatus('error'); setDocMsg(isPJ ? 'CNPJ inválido' : 'CPF inválido'); return }
-
     if (isPJ) {
-      // Consulta BrasilAPI — só para CNPJ
       setDocStatus('loading')
       debounceRef.current = setTimeout(async () => {
         try {
           const res  = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${digits}`)
           if (!res.ok) throw new Error('não encontrado')
           const data = await res.json()
-          setForm(p => ({
-            ...p,
-            razao_social:  (data.razao_social  || '').toUpperCase(),
-            nome_fantasia: (data.nome_fantasia || '').toUpperCase(),
-          }))
-          setDocStatus('ok')
-          setDocMsg('CNPJ encontrado na Receita Federal')
+          setForm(p => ({ ...p, razao_social: (data.razao_social || '').toUpperCase(), nome_fantasia: (data.nome_fantasia || '').toUpperCase() }))
+          setDocStatus('ok'); setDocMsg('CNPJ encontrado na Receita Federal')
         } catch {
-          setDocStatus('ok') // CNPJ algoritmicamente válido, só não encontrado na API
-          setDocMsg('CNPJ válido — preencha os dados manualmente')
+          setDocStatus('ok'); setDocMsg('CNPJ válido — preencha os dados manualmente')
         }
       }, 400)
     } else {
-      setDocStatus('ok')
-      setDocMsg('CPF válido')
+      setDocStatus('ok'); setDocMsg('CPF válido')
     }
   }
 
   const onTipoChange = (t) => {
     if (readonly) return
-    set('tipo', t)
-    set('cnpj_cpf', '')
-    setDocStatus('idle')
-    setDocMsg('')
+    set('tipo', t); set('cnpj_cpf', ''); setDocStatus('idle'); setDocMsg('')
   }
 
   const salvar = () => {
@@ -654,176 +763,238 @@ function CredorModal({ modo, credor, onSave, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col" style={{ maxHeight: '92vh' }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in duration-150">
+      <div className="bg-gray-50 dark:bg-slate-900 rounded-3xl shadow-2xl w-full flex flex-col overflow-hidden" style={{ maxWidth: '90vw', maxHeight: '90vh', width: '820px' }}>
 
-        {/* Barra de título */}
-        <div className="flex items-center justify-between bg-slate-900 dark:bg-slate-900 px-5 py-3 rounded-t-2xl shrink-0">
-          <span className="text-sm font-semibold text-white">Cadastro de Credores — {titulo}</span>
-          <button onClick={onClose} className="p-0.5 rounded hover:bg-slate-700 text-white/80 hover:text-white">
-            <X className="w-4 h-4" />
-          </button>
+        {/* ── Header Premium ── */}
+        <div className="bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700/60 px-6 py-4 shrink-0">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-4">
+              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-md ${isPJ ? 'bg-gradient-to-br from-blue-500 to-indigo-600' : 'bg-gradient-to-br from-teal-500 to-emerald-600'}`}>
+                <User className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-gray-900 dark:text-white">
+                  {readonly ? (form.razao_social || 'Detalhes do Credor') : `Credor — ${titulo}`}
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+                  {readonly ? (form.cnpj_cpf || 'Informações completas do credor') : 'Dados do fornecedor ou prestador de serviço'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
+                form.status === 'ATIVO'
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                  : 'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-400'
+              }`}>{form.status || 'ATIVO'}</span>
+              <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${isPJ ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400'}`}>
+                {isPJ ? 'Pessoa Jurídica' : 'Pessoa Física'}
+              </span>
+              <button onClick={onClose}
+                className="w-8 h-8 flex items-center justify-center rounded-xl border border-gray-200 dark:border-slate-600 text-gray-400 hover:text-gray-600 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Corpo */}
+        {/* ── Corpo ── */}
         <div className="flex-1 overflow-y-auto">
+          <div className="p-6">
+            <div className="space-y-4">
 
-          {/* ── Dados Principais ── */}
-          <div className="px-6 pt-4 pb-4 space-y-3">
-            <SectionTitle>Dados principais</SectionTitle>
+            {/* Dados Principais */}
+              <SectionCard icon={User} title="Dados Principais" subtitle="Identificação e situação do credor">
+                <div className="space-y-4">
+                  {/* Tipo de Pessoa */}
+                  {!readonly && (
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-2">Tipo de Pessoa</label>
+                      <div className="flex gap-3">
+                        {['Jurídica', 'Física'].map(t => (
+                          <label key={t} className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border-2 cursor-pointer transition-all ${
+                            form.tipo === t
+                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                              : 'border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400 hover:border-gray-300'
+                          }`}>
+                            <input type="radio" name="tipo_credor" value={t} checked={form.tipo === t}
+                              onChange={() => onTipoChange(t)} disabled={readonly} className="sr-only" />
+                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${form.tipo === t ? 'border-blue-500' : 'border-gray-300'}`}>
+                              {form.tipo === t && <div className="w-2 h-2 rounded-full bg-blue-500" />}
+                            </div>
+                            <span className="text-sm font-medium">Pessoa {t}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-            {/* Tipo de Pessoa */}
-            <FieldRow label="Tipo de Pessoa">
-              <div className="flex gap-4">
-                {['Jurídica', 'Física'].map(t => (
-                  <label key={t} className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-slate-300">
-                    <input type="radio" name="tipo_credor" value={t} checked={form.tipo === t}
-                      onChange={() => onTipoChange(t)} disabled={readonly}
-                      className="w-4 h-4 text-blue-600" />
-                    {t}
-                  </label>
-                ))}
-              </div>
-            </FieldRow>
+                  {/* CNPJ / CPF */}
+                  <div className="grid grid-cols-12 gap-4">
+                    <div className="col-span-6">
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">{isPJ ? 'CNPJ *' : 'CPF *'}</label>
+                      {readonly
+                        ? <p className="font-mono font-semibold text-gray-800 dark:text-slate-200">{form.cnpj_cpf}</p>
+                        : <div className="relative">
+                            <PremiumInput
+                              value={form.cnpj_cpf}
+                              onChange={e => onDocChange(e.target.value)}
+                              placeholder={isPJ ? '00.000.000/0000-00' : '000.000.000-00'}
+                              maxLength={isPJ ? 18 : 14}
+                              className={`font-mono pr-10 ${docStatus === 'error' ? 'border-red-400 focus:ring-red-300' : docStatus === 'ok' ? 'border-green-400 focus:ring-green-300' : ''}`}
+                              autoFocus
+                            />
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                              {docStatus === 'loading' && <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />}
+                              {docStatus === 'ok'      && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+                              {docStatus === 'error'   && <XCircle className="w-4 h-4 text-red-500" />}
+                            </div>
+                          </div>
+                      }
+                      {docMsg && (
+                        <p className={`text-xs mt-1 ${docStatus === 'error' ? 'text-red-500' : 'text-green-600 dark:text-green-400'}`}>{docMsg}</p>
+                      )}
+                    </div>
+                    <div className="col-span-6">
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Status</label>
+                      {readonly
+                        ? <span className={`inline-block text-xs px-2.5 py-1 rounded-full font-semibold ${form.status === 'ATIVO' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{form.status}</span>
+                        : <PremiumSelect value={form.status} onChange={e => set('status', e.target.value)}>
+                            <option value="ATIVO">ATIVO</option>
+                            <option value="INATIVO">INATIVO</option>
+                          </PremiumSelect>
+                      }
+                    </div>
+                  </div>
 
-            {/* CNPJ / CPF — primeiro campo de dados */}
-            <FieldRow label={isPJ ? 'CNPJ *' : 'CPF *'}>
-              <div className="flex items-center gap-2">
-                <input
-                  value={form.cnpj_cpf}
-                  onChange={e => onDocChange(e.target.value)}
-                  disabled={readonly}
-                  className={`input-field text-sm w-52 font-mono ${
-                    docStatus === 'error' ? 'border-red-400 focus:ring-red-300' :
-                    docStatus === 'ok'    ? 'border-green-400 focus:ring-green-300' : ''
-                  }`}
-                  placeholder={isPJ ? '00.000.000/0000-00' : '000.000.000-00'}
-                  maxLength={isPJ ? 18 : 14}
-                  autoFocus={!readonly}
-                />
-                {docStatus === 'loading' && <Loader2 className="w-4 h-4 text-blue-500 animate-spin shrink-0" />}
-                {docStatus === 'ok'      && <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />}
-                {docStatus === 'error'   && <XCircle className="w-4 h-4 text-red-500 shrink-0" />}
-                {docMsg && (
-                  <span className={`text-xs ${
-                    docStatus === 'error' ? 'text-red-500' : 'text-green-600 dark:text-green-400'
-                  }`}>{docMsg}</span>
-                )}
-              </div>
-            </FieldRow>
+                  {/* Razão Social */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">{isPJ ? 'Razão Social *' : 'Nome Completo *'}</label>
+                    {readonly
+                      ? <p className="text-sm font-semibold text-gray-900 dark:text-slate-100 uppercase">{form.razao_social}</p>
+                      : <PremiumInput value={form.razao_social} onChange={e => set('razao_social', e.target.value.toUpperCase())}
+                          placeholder={isPJ ? 'Razão social...' : 'Nome completo...'} className="uppercase font-medium" />
+                    }
+                  </div>
 
-            {/* Razão Social / Nome */}
-            <FieldRow label={isPJ ? 'Razão Social *' : 'Nome *'}>
-              <input value={form.razao_social} onChange={e => set('razao_social', e.target.value.toUpperCase())}
-                disabled={readonly} className="input-field text-sm uppercase w-full"
-                placeholder={isPJ ? 'Razão social...' : 'Nome completo...'} />
-            </FieldRow>
+                  {isPJ && (
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Nome Fantasia</label>
+                      {readonly
+                        ? <p className="text-sm text-gray-700 dark:text-slate-300">{form.nome_fantasia || '—'}</p>
+                        : <PremiumInput value={form.nome_fantasia} onChange={e => set('nome_fantasia', e.target.value.toUpperCase())} placeholder="Nome fantasia..." className="uppercase" />
+                      }
+                    </div>
+                  )}
+                </div>
+              </SectionCard>
 
-            {isPJ && (
-              <FieldRow label="Nome Fantasia">
-                <input value={form.nome_fantasia} onChange={e => set('nome_fantasia', e.target.value.toUpperCase())}
-                  disabled={readonly} className="input-field text-sm uppercase w-full"
-                  placeholder="Nome fantasia..." />
-              </FieldRow>
-            )}
+              {/* Contato */}
+              <SectionCard icon={Activity} title="Contato" subtitle="Informações para comunicação">
+                <div className="grid grid-cols-12 gap-4">
+                  <div className="col-span-12">
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">E-mail</label>
+                    {readonly
+                      ? <p className="text-sm text-gray-700 dark:text-slate-300">{form.email || '—'}</p>
+                      : <PremiumInput value={form.email} onChange={e => set('email', e.target.value)} type="email" placeholder="email@empresa.com.br" />
+                    }
+                  </div>
+                  <div className="col-span-6">
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Telefone</label>
+                    {readonly
+                      ? <p className="text-sm font-mono text-gray-700 dark:text-slate-300">{form.telefone || '—'}</p>
+                      : <PremiumInput value={form.telefone} onChange={e => set('telefone', maskPhone(e.target.value))} placeholder="(88) 0000-0000" maxLength={15} className="font-mono" />
+                    }
+                  </div>
+                  <div className="col-span-6">
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Celular</label>
+                    {readonly
+                      ? <p className="text-sm font-mono text-gray-700 dark:text-slate-300">{form.celular || '—'}</p>
+                      : <PremiumInput value={form.celular} onChange={e => set('celular', maskPhone(e.target.value))} placeholder="(88) 9.9999-9999" maxLength={16} className="font-mono" />
+                    }
+                  </div>
+                </div>
+              </SectionCard>
 
-            <FieldRow label="Status">
-              <select value={form.status} onChange={e => set('status', e.target.value)}
-                disabled={readonly} className="input-field text-sm w-36">
-                <option value="ATIVO">ATIVO</option>
-                <option value="INATIVO">INATIVO</option>
-              </select>
-            </FieldRow>
-          </div>
-
-          {/* ── Contato ── */}
-          <div className="px-6 pb-4 space-y-3">
-            <SectionTitle>Contato</SectionTitle>
-
-            <FieldRow label="E-mail">
-              <input value={form.email} onChange={e => set('email', e.target.value)}
-                disabled={readonly} type="email" className="input-field text-sm w-full"
-                placeholder="email@empresa.com.br" />
-            </FieldRow>
-            <FieldRow label="Telefone">
-              <input
-                value={form.telefone}
-                onChange={e => set('telefone', maskPhone(e.target.value))}
-                disabled={readonly}
-                className="input-field text-sm w-44 font-mono"
-                placeholder="(88) 0000-0000"
-                maxLength={15}
-              />
-            </FieldRow>
-            <FieldRow label="Celular">
-              <input
-                value={form.celular}
-                onChange={e => set('celular', maskPhone(e.target.value))}
-                disabled={readonly}
-                className="input-field text-sm w-44 font-mono"
-                placeholder="(88) 9.9999-9999"
-                maxLength={16}
-              />
-            </FieldRow>
-          </div>
-
-          {/* ── Endereço ── */}
-          <div className="px-6 pb-4 space-y-3">
-            <SectionTitle>Endereço</SectionTitle>
-
-            <FieldRow label="CEP">
-              <input
-                value={form.cep}
-                onChange={e => set('cep', maskCEP(e.target.value))}
-                disabled={readonly}
-                className="input-field text-sm w-28 font-mono"
-                placeholder="00000-000"
-                maxLength={9}
-              />
-            </FieldRow>
-            <FieldRow label="Logradouro">
-              <input value={form.logradouro} onChange={e => set('logradouro', e.target.value.toUpperCase())}
-                disabled={readonly} className="input-field text-sm uppercase w-full"
-                placeholder="Rua, Av., Travessa..." />
-            </FieldRow>
-            <FieldRow label="Número / Compl.">
-              <div className="flex gap-2">
-                <input value={form.numero} onChange={e => set('numero', e.target.value)}
-                  disabled={readonly} className="input-field text-sm w-24" placeholder="Nº" />
-                <input value={form.complemento} onChange={e => set('complemento', e.target.value.toUpperCase())}
-                  disabled={readonly} className="input-field text-sm uppercase flex-1" placeholder="Complemento" />
-              </div>
-            </FieldRow>
-            <FieldRow label="Bairro">
-              <input value={form.bairro} onChange={e => set('bairro', e.target.value.toUpperCase())}
-                disabled={readonly} className="input-field text-sm uppercase w-full" placeholder="Bairro" />
-            </FieldRow>
-            <FieldRow label="Cidade / UF">
-              <div className="flex gap-2">
-                <input value={form.cidade} onChange={e => set('cidade', e.target.value.toUpperCase())}
-                  disabled={readonly} className="input-field text-sm uppercase flex-1" placeholder="Cidade" />
-                <select value={form.uf} onChange={e => set('uf', e.target.value)}
-                  disabled={readonly} className="input-field text-sm w-20">
-                  <option value="">UF</option>
-                  {ESTADOS_BR.map(u => <option key={u} value={u}>{u}</option>)}
-                </select>
-              </div>
-            </FieldRow>
+              {/* Endereço */}
+              <SectionCard icon={Building2} title="Endereço" subtitle="Localização do credor">
+                <div className="grid grid-cols-12 gap-4">
+                  <div className="col-span-4">
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">CEP</label>
+                    {readonly
+                      ? <p className="text-sm font-mono text-gray-700 dark:text-slate-300">{form.cep || '—'}</p>
+                      : <PremiumInput value={form.cep} onChange={e => set('cep', maskCEP(e.target.value))} placeholder="00000-000" maxLength={9} className="font-mono" />
+                    }
+                  </div>
+                  <div className="col-span-8">
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Logradouro</label>
+                    {readonly
+                      ? <p className="text-sm uppercase text-gray-700 dark:text-slate-300">{form.logradouro || '—'}</p>
+                      : <PremiumInput value={form.logradouro} onChange={e => set('logradouro', e.target.value.toUpperCase())} placeholder="Rua, Av., Travessa..." className="uppercase" />
+                    }
+                  </div>
+                  <div className="col-span-3">
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Número</label>
+                    {readonly
+                      ? <p className="text-sm text-gray-700 dark:text-slate-300">{form.numero || '—'}</p>
+                      : <PremiumInput value={form.numero} onChange={e => set('numero', e.target.value)} placeholder="Nº" />
+                    }
+                  </div>
+                  <div className="col-span-9">
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Complemento</label>
+                    {readonly
+                      ? <p className="text-sm uppercase text-gray-700 dark:text-slate-300">{form.complemento || '—'}</p>
+                      : <PremiumInput value={form.complemento} onChange={e => set('complemento', e.target.value.toUpperCase())} placeholder="Complemento" className="uppercase" />
+                    }
+                  </div>
+                  <div className="col-span-5">
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Bairro</label>
+                    {readonly
+                      ? <p className="text-sm uppercase text-gray-700 dark:text-slate-300">{form.bairro || '—'}</p>
+                      : <PremiumInput value={form.bairro} onChange={e => set('bairro', e.target.value.toUpperCase())} placeholder="Bairro" className="uppercase" />
+                    }
+                  </div>
+                  <div className="col-span-5">
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Cidade</label>
+                    {readonly
+                      ? <p className="text-sm uppercase text-gray-700 dark:text-slate-300">{form.cidade || '—'}</p>
+                      : <PremiumInput value={form.cidade} onChange={e => set('cidade', e.target.value.toUpperCase())} placeholder="Cidade" className="uppercase" />
+                    }
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">UF</label>
+                    {readonly
+                      ? <p className="text-sm font-mono text-gray-700 dark:text-slate-300">{form.uf || '—'}</p>
+                      : <PremiumSelect value={form.uf} onChange={e => set('uf', e.target.value)}>
+                          <option value="">UF</option>
+                          {ESTADOS_BR.map(u => <option key={u} value={u}>{u}</option>)}
+                        </PremiumSelect>
+                    }
+                  </div>
+                </div>
+              </SectionCard>
+            </div>
           </div>
         </div>
 
-        {/* Rodapé */}
-        <div className="border-t border-gray-200 dark:border-slate-700/50 px-5 py-3 flex items-center gap-2 shrink-0">
-          {!readonly && (
-            <button onClick={salvar}
-              className="flex items-center gap-1.5 px-5 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
-              <Check className="w-4 h-4" /> Salvar
+        {/* ── Footer ── */}
+        <div className="bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700/60 px-6 py-4 flex items-center justify-between shrink-0">
+          <div className="text-xs text-gray-400">
+            {credor?.id && <span>ID: <span className="font-mono">{credor.id}</span></span>}
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={onClose}
+              className="px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 text-sm text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 font-medium transition-all">
+              {readonly ? 'Fechar' : 'Cancelar'}
             </button>
-          )}
-          <button onClick={onClose}
-            className="flex items-center gap-1.5 px-5 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 rounded-lg text-sm font-semibold transition-colors">
-            {readonly ? 'Fechar' : 'Cancelar'}
-          </button>
+            {!readonly && (
+              <button onClick={salvar}
+                className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm hover:shadow-md">
+                <Check className="w-4 h-4" /> Salvar Credor
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -875,6 +1046,8 @@ function TabItens() {
   const [selecionado, setSelecionado]   = useState(null)
   const [modal, setModal]               = useState(null) // 'novo'|'editar'|'visualizar'|'excluir'|'relatorio'|'listagem'
   const [ordenar, setOrdenar]           = useState({ col: 'descricao', asc: true })
+  const [pagina, setPagina]             = useState(1)
+  const PER_PAGE_ITEM = 20
 
   const recarregarItens = () =>
     api.get('/contratos/itens').then(r => setItens(r.data)).catch(() => {})
@@ -883,11 +1056,12 @@ function TabItens() {
 
   const setF = (k, v) => setFiltros(p => ({ ...p, [k]: v }))
 
-  const pesquisar = () => setFiltrosAtivos({ ...filtros })
+  const pesquisar = () => { setFiltrosAtivos({ ...filtros }); setPagina(1) }
 
   const limparFiltros = () => {
     setFiltros(FILTROS_VAZIOS)
     setFiltrosAtivos(FILTROS_VAZIOS)
+    setPagina(1)
   }
 
   // ── Filtros ──────────────────────────────────────────────────────────────
@@ -909,6 +1083,9 @@ function TabItens() {
       const bv = String(b[ordenar.col] || '')
       return ordenar.asc ? av.localeCompare(bv) : bv.localeCompare(av)
     })
+
+  const totalPagsItem = Math.max(1, Math.ceil(itensFiltrados.length / PER_PAGE_ITEM))
+  const itensPaginados = itensFiltrados.slice((pagina - 1) * PER_PAGE_ITEM, pagina * PER_PAGE_ITEM)
 
   const itemSelecionado = itens.find(i => i.id === selecionado)
 
@@ -955,6 +1132,26 @@ function TabItens() {
 
   return (
     <div className="flex flex-col gap-3">
+
+      {/* ── Mini KPIs ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Total Itens',  value: itens.length,                                              icon: PackageOpen,  color: 'from-blue-500 to-indigo-600'  },
+          { label: 'Ativos',       value: itens.filter(i => i.status === 'ATIVO').length,            icon: CheckCircle2, color: 'from-green-500 to-emerald-600' },
+          { label: 'Filtrados',    value: itensFiltrados.length,                                     icon: Search,       color: 'from-purple-500 to-violet-600' },
+          { label: 'Categorias',   value: new Set(itens.map(i => i.categoria).filter(Boolean)).size, icon: Tag,          color: 'from-teal-500 to-cyan-600'    },
+        ].map((k, i) => (
+          <div key={i} className="bg-white dark:bg-slate-900/70 border border-gray-100 dark:border-slate-700/50 rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:shadow-md transition-all">
+            <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${k.color} flex items-center justify-center shadow-sm flex-shrink-0`}>
+              <k.icon className="w-4 h-4 text-white" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xl font-black tabular-nums text-gray-900 dark:text-white leading-tight">{k.value}</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 truncate">{k.label}</p>
+            </div>
+          </div>
+        ))}
+      </div>
 
       {/* ── Filtros ── */}
       <div className="card p-4 space-y-3">
@@ -1059,7 +1256,7 @@ function TabItens() {
                   </td>
                 </tr>
               )}
-              {itensFiltrados.map(item => {
+              {itensPaginados.map(item => {
                 const sel = item.id === selecionado
                 return (
                   <tr key={item.id}
@@ -1118,6 +1315,60 @@ function TabItens() {
           </span>
         </div>
       </div>
+
+      {/* ── Paginação ── */}
+      {totalPagsItem > 1 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 mt-1">
+          <p className="text-xs text-gray-500 dark:text-slate-400">
+            Mostrando{' '}
+            <span className="font-semibold text-gray-700 dark:text-slate-300">
+              {(pagina - 1) * PER_PAGE_ITEM + 1}–{Math.min(pagina * PER_PAGE_ITEM, itensFiltrados.length)}
+            </span>{' '}
+            de{' '}
+            <span className="font-semibold text-gray-700 dark:text-slate-300">
+              {itensFiltrados.length}
+            </span>{' '}
+            itens
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPagina(p => Math.max(1, p - 1))}
+              disabled={pagina === 1}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >← Anterior</button>
+            {(() => {
+              const pages = []
+              for (let i = 1; i <= totalPagsItem; i++) {
+                if (i === 1 || i === totalPagsItem || (i >= pagina - 1 && i <= pagina + 1)) {
+                  pages.push(i)
+                } else if (pages[pages.length - 1] !== '...') {
+                  pages.push('...')
+                }
+              }
+              return pages.map((p, idx) =>
+                p === '...' ? (
+                  <span key={`dots-${idx}`} className="px-1.5 text-xs text-gray-400 dark:text-slate-500">…</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setPagina(p)}
+                    className={`min-w-[32px] px-2 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                      pagina === p
+                        ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                        : 'border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700'
+                    }`}
+                  >{p}</button>
+                )
+              )
+            })()}
+            <button
+              onClick={() => setPagina(p => Math.min(totalPagsItem, p + 1))}
+              disabled={pagina === totalPagsItem}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >Próximo →</button>
+          </div>
+        </div>
+      )}
 
       {/* ── Barra de Ações ── */}
       <div className="flex flex-wrap items-center gap-2 pb-2">
@@ -1279,10 +1530,12 @@ function TabCredor() {
   const [selecionado, setSelecionado]     = useState(null)
   const [modal, setModal]                 = useState(null) // 'novo'|'editar'|'visualizar'|'excluir'
   const [ordenar, setOrdenar]             = useState({ col: 'razao_social', asc: true })
+  const [pagina, setPagina]               = useState(1)
+  const PER_PAGE_CREDOR = 15
 
   const setF = (k, v) => setFiltros(p => ({ ...p, [k]: v }))
-  const pesquisar = () => setFiltrosAtivos({ ...filtros })
-  const limparFiltros = () => { setFiltros(FILTROS_VAZIOS); setFiltrosAtivos(FILTROS_VAZIOS) }
+  const pesquisar = () => { setFiltrosAtivos({ ...filtros }); setPagina(1) }
+  const limparFiltros = () => { setFiltros(FILTROS_VAZIOS); setFiltrosAtivos(FILTROS_VAZIOS); setPagina(1) }
 
   useEffect(() => {
     api.get('/contratos/credores').then(r => setCredores(r.data)).catch(() => {})
@@ -1302,6 +1555,9 @@ function TabCredor() {
       const bv = String(b[ordenar.col] || '')
       return ordenar.asc ? av.localeCompare(bv) : bv.localeCompare(av)
     })
+
+  const totalPags = Math.max(1, Math.ceil(credoresFiltrados.length / PER_PAGE_CREDOR))
+  const credoresPaginados = credoresFiltrados.slice((pagina - 1) * PER_PAGE_CREDOR, pagina * PER_PAGE_CREDOR)
 
   const credorSelecionado = credores.find(c => c.id === selecionado)
   const podeAgir = !!credorSelecionado
@@ -1359,6 +1615,26 @@ function TabCredor() {
 
   return (
     <div className="flex flex-col gap-3">
+
+      {/* ── Mini KPIs ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Total Credores', value: credores.length,                                  icon: User,         color: 'from-blue-500 to-indigo-600'  },
+          { label: 'Ativos',         value: credores.filter(c => c.status === 'ATIVO').length, icon: CheckCircle2, color: 'from-green-500 to-emerald-600' },
+          { label: 'Inativos',       value: credores.filter(c => c.status !== 'ATIVO').length, icon: XCircle,      color: 'from-gray-400 to-slate-500'   },
+          { label: 'Filtrados',      value: credoresFiltrados.length,                          icon: Search,       color: 'from-purple-500 to-violet-600' },
+        ].map((k, i) => (
+          <div key={i} className="bg-white dark:bg-slate-900/70 border border-gray-100 dark:border-slate-700/50 rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:shadow-md transition-all">
+            <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${k.color} flex items-center justify-center shadow-sm flex-shrink-0`}>
+              <k.icon className="w-4 h-4 text-white" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xl font-black tabular-nums text-gray-900 dark:text-white leading-tight">{k.value}</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 truncate">{k.label}</p>
+            </div>
+          </div>
+        ))}
+      </div>
 
       {/* ── Filtros ── */}
       <div className="card p-4 space-y-3">
@@ -1439,7 +1715,7 @@ function TabCredor() {
                   </td>
                 </tr>
               )}
-              {credoresFiltrados.map(c => {
+              {credoresPaginados.map(c => {
                 const sel = c.id === selecionado
                 return (
                   <tr key={c.id}
@@ -1480,9 +1756,27 @@ function TabCredor() {
               ? <span className="text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1"><Check className="w-3 h-3" /> {credorSelecionado.razao_social}</span>
               : <span className="text-gray-400">Clique para selecionar · Duplo clique para visualizar</span>}
           </span>
-          <span className="text-xs text-gray-500">
-            Foram encontrados <strong>{credoresFiltrados.length}</strong> registro(s)
-          </span>
+          <div className="flex items-center gap-4">
+            {totalPags > 1 && (
+              <div className="flex items-center gap-1">
+                <button onClick={() => setPagina(1)} disabled={pagina === 1} className="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><ChevronsLeft className="w-3.5 h-3.5" /></button>
+                <button onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={pagina === 1} className="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><ChevronLeft className="w-3.5 h-3.5" /></button>
+                {Array.from({ length: totalPags }, (_, i) => i + 1)
+                  .filter(p => p >= Math.max(1, pagina - 2) && p <= Math.min(totalPags, pagina + 2))
+                  .map(p => (
+                    <button key={p} onClick={() => setPagina(p)} className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold border transition-colors ${
+                      p === pagina ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-200 dark:border-slate-700 text-gray-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                    }`}>{p}</button>
+                  ))}
+                <button onClick={() => setPagina(p => Math.min(totalPags, p + 1))} disabled={pagina === totalPags} className="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><ChevronRight className="w-3.5 h-3.5" /></button>
+                <button onClick={() => setPagina(totalPags)} disabled={pagina === totalPags} className="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><ChevronsRight className="w-3.5 h-3.5" /></button>
+              </div>
+            )}
+            <span className="text-xs text-gray-500">
+              Foram encontrados <strong>{credoresFiltrados.length}</strong> registro(s)
+              {totalPags > 1 && <> · pág. <strong>{pagina}</strong>/{totalPags}</>}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -1733,12 +2027,17 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
   const [credorSel, setCredorSel] = useState(credorInicial)
   const [buscaCredor, setBuscaCredor] = useState(credorInicial?.razao_social || '')
   const [dropdownCredor, setDropdownCredor] = useState(false)
+  const credorAnchorRef = useRef(null)
 
   // Secretaria (via API)
   const [secretarias, setSecretarias] = useState([])
   const [secSel, setSecSel] = useState(null)
   const [buscaSec, setBuscaSec] = useState(contrato?.secretaria || '')
   const [dropdownSec, setDropdownSec] = useState(false)
+  const secAnchorRef = useRef(null)
+
+  // Item table dropdown anchor
+  const [itemDropEl, setItemDropEl] = useState(null)
 
   useEffect(() => {
     api.get('/organizacao/secretarias')
@@ -1954,520 +2253,506 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
     onSave({ ...form, valor: valorFinal, itens: itensContrato, fontes_recurso: fontesLimpas, dotacoes: dotacoesLimpas })
   }
 
+  const alertaIcone = alertaVencimento?.tipo === 'vencido'
+    ? <XCircle className="w-3.5 h-3.5" />
+    : alertaVencimento?.tipo === 'proximo'
+      ? <AlertTriangle className="w-3.5 h-3.5" />
+      : <CheckCircle2 className="w-3.5 h-3.5" />
+
+  const alertaBadgeCls = {
+    vencido: 'bg-red-100 text-red-700 border-red-200',
+    proximo: 'bg-amber-100 text-amber-700 border-amber-200',
+    vigente: 'bg-green-100 text-green-700 border-green-200',
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col" style={{ maxHeight: '94vh' }}>
+      <div className="bg-gray-50 dark:bg-slate-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+        style={{ width: '720px', maxWidth: '95vw', maxHeight: '92vh' }}>
 
-        {/* Título */}
-        <div className="flex items-center justify-between bg-slate-900 dark:bg-slate-900 px-5 py-3 rounded-t-2xl shrink-0">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-white">Cadastro de Contratos — {titulo}</span>
+        {/* ── Header ───────────────────────────────────────────────────── */}
+        <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4 flex items-center gap-4 shrink-0">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg shrink-0">
+            <FileText className="w-6 h-6 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white truncate">
+              {form.numero_contrato ? form.numero_contrato : 'Novo Contrato'}
+              {form.tipo_contrato && form.tipo_contrato !== 'CONTRATO' && (
+                <span className="ml-2 text-sm font-normal text-gray-500">· {form.tipo_contrato}</span>
+              )}
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-slate-400 truncate">
+              {form.objeto ? form.objeto.substring(0, 80) + (form.objeto.length > 80 ? '…' : '') : 'Contrato — ' + titulo}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {form.status && (
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
+                form.status === 'ATIVO' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                form.status === 'ENCERRADO' ? 'bg-gray-100 text-gray-600 border-gray-200' :
+                'bg-amber-50 text-amber-700 border-amber-200'
+              }`}>{form.status}</span>
+            )}
             {alertaVencimento && (
-              <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${alertaCor[alertaVencimento.tipo]}`}>
-                <span className={`w-2 h-2 rounded-full inline-block mr-1 ${alertaVencimento.tipo === 'vencido' ? 'bg-red-500' : alertaVencimento.tipo === 'proximo' ? 'bg-amber-400' : 'bg-green-500'}`} /> {alertaVencimento.texto}
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${alertaBadgeCls[alertaVencimento.tipo]}`}>
+                {alertaIcone} {alertaVencimento.texto}
               </span>
             )}
+            <button onClick={onClose} className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          <button onClick={onClose} className="p-0.5 rounded hover:bg-slate-700 text-white/80 hover:text-white">
-            <X className="w-4 h-4" />
-          </button>
         </div>
 
+        {/* ── Barra de Progresso de Vigência ─────────────────────────── */}
+        {(form.vigencia_inicio || form.vigencia_fim) && (
+          <VigenciaProgress inicio={form.vigencia_inicio} fim={form.vigencia_fim} assinatura={form.data_assinatura} />
+        )}
+
+        {/* ── Corpo ────────────────────────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto">
+          <div className="p-6">
+            <div className="space-y-5">
 
-          {/* ── Identificação ── */}
-          <div className="px-6 pt-4 pb-4 space-y-3">
-            <SectionTitle>Identificação</SectionTitle>
-
-            <FieldRow label="Tipo *">
-              <select value={form.tipo_contrato} onChange={e => set('tipo_contrato', e.target.value)}
-                disabled={readonly} className="input-field text-sm w-72">
-                {TIPOS_CONTRATO.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </FieldRow>
-
-            <FieldRow label="N° Contrato *">
-              <input value={form.numero_contrato} onChange={e => set('numero_contrato', e.target.value.toUpperCase())}
-                disabled={readonly} className="input-field text-sm w-52 uppercase"
-                placeholder="Ex: 001/2026" autoFocus={!readonly} />
-            </FieldRow>
-
-            <FieldRow label="Data Assinatura">
-              <input value={form.data_assinatura} onChange={e => set('data_assinatura', e.target.value)}
-                disabled={readonly} type="date" className="input-field text-sm w-44" />
-            </FieldRow>
-
-            <FieldRow label="Status">
-              <select value={form.status} onChange={e => set('status', e.target.value)}
-                disabled={readonly} className="input-field text-sm w-44">
-                {STATUS_CONTRATO.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </FieldRow>
-          </div>
-
-          {/* ── Objeto e Licitação ── */}
-          <div className="px-6 pb-4 space-y-3">
-            <SectionTitle>Objeto e Licitação</SectionTitle>
-
-            <FieldRow label="Objeto *">
-              <textarea value={form.objeto} onChange={e => set('objeto', e.target.value.toUpperCase())}
-                disabled={readonly} rows={3} className="input-field text-sm w-full resize-none uppercase"
-                placeholder="Descrição do objeto do contrato..." />
-            </FieldRow>
-
-            <FieldRow label="Modalidade">
-              <select value={form.modalidade} onChange={e => set('modalidade', e.target.value)}
-                disabled={readonly} className="input-field text-sm w-56">
-                <option value="">Selecione...</option>
-                {MODALIDADES.map(m => <option key={m} value={m}>{m}</option>)}
-              </select>
-            </FieldRow>
-
-            <FieldRow label="N° Licitação">
-              <input value={form.numero_licitacao} onChange={e => set('numero_licitacao', e.target.value.toUpperCase())}
-                disabled={readonly} className="input-field text-sm w-52 uppercase"
-                placeholder="Ex: PE 012/2026" />
-            </FieldRow>
-          </div>
-
-          {/* ── Credor ── */}
-          <div className="px-6 pb-4 space-y-3">
-            <SectionTitle>Credor</SectionTitle>
-
-            <FieldRow label="Credor *">
-              {readonly ? (
-                <div className="text-sm text-gray-800 dark:text-slate-200 font-medium">
-                  {credorSel ? credorSel.razao_social : '—'}
-                </div>
-              ) : (
-                <div className="relative w-full">
-                  {credorSel ? (
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 input-field text-sm bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700 text-gray-800 dark:text-slate-100 flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
-                        <span className="truncate">{credorSel.razao_social}</span>
-                        <span className="text-gray-400 font-mono text-xs ml-1 shrink-0">{credorSel.cnpj_cpf}</span>
-                      </div>
-                      <button type="button" onClick={limparCredor} className="p-1.5 rounded border border-gray-300 dark:border-slate-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700">
-                        <X className="w-3.5 h-3.5" />
-                      </button>
+              {/* SectionCard — Identificação */}
+              <SectionCard icon={FileText} title="Identificação" subtitle="Tipo, número e data de assinatura">
+                {readonly ? (
+                  <div className="grid grid-cols-12 gap-4">
+                    <div className="col-span-4"><ViewField label="Tipo" value={form.tipo_contrato} /></div>
+                    <div className="col-span-4"><ViewField label="Nº Contrato" value={form.numero_contrato} mono /></div>
+                    <div className="col-span-4"><ViewField label="Data Assinatura" value={form.data_assinatura ? new Date(form.data_assinatura + 'T00:00:00').toLocaleDateString('pt-BR') : '—'} /></div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-12 gap-4">
+                    <div className="col-span-4">
+                      <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Tipo *</label>
+                      <PremiumSelect value={form.tipo_contrato} onChange={e => set('tipo_contrato', e.target.value)}>
+                        {TIPOS_CONTRATO.map(t => <option key={t} value={t}>{t}</option>)}
+                      </PremiumSelect>
                     </div>
-                  ) : (
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                      <input
-                        value={buscaCredor}
-                        onChange={e => { setBuscaCredor(e.target.value); setDropdownCredor(true) }}
-                        onFocus={() => setDropdownCredor(true)}
-                        onBlur={() => setTimeout(() => setDropdownCredor(false), 150)}
-                        className="input-field text-sm pl-8 w-full"
-                        placeholder="Buscar credor por nome ou CNPJ..."
-                      />
-                      {dropdownCredor && (
-                        <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg shadow-xl max-h-56 overflow-y-auto">
-                          {credoresFiltradosModal.length === 0 ? (
-                            <p className="px-3 py-3 text-sm text-gray-400">
-                              {buscaCredor.trim() ? 'Nenhum credor encontrado.' : 'Nenhum credor cadastrado.'}
-                            </p>
-                          ) : (
-                            credoresFiltradosModal.map(c => (
-                              <button key={c.id} type="button" onMouseDown={() => selecionarCredor(c)}
-                                className="w-full text-left px-3 py-2.5 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-3 border-b border-gray-100 dark:border-slate-700/50 last:border-0">
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-gray-800 dark:text-slate-200 truncate">{c.razao_social}</p>
-                                  <p className="text-xs text-gray-400 font-mono mt-0.5">{c.cnpj_cpf} · {c.tipo}</p>
-                                </div>
-                                <span className={`text-xs px-1.5 py-0.5 rounded font-medium shrink-0 ${
-                                  c.status === 'ATIVO' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-                                }`}>{c.status}</span>
-                              </button>
-                            ))
-                          )}
+                    <div className="col-span-4">
+                      <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Nº Contrato *</label>
+                      <PremiumInput value={form.numero_contrato} onChange={e => set('numero_contrato', e.target.value.toUpperCase())}
+                        className="uppercase" placeholder="Ex: 001/2026" autoFocus />
+                    </div>
+                    <div className="col-span-4">
+                      <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Data Assinatura</label>
+                      <PremiumInput type="date" value={form.data_assinatura} onChange={e => set('data_assinatura', e.target.value)} />
+                    </div>
+                  </div>
+                )}
+              </SectionCard>
+
+              {/* SectionCard — Objeto e Licitação */}
+              <SectionCard icon={Award} title="Objeto e Licitação" subtitle="Descrição, modalidade e processo licitatório">
+                {readonly ? (
+                  <div className="grid grid-cols-12 gap-4">
+                    <div className="col-span-12"><ViewField label="Objeto" value={form.objeto} /></div>
+                    <div className="col-span-6"><ViewField label="Modalidade" value={form.modalidade || '—'} /></div>
+                    <div className="col-span-6"><ViewField label="Nº Licitação" value={form.numero_licitacao || '—'} mono /></div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Objeto *</label>
+                      <PremiumTextarea value={form.objeto} onChange={e => set('objeto', e.target.value.toUpperCase())}
+                        rows={3} className="uppercase resize-none" placeholder="Descrição do objeto do contrato..." />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Modalidade</label>
+                        <PremiumSelect value={form.modalidade} onChange={e => set('modalidade', e.target.value)}>
+                          <option value="">Selecione...</option>
+                          {MODALIDADES.map(m => <option key={m} value={m}>{m}</option>)}
+                        </PremiumSelect>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Nº Licitação</label>
+                        <PremiumInput value={form.numero_licitacao} onChange={e => set('numero_licitacao', e.target.value.toUpperCase())}
+                          className="uppercase" placeholder="Ex: PE 012/2026" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </SectionCard>
+
+              {/* SectionCard — Credor */}
+              <SectionCard icon={User} title="Credor" subtitle="Empresa ou pessoa física contratada">
+                {readonly ? (
+                  <ViewField label="Credor" value={credorSel ? `${credorSel.razao_social} · ${credorSel.cnpj_cpf}` : form.credor_id ? `ID: ${form.credor_id}` : '—'} />
+                ) : (
+                  <div className="relative w-full">
+                    {credorSel ? (
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-11 px-3 rounded-xl border border-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-700 flex items-center gap-2 text-sm">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          <span className="font-medium text-gray-800 dark:text-slate-100 truncate">{credorSel.razao_social}</span>
+                          <span className="text-gray-400 font-mono text-xs shrink-0">{credorSel.cnpj_cpf}</span>
                         </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </FieldRow>
-          </div>
-
-          {/* ── Vigência e Alertas ── */}
-          <div className="px-6 pb-4 space-y-3">
-            <SectionTitle>Vigência e Alertas</SectionTitle>
-
-            <FieldRow label="Vigência Início">
-              <input value={form.vigencia_inicio} onChange={e => set('vigencia_inicio', e.target.value)}
-                disabled={readonly} type="date" className="input-field text-sm w-44" />
-            </FieldRow>
-
-            <FieldRow label="Vigência Fim">
-              <input value={form.vigencia_fim} onChange={e => set('vigencia_fim', e.target.value)}
-                disabled={readonly} type="date" className="input-field text-sm w-44" />
-            </FieldRow>
-
-            <FieldRow label="Alertar antes de (dias)">
-              <div className="flex items-center gap-3">
-                <input value={form.dias_alerta}
-                  onChange={e => set('dias_alerta', Math.max(1, parseInt(e.target.value) || 30))}
-                  disabled={readonly} type="number" min={1} max={365}
-                  className="input-field text-sm w-24 font-mono" />
-                <span className="text-xs text-gray-500">dias antes do vencimento</span>
-                {alertaVencimento && (
-                  <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${alertaCor[alertaVencimento.tipo]}`}>
-                    <span className={`w-2 h-2 rounded-full inline-block mr-1 ${alertaVencimento.tipo === 'vencido' ? 'bg-red-500' : alertaVencimento.tipo === 'proximo' ? 'bg-amber-400' : 'bg-green-500'}`} />{alertaVencimento.tipo === 'vencido' ? 'Vencido' : alertaVencimento.tipo === 'proximo' ? 'Próximo do vencimento' : 'Vigente'} — {alertaVencimento.texto}
-                  </span>
-                )}
-              </div>
-            </FieldRow>
-          </div>
-
-          {/* ── Itens do Contrato ── */}
-          <div className="px-6 pb-4">
-            <div className="flex items-center justify-between mb-3">
-              <SectionTitle>Itens do Contrato</SectionTitle>
-              {!readonly && (
-                <button type="button" onClick={adicionarItem}
-                  className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors">
-                  <Plus className="w-3.5 h-3.5" /> Adicionar Item
-                </button>
-              )}
-            </div>
-
-            {itensContrato.length === 0 ? (
-              <p className="text-sm text-gray-400 italic py-2">
-                {readonly ? 'Nenhum item registrado.' : 'Clique em "Adicionar Item" para incluir itens do contrato.'}
-              </p>
-            ) : (
-              <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-slate-700/50">
-                <table className="w-full text-xs">
-                  <thead className="bg-slate-100 dark:bg-slate-800">
-                    <tr>
-                      <th className="px-2 py-2 text-left font-semibold text-gray-500 w-16">Lote<br/><span className="font-normal text-gray-400">(opcional)</span></th>
-                      <th className="px-2 py-2 text-left font-semibold text-gray-500 min-w-[220px]">Descrição do Item</th>
-                      <th className="px-2 py-2 text-left font-semibold text-gray-500 w-28">Unidade</th>
-                      <th className="px-2 py-2 text-right font-semibold text-gray-500 w-24">Qtd.</th>
-                      <th className="px-2 py-2 text-right font-semibold text-gray-500 w-32">Vlr. Unit.</th>
-                      <th className="px-2 py-2 text-right font-semibold text-gray-500 w-32">Vlr. Total</th>
-                      {!readonly && <th className="w-8"></th>}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
-                    {itensContrato.map((it, idx) => {
-                      const busca = itemBusca[idx] ?? it.descricao ?? ''
-                      const catalogFiltrado = itemCatalogFiltrado(busca)
-                      return (
-                        <tr key={it._id ?? idx} className="bg-white dark:bg-slate-800 hover:bg-blue-50/30 dark:hover:bg-blue-900/10">
-                          {/* Lote */}
-                          <td className="px-2 py-1.5">
-                            <input value={it.lote} onChange={e => setItem(idx, 'lote', e.target.value)}
-                              readOnly={readonly} className="input-field text-xs w-12 text-center font-mono" />
-                          </td>
-
-                          {/* Descrição com busca */}
-                          <td className="px-2 py-1.5 relative">
-                            {readonly ? (
-                              <span className="text-gray-800 dark:text-slate-200">{it.descricao || '—'}</span>
-                            ) : (
-                              <div className="relative">
-                                <div className="flex items-center gap-1">
-                                  <button
-                                    type="button"
-                                    title="Buscar item no catálogo"
-                                    onClick={() => setItemModalIdx(idx)}
-                                    className="p-0.5 rounded text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors shrink-0"
-                                  >
-                                    <Search className="w-3.5 h-3.5" />
-                                  </button>
-                                  <input
-                                    value={busca}
-                                    onChange={e => {
-                                      setItemBusca(p => ({ ...p, [idx]: e.target.value }))
-                                      setItem(idx, 'descricao', e.target.value.toUpperCase())
-                                      setItemDrop(idx)
-                                    }}
-                                    onFocus={() => setItemDrop(idx)}
-                                    onBlur={() => setTimeout(() => setItemDrop(p => p === idx ? null : p), 150)}
-                                    className="input-field text-xs flex-1 uppercase"
-                                    placeholder="Código ou descrição..."
-                                  />
-                                </div>
-                                {itemDrop === idx && catalogFiltrado.length > 0 && (
-                                  <div className="absolute z-30 top-full left-0 w-80 mt-0.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg shadow-2xl max-h-44 overflow-y-auto">
-                                    {catalogFiltrado.map(ci => (
-                                      <button key={ci.id} type="button"
-                                        onMouseDown={() => selecionarItemCatalogo(idx, ci)}
-                                        className="w-full text-left px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b border-gray-100 dark:border-slate-700/50 last:border-0">
-                                        <span className="font-mono text-blue-600 dark:text-blue-400 text-xs mr-2">{ci.codigo}</span>
-                                        <span className="text-gray-800 dark:text-slate-200 text-xs">{ci.descricao}</span>
-                                        <span className="ml-2 text-gray-400 text-xs">({ci.unidade_medida})</span>
-                                      </button>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </td>
-
-                          {/* Unidade */}
-                          <td className="px-2 py-1.5">
-                            {readonly ? (
-                              <span>{it.unidade || '—'}</span>
-                            ) : (
-                              <select value={it.unidade} onChange={e => setItem(idx, 'unidade', e.target.value)}
-                                className="input-field text-xs w-full">
-                                <option value="">—</option>
-                                {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
-                              </select>
-                            )}
-                          </td>
-
-                          {/* Quantidade */}
-                          <td className="px-2 py-1.5">
-                            <input value={it.quantidade} onChange={e => setItem(idx, 'quantidade', e.target.value)}
-                              readOnly={readonly} type="text" inputMode="decimal"
-                              className="input-field text-xs w-full text-right" placeholder="0" />
-                          </td>
-
-                          {/* Valor Unitário */}
-                          <td className="px-2 py-1.5">
-                            <input value={it.valor_unitario} onChange={e => setItem(idx, 'valor_unitario', e.target.value)}
-                              readOnly={readonly} type="text" inputMode="decimal"
-                              className="input-field text-xs w-full text-right font-mono" placeholder="0,00" />
-                          </td>
-
-                          {/* Valor Total */}
-                          <td className="px-2 py-1.5 text-right font-semibold text-gray-700 dark:text-slate-300 font-mono">
-                            {it.valor_total
-                              ? parseFloat(it.valor_total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-                              : '—'}
-                          </td>
-
-                          {!readonly && (
-                            <td className="px-1 py-1.5 text-center">
-                              <button type="button" onClick={() => removerItem(idx)}
-                                className="p-1 text-red-400 hover:text-red-600 transition-colors rounded hover:bg-red-50 dark:hover:bg-red-900/20">
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </td>
-                          )}
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                  {itensContrato.length > 0 && (
-                    <tfoot className="bg-slate-50 dark:bg-slate-800/50 border-t-2 border-slate-200 dark:border-slate-700/50">
-                      <tr>
-                        <td colSpan={readonly ? 5 : 5} className="px-2 py-2 text-right text-xs font-bold text-gray-600 dark:text-slate-300 uppercase tracking-wide">
-                          Total do Contrato:
-                        </td>
-                        <td className="px-2 py-2 text-right font-bold text-blue-700 dark:text-blue-400 font-mono whitespace-nowrap">
-                          {fmtBRL(valorTotalItens) || '—'}
-                        </td>
-                        {!readonly && <td />}
-                      </tr>
-                    </tfoot>
-                  )}
-                </table>
-              </div>
-            )}
-          </div>
-
-          {/* ── Valores ── */}
-          <div className="px-6 pb-4 space-y-3">
-            <SectionTitle>Valor do Contrato</SectionTitle>
-            <FieldRow label="Valor Total">
-              <div className="flex items-center gap-3">
-                <input value={valorExibido}
-                  onChange={e => { if (itensContrato.length === 0) set('valor', e.target.value) }}
-                  readOnly={readonly || itensContrato.length > 0}
-                  className={`input-field text-sm w-52 font-mono ${itensContrato.length > 0 ? 'bg-gray-50 dark:bg-slate-700 cursor-default font-bold text-blue-700 dark:text-blue-400' : ''}`}
-                  placeholder="R$ 0,00" />
-                {itensContrato.length > 0 && (
-                  <span className="text-xs text-gray-500">Calculado automaticamente com base nos itens</span>
-                )}
-              </div>
-            </FieldRow>
-          </div>
-
-          {/* ── Responsáveis ── */}
-          <div className="px-6 pb-4 space-y-3">
-            <SectionTitle>Responsáveis</SectionTitle>
-
-            <FieldRow label="Secretaria">
-              {readonly ? (
-                <span className="text-sm text-gray-800 dark:text-slate-200">{form.secretaria || '—'}</span>
-              ) : (
-                <div className="relative w-full">
-                  {secSel ? (
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 input-field text-sm bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700 text-gray-800 dark:text-slate-100 flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
-                        <span className="truncate font-medium">{secSel.nome}</span>
-                        {secSel.sigla && <span className="text-gray-400 text-xs ml-1 shrink-0">({secSel.sigla})</span>}
+                        <button type="button" onClick={limparCredor} className="p-2 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                          <X className="w-4 h-4" />
+                        </button>
                       </div>
-                      <button type="button" onClick={limparSecretaria}
-                        className="p-1.5 rounded border border-gray-300 dark:border-slate-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700">
-                        <X className="w-3.5 h-3.5" />
-                      </button>
+                    ) : (
+                      <div className="relative" ref={credorAnchorRef}>
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <PremiumInput
+                          value={buscaCredor}
+                          onChange={e => { setBuscaCredor(e.target.value); setDropdownCredor(true) }}
+                          onFocus={() => setDropdownCredor(true)}
+                          onBlur={() => setTimeout(() => setDropdownCredor(false), 150)}
+                          className="pl-10" placeholder="Buscar credor por nome ou CNPJ/CPF..."
+                        />
+                        <PortalDropdown anchorRef={credorAnchorRef} open={dropdownCredor}>
+                          {credoresFiltradosModal.length === 0 ? (
+                            <p className="px-4 py-3 text-sm text-gray-400">Nenhum credor encontrado.</p>
+                          ) : credoresFiltradosModal.map(c => (
+                            <button key={c.id} type="button" onMouseDown={() => selecionarCredor(c)}
+                              className="w-full text-left px-4 py-3 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-3 border-b border-gray-100 dark:border-slate-700/50 last:border-0">
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-gray-800 dark:text-slate-200 truncate">{c.razao_social}</p>
+                                <p className="text-xs text-gray-400 mt-0.5 font-mono">{c.cnpj_cpf}</p>
+                              </div>
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.status === 'ATIVO' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>{c.status}</span>
+                            </button>
+                          ))}
+                        </PortalDropdown>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </SectionCard>
+
+              {/* SectionCard — Vigência */}
+              <SectionCard icon={Activity} title="Vigência" subtitle="Datas de início, fim e alerta de vencimento">
+                {readonly ? (
+                  <div className="grid grid-cols-12 gap-4">
+                    <div className="col-span-4"><ViewField label="Início" value={form.vigencia_inicio ? new Date(form.vigencia_inicio + 'T00:00:00').toLocaleDateString('pt-BR') : '—'} /></div>
+                    <div className="col-span-4"><ViewField label="Fim" value={form.vigencia_fim ? new Date(form.vigencia_fim + 'T00:00:00').toLocaleDateString('pt-BR') : '—'} /></div>
+                    <div className="col-span-4"><ViewField label="Alerta (dias)" value={form.dias_alerta} /></div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-12 gap-4">
+                    <div className="col-span-4">
+                      <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Início</label>
+                      <PremiumInput type="date" value={form.vigencia_inicio} onChange={e => set('vigencia_inicio', e.target.value)} />
                     </div>
-                  ) : (
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                      <input
-                        value={buscaSec}
-                        onChange={e => { setBuscaSec(e.target.value); set('secretaria', e.target.value.toUpperCase()); setDropdownSec(true) }}
-                        onFocus={() => setDropdownSec(true)}
-                        onBlur={() => setTimeout(() => setDropdownSec(false), 150)}
-                        className="input-field text-sm pl-8 w-full uppercase"
-                        placeholder="Buscar ou digitar secretaria..."
-                      />
-                      {dropdownSec && secretarias.length > 0 && (
-                        <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg shadow-xl max-h-52 overflow-y-auto">
-                          {secFiltradas.length === 0 ? (
-                            <p className="px-3 py-3 text-sm text-gray-400">Nenhuma secretaria encontrada.</p>
-                          ) : (
-                            secFiltradas.map(s => (
+                    <div className="col-span-4">
+                      <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Fim</label>
+                      <PremiumInput type="date" value={form.vigencia_fim} onChange={e => set('vigencia_fim', e.target.value)} />
+                    </div>
+                    <div className="col-span-4">
+                      <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Alerta (dias)</label>
+                      <PremiumInput type="number" min={0} value={form.dias_alerta}
+                        onChange={e => set('dias_alerta', Number(e.target.value))} placeholder="30" />
+                    </div>
+                  </div>
+                )}
+              </SectionCard>
+
+              {/* SectionCard — Responsáveis */}
+              <SectionCard icon={Building2} title="Responsáveis" subtitle="Secretaria e fiscal do contrato">
+                {readonly ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    <ViewField label="Secretaria" value={form.secretaria || '—'} />
+                    <ViewField label="Fiscal" value={form.fiscal || '—'} />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="min-w-0">
+                      <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Secretaria</label>
+                      {secSel ? (
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="flex-1 min-w-0 h-11 px-3 rounded-xl border border-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-700 flex items-center gap-2 text-sm overflow-hidden">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                            <span className="font-medium text-gray-800 dark:text-slate-100 truncate">{secSel.nome}</span>
+                            {secSel.sigla && <span className="text-gray-400 text-xs shrink-0 whitespace-nowrap">({secSel.sigla})</span>}
+                          </div>
+                          <button type="button" onClick={limparSecretaria} className="shrink-0 p-2 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors">
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="relative" ref={secAnchorRef}>
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <PremiumInput
+                            value={buscaSec}
+                            onChange={e => { setBuscaSec(e.target.value); set('secretaria', e.target.value.toUpperCase()); setDropdownSec(true) }}
+                            onFocus={() => setDropdownSec(true)}
+                            onBlur={() => setTimeout(() => setDropdownSec(false), 150)}
+                            className="pl-10 uppercase" placeholder="Buscar secretaria..."
+                          />
+                          <PortalDropdown anchorRef={secAnchorRef} open={dropdownSec && secretarias.length > 0}>
+                            {secFiltradas.length === 0 ? (
+                              <p className="px-4 py-3 text-sm text-gray-400">Nenhuma encontrada.</p>
+                            ) : secFiltradas.map(s => (
                               <button key={s.id} type="button" onMouseDown={() => selecionarSecretaria(s)}
-                                className="w-full text-left px-3 py-2.5 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-3 border-b border-gray-100 dark:border-slate-700/50 last:border-0">
+                                className="w-full text-left px-4 py-3 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-3 border-b border-gray-100 dark:border-slate-700/50 last:border-0">
                                 <div className="flex-1 min-w-0">
                                   <p className="font-medium text-gray-800 dark:text-slate-200 truncate">{s.nome}</p>
-                                  {s.sigla && <p className="text-xs text-gray-400 mt-0.5 font-mono">{s.sigla}</p>}
+                                  {s.sigla && <p className="text-xs text-gray-400 font-mono mt-0.5">{s.sigla}</p>}
                                 </div>
-                                {(s.responsaveis || []).length > 0 && (
-                                  <span className="text-xs text-indigo-600 dark:text-indigo-400 shrink-0">
-                                    {(s.responsaveis || []).length} resp.
-                                  </span>
-                                )}
                               </button>
-                            ))
-                          )}
+                            ))}
+                          </PortalDropdown>
                         </div>
                       )}
                     </div>
-                  )}
-                </div>
-              )}
-            </FieldRow>
+                    <div className="min-w-0">
+                      <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Fiscal</label>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <PremiumSelect value={form.fiscal} onChange={e => set('fiscal', e.target.value)} disabled={!secSel}
+                          className={!secSel ? 'opacity-50 cursor-not-allowed' : ''}>
+                          <option value="">{!secSel ? 'Selecione a secretaria primeiro' : fiscaisClassificados.length === 0 ? 'Nenhum responsável cadastrado' : 'Selecione o fiscal...'}</option>
+                          {fiscaisClassificados.map((r, idx) => (
+                            <option key={idx} value={r.nome} disabled={!r.vigente}>
+                              {r.vigente ? r.nome : `${r.nome} (fora do período)`}
+                            </option>
+                          ))}
+                        </PremiumSelect>
+                        {form.fiscal && (
+                          <button type="button" onClick={() => set('fiscal', '')}
+                            className="p-2 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0">
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </SectionCard>
 
-            <FieldRow label="Fiscal">
-              {readonly ? (
-                <span className="text-sm text-gray-800 dark:text-slate-200">{form.fiscal || '—'}</span>
-              ) : (
-                <div className="flex items-center gap-2 w-full">
-                  <select
-                    value={form.fiscal}
-                    onChange={e => set('fiscal', e.target.value)}
-                    disabled={!secSel}
-                    className={`input-field text-sm flex-1 ${
-                      !secSel ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-                  >
-                    <option value="">
-                      {!secSel
-                        ? 'Selecione a secretaria primeiro'
-                        : fiscaisClassificados.length === 0
-                          ? 'Nenhum responsável cadastrado nesta secretaria'
-                          : 'Selecione o fiscal...'}
-                    </option>
-                    {fiscaisClassificados.map((r, idx) => {
-                      const label = r.nome
-                      const per = r.data_inicio
-                        ? `${r.data_inicio}${r.data_fim ? ' a ' + r.data_fim : ' em diante'}`
-                        : ''
-                      return (
-                        <option key={idx} value={label} disabled={!r.vigente}>
-                          {r.vigente
-                            ? label
-                            : `${label}${per ? ' — ' + per : ''} (fora do período)`}
-                        </option>
-                      )
-                    })}
-                  </select>
-                  {form.fiscal && (
-                    <button type="button" onClick={() => set('fiscal', '')}
-                      title="Limpar fiscal"
-                      className="p-1.5 rounded border border-gray-300 dark:border-slate-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700 shrink-0">
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              )}
-            </FieldRow>
-          </div>
+              {/* SectionCard — Itens do Contrato */}
+              <SectionCard icon={ShoppingBag} title="Itens do Contrato" subtitle="Produtos e serviços contratados">
+                {itensContrato.length === 0 ? (
+                  <div className="text-center py-6 text-gray-400 dark:text-slate-500">
+                    <ShoppingBag className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                    <p className="text-sm">Nenhum item adicionado</p>
+                    {!readonly && (
+                      <button type="button" onClick={adicionarItem}
+                        className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors">
+                        <Plus className="w-4 h-4" /> Adicionar Item
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-slate-700">
+                      <table className="w-full text-xs">
+                        <thead className="bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 uppercase tracking-wide">
+                          <tr>
+                            <th className="px-3 py-2 text-left font-semibold">Lote</th>
+                            <th className="px-3 py-2 text-left font-semibold">Descrição</th>
+                            <th className="px-3 py-2 text-left font-semibold">Unid.</th>
+                            <th className="px-3 py-2 text-right font-semibold">Qtd.</th>
+                            <th className="px-3 py-2 text-right font-semibold">V. Unit.</th>
+                            <th className="px-3 py-2 text-right font-semibold">V. Total</th>
+                            {!readonly && <th className="px-3 py-2" />}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
+                          {itensContrato.map((it, idx) => (
+                            <tr key={it._id || idx} className="bg-white dark:bg-slate-900/50 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors">
+                              <td className="px-2 py-1.5">
+                                {readonly ? <span className="font-mono">{it.lote || '—'}</span> : (
+                                  <input value={it.lote} onChange={e => setItem(idx, 'lote', e.target.value)}
+                                    className="w-14 h-8 px-2 text-xs rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono" />
+                                )}
+                              </td>
+                              <td className="px-2 py-1.5 max-w-xs">
+                                {readonly ? <span className="text-gray-800 dark:text-slate-200">{it.descricao || '—'}</span> : (
+                                  <div className="relative">
+                                    <input
+                                      value={itemBusca[idx] !== undefined ? itemBusca[idx] : (it.descricao || '')}
+                                      onChange={e => { setItemBusca(p => ({ ...p, [idx]: e.target.value })); setItemDrop(idx) }}
+                                      onFocus={e => { setItemDrop(idx); setItemDropEl(e.currentTarget.closest('.relative')) }}
+                                      onBlur={() => setTimeout(() => { setItemDrop(null); setItemDropEl(null) }, 150)}
+                                      className="w-48 h-8 px-2 text-xs rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                      placeholder="Buscar item..."
+                                    />
+                                    {itemDrop === idx && itemDropEl && createPortal(
+                                      <div style={{ position: 'fixed', zIndex: 10000, top: itemDropEl.getBoundingClientRect().bottom + 4, left: itemDropEl.getBoundingClientRect().left, width: 288 }}
+                                        className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl shadow-2xl max-h-40 overflow-y-auto">
+                                        {itemCatalogFiltrado(itemBusca[idx]).length === 0
+                                          ? <p className="px-3 py-2 text-xs text-gray-400">Nenhum item encontrado</p>
+                                          : itemCatalogFiltrado(itemBusca[idx]).map(i => (
+                                            <button key={i.id} type="button" onMouseDown={() => selecionarItemCatalogo(idx, i)}
+                                              className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b border-gray-100 dark:border-slate-700/50 last:border-0">
+                                              <p className="font-medium text-gray-800 dark:text-slate-200 truncate">{i.descricao}</p>
+                                              <p className="text-gray-400 mt-0.5 font-mono">{i.codigo} · {i.unidade_medida}</p>
+                                            </button>
+                                          ))
+                                        }
+                                        <button type="button" onMouseDown={() => { setItemModalIdx(idx); setItemDrop(null); setItemDropEl(null) }}
+                                          className="w-full px-3 py-2 text-xs text-blue-600 font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20 border-t border-gray-100 dark:border-slate-700 flex items-center gap-1">
+                                          <Search className="w-3 h-3" /> Busca avançada
+                                        </button>
+                                      </div>,
+                                      document.body
+                                    )}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-2 py-1.5">
+                                {readonly ? <span>{it.unidade || '—'}</span> : (
+                                  <input value={it.unidade} onChange={e => setItem(idx, 'unidade', e.target.value)}
+                                    className="w-16 h-8 px-2 text-xs rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                                )}
+                              </td>
+                              <td className="px-2 py-1.5 text-right">
+                                {readonly ? <span className="font-mono">{it.quantidade || '—'}</span> : (
+                                  <input type="number" min={0} value={it.quantidade} onChange={e => setItem(idx, 'quantidade', e.target.value)}
+                                    className="w-20 h-8 px-2 text-xs rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-right font-mono" />
+                                )}
+                              </td>
+                              <td className="px-2 py-1.5 text-right">
+                                {readonly ? <span className="font-mono">{it.valor_unitario || '—'}</span> : (
+                                  <input type="number" min={0} step="0.01" value={it.valor_unitario} onChange={e => setItem(idx, 'valor_unitario', e.target.value)}
+                                    className="w-24 h-8 px-2 text-xs rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-right font-mono" />
+                                )}
+                              </td>
+                              <td className="px-2 py-1.5 text-right font-mono font-semibold text-blue-700 dark:text-blue-400 whitespace-nowrap">
+                                {it.valor_total ? `R$ ${parseFloat(it.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}
+                              </td>
+                              {!readonly && (
+                                <td className="px-2 py-1.5">
+                                  <button type="button" onClick={() => removerItem(idx)}
+                                    className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </td>
+                              )}
+                            </tr>
+                          ))}
+                        </tbody>
+                        {itensContrato.length > 0 && (
+                          <tfoot className="bg-gray-100 dark:bg-slate-800 border-t-2 border-gray-200 dark:border-slate-700">
+                            <tr>
+                              <td colSpan={readonly ? 5 : 5} className="px-3 py-2 text-right text-xs font-bold text-gray-600 dark:text-slate-300 uppercase tracking-wide">Total do Contrato:</td>
+                              <td className="px-3 py-2 text-right font-bold text-blue-700 dark:text-blue-400 font-mono whitespace-nowrap">{fmtBRL(valorTotalItens) || '—'}</td>
+                              {!readonly && <td />}
+                            </tr>
+                          </tfoot>
+                        )}
+                      </table>
+                    </div>
+                    {!readonly && (
+                      <button type="button" onClick={adicionarItem}
+                        className="mt-3 flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors">
+                        <Plus className="w-4 h-4" /> Adicionar Item
+                      </button>
+                    )}
+                  </>
+                )}
+              </SectionCard>
 
-          {/* ── Fonte de Recurso ── */}
-          <div className="px-6 pb-4 space-y-3">
-            <SectionTitle>Fonte de Recurso</SectionTitle>
-            <div className="space-y-2">
-              {fontesRecurso.map((val, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <input
-                    value={val}
-                    onChange={e => setFontesRecurso(p => { const a = [...p]; a[i] = e.target.value.toUpperCase(); return a })}
-                    readOnly={readonly}
-                    className="input-field text-sm flex-1 uppercase"
-                    placeholder="Ex: PRÓPRIO, FEDERAL, CONVÊNIO..."
-                  />
-                  {!readonly && fontesRecurso.length > 1 && (
-                    <button type="button" onClick={() => setFontesRecurso(p => p.filter((_, j) => j !== i))}
-                      className="p-1.5 rounded border border-gray-300 dark:border-slate-600 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
+              {/* SectionCard — Recursos */}
+              <SectionCard icon={DollarSign} title="Recursos" subtitle="Valor, fontes de recurso e dotações orçamentárias">
+                <div className="space-y-4">
+                  {/* Valor */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Valor Total</label>
+                    {readonly ? (
+                      <ViewField label="" value={valorExibido || '—'} mono />
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <PremiumInput value={valorExibido}
+                          onChange={e => { if (itensContrato.length === 0) set('valor', e.target.value) }}
+                          readOnly={itensContrato.length > 0}
+                          className={`w-52 font-mono ${itensContrato.length > 0 ? 'bg-gray-100 dark:bg-slate-700 cursor-default font-bold text-blue-700 dark:text-blue-400' : ''}`}
+                          placeholder="R$ 0,00" />
+                        {itensContrato.length > 0 && (
+                          <span className="text-xs text-gray-500">Calculado pelos itens</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Fontes de Recurso */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Fontes de Recurso</label>
+                    {readonly ? (
+                      <div className="flex flex-wrap gap-2">
+                        {fontesRecurso.filter(Boolean).length === 0
+                          ? <span className="text-sm text-gray-400">—</span>
+                          : fontesRecurso.filter(Boolean).map((f, i) => (
+                            <span key={i} className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full text-xs font-medium">{f}</span>
+                          ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {fontesRecurso.map((val, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <PremiumInput value={val}
+                              onChange={e => setFontesRecurso(p => { const a = [...p]; a[i] = e.target.value.toUpperCase(); return a })}
+                              className="flex-1 uppercase" placeholder="Ex: PRÓPRIO, FEDERAL, CONVÊNIO..." />
+                            {fontesRecurso.length > 1 && (
+                              <button type="button" onClick={() => setFontesRecurso(p => p.filter((_, j) => j !== i))}
+                                className="p-2 rounded-xl border border-gray-200 dark:border-slate-600 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                                <X className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        <button type="button" onClick={() => setFontesRecurso(p => [...p, ''])}
+                          className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                          <Plus className="w-3 h-3" /> Adicionar fonte
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Dotações */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Dotações Orçamentárias</label>
+                    {readonly ? (
+                      <div className="flex flex-wrap gap-2">
+                        {dotacoes.filter(Boolean).length === 0
+                          ? <span className="text-sm text-gray-400">—</span>
+                          : dotacoes.filter(Boolean).map((d, i) => (
+                            <span key={i} className="px-3 py-1 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 rounded-full text-xs font-mono">{d}</span>
+                          ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {dotacoes.map((val, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <PremiumInput value={val}
+                              onChange={e => setDotacoes(p => { const a = [...p]; a[i] = e.target.value; return a })}
+                              className="flex-1 font-mono" placeholder="Ex: 3.3.90.39.00" />
+                            {dotacoes.length > 1 && (
+                              <button type="button" onClick={() => setDotacoes(p => p.filter((_, j) => j !== i))}
+                                className="p-2 rounded-xl border border-gray-200 dark:border-slate-600 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                                <X className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        <button type="button" onClick={() => setDotacoes(p => [...p, ''])}
+                          className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                          <Plus className="w-3 h-3" /> Adicionar dotação
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              ))}
-              {!readonly && (
-                <button type="button"
-                  onClick={() => setFontesRecurso(p => [...p, ''])}
-                  className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline mt-1">
-                  <Plus className="w-3 h-3" /> Adicionar fonte de recurso
-                </button>
-              )}
+              </SectionCard>
+
+              {/* SectionCard — Observações */}
+              <SectionCard icon={List} title="Observações" subtitle="Notas e informações adicionais">
+                {readonly ? (
+                  <ViewField label="" value={form.observacoes || '—'} />
+                ) : (
+                  <PremiumTextarea value={form.observacoes} onChange={e => set('observacoes', e.target.value)}
+                    rows={3} className="resize-none" placeholder="Observações adicionais..." />
+                )}
+              </SectionCard>
             </div>
-          </div>
-
-          {/* ── Dotação Orçamentária ── */}
-          <div className="px-6 pb-4 space-y-3">
-            <SectionTitle>Dotação Orçamentária</SectionTitle>
-            <div className="space-y-2">
-              {dotacoes.map((val, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <input
-                    value={val}
-                    onChange={e => setDotacoes(p => { const a = [...p]; a[i] = e.target.value; return a })}
-                    readOnly={readonly}
-                    className="input-field text-sm flex-1 font-mono"
-                    placeholder="Ex: 3.3.90.39.00"
-                  />
-                  {!readonly && dotacoes.length > 1 && (
-                    <button type="button" onClick={() => setDotacoes(p => p.filter((_, j) => j !== i))}
-                      className="p-1.5 rounded border border-gray-300 dark:border-slate-600 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              ))}
-              {!readonly && (
-                <button type="button"
-                  onClick={() => setDotacoes(p => [...p, ''])}
-                  className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline mt-1">
-                  <Plus className="w-3 h-3" /> Adicionar dotação
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* ── Observações ── */}
-          <div className="px-6 pb-4 space-y-3">
-            <SectionTitle>Observações</SectionTitle>
-            <textarea value={form.observacoes} onChange={e => set('observacoes', e.target.value)}
-              disabled={readonly} rows={3} className="input-field text-sm w-full resize-none mt-2"
-              placeholder="Observações adicionais..." />
           </div>
         </div>
 
-        {/* Modal de busca de item */}
+        {/* Modal de busca de item (inline) */}
         {itemModalIdx !== null && (
           <BuscarItemModal
             catalogoItens={catalogoItens}
@@ -2488,23 +2773,28 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
           />
         )}
 
-        {/* Rodapé */}
-        <div className="border-t border-gray-200 dark:border-slate-700/50 px-5 py-3 flex items-center gap-2 shrink-0">
+        {/* ── Footer ───────────────────────────────────────────────────── */}
+        <div className="bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 px-6 py-3 flex items-center gap-3 shrink-0">
+          <div className="flex-1 min-w-0">
+            {contrato?.id && (
+              <span className="text-xs text-gray-400 font-mono">ID #{contrato.id}</span>
+            )}
+            {itensContrato.length > 0 && (
+              <span className="text-xs text-gray-500 ml-3">
+                {itensContrato.length} item(ns) · <strong className="text-blue-700 dark:text-blue-400">{fmtBRL(valorTotalItens)}</strong>
+              </span>
+            )}
+          </div>
           {!readonly && (
             <button onClick={salvar}
-              className="flex items-center gap-1.5 px-5 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
-              <Check className="w-4 h-4" /> Salvar
+              className="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm hover:shadow-md">
+              <Check className="w-4 h-4" /> Salvar Contrato
             </button>
           )}
           <button onClick={onClose}
-            className="flex items-center gap-1.5 px-5 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 rounded-lg text-sm font-semibold transition-colors">
+            className="flex items-center gap-2 px-5 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 rounded-xl text-sm font-semibold transition-all">
             {readonly ? 'Fechar' : 'Cancelar'}
           </button>
-          {itensContrato.length > 0 && (
-            <span className="ml-auto text-xs text-gray-500">
-              {itensContrato.length} item(ns) · Total: <strong className="text-blue-700 dark:text-blue-400">{fmtBRL(valorTotalItens)}</strong>
-            </span>
-          )}
         </div>
       </div>
     </div>
@@ -2546,6 +2836,8 @@ function ConfirmModalContrato({ contrato, onConfirm, onClose }) {
 //  TAB CONTRATOS
 // ══════════════════════════════════════════════════════════════════════════════
 function TabContratos() {
+  const { subdomain } = useParams()
+  const navigate = useNavigate()
   const [contratos, setContratos] = useState([])
   const [credores, setCredores] = useState([])
 
@@ -2564,10 +2856,12 @@ function TabContratos() {
   const [selecionado, setSelecionado]       = useState(null)
   const [modal, setModal]                   = useState(null)
   const [ordenar, setOrdenar]               = useState({ col: 'numero_contrato', asc: true })
+  const [paginaCtr, setPaginaCtr]           = useState(1)
+  const PER_PAGE_CTR = 15
 
   const setF = (k, v) => setFiltros(p => ({ ...p, [k]: v }))
-  const pesquisar  = () => setFiltrosAtivos({ ...filtros })
-  const limpar     = () => { setFiltros(FILTROS_VAZIOS); setFiltrosAtivos(FILTROS_VAZIOS) }
+  const pesquisar  = () => { setFiltrosAtivos({ ...filtros }); setPaginaCtr(1) }
+  const limpar     = () => { setFiltros(FILTROS_VAZIOS); setFiltrosAtivos(FILTROS_VAZIOS); setPaginaCtr(1) }
 
   const nomeCredor = (id) => credores.find(c => c.id === id)?.razao_social || '—'
 
@@ -2587,8 +2881,18 @@ function TabContratos() {
       return ordenar.asc ? av.localeCompare(bv) : bv.localeCompare(av)
     })
 
+  const totalPagsCtr = Math.max(1, Math.ceil(contratosFiltrados.length / PER_PAGE_CTR))
+  const contratosPaginados = contratosFiltrados.slice((paginaCtr - 1) * PER_PAGE_CTR, paginaCtr * PER_PAGE_CTR)
+
   const contratoSelecionado = contratos.find(c => c.id === selecionado)
   const podeAgir = !!contratoSelecionado
+
+  const diasAteVencer = (d) => {
+    if (!d) return null
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0)
+    const fim  = new Date(d + 'T00:00:00'); fim.setHours(0, 0, 0, 0)
+    return Math.ceil((fim - hoje) / 86400000)
+  }
 
   const toggleSort = (col) => setOrdenar(p => ({ col, asc: p.col === col ? !p.asc : true }))
   const SortIcon = ({ col }) => {
@@ -2707,7 +3011,8 @@ function TabContratos() {
                   { col: 'objeto',          label: 'Objeto',      cls: 'text-left px-3 py-2.5 font-semibold min-w-[200px]' },
                   { col: 'modalidade',      label: 'Modalidade',  cls: 'text-left px-3 py-2.5 font-semibold whitespace-nowrap' },
                   { col: 'valor',           label: 'Valor',       cls: 'text-right px-3 py-2.5 font-semibold whitespace-nowrap' },
-                  { col: 'vigencia_fim',    label: 'Vigência até',cls: 'text-left px-3 py-2.5 font-semibold whitespace-nowrap' },
+                  { col: 'vigencia_fim',    label: 'Vigência até',cls: 'text-left px-3 py-2.5 font-semibold whitespace-nowrap hidden sm:table-cell' },
+                  { col: '_dias',           label: 'Dias',        cls: 'text-center px-3 py-2.5 font-semibold whitespace-nowrap w-20 hidden sm:table-cell' },
                   { col: 'status',          label: 'Status',      cls: 'text-center px-3 py-2.5 font-semibold w-24' },
                 ].map(({ col, label, cls }) => (
                   <th key={col} className={cls} onClick={() => toggleSort(col)} style={{ cursor: 'pointer' }}>
@@ -2719,14 +3024,15 @@ function TabContratos() {
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
               {contratosFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center py-14 text-gray-400 dark:text-slate-500">
+                  <td colSpan={9} className="text-center py-14 text-gray-400 dark:text-slate-500">
                     <FileText className="w-10 h-10 mx-auto mb-2 opacity-30" />
                     Nenhum contrato encontrado
                   </td>
                 </tr>
               )}
-              {contratosFiltrados.map(c => {
+              {contratosPaginados.map(c => {
                 const sel = c.id === selecionado
+                const dv  = diasAteVencer(c.vigencia_fim)
                 return (
                   <tr key={c.id}
                     onClick={() => setSelecionado(sel ? null : c.id)}
@@ -2743,7 +3049,14 @@ function TabContratos() {
                     <td className="px-3 py-2 max-w-[200px] truncate">{c.objeto || '—'}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{c.modalidade || '—'}</td>
                     <td className="px-3 py-2 text-right font-semibold whitespace-nowrap">{fmtValor(c.valor)}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{fmtData(c.vigencia_fim)}</td>
+                    <td className="px-3 py-2 whitespace-nowrap hidden sm:table-cell">{fmtData(c.vigencia_fim)}</td>
+                    <td className="px-3 py-2 text-center hidden sm:table-cell">
+                      {dv === null ? <span className="text-gray-300 dark:text-slate-600">—</span>
+                        : dv < 0   ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">{Math.abs(dv)}d exp.</span>
+                        : dv === 0 ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-600">Hoje</span>
+                        : dv <= 30 ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">{dv}d</span>
+                        :            <span className="text-xs text-gray-400 dark:text-slate-500">{dv}d</span>}
+                    </td>
                     <td className="px-3 py-2 text-center">
                       <span className={`font-bold px-2 py-0.5 rounded-full text-xs ${statusCor(c.status)}`}>
                         {c.status}
@@ -2767,6 +3080,43 @@ function TabContratos() {
           </span>
         </div>
       </div>
+
+      {/* ── Paginação ── */}
+      {totalPagsCtr > 1 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 mt-1">
+          <p className="text-xs text-gray-500 dark:text-slate-400">
+            Mostrando{' '}
+            <span className="font-semibold text-gray-700 dark:text-slate-300">
+              {(paginaCtr - 1) * PER_PAGE_CTR + 1}–{Math.min(paginaCtr * PER_PAGE_CTR, contratosFiltrados.length)}
+            </span>{' '}de{' '}
+            <span className="font-semibold text-gray-700 dark:text-slate-300">{contratosFiltrados.length}</span>{' '}contratos
+          </p>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setPaginaCtr(p => Math.max(1, p - 1))} disabled={paginaCtr === 1}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              ← Anterior
+            </button>
+            {(() => {
+              const pages = []
+              for (let i = 1; i <= totalPagsCtr; i++) {
+                if (i === 1 || i === totalPagsCtr || (i >= paginaCtr - 1 && i <= paginaCtr + 1)) pages.push(i)
+                else if (pages[pages.length - 1] !== '...') pages.push('...')
+              }
+              return pages.map((p, idx) => p === '...'
+                ? <span key={`dots-${idx}`} className="px-1.5 text-xs text-gray-400 dark:text-slate-500">…</span>
+                : <button key={p} onClick={() => setPaginaCtr(p)}
+                    className={`min-w-[32px] px-2 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                      paginaCtr === p ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700'
+                    }`}>{p}</button>
+              )
+            })()}
+            <button onClick={() => setPaginaCtr(p => Math.min(totalPagsCtr, p + 1))} disabled={paginaCtr === totalPagsCtr}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              Próximo →
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Barra de Ações ── */}
       <div className="flex flex-wrap items-center gap-2 pb-2">
@@ -2806,21 +3156,267 @@ function TabContratos() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+//  RELATÓRIOS
+// ══════════════════════════════════════════════════════════════════════════════
+function TabRelatorios() {
+  const [contratos, setContratos] = useState([])
+  const [credores,  setCredores]  = useState([])
+  const [loading,   setLoading]   = useState(true)
+
+  useEffect(() => {
+    Promise.all([api.get('/contratos'), api.get('/contratos/credores')])
+      .then(([cr, cc]) => { setContratos(cr.data || []); setCredores(cc.data || []) })
+      .finally(() => setLoading(false))
+  }, [])
+
+  const fmtMoeda = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseFloat(String(v ?? '').replace(',', '.')) || 0)
+  const parseVal  = v => parseFloat(String(v ?? '').replace(',', '.')) || 0
+  const nomeCredor = id => credores.find(c => c.id === id)?.razao_social || '—'
+  const diasAte = d => {
+    if (!d) return null
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0)
+    const fim  = new Date(d + 'T00:00:00'); fim.setHours(0, 0, 0, 0)
+    return Math.ceil((fim - hoje) / 86400000)
+  }
+
+  if (loading) return (
+    <div className="flex items-center justify-center py-24 gap-3 text-slate-400">
+      <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+      <span className="text-sm">Carregando relatórios...</span>
+    </div>
+  )
+
+  const ativos   = contratos.filter(c => c.status === 'ATIVO')
+  const totalVal = contratos.reduce((a, c) => a + parseVal(c.valor), 0)
+  const ativoVal = ativos.reduce((a, c) => a + parseVal(c.valor), 0)
+  const vencendo = ativos.filter(c => { const d = diasAte(c.vigencia_fim); return d !== null && d >= 0 && d <= 30 })
+  const vencidos = ativos.filter(c => { const d = diasAte(c.vigencia_fim); return d !== null && d < 0 })
+
+  const mapMod = {}
+  contratos.forEach(c => { const m = c.modalidade || 'N/I'; if (!mapMod[m]) mapMod[m] = { qtd: 0, valor: 0 }; mapMod[m].qtd++; mapMod[m].valor += parseVal(c.valor) })
+  const modList    = Object.entries(mapMod).sort((a, b) => b[1].valor - a[1].valor)
+  const maxModVal  = modList[0]?.[1]?.valor || 1
+
+  const mapStatus = {}
+  contratos.forEach(c => { const s = c.status || 'N/I'; if (!mapStatus[s]) mapStatus[s] = { qtd: 0, valor: 0 }; mapStatus[s].qtd++; mapStatus[s].valor += parseVal(c.valor) })
+  const statusList   = Object.entries(mapStatus).sort((a, b) => b[1].qtd - a[1].qtd)
+  const maxStatusQtd = statusList[0]?.[1]?.qtd || 1
+
+  const mapCred = {}
+  contratos.forEach(c => { const n = nomeCredor(c.credor_id); if (!mapCred[n]) mapCred[n] = { qtd: 0, valor: 0 }; mapCred[n].qtd++; mapCred[n].valor += parseVal(c.valor) })
+  const topCred    = Object.entries(mapCred).sort((a, b) => b[1].valor - a[1].valor).slice(0, 8)
+  const maxCredVal = topCred[0]?.[1]?.valor || 1
+
+  const mapSec = {}
+  contratos.forEach(c => { const s = c.secretaria || 'Não informada'; if (!mapSec[s]) mapSec[s] = { qtd: 0, valor: 0 }; mapSec[s].qtd++; mapSec[s].valor += parseVal(c.valor) })
+  const secList   = Object.entries(mapSec).sort((a, b) => b[1].valor - a[1].valor).slice(0, 8)
+  const maxSecVal = secList[0]?.[1]?.valor || 1
+
+  const STATUS_BAR   = { ATIVO: 'bg-green-500', ENCERRADO: 'bg-gray-400', SUSPENSO: 'bg-amber-500', RESCINDIDO: 'bg-red-500' }
+  const STATUS_BADGE = { ATIVO: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', ENCERRADO: 'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-400', SUSPENSO: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', RESCINDIDO: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' }
+  const CORES = ['bg-blue-500','bg-purple-500','bg-teal-500','bg-indigo-500','bg-cyan-500','bg-violet-500','bg-sky-500','bg-fuchsia-500']
+
+  const KpiCard = ({ icon: Icon, label, value, color }) => {
+    const str = String(value); const sz = Math.min(1.4, Math.max(0.85, 1.4 - 0.07 * (str.length - 7))) + 'rem'
+    return (
+      <div className="bg-white dark:bg-slate-900/70 border border-gray-100 dark:border-slate-700/50 rounded-2xl p-4 flex flex-col gap-2 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
+        <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center shadow-sm`}>
+          <Icon className="w-[18px] h-[18px] text-white" />
+        </div>
+        <div>
+          <p className="font-black tabular-nums text-gray-900 dark:text-white leading-tight truncate" style={{ fontSize: sz }}>{value}</p>
+          <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 truncate">{label}</p>
+        </div>
+      </div>
+    )
+  }
+
+  const DashCardR = ({ icon: Icon, title, badge, children }) => (
+    <div className="bg-white dark:bg-slate-900/70 border border-gray-100 dark:border-slate-700/50 rounded-2xl overflow-hidden shadow-sm">
+      <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-100 dark:border-slate-700/50 bg-gray-50/70 dark:bg-slate-800/30">
+        {Icon && <Icon className="w-4 h-4 text-blue-500" />}
+        <h3 className="text-sm font-semibold text-gray-800 dark:text-slate-200">{title}</h3>
+        {badge && <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700/60 text-gray-500">{badge}</span>}
+      </div>
+      <div className="p-5">{children}</div>
+    </div>
+  )
+
+  const BarRowR = ({ label, value, extra, pct, bar }) => (
+    <div>
+      <div className="flex justify-between items-center mb-1">
+        <span className="text-sm font-medium text-gray-700 dark:text-slate-300 truncate max-w-[55%]" title={label}>{label}</span>
+        <div className="flex items-center gap-2 flex-shrink-0 ml-1">
+          {extra && <span className="text-xs text-gray-400 hidden sm:block">{extra}</span>}
+          <span className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">{value}</span>
+        </div>
+      </div>
+      <div className="h-2 bg-gray-100 dark:bg-slate-700/60 rounded-full overflow-hidden">
+        <div className={`h-2 ${bar} rounded-full transition-all duration-700`} style={{ width: Math.min(100, pct) + '%' }} />
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="space-y-4">
+      {/* KPIs */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <KpiCard icon={FileText}     label="Total Contratos"  value={String(contratos.length)} color="from-blue-500 to-indigo-600" />
+        <KpiCard icon={CheckCircle2} label="Ativos"           value={String(ativos.length)}    color="from-green-500 to-emerald-600" />
+        <KpiCard icon={AlertTriangle} label="Vencendo (30d)" value={String(vencendo.length)}  color="from-yellow-400 to-orange-500" />
+        <KpiCard icon={XCircle}      label="Vencidos"         value={String(vencidos.length)}  color="from-red-500 to-rose-600" />
+        <KpiCard icon={DollarSign}   label="Valor Total"      value={fmtMoeda(totalVal)}       color="from-blue-600 to-indigo-700" />
+        <KpiCard icon={TrendingUp}   label="Valor Ativo"      value={fmtMoeda(ativoVal)}       color="from-teal-500 to-cyan-600" />
+      </div>
+
+      {/* Alertas de vigência */}
+      {(vencendo.length > 0 || vencidos.length > 0) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {vencendo.length > 0 && (
+            <div className="bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-800/30 rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0" />
+                <span className="text-sm font-semibold text-yellow-800 dark:text-yellow-300">{vencendo.length} contrato(s) vencendo em 30 dias</span>
+              </div>
+              <div className="space-y-1.5">
+                {vencendo.slice(0, 4).map(c => {
+                  const d = diasAte(c.vigencia_fim)
+                  return (
+                    <div key={c.id} className="flex items-center gap-2 text-xs">
+                      <span className="font-mono font-bold text-blue-600 dark:text-blue-400 w-24 shrink-0 truncate">{c.numero_contrato}</span>
+                      <span className="text-gray-600 dark:text-slate-300 flex-1 truncate">{nomeCredor(c.credor_id)}</span>
+                      <span className={`font-bold px-2 py-0.5 rounded-full shrink-0 ${d === 0 ? 'bg-red-100 text-red-600' : d <= 7 ? 'bg-orange-100 text-orange-600' : 'bg-yellow-100 text-yellow-700'}`}>{d === 0 ? 'Hoje' : `${d}d`}</span>
+                    </div>
+                  )
+                })}
+                {vencendo.length > 4 && <p className="text-xs text-yellow-600 mt-1">+ {vencendo.length - 4} outros</p>}
+              </div>
+            </div>
+          )}
+          {vencidos.length > 0 && (
+            <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30 rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <XCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                <span className="text-sm font-semibold text-red-800 dark:text-red-300">{vencidos.length} contrato(s) com prazo expirado</span>
+              </div>
+              <div className="space-y-1.5">
+                {vencidos.slice(0, 4).map(c => {
+                  const d = diasAte(c.vigencia_fim)
+                  return (
+                    <div key={c.id} className="flex items-center gap-2 text-xs">
+                      <span className="font-mono font-bold text-blue-600 dark:text-blue-400 w-24 shrink-0 truncate">{c.numero_contrato}</span>
+                      <span className="text-gray-600 dark:text-slate-300 flex-1 truncate">{nomeCredor(c.credor_id)}</span>
+                      <span className="font-bold px-2 py-0.5 rounded-full shrink-0 bg-red-100 text-red-600">{Math.abs(d)}d atrás</span>
+                    </div>
+                  )
+                })}
+                {vencidos.length > 4 && <p className="text-xs text-red-600 mt-1">+ {vencidos.length - 4} outros</p>}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <DashCardR icon={Tag} title="Por Modalidade" badge={`${modList.length} tipos`}>
+          {modList.length === 0 ? <p className="text-sm text-gray-400 text-center py-6">Sem dados</p> : (
+            <div className="space-y-3">
+              {modList.map(([label, v], i) => (
+                <BarRowR key={label} label={label} value={fmtMoeda(v.valor)} extra={`${v.qtd} contrato(s)`} pct={(v.valor / maxModVal) * 100} bar={CORES[i % CORES.length]} />
+              ))}
+            </div>
+          )}
+        </DashCardR>
+
+        <DashCardR icon={Activity} title="Por Status">
+          {statusList.length === 0 ? <p className="text-sm text-gray-400 text-center py-6">Sem dados</p> : (
+            <div className="space-y-3">
+              {statusList.map(([status, v]) => {
+                const pct = contratos.length > 0 ? (v.qtd / contratos.length) * 100 : 0
+                return (
+                  <div key={status}>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${STATUS_BADGE[status] || 'bg-gray-100 text-gray-600'}`}>{status}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-400">{Math.round(pct)}%</span>
+                        <span className="text-sm font-bold text-gray-900 dark:text-white">{v.qtd}</span>
+                        <span className="text-xs text-gray-400 hidden sm:block">{fmtMoeda(v.valor)}</span>
+                      </div>
+                    </div>
+                    <div className="h-2 bg-gray-100 dark:bg-slate-700/60 rounded-full overflow-hidden">
+                      <div className={`h-2 ${STATUS_BAR[status] || 'bg-gray-400'} rounded-full transition-all`} style={{ width: Math.min(100, (v.qtd / maxStatusQtd) * 100) + '%' }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </DashCardR>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <DashCardR icon={Award} title="Top Credores por Valor">
+          {topCred.length === 0 ? <p className="text-sm text-gray-400 text-center py-6">Sem dados</p> : (
+            <div className="space-y-3">
+              {topCred.map(([nome, v], i) => (
+                <div key={nome} className="flex items-center gap-3">
+                  <span className="text-xs font-bold text-gray-300 dark:text-slate-600 w-5 text-right shrink-0">{i + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm font-medium text-gray-800 dark:text-slate-200 truncate max-w-[55%]" title={nome}>{nome}</span>
+                      <div className="flex items-center gap-2 shrink-0 ml-1">
+                        <span className="text-xs text-gray-400">{v.qtd}</span>
+                        <span className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">{fmtMoeda(v.valor)}</span>
+                      </div>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 dark:bg-slate-700/60 rounded-full overflow-hidden">
+                      <div className="h-1.5 bg-blue-500 rounded-full" style={{ width: Math.min(100, (v.valor / maxCredVal) * 100) + '%' }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </DashCardR>
+
+        <DashCardR icon={Building2} title="Top Secretarias por Valor">
+          {secList.length <= 1 ? <p className="text-sm text-gray-400 text-center py-6">Secretarias não informadas nos contratos</p> : (
+            <div className="space-y-3">
+              {secList.map(([nome, v], i) => (
+                <BarRowR key={nome} label={nome} value={fmtMoeda(v.valor)} extra={`${v.qtd} contrato(s)`} pct={(v.valor / maxSecVal) * 100} bar={CORES[i % CORES.length]} />
+              ))}
+            </div>
+          )}
+        </DashCardR>
+      </div>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 //  PÁGINA CONTRATOS
 // ══════════════════════════════════════════════════════════════════════════════
 export default function Contratos() {
   const { subdomain, tab: tabParam } = useParams()
   const navigate = useNavigate()
   const VALID_TABS_CTR = TABS.map(t => t.key)
-  const tab = VALID_TABS_CTR.includes(tabParam) ? tabParam : 'itens'
+  const tab = VALID_TABS_CTR.includes(tabParam) ? tabParam : 'contratos'
   const setTab = (key) => navigate(`/${subdomain}/contratos/${key}`)
 
   return (
     <div className="space-y-4 animate-fade-in">
       <PageHeader
         icon={FileText}
-        title="Contratos"
-        subtitle="Gestão de itens, credores e contratos"
+        title="Gestão Contratual"
+        subtitle="Monitoramento de contratos, vigências, credores e execução financeira"
+        actions={
+          <button
+            onClick={() => navigate(`/${subdomain}/contratos/dashboard`)}
+            className="h-9 inline-flex items-center gap-2 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-sm transition-all"
+          >
+            <BarChart3 className="w-4 h-4" /> Dashboard
+          </button>
+        }
       />
 
       {/* Tabs */}
@@ -2848,9 +3444,10 @@ export default function Contratos() {
       </div>
 
       {/* Conteúdo */}
-      {tab === 'itens'     && <TabItens />}
-      {tab === 'credor'    && <TabCredor />}
-      {tab === 'contratos' && <TabContratos />}
+      {tab === 'contratos'  && <TabContratos />}
+      {tab === 'credor'     && <TabCredor />}
+      {tab === 'itens'      && <TabItens />}
+      {tab === 'relatorios' && <TabRelatorios />}
     </div>
   )
 }

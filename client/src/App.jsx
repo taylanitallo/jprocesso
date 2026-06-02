@@ -18,6 +18,7 @@ import Almoxarifado from './pages/Almoxarifado'
 import Patrimonio from './pages/Patrimonio'
 import Financeiro from './pages/Financeiro'
 import Contratos from './pages/Contratos'
+import ContratosDashboard from './pages/ContratosDashboard'
 import FormularioDid from './pages/FormularioDid'
 import { useAuth } from './context/AuthContext'
 import AuthProvider from './context/AuthContext'
@@ -129,6 +130,7 @@ function App() {
             <Route path="financeiro" element={<PermissionRoute permissao="acessar_financeiro"><Financeiro /></PermissionRoute>} />
             <Route path="financeiro/:tab" element={<PermissionRoute permissao="acessar_financeiro"><Financeiro /></PermissionRoute>} />
             <Route path="contratos" element={<PermissionRoute permissao="acessar_contratos"><Contratos /></PermissionRoute>} />
+            <Route path="contratos/dashboard" element={<PermissionRoute permissao="acessar_contratos"><ContratosDashboard /></PermissionRoute>} />
             <Route path="contratos/:tab" element={<PermissionRoute permissao="acessar_contratos"><Contratos /></PermissionRoute>} />
             <Route path="relatorios" element={<PermissionRoute permissao="visualizar_relatorios"><Relatorios /></PermissionRoute>} />
             <Route path="configuracoes" element={<PermissionRoute permissao="gerenciar_configuracoes"><Configuracoes /></PermissionRoute>} />

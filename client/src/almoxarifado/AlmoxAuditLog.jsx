@@ -147,8 +147,10 @@ export default function AlmoxAuditLog() {
       if (filtUser)   params.set('user_nome', filtUser)
 
       const res = await api.get(`/almoxarifado/auditlog?${params}`)
-      setLogs(res.data.rows ?? res.data)
-      setTotal(res.data.total ?? res.data.length)
+      const payload = res.data
+      const logsArr = payload.logs ?? payload.rows ?? (Array.isArray(payload) ? payload : [])
+      setLogs(logsArr)
+      setTotal(payload.total ?? logsArr.length)
     } catch (err) {
       console.error('Erro ao buscar auditlog:', err)
     } finally {

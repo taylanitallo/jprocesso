@@ -15,6 +15,7 @@ const {
   getRessuprimento,
   listCotas, createCota, deleteCota,
   listInventarios, createInventario, getInventario, registrarContagem, concluirInventario,
+  updateInventario, deleteInventario,
   exportarTransparencia
 } = require('../controllers/almoxarifadoController');
 
@@ -73,6 +74,8 @@ router.post('/inventarios',                         midGestor, createInventario)
 router.get('/inventarios/:id',                      mid,       getInventario);
 router.put('/inventarios/:id/itens/:itemId/contar', mid,       registrarContagem);
 router.put('/inventarios/:id/concluir',             midGestor, concluirInventario);
+router.put('/inventarios/:id',                      midGestor, updateInventario);
+router.delete('/inventarios/:id',                   midGestor, deleteInventario);
 
 // Exportação transparência
 router.get('/exportar', mid, exportarTransparencia);

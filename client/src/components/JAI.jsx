@@ -572,7 +572,7 @@ export default function JAI() {
                   </button>
                 </div>
                 <p className="text-center text-[9px] text-gray-300 dark:text-slate-600 mt-1.5">
-                  Ayla · JEOS Sistemas de Governo
+                  Ayla · JEOS SISTEMAS E ASSESSORIAS LTDA
                 </p>
               </div>
             </>

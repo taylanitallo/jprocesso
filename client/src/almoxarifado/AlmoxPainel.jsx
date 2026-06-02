@@ -6,7 +6,6 @@ import {
 } from 'lucide-react'
 import api from '../services/api'
 import { fmt, fmtMoney } from './almoxConstants'
-import PageHeader from '../components/ui/PageHeader'
 import StatCard from '../components/ui/StatCard'
 import SectionTitle from '../components/ui/SectionTitle'
 import EmptyState from '../components/ui/EmptyState'
@@ -43,18 +42,21 @@ export default function AlmoxPainel() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        icon={Package}
-        eyebrow="Almoxarifado"
-        title="Painel"
-        subtitle="Visão geral do estoque, movimentações e indicadores operacionais"
-        actions={
-          <button onClick={load} className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
-            <RefreshCw className="h-4 w-4" /> Atualizar
-          </button>
-        }
-      />
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="flex items-center justify-end">
+        <button
+          onClick={load}
+          className="flex items-center gap-1.5 px-3 py-1.5
+                     border border-gray-200 dark:border-slate-600/70
+                     text-gray-500 dark:text-slate-400 rounded-lg text-xs
+                     hover:bg-gray-50 dark:hover:bg-slate-700/50
+                     hover:text-gray-700 dark:hover:text-slate-200
+                     transition-colors"
+        >
+          <RefreshCw className="h-3.5 w-3.5" />
+          Atualizar
+        </button>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard icon={Package}       label="Total de Itens"   value={dados.totalItens ?? 0}              tone="blue" />
         <StatCard icon={DollarSign}    label="Valor do Estoque" value={fmtMoney(dados.valorTotalEstoque)}  tone="green" />
         <StatCard icon={AlertTriangle} label="Itens Críticos"   value={dados.itensCriticos?.length || 0}  tone="red" />
@@ -65,7 +67,7 @@ export default function AlmoxPainel() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Itens críticos */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+        <div className="bg-white dark:bg-slate-800/70 rounded-2xl border border-gray-200 dark:border-slate-700/50 p-5">
           <SectionTitle icon={AlertTriangle} title="Estoque Crítico" />
           {dados.itensCriticos?.length === 0 ? (
             <EmptyState icon={Package} title="Nenhum item crítico" description="Todos os itens estão acima do estoque mínimo." />
@@ -74,11 +76,11 @@ export default function AlmoxPainel() {
               {dados.itensCriticos?.map(item => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-0"
+                  className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-slate-700/50 last:border-0"
                 >
                   <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">{item.nome}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{item.codigo}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-slate-100">{item.nome}</p>
+                    <p className="text-xs text-gray-500 dark:text-slate-400">{item.codigo}</p>
                   </div>
                   <div className="text-right">
                     <span className="text-sm font-bold text-red-600">{fmt(item.estoque_atual)}</span>
@@ -91,7 +93,7 @@ export default function AlmoxPainel() {
         </div>
 
         {/* Últimas movimentações */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+        <div className="bg-white dark:bg-slate-800/70 rounded-2xl border border-gray-200 dark:border-slate-700/50 p-5">
           <SectionTitle icon={BarChart2} title="Últimas Movimentações" />
           {dados.ultimasMovimentacoes?.length === 0 ? (
             <EmptyState icon={ArrowDownCircle} title="Sem movimentações" description="Nenhuma movimentação registrada recentemente." />
@@ -100,7 +102,7 @@ export default function AlmoxPainel() {
               {dados.ultimasMovimentacoes?.map(mov => (
                 <div
                   key={mov.id}
-                  className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-0"
+                  className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-slate-700/50 last:border-0"
                 >
                   <div className="flex items-center gap-2">
                     {mov.tipo === 'ENTRADA'
@@ -108,8 +110,8 @@ export default function AlmoxPainel() {
                       : <ArrowUpCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
                     }
                     <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">{mov.item?.nome}</p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500">{mov.data_movimentacao}</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-slate-100">{mov.item?.nome}</p>
+                      <p className="text-xs text-gray-400 dark:text-slate-500">{mov.data_movimentacao}</p>
                     </div>
                   </div>
                   <span className={`text-sm font-semibold ${mov.tipo === 'ENTRADA' ? 'text-green-600' : 'text-red-600'}`}>
@@ -130,7 +132,7 @@ export default function AlmoxPainel() {
             {dados.itensRessuprimentoList.map(item => (
               <div key={item.id} className="flex items-center justify-between py-1.5 border-b border-orange-100 dark:border-orange-800 last:border-0 text-sm">
                 <div>
-                  <span className="font-medium text-gray-900 dark:text-white">{item.nome}</span>
+                  <span className="font-medium text-gray-900 dark:text-slate-100">{item.nome}</span>
                   <span className="text-xs text-gray-400 ml-2">{item.codigo}</span>
                 </div>
                 <div className="text-right">
@@ -153,7 +155,7 @@ export default function AlmoxPainel() {
               return (
                 <div key={lote.id} className="flex items-center justify-between py-1.5 border-b border-red-100 dark:border-red-800 last:border-0 text-sm">
                   <div>
-                    <span className="font-medium text-gray-900 dark:text-white">{lote.item?.nome || '—'}</span>
+                    <span className="font-medium text-gray-900 dark:text-slate-100">{lote.item?.nome || '—'}</span>
                     {lote.numero_empenho && <span className="text-xs text-gray-400 ml-2">Emp. {lote.numero_empenho}</span>}
                   </div>
                   <div className="text-right">
@@ -171,28 +173,28 @@ export default function AlmoxPainel() {
 
       {/* Predição de demanda */}
       {dados.predicaoConsumoMensal && Object.keys(dados.predicaoConsumoMensal).length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+        <div className="bg-white dark:bg-slate-800/70 rounded-2xl border border-gray-200 dark:border-slate-700/50 p-5">
           <SectionTitle icon={TrendingUp} title="Predição de Demanda" subtitle="Média mensal dos últimos 3 meses" />
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-xs text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+              <tr className="text-xs text-gray-500 dark:text-slate-400 border-b border-gray-100 dark:border-slate-700/50">
                 <th className="pb-2 text-left font-semibold">Item</th>
                 <th className="pb-2 text-right font-semibold">Consumo médio mensal</th>
                 <th className="pb-2 text-right font-semibold">Estoque atual</th>
                 <th className="pb-2 text-right font-semibold">Meses restantes</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
+            <tbody className="divide-y divide-gray-50 dark:divide-slate-700/50">
               {Object.entries(dados.predicaoConsumoMensal).map(([itemId, pred]) => {
                 const meses = pred.media > 0 ? (pred.estoqueAtual / pred.media).toFixed(1) : null
                 return (
                   <tr key={itemId} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
-                    <td className="py-2 text-gray-800 dark:text-gray-200">
+                    <td className="py-2 text-gray-800 dark:text-slate-200">
                       <span className="font-medium">{pred.nome}</span>
                       <span className="text-xs text-gray-400 ml-2">{pred.codigo}</span>
                     </td>
-                    <td className="py-2 text-right text-gray-600 dark:text-gray-400">{fmt(pred.media)} {pred.unidade}/mês</td>
-                    <td className="py-2 text-right text-gray-600 dark:text-gray-400">{fmt(pred.estoqueAtual)}</td>
+                    <td className="py-2 text-right text-gray-600 dark:text-slate-400">{fmt(pred.media)} {pred.unidade}/mês</td>
+                    <td className="py-2 text-right text-gray-600 dark:text-slate-400">{fmt(pred.estoqueAtual)}</td>
                     <td className={`py-2 text-right font-semibold ${
                       meses === null ? 'text-gray-400' :
                       parseFloat(meses) < 1 ? 'text-red-600' :
