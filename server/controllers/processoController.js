@@ -103,18 +103,15 @@ const createProcesso = async (req, res) => {
   } catch (error) {
     await transaction.rollback();
     console.error('Erro ao criar processo:', error);
-    
-    // Enviar mensagem de erro mais específica
-    let errorMessage = 'Erro ao criar processo';
-    
+
+    // M-6: nunca vazar error.message/stack ao cliente
+    let errorMessage = 'Erro interno do servidor';
     if (error.name === 'SequelizeValidationError') {
-      errorMessage = `Erro de validação: ${error.errors.map(e => e.message).join(', ')}`;
+      errorMessage = 'Erro de validação nos dados enviados';
     } else if (error.name === 'SequelizeForeignKeyConstraintError') {
-      errorMessage = 'Erro: Referência inválida (setor ou usuário não encontrado)';
-    } else if (error.message) {
-      errorMessage = `Erro: ${error.message}`;
+      errorMessage = 'Referência inválida (setor ou usuário não encontrado)';
     }
-    
+
     res.status(500).json({ error: errorMessage });
   }
 };
@@ -841,7 +838,11 @@ const buscarProcessosPublico = async (req, res) => {
       limit: 50
     });
 
-    res.json({ processos, total: processos.length });
+    // M-5: remover PII antes de enviar para endpoint público
+    const PII = ['interessado_cpf_cnpj', 'interessado_email', 'interessado_telefone'];
+    const result = processos.map(p => { const o = p.toJSON(); PII.forEach(k => delete o[k]); return o; });
+
+    res.json({ processos: result, total: result.length });
   } catch (error) {
     console.error('Erro na busca pública com filtros:', error);
     res.status(500).json({ error: 'Erro ao buscar processos' });
@@ -915,8 +916,13 @@ const consultarProcessoPublico = async (req, res) => {
       return res.status(404).json({ error: 'Processo não encontrado' });
     }
 
+    // M-5: remover PII antes de enviar para endpoint público
+    const PII = ['interessado_cpf_cnpj', 'interessado_email', 'interessado_telefone'];
+    const obj = processo.toJSON();
+    PII.forEach(k => delete obj[k]);
+
     console.log('Processo encontrado:', processo.numero);
-    res.json(processo);
+    res.json(obj);
   } catch (error) {
     console.error('Erro ao consultar processo:', error);
     res.status(500).json({ error: 'Erro ao consultar processo' });

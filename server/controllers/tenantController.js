@@ -150,7 +150,7 @@ const createTenant = async (req, res) => {
     });
   } catch (error) {
     console.error('Erro ao criar município');
-    res.status(500).json({ error: error.message || 'Erro ao criar município' });
+    res.status(500).json({ error: 'Erro interno do servidor' });
   }
 };
 
@@ -911,21 +911,15 @@ const getTenantInfo = async (req, res) => {
 // Endpoint usado pela aba Gerais das Configurações
 const updateTenantConfiguracoes = async (req, res) => {
   try {
-    const subdomain = req.headers['x-tenant-subdomain'];
-    if (!subdomain) {
-      return res.status(400).json({ error: 'Subdomínio não fornecido' });
-    }
-
-    const tenant = await Tenant.findOne({ where: { subdominio: subdomain, ativo: true } });
-    if (!tenant) {
-      return res.status(404).json({ error: 'Município não encontrado' });
-    }
+    // A-3: usa req.tenant resolvido pelo tenantMiddleware — não confia em
+    // subdomain enviado livremente no header (validação JWT↔tenant já ocorreu)
+    const tenant = req.tenant;
 
     const novoConf = { ...(tenant.configuracoes || {}), ...req.body };
     await tenant.update({ configuracoes: novoConf });
 
-    // Limpar cache para que o próximo request leia o valor atualizado
-    tenantCache.delete(subdomain);
+    // Limpar cache local (auth middleware possui cache próprio com TTL de 5min)
+    tenantCache.delete(tenant.subdominio);
 
     res.json({ success: true, configuracoes: tenant.configuracoes });
   } catch (error) {

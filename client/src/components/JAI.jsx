@@ -337,11 +337,25 @@ const RAPIDAS_POR_ABA = {
 //  UTILITÁRIOS
 // ══════════════════════════════════════════════════════════════════════════
 
+// A-4: renderização segura de markdown sem dangerouslySetInnerHTML
+// Converte **bold** e \n em elementos React — nenhum HTML bruto é injetado
 function Markdown({ texto }) {
-  const html = texto
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\n/g, '<br/>')
-  return <span dangerouslySetInnerHTML={{ __html: html }} />
+  const segments = texto.split(/(\*\*.+?\*\*)/g)
+  return (
+    <span>
+      {segments.map((seg, i) => {
+        if (seg.startsWith('**') && seg.endsWith('**')) {
+          return <strong key={i}>{seg.slice(2, -2)}</strong>
+        }
+        return seg.split('\n').map((line, j, arr) => (
+          <span key={`${i}-${j}`}>
+            {line}
+            {j < arr.length - 1 && <br />}
+          </span>
+        ))
+      })}
+    </span>
+  )
 }
 
 function MsgBolha({ msg }) {

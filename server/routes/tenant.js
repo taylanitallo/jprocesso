@@ -10,7 +10,7 @@ const {
   deleteTenant,
   getStatistics
 } = require('../controllers/tenantController');
-const { authenticate, requireSuperAdmin } = require('../middleware/auth');
+const { authenticate, requireSuperAdmin, tenantMiddleware, requireTenant, authorize } = require('../middleware/auth');
 
 // Atalho: garante que o caller é SuperAdmin autenticado
 const superAdmin = [authenticate, requireSuperAdmin];
@@ -38,9 +38,10 @@ router.get('/public', async (req, res) => {
 // Estatísticas do painel admin
 router.get('/statistics', ...superAdmin, getStatistics);
 
-// Atualizar configurações do tenant autenticado (logo, cores etc.)
-// Mantém apenas `authenticate` — qualquer admin do próprio tenant pode configurar
-router.put('/configuracoes', authenticate, updateTenantConfiguracoes);
+// A-3: tenantMiddleware resolve req.tenant; requireTenant bloqueia admin global;
+// authenticate verifica JWT (inclui binding JWT↔tenant da SEC-01A);
+// authorize restringe a admin e gestor — operacional recebe 403
+router.put('/configuracoes', tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), updateTenantConfiguracoes);
 
 // CRUD completo de tenants
 router.post('/',    ...superAdmin, createTenant);

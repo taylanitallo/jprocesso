@@ -58,7 +58,7 @@ const listSecretarias = async (req, res) => {
     res.json({ secretarias });
   } catch (error) {
     console.error('Erro ao listar secretarias:', error);
-    res.status(500).json({ error: 'Erro ao listar secretarias', detail: error.message });
+    res.status(500).json({ error: 'Erro interno do servidor' });
   }
 };
 

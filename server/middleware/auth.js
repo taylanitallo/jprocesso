@@ -25,7 +25,18 @@ const authenticate = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({ error: 'Token não fornecido' });
     }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // C-3: algoritmo fixado para prevenir ataques de confusão de algoritmo
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
+
+    // C-1: se o token pertence a um tenant específico, garantir que corresponde
+    // ao tenant resolvido pelo tenantMiddleware nesta requisição
+    if (decoded.subdomain && req.tenant) {
+      if (decoded.subdomain !== req.tenant.subdominio) {
+        return res.status(403).json({ error: 'Token não autorizado para este município' });
+      }
+    }
+
     req.user = decoded;
     next();
   } catch (error) {

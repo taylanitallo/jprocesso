@@ -22,10 +22,12 @@ app.set('trust proxy', 1);
 const buildAllowlist = () => {
   const list = new Set();
 
-  // Sempre permitir localhost em qualquer porta (desenvolvimento)
-  list.add('http://localhost:3000');
-  list.add('http://localhost:5173');
-  list.add('http://127.0.0.1:3000');
+  // M-1/CORS: localhost apenas em desenvolvimento — nunca em produção
+  if (process.env.NODE_ENV !== 'production') {
+    list.add('http://localhost:3000');
+    list.add('http://localhost:5173');
+    list.add('http://127.0.0.1:3000');
+  }
 
   if (process.env.CLIENT_URL) {
     process.env.CLIENT_URL.split(',').map(s => s.trim()).filter(Boolean).forEach(o => list.add(o));
@@ -63,7 +65,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions)); // preflight para todas as rotas
 app.use(helmet({
-  frameguard: false,
+  frameguard: { action: 'sameorigin' },
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
@@ -90,16 +92,28 @@ const limiter = rateLimit({
   legacyHeaders: false
 });
 
+// B-1: reduzido de 30 → 10 tentativas por 15 min
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 30,
-  message: 'Muitas tentativas de login. Tente novamente em 15 minutos.',
+  max: 10,
+  message: { error: 'Muitas tentativas. Tente novamente em alguns minutos.' },
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  skipSuccessfulRequests: true, // não conta logins bem-sucedidos no limite
+});
+
+// Refresh com limite mais generoso (renova token em segundo plano)
+const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  message: { error: 'Muitas tentativas. Tente novamente em alguns minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 app.use('/api/', limiter);
 app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/refresh', refreshLimiter);
 
 routes(app);
 

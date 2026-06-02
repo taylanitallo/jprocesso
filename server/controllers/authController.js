@@ -96,6 +96,12 @@ const register = async (req, res) => {
     const { nome, nomeReduzido, email, senha, cpf, telefone, tipo, secretariaId, setorId, permissoes } = req.body;
     const { User } = req.models;
 
+    // B-2: mínimo 8 chars, ao menos uma letra e um número
+    const senhaRe = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
+    if (!senha || !senhaRe.test(senha)) {
+      return res.status(400).json({ error: 'A senha deve ter pelo menos 8 caracteres, incluindo uma letra e um número' });
+    }
+
     // Verificar se email já existe
     const existingEmail = await User.findOne({ where: { email } });
     if (existingEmail) {
@@ -365,7 +371,13 @@ const listUsers = async (req, res) => {
       order: [['nome', 'ASC']]
     });
 
-    res.json({ users });
+    // B-5: operacional não recebe CPF nem telefone de outros usuários
+    const isSensivel = req.user?.tipo !== 'admin' && req.user?.tipo !== 'gestor';
+    const result = isSensivel
+      ? users.map(u => { const o = u.toJSON(); delete o.cpf; delete o.telefone; return o; })
+      : users;
+
+    res.json({ users: result });
   } catch (error) {
     console.error('Erro ao listar usuários:', error);
     res.status(500).json({ error: 'Erro ao listar usuários' });
@@ -378,6 +390,13 @@ const updateUser = async (req, res) => {
     const { nome, nomeReduzido, email, cpf, telefone, tipo, secretariaId, setorId, permissoes, ativo, novaSenha } = req.body;
     const { User } = req.models;
     const { Op } = require('sequelize');
+
+    // A-5: impede que um admin altere seu próprio tipo/permissões
+    // (evita auto-escalada acidental e lockout de último admin)
+    const isSelf = req.user && req.user.id === id;
+    if (isSelf && (tipo !== undefined || permissoes !== undefined)) {
+      return res.status(403).json({ error: 'Não é permitido alterar o próprio tipo ou permissões' });
+    }
 
     const user = await User.findByPk(id);
     if (!user) {
@@ -392,7 +411,12 @@ const updateUser = async (req, res) => {
 
     const updatePayload = { nome, nomeReduzido: nomeReduzido ?? undefined, email, cpf, telefone, tipo, secretariaId, setorId, permissoes, ativo };
 
-    if (novaSenha && novaSenha.trim().length >= 6) {
+    // B-2: mesma regra do register — 8+ chars, letra + número
+    const senhaRe = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
+    if (novaSenha) {
+      if (!senhaRe.test(novaSenha.trim())) {
+        return res.status(400).json({ error: 'A senha deve ter pelo menos 8 caracteres, incluindo uma letra e um número' });
+      }
       updatePayload.senha = await bcrypt.hash(novaSenha.trim(), 10);
     }
 
@@ -435,7 +459,8 @@ const refreshToken = async (req, res) => {
 
     let decoded;
     try {
-      decoded = jwt.verify(cookieToken, _getRefreshSecret());
+      // C-3: algoritmo fixado
+      decoded = jwt.verify(cookieToken, _getRefreshSecret(), { algorithms: ['HS256'] });
     } catch {
       return res.status(401).json({ error: 'Refresh token inválido ou expirado' });
     }
@@ -482,7 +507,8 @@ const logoutUser = async (req, res) => {
     const cookieToken = req.cookies?.refreshToken;
     if (cookieToken) {
       try {
-        const decoded = jwt.verify(cookieToken, _getRefreshSecret());
+        // C-3: algoritmo fixado
+        const decoded = jwt.verify(cookieToken, _getRefreshSecret(), { algorithms: ['HS256'] });
         if (decoded?.jti) {
           const dbCtx = await _getRefreshDb(decoded);
           await _revokeRefreshToken(dbCtx.db, dbCtx.isAdmin, decoded.jti);
