@@ -43,10 +43,14 @@ export default defineConfig({
           if (id.includes('node_modules/xlsx')) {
             return 'vendor-xlsx'
           }
-          // React core — react, react-dom, react-router, scheduler
+          // React core — react, react-dom, react-router, @remix-run/router, scheduler
+          // @remix-run/router é sub-dependência de react-router-dom; mantê-la aqui
+          // evita a circular chunk "vendor-misc → vendor-react → vendor-misc" que
+          // causava React.useState undefined em chunks lazy carregados.
           if (id.includes('node_modules/react/') ||
               id.includes('node_modules/react-dom/') ||
               id.includes('node_modules/react-router') ||
+              id.includes('node_modules/@remix-run/') ||
               id.includes('node_modules/scheduler/')) {
             return 'vendor-react'
           }

@@ -215,7 +215,7 @@ function NovoInventarioModal({ onClose, onSave, saving, erro }) {
 
 // ─── Modal: Editar Inventário ─────────────────────────────────────────────────
 function EditarInventarioModal({ inventario, onClose, onSave, saving, erro }) {
-  const [obs, setObs] = React.useState(inventario.observacao || '')
+  const [obs, setObs] = useState(inventario.observacao || '')
   return (
     <AlmoxModal title={`Editar Inventário ${inventario.numero}`} onClose={onClose}>
       <div className="space-y-4">
