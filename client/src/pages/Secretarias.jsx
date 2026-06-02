@@ -822,8 +822,8 @@ export default function Secretarias() {
       />
 
       {/* Abas do módulo */}
-      <div className="border-b border-gray-200 dark:border-slate-700/50 -mt-1">
-        <nav className="flex overflow-x-auto scrollbar-none -mb-px">
+      <div className="border-b border-gray-200 dark:border-slate-700/50 -mt-1 overflow-hidden">
+        <nav className="flex overflow-x-auto scrollbar-none touch-pan-x -mb-px">
           {[
             { key: 'entidade',     label: 'Entidade',              Icon: Building2  },
             { key: 'secretarias',  label: 'Secretarias e Setores', Icon: Network    },

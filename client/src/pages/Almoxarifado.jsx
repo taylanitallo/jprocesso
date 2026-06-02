@@ -68,8 +68,8 @@ export default function Almoxarifado() {
         subtitle="Controle de estoque e materiais"
       />
 
-      <div className="border-b border-gray-200 dark:border-slate-700/50">
-        <nav className="flex space-x-1 overflow-x-auto scrollbar-none">
+      <div className="border-b border-gray-200 dark:border-slate-700/50 overflow-hidden">
+        <nav className="flex space-x-1 overflow-x-auto scrollbar-none touch-pan-x">
           {TABS.map(tab => {
             const Icon = tab.icon
             const active = activeTab === tab.id

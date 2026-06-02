@@ -938,21 +938,23 @@ export default function Financeiro() {
       />
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100/70 dark:bg-slate-800/50 rounded-xl p-1 w-fit">
-        {TABS.map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            onClick={() => setTab(id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-              tab === id
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50 hover:text-slate-700 dark:hover:text-slate-200'
-            }`}
-          >
-            <Icon className="w-4 h-4" />
-            {label}
-          </button>
-        ))}
+      <div className="overflow-x-auto overflow-y-hidden scrollbar-none touch-pan-x">
+        <div className="flex gap-1 bg-gray-100/70 dark:bg-slate-800/50 rounded-xl p-1 min-w-max w-fit">
+          {TABS.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${
+                tab === id
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50 hover:text-slate-700 dark:hover:text-slate-200'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* ═══ TAB: PAINEL ═══════════════════════════════════════════════════════ */}

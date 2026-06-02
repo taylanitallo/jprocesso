@@ -3420,8 +3420,8 @@ export default function Contratos() {
       />
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 dark:border-slate-700/50">
-        <nav className="flex gap-1 overflow-x-auto scrollbar-none">
+      <div className="border-b border-gray-200 dark:border-slate-700/50 overflow-hidden">
+        <nav className="flex gap-1 overflow-x-auto scrollbar-none touch-pan-x">
           {TABS.map(t => {
             const active = tab === t.key
             const Icon = t.icon

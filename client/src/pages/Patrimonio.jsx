@@ -109,7 +109,7 @@ export default function Patrimonio() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 dark:border-slate-700/50 overflow-x-auto">
+      <div className="border-b border-gray-200 dark:border-slate-700/50 overflow-x-auto overflow-y-hidden scrollbar-none touch-pan-x">
         <nav className="flex space-x-1 min-w-max">
           {TABS.map(tab => {
             const Icon = tab.icon

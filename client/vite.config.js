@@ -13,39 +13,64 @@ export default defineConfig({
     }
   },
   build: {
-    // Sem sourcemaps em produção — impede reconstrução do código original no DevTools
     sourcemap: false,
-    // Minificação com terser (ofuscação mais agressiva)
     minify: 'terser',
     terserOptions: {
       compress: {
-        // Remove console.log/warn em produção automaticamente
         drop_console: true,
         drop_debugger: true,
-        // Removidas referências de código morto
         dead_code: true,
         passes: 2
       },
-      mangle: {
-        // Ofusca nomes de variáveis e funções
-        toplevel: true
-      },
-      format: {
-        // Remove todos os comentários do bundle final
-        comments: false
-      }
+      mangle: { toplevel: true },
+      format: { comments: false }
     },
+    // jsPDF (~548KB) e xlsx (~402KB) são intrinsecamente grandes — carregados lazily
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
-        // Nomes de chunk não-previsíveis (hash) para dificultar mapeamento
         chunkFileNames: 'assets/[hash].js',
         entryFileNames: 'assets/[hash].js',
         assetFileNames: 'assets/[hash].[ext]',
-        // Code splitting manual
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          query: ['react-query'],
-          ui: ['lucide-react']
+        manualChunks(id) {
+          // PDF — jspdf + jspdf-autotable + html2canvas (muito pesados, isolados)
+          if (id.includes('node_modules/jspdf') ||
+              id.includes('node_modules/jspdf-autotable') ||
+              id.includes('node_modules/html2canvas')) {
+            return 'vendor-pdf'
+          }
+          // Excel — xlsx (pesado, isolado)
+          if (id.includes('node_modules/xlsx')) {
+            return 'vendor-xlsx'
+          }
+          // React core — react, react-dom, react-router, scheduler
+          if (id.includes('node_modules/react/') ||
+              id.includes('node_modules/react-dom/') ||
+              id.includes('node_modules/react-router') ||
+              id.includes('node_modules/scheduler/')) {
+            return 'vendor-react'
+          }
+          // Ícones
+          if (id.includes('node_modules/lucide-react')) {
+            return 'vendor-icons'
+          }
+          // Data fetching
+          if (id.includes('node_modules/react-query') ||
+              id.includes('node_modules/@tanstack/react-query') ||
+              id.includes('node_modules/axios')) {
+            return 'vendor-data'
+          }
+          // Utilitários pequenos
+          if (id.includes('node_modules/date-fns') ||
+              id.includes('node_modules/uuid') ||
+              id.includes('node_modules/react-hook-form') ||
+              id.includes('node_modules/react-qr-code')) {
+            return 'vendor-utils'
+          }
+          // Resto do node_modules
+          if (id.includes('node_modules/')) {
+            return 'vendor-misc'
+          }
         }
       }
     }

@@ -323,17 +323,17 @@ export default function Configuracoes() {
         </div>
       )}
 
-      <div className="card overflow-hidden">
-        {/* Tabs */}
-        <div className="border-b border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-800/50">
-          <nav className="flex overflow-x-auto">
+      <div className="card">
+        {/* Tabs — overflow-x-auto no wrapper para funcionar no WebKit (border-radius + overflow-hidden bloqueia filhos) */}
+        <div className="border-b border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-800/50 overflow-x-auto overflow-y-hidden scrollbar-none touch-pan-x">
+          <nav className="flex min-w-max">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 py-3.5 px-5 border-b-2 font-medium text-sm transition-all whitespace-nowrap
+                className={`flex-shrink-0 flex items-center gap-2 py-3.5 px-5 border-b-2 font-medium text-sm transition-all whitespace-nowrap
                   ${activeTab === tab.id
                     ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-900'
                     : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:border-gray-300'

@@ -1,31 +1,47 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom'
-import MunicipioSelector from './pages/MunicipioSelector'
-import LoginAdmin from './pages/LoginAdmin'
-import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import Processos from './pages/Processos'
-import NovoProcesso from './pages/NovoProcesso'
-import DetalhesProcesso from './pages/DetalhesProcesso'
-import Secretarias from './pages/Secretarias'
-import ConsultaPublica from './pages/ConsultaPublica'
-import AdminTenants from './pages/AdminTenants'
-import Enviados from './pages/Enviados'
-import Relatorios from './pages/Relatorios'
-import Configuracoes from './pages/Configuracoes'
-import Registros from './pages/Registros'
-import Usuarios from './pages/Usuarios'
-import Almoxarifado from './pages/Almoxarifado'
-import Patrimonio from './pages/Patrimonio'
-import Financeiro from './pages/Financeiro'
-import Contratos from './pages/Contratos'
-import ContratosDashboard from './pages/ContratosDashboard'
-import FormularioDid from './pages/FormularioDid'
 import { useAuth } from './context/AuthContext'
 import AuthProvider from './context/AuthContext'
 import ThemeProvider from './context/ThemeContext'
-import Layout from './components/Layout'
 
-// Protege rotas privadas — aguarda loading antes de decidir
+// ── Imports estáticos — shell crítico (sempre carregado) ──────────────────────
+import Layout from './components/Layout'
+import Login from './pages/Login'
+import LoginAdmin from './pages/LoginAdmin'
+import MunicipioSelector from './pages/MunicipioSelector'
+import Dashboard from './pages/Dashboard'
+import ConsultaPublica from './pages/ConsultaPublica'
+
+// ── Lazy — páginas pesadas carregadas sob demanda ─────────────────────────────
+const Processos          = lazy(() => import('./pages/Processos'))
+const NovoProcesso       = lazy(() => import('./pages/NovoProcesso'))
+const DetalhesProcesso   = lazy(() => import('./pages/DetalhesProcesso'))
+const FormularioDid      = lazy(() => import('./pages/FormularioDid'))
+const Enviados           = lazy(() => import('./pages/Enviados'))
+const Secretarias        = lazy(() => import('./pages/Secretarias'))
+const Usuarios           = lazy(() => import('./pages/Usuarios'))
+const Almoxarifado       = lazy(() => import('./pages/Almoxarifado'))
+const Patrimonio         = lazy(() => import('./pages/Patrimonio'))
+const Financeiro         = lazy(() => import('./pages/Financeiro'))
+const Contratos          = lazy(() => import('./pages/Contratos'))
+const ContratosDashboard = lazy(() => import('./pages/ContratosDashboard'))
+const Relatorios         = lazy(() => import('./pages/Relatorios'))
+const Configuracoes      = lazy(() => import('./pages/Configuracoes'))
+const Registros          = lazy(() => import('./pages/Registros'))
+const AdminTenants       = lazy(() => import('./pages/AdminTenants'))
+
+// ── PageLoader — fallback enquanto chunk carrega ──────────────────────────────
+function PageLoader() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+      <div className="w-8 h-8 border-[3px] border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin" />
+      <p className="text-sm font-medium text-gray-500 dark:text-slate-400">Carregando módulo...</p>
+    </div>
+  )
+}
+
+// ── Guards de rota ────────────────────────────────────────────────────────────
+
 function PrivateRoute({ children, requireAdmin = false }) {
   const { user, loading } = useAuth()
   const isAdmin = localStorage.getItem('isAdmin') === 'true'
@@ -34,7 +50,6 @@ function PrivateRoute({ children, requireAdmin = false }) {
 
   if (loading) return null
 
-  // Rotas de admin: verifica apenas localStorage (sem depender do contexto)
   if (requireAdmin) {
     if (!token || !isAdmin) return <Navigate to="/" replace />
     return children
@@ -45,7 +60,6 @@ function PrivateRoute({ children, requireAdmin = false }) {
   return children
 }
 
-// Bloqueia acesso direto por URL a módulos que o usuário não tem permissão
 function PermissionRoute({ children, permissao }) {
   const { user } = useAuth()
   const subdomain = window.location.pathname.split('/')[1]
@@ -55,7 +69,6 @@ function PermissionRoute({ children, permissao }) {
   return children
 }
 
-// Wrapper da rota de login — redireciona sincronamente se já autenticado (sem flash)
 function LoginRoute() {
   const { user, loading } = useAuth()
   const location = useLocation()
@@ -66,13 +79,11 @@ function LoginRoute() {
   return <Login />
 }
 
-// Slugs reservados que nunca são tenants
 const RESERVED = new Set([
   'login', 'admin', 'superadmin', 'api', 'www', 'app',
   'static', 'assets', 'public', 'health', 'ping',
 ])
 
-// Guard: bloqueia subdomains reservados e redireciona para /
 function TenantGuard() {
   const { subdomain } = useParams()
   if (RESERVED.has(subdomain?.toLowerCase())) return <Navigate to="/" replace />
@@ -89,59 +100,76 @@ function OrganizacaoRedirect() {
   return <Navigate to={`/${subdomain}/organizacao`} replace />
 }
 
+// ── App ───────────────────────────────────────────────────────────────────────
+
 function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <Routes>
-        {/* Seletor de Municípios - Rota Raiz */}
-        <Route path="/" element={<MunicipioSelector />} />
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/" element={<MunicipioSelector />} />
 
-        {/* Área Restrita - Login SuperAdmin */}
-        <Route path="/superadmin" element={<LoginAdmin />} />
-        <Route path="/admin" element={<Navigate to="/superadmin" replace />} />
-        
-        {/* SuperAdmin Routes - Gestão de Municípios (após login superadmin) */}
-        <Route path="/superadmin/painel" element={<PrivateRoute requireAdmin><AdminTenants /></PrivateRoute>} />
-        <Route path="/admin/painel" element={<Navigate to="/superadmin/painel" replace />} />
-        
-        {/* Rotas com subdomínio (cada município) */}
-        <Route path="/:subdomain" element={<TenantGuard />}>
-          <Route path="login" element={<LoginRoute />} />
-          <Route path="consulta/:numero?" element={<ConsultaPublica />} />
-          
-          <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
-            <Route index element={<Dashboard />} />
-            <Route path="processos" element={<Processos />} />
-            <Route path="processos/entrada" element={<Processos />} />
-            <Route path="processos/enviados" element={<Processos />} />
-            <Route path="processos/novo" element={<NovoProcesso />} />
-            <Route path="processos/:id" element={<DetalhesProcesso />} />
-            <Route path="processos/:id/did" element={<FormularioDid />} />
-            <Route path="enviados" element={<EnviadosRedirect />} />
-            <Route path="organizacao" element={<PermissionRoute permissao="gerenciar_secretarias"><Secretarias /></PermissionRoute>} />
-            <Route path="organizacao/:tab" element={<PermissionRoute permissao="gerenciar_secretarias"><Secretarias /></PermissionRoute>} />
-            <Route path="secretarias" element={<OrganizacaoRedirect />} />
-            <Route path="usuarios" element={<PermissionRoute permissao="gerenciar_usuarios"><Usuarios /></PermissionRoute>} />
-            <Route path="almoxarifado" element={<PermissionRoute permissao="acessar_almoxarifado"><Almoxarifado /></PermissionRoute>} />
-            <Route path="almoxarifado/:tab" element={<PermissionRoute permissao="acessar_almoxarifado"><Almoxarifado /></PermissionRoute>} />
-            <Route path="patrimonio" element={<PermissionRoute permissao="acessar_almoxarifado"><Patrimonio /></PermissionRoute>} />
-            <Route path="patrimonio/:tab" element={<PermissionRoute permissao="acessar_almoxarifado"><Patrimonio /></PermissionRoute>} />
-            <Route path="financeiro" element={<PermissionRoute permissao="acessar_financeiro"><Financeiro /></PermissionRoute>} />
-            <Route path="financeiro/:tab" element={<PermissionRoute permissao="acessar_financeiro"><Financeiro /></PermissionRoute>} />
-            <Route path="contratos" element={<PermissionRoute permissao="acessar_contratos"><Contratos /></PermissionRoute>} />
-            <Route path="contratos/dashboard" element={<PermissionRoute permissao="acessar_contratos"><ContratosDashboard /></PermissionRoute>} />
-            <Route path="contratos/:tab" element={<PermissionRoute permissao="acessar_contratos"><Contratos /></PermissionRoute>} />
-            <Route path="relatorios" element={<PermissionRoute permissao="visualizar_relatorios"><Relatorios /></PermissionRoute>} />
-            <Route path="configuracoes" element={<PermissionRoute permissao="gerenciar_configuracoes"><Configuracoes /></PermissionRoute>} />
-            <Route path="configuracoes/:tab" element={<PermissionRoute permissao="gerenciar_configuracoes"><Configuracoes /></PermissionRoute>} />
-            <Route path="registros" element={<PermissionRoute permissao="visualizar_registros"><Registros /></PermissionRoute>} />
-          </Route>
-        </Route>
+            <Route path="/superadmin" element={<LoginAdmin />} />
+            <Route path="/admin" element={<Navigate to="/superadmin" replace />} />
 
-        {/* Redireciona qualquer rota não encontrada para a página inicial */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+            <Route path="/superadmin/painel" element={
+              <PrivateRoute requireAdmin><AdminTenants /></PrivateRoute>
+            } />
+            <Route path="/admin/painel" element={<Navigate to="/superadmin/painel" replace />} />
+
+            <Route path="/:subdomain" element={<TenantGuard />}>
+              <Route path="login" element={<LoginRoute />} />
+              <Route path="consulta/:numero?" element={<ConsultaPublica />} />
+
+              <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
+                <Route index element={<Dashboard />} />
+
+                {/* Processos */}
+                <Route path="processos"          element={<Processos />} />
+                <Route path="processos/entrada"  element={<Processos />} />
+                <Route path="processos/enviados" element={<Processos />} />
+                <Route path="processos/novo"     element={<NovoProcesso />} />
+                <Route path="processos/:id"      element={<DetalhesProcesso />} />
+                <Route path="processos/:id/did"  element={<FormularioDid />} />
+                <Route path="enviados"           element={<EnviadosRedirect />} />
+
+                {/* Organização */}
+                <Route path="organizacao"      element={<PermissionRoute permissao="gerenciar_secretarias"><Secretarias /></PermissionRoute>} />
+                <Route path="organizacao/:tab" element={<PermissionRoute permissao="gerenciar_secretarias"><Secretarias /></PermissionRoute>} />
+                <Route path="secretarias"      element={<OrganizacaoRedirect />} />
+
+                {/* Usuários */}
+                <Route path="usuarios" element={<PermissionRoute permissao="gerenciar_usuarios"><Usuarios /></PermissionRoute>} />
+
+                {/* Almoxarifado */}
+                <Route path="almoxarifado"      element={<PermissionRoute permissao="acessar_almoxarifado"><Almoxarifado /></PermissionRoute>} />
+                <Route path="almoxarifado/:tab" element={<PermissionRoute permissao="acessar_almoxarifado"><Almoxarifado /></PermissionRoute>} />
+
+                {/* Patrimônio */}
+                <Route path="patrimonio"      element={<PermissionRoute permissao="acessar_almoxarifado"><Patrimonio /></PermissionRoute>} />
+                <Route path="patrimonio/:tab" element={<PermissionRoute permissao="acessar_almoxarifado"><Patrimonio /></PermissionRoute>} />
+
+                {/* Financeiro */}
+                <Route path="financeiro"      element={<PermissionRoute permissao="acessar_financeiro"><Financeiro /></PermissionRoute>} />
+                <Route path="financeiro/:tab" element={<PermissionRoute permissao="acessar_financeiro"><Financeiro /></PermissionRoute>} />
+
+                {/* Contratos */}
+                <Route path="contratos"           element={<PermissionRoute permissao="acessar_contratos"><Contratos /></PermissionRoute>} />
+                <Route path="contratos/dashboard" element={<PermissionRoute permissao="acessar_contratos"><ContratosDashboard /></PermissionRoute>} />
+                <Route path="contratos/:tab"      element={<PermissionRoute permissao="acessar_contratos"><Contratos /></PermissionRoute>} />
+
+                {/* Admin */}
+                <Route path="relatorios"          element={<PermissionRoute permissao="visualizar_relatorios"><Relatorios /></PermissionRoute>} />
+                <Route path="configuracoes"       element={<PermissionRoute permissao="gerenciar_configuracoes"><Configuracoes /></PermissionRoute>} />
+                <Route path="configuracoes/:tab"  element={<PermissionRoute permissao="gerenciar_configuracoes"><Configuracoes /></PermissionRoute>} />
+                <Route path="registros"           element={<PermissionRoute permissao="visualizar_registros"><Registros /></PermissionRoute>} />
+              </Route>
+            </Route>
+
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </AuthProvider>
     </ThemeProvider>
   )
