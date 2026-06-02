@@ -60,6 +60,12 @@ export default defineConfig({
               id.includes('node_modules/axios')) {
             return 'vendor-data'
           }
+          // Gráficos — recharts + dependências d3 usadas por ele
+          if (id.includes('node_modules/recharts') ||
+              id.includes('node_modules/victory-vendor') ||
+              id.includes('node_modules/d3-')) {
+            return 'vendor-charts'
+          }
           // Utilitários pequenos
           if (id.includes('node_modules/date-fns') ||
               id.includes('node_modules/uuid') ||
