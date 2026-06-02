@@ -68,12 +68,19 @@ app.use(helmet({
   frameguard: { action: 'sameorigin' },
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
-      frameAncestors: ["'self'", "https://www.jeossistemas.com", "https://*.jeossistemas.com"]
+      defaultSrc:     ["'self'"],
+      scriptSrc:      ["'self'"],
+      // 'unsafe-inline' necessário para blocos <style> em componentes React (ex: animações JAI)
+      styleSrc:       ["'self'", "'unsafe-inline'"],
+      // M-4: restrito a domínios conhecidos — sem https: genérico
+      imgSrc:         ["'self'", "data:", "https://*.supabase.co", "https://*.supabase.in"],
+      connectSrc:     ["'self'",
+                       "https://jprocesso-production.up.railway.app",
+                       "https://*.supabase.co"],
+      frameAncestors: ["'self'", "https://www.jeossistemas.com", "https://*.jeossistemas.com"],
+      objectSrc:      ["'none'"],
+      baseUri:        ["'self'"],
+      formAction:     ["'self'"],
     }
   }
 }));

@@ -3,10 +3,31 @@ const router = express.Router();
 const { login, register, getProfile, listUsers, updateUser, deleteUser, refreshToken, logoutUser } = require('../controllers/authController');
 const { authenticate, tenantMiddleware, requireTenant, authorize } = require('../middleware/auth');
 
+// M-4: em produção, valida Origin nos endpoints que recebem o cookie cross-site
+// (refresh e logout). Previne CSRF: sem Origin válido → 403.
+// Em dev, qualquer origem é aceita para facilitar o desenvolvimento local.
+const _buildRefreshOrigins = () => {
+  const set = new Set();
+  [process.env.CLIENT_URL, process.env.ALLOWED_ORIGINS].forEach(env => {
+    if (env) env.split(',').map(s => s.trim()).filter(Boolean).forEach(o => set.add(o));
+  });
+  return set;
+};
+
+const validateRefreshOrigin = (req, res, next) => {
+  if (process.env.NODE_ENV !== 'production') return next();
+  const allowed = _buildRefreshOrigins();
+  const origin  = req.headers.origin;
+  if (!origin || !allowed.has(origin)) {
+    return res.status(403).json({ error: 'Origem não autorizada' });
+  }
+  next();
+};
+
 // ── Autenticação ──────────────────────────────────────────────────────────────
 router.post('/login',   login);
-router.post('/refresh', refreshToken);  // lê cookie httpOnly — sem middleware de tenant
-router.post('/logout',  logoutUser);    // revoga refresh token + limpa cookie
+router.post('/refresh', validateRefreshOrigin, refreshToken);  // lê cookie httpOnly
+router.post('/logout',  validateRefreshOrigin, logoutUser);    // revoga refresh + limpa cookie
 
 // ── Usuários (protegidos) ─────────────────────────────────────────────────────
 // A-5: register/updateUser/deleteUser requerem papel admin para evitar privilege escalation

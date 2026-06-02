@@ -73,9 +73,10 @@ const _revokeRefreshToken = (db, isAdmin, jti) =>
   );
 
 // Gera access token (payload e expiração sem alterações)
+// M-2: TTL curto — 15 min. Sessões longas são mantidas pelo refresh token (30d).
 const generateAccessToken = (payload) =>
   jwt.sign(payload, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE || '7d',
+    expiresIn: process.env.JWT_EXPIRE || '15m',
   });
 const REFRESH_COOKIE_OPTS = {
   httpOnly: true,

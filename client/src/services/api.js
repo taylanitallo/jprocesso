@@ -1,24 +1,28 @@
 import axios from 'axios'
 
-// Determinar URL da API com fallbacks inteligentes
-const getApiUrl = () => {
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL
-  return '/api'
-}
+// ── Token manager — M-3: access token em memória, nunca em localStorage ───────
+// Zerado a cada recarga de página; sessão é restaurada via refresh token cookie.
+let _accessToken = null
+export const setAccessToken   = (t) => { _accessToken = t }
+export const getAccessToken   = ()  => _accessToken
+export const clearAccessToken = ()  => { _accessToken = null }
+
+// ── Instância axios ───────────────────────────────────────────────────────────
+const getApiUrl = () => import.meta.env.VITE_API_URL || '/api'
 
 const api = axios.create({
   baseURL: getApiUrl(),
-  // Necessário para enviar o cookie httpOnly refreshToken em todas as requisições
-  // (inclui cross-origin em produção — Vercel → Railway)
+  // withCredentials: envia o cookie httpOnly refreshToken em requisições cross-origin
   withCredentials: true,
 })
 
-// ── Interceptor de request ─────────────────────────────────────────────────
+// ── Interceptor de request ────────────────────────────────────────────────────
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token')
-    if (token) config.headers.Authorization = `Bearer ${token}`
+    // M-3: Authorization lido da memória — nunca do localStorage
+    if (_accessToken) config.headers.Authorization = `Bearer ${_accessToken}`
 
+    // subdomain não é sensível — pode ficar em localStorage
     const subdomain = localStorage.getItem('subdomain')
     if (subdomain) config.headers['x-tenant-subdomain'] = subdomain
 
@@ -27,7 +31,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-// ── Refresh Token — serialização de múltiplos 401 simultâneos ─────────────
+// ── Refresh Token — serialização de múltiplos 401 simultâneos ─────────────────
 // Evita múltiplos POSTs /auth/refresh disparados em paralelo:
 // a primeira requisição cria a Promise; as demais aguardam a mesma.
 let _refreshPromise = null
@@ -43,9 +47,8 @@ const _doRefresh = () => {
 
 // Limpa estado de autenticação e redireciona para login
 const _forceLogout = (subdomain) => {
-  localStorage.removeItem('token')
+  clearAccessToken()
   localStorage.removeItem('subdomain')
-  delete api.defaults.headers.common['Authorization']
   delete api.defaults.headers.common['x-tenant-subdomain']
 
   const currentPath = window.location.pathname
@@ -55,7 +58,7 @@ const _forceLogout = (subdomain) => {
   }
 }
 
-// ── Interceptor de response ────────────────────────────────────────────────
+// ── Interceptor de response ───────────────────────────────────────────────────
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -71,10 +74,9 @@ api.interceptors.response.use(
       !originalRequest?._retry &&
       !isAuthRoute
     ) {
-      // Marcar para evitar loop infinito caso o retry também retorne 401
+      // Marca para evitar loop infinito caso o retry também retorne 401
       originalRequest._retry = true
 
-      // Ler subdomain ANTES de limpar (usado no redirect caso refresh falhe)
       const subdomain =
         localStorage.getItem('subdomain') ||
         window.location.pathname.split('/')[1]
@@ -82,9 +84,8 @@ api.interceptors.response.use(
       try {
         const { data } = await _doRefresh()
 
-        // Persistir e propagar novo token
-        localStorage.setItem('token', data.token)
-        api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
+        // M-3: novo token vai para memória
+        setAccessToken(data.token)
         originalRequest.headers.Authorization = `Bearer ${data.token}`
 
         // Repetir requisição original com o novo token
@@ -99,7 +100,7 @@ api.interceptors.response.use(
   }
 )
 
-// Função para consulta pública de processos
+// Consulta pública (sem autenticação)
 export const consultar = async (subdomain, numeroProcesso) => {
   const response = await axios.get(
     `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/consulta-publica/${subdomain}/${numeroProcesso}`

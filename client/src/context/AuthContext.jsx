@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import api from '../services/api'
+import api, { setAccessToken, clearAccessToken } from '../services/api'
 
 const AuthContext = createContext({})
 
@@ -21,72 +21,73 @@ export default function AuthProvider({ children }) {
   }
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
     const subdomain = localStorage.getItem('subdomain')
 
-    if (token && subdomain) {
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-      api.defaults.headers.common['x-tenant-subdomain'] = subdomain
-
-      // Busca usuário e configurações do tenant em paralelo (dados frescos do servidor)
-      Promise.all([
-        api.get('/auth/profile'),
-        fetch(`/api/tenants/info?subdomain=${subdomain}`).then(r => r.json()),
-      ])
-        .then(([profileRes, tenantInfoData]) => {
-          setUser(profileRes.data.user)
-          if (tenantInfoData?.tenant) setTenant(tenantInfoData.tenant)
-        })
-        .catch(() => {
-          // Token inválido/expirado — limpa para evitar loop de redirect
-          localStorage.removeItem('token')
-          localStorage.removeItem('subdomain')
-          delete api.defaults.headers.common['Authorization']
-          delete api.defaults.headers.common['x-tenant-subdomain']
-        })
-        .finally(() => setLoading(false))
-    } else {
+    if (!subdomain) {
       setLoading(false)
+      return
     }
+
+    // Propagar subdomain para todas as requisições da instância axios
+    api.defaults.headers.common['x-tenant-subdomain'] = subdomain
+
+    // M-3: ao recarregar a página, access token não existe em memória.
+    // Restaurar sessão via refresh token (httpOnly cookie) — sem tocar localStorage.
+    api.post('/auth/refresh')
+      .then(({ data }) => {
+        setAccessToken(data.token)
+        // Buscar usuário e tenant em paralelo com o novo token em memória
+        return Promise.all([
+          api.get('/auth/profile'),
+          fetch(`/api/tenants/info?subdomain=${subdomain}`).then(r => r.json()),
+        ])
+      })
+      .then(([profileRes, tenantInfoData]) => {
+        setUser(profileRes.data.user)
+        if (tenantInfoData?.tenant) setTenant(tenantInfoData.tenant)
+      })
+      .catch(() => {
+        // Refresh falhou (cookie expirado/ausente) — limpa sessão local
+        clearAccessToken()
+        localStorage.removeItem('subdomain')
+        delete api.defaults.headers.common['x-tenant-subdomain']
+      })
+      .finally(() => setLoading(false))
   }, [])
 
   const login = async (cpf, senha, subdomain) => {
     const { data } = await api.post('/auth/login', { cpf, senha, subdomain })
-    
-    // Só o token e subdomain ficam no localStorage (strings pequenas, sem imagens)
-    localStorage.setItem('token', data.token)
+
+    // M-3: access token em memória — nunca no localStorage
+    setAccessToken(data.token)
     localStorage.setItem('subdomain', data.tenant.subdominio)
-    
+
     setUser(data.user)
     setTenant(data.tenant)
-    
-    api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
+
     api.defaults.headers.common['x-tenant-subdomain'] = data.tenant.subdominio
-    
+
     return data
   }
 
   const logout = async () => {
-    // Capturar subdomain antes de limpar (necessário para o redirect)
     const subdomain = localStorage.getItem('subdomain')
 
-    // Revogar refresh token no backend — ignorar falha (cookie ainda será limpo pelo servidor)
+    // Revogar refresh token no backend (cookie limpo pelo servidor)
     try {
       await api.post('/auth/logout')
     } catch {
       // Falha silenciosa — logout local sempre prossegue
     }
 
-    localStorage.removeItem('token')
+    clearAccessToken()
     localStorage.removeItem('subdomain')
 
     setUser(null)
     setTenant(null)
 
-    delete api.defaults.headers.common['Authorization']
     delete api.defaults.headers.common['x-tenant-subdomain']
 
-    // Redirecionar para a tela de login do tenant (ou raiz para admin)
     const currentPath = window.location.pathname
     if (!currentPath.includes('/login')) {
       window.location.href =
@@ -96,7 +97,6 @@ export default function AuthProvider({ children }) {
 
   const updateTenantConfig = async (novoConf) => {
     const { data } = await api.put('/tenants/configuracoes', novoConf)
-    // Atualiza só em memória — banco é a fonte da verdade
     setTenant(prev => ({ ...prev, configuracoes: data.configuracoes }))
     return data
   }
