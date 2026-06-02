@@ -80,6 +80,7 @@ export default function Configuracoes() {
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [editandoGerais, setEditandoGerais] = useState(false);
+  const [geraisOriginal, setGeraisOriginal] = useState(null);
 
   // Estado da aba Gerais — configurações GLOBAIS do tenant (sem logo_secretaria)
   const conf = tenant?.configuracoes || {};
@@ -184,6 +185,7 @@ export default function Configuracoes() {
     e.preventDefault(); setLoading(true);
     try {
       await updateTenantConfig(geraisData);
+      setGeraisOriginal({ ...geraisData });
       feedback('✅ Configurações salvas com sucesso!');
       setEditandoGerais(false);
     } catch (err) {
@@ -436,14 +438,26 @@ export default function Configuracoes() {
               </div>
 
               <div className="flex justify-end pt-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setEditandoGerais(true)}
-                  disabled={editandoGerais}
-                  className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Alterar
-                </button>
+                {editandoGerais ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (geraisOriginal) setGeraisData({ ...geraisOriginal });
+                      setEditandoGerais(false);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 rounded-lg text-sm font-semibold transition-colors shadow-sm border border-gray-300 dark:border-slate-600"
+                  >
+                    <X className="h-4 w-4" /> Cancelar
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { setGeraisOriginal({ ...geraisData }); setEditandoGerais(true); }}
+                    className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm"
+                  >
+                    Alterar
+                  </button>
+                )}
                 <button type="submit" disabled={!editandoGerais || loading} className="btn-primary flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
                   <Save className="h-4 w-4" />
                   {loading ? 'Salvando...' : 'Salvar Configurações'}
