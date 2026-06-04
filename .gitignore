@@ -63,3 +63,5 @@ hostgator-deploy/
 # Documenta��o local/operacional
 README.md
 SYSTEM_PROMPT.md
+
+*.sql

@@ -11,6 +11,7 @@ const contratosRoutes    = require('./contratos');
 const importexportRoutes = require('./importexport');
 const patrimonioRoutes   = require('./patrimonio');
 const logRoutes          = require('./log');
+const aylaRoutes         = require('./ayla');
 
 module.exports = (app) => {
   app.use('/api/auth', authRoutes);
@@ -27,4 +28,5 @@ module.exports = (app) => {
   app.use('/api/import', importexportRoutes);
   app.use('/api/patrimonio', patrimonioRoutes);
   app.use('/api/logs',       logRoutes);
+  app.use('/api/ayla',       aylaRoutes);
 };
