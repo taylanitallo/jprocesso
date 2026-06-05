@@ -11,20 +11,20 @@ import {
 import { PageHeader, EmptyState } from '../components/ui'
 
 // ── Constantes de badge / cor ─────────────────────────────────────────────────
-const TIPO_BADGE = {
-  Did:        'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300',
-  Despacho:   'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300',
-  Pauta:      'bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300',
-  Requisição: 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300',
+const TIPO_CLS = {
+  Did:        'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300 ring-purple-200 dark:ring-purple-800/40',
+  Despacho:   'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 ring-indigo-200 dark:ring-indigo-800/40',
+  Pauta:      'bg-teal-50   dark:bg-teal-900/30   text-teal-600   dark:text-teal-300   ring-teal-200   dark:ring-teal-800/40',
+  Requisição: 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-300 ring-orange-200 dark:ring-orange-800/40',
 }
 
 const STATUS_INFO = {
-  aberto:     { label: 'Aberto',      cls: 'status-aberto'     },
-  em_analise: { label: 'Em Análise',  cls: 'status-em_analise' },
-  pendente:   { label: 'Pendente',    cls: 'status-pendente'   },
-  devolvido:  { label: 'Devolvido',   cls: 'status-devolvido'  },
-  concluido:  { label: 'Concluído',   cls: 'status-concluido'  },
-  arquivado:  { label: 'Arquivado',   cls: 'status-arquivado'  },
+  aberto:     { label: 'Aberto',      cls: 'status-aberto',     border: 'border-l-blue-500'    },
+  em_analise: { label: 'Em Análise',  cls: 'status-em_analise', border: 'border-l-amber-400'   },
+  pendente:   { label: 'Pendente',    cls: 'status-pendente',   border: 'border-l-orange-500'  },
+  devolvido:  { label: 'Devolvido',   cls: 'status-devolvido',  border: 'border-l-red-500'     },
+  concluido:  { label: 'Concluído',   cls: 'status-concluido',  border: 'border-l-emerald-500' },
+  arquivado:  { label: 'Arquivado',   cls: 'status-arquivado',  border: 'border-l-gray-400'    },
 }
 
 const PRIO_INFO = {
@@ -534,55 +534,71 @@ export default function Processos() {
           {!loadEnv && processosEnv.length > 0 && (
             <div className="space-y-2">
               {processosEnv.map((processo) => {
-                const s = STATUS_INFO[processo.status]    || STATUS_INFO.aberto
-                const p = PRIO_INFO[processo.prioridade]  || PRIO_INFO.normal
+                const s         = STATUS_INFO[processo.status]   || STATUS_INFO.aberto
+                const p         = PRIO_INFO[processo.prioridade] || PRIO_INFO.normal
+                const dataEnvio = processo.dataEnvio || processo.created_at
+                const tramLabel = processo.tipoTramitacao === 'tramite' ? 'Tramitado' : 'Devolvido'
+                const isUrgente = processo.prioridade === 'urgente'
+                const isAlta    = processo.prioridade === 'alta'
+
                 return (
                   <Link
                     key={processo.id}
                     to={`/${subdomain}/processos/${processo.id}`}
-                    className="group flex items-center gap-4 p-4 bg-white dark:bg-slate-900/75 border border-gray-200 dark:border-slate-700/70 rounded-2xl hover:border-blue-300 dark:hover:border-blue-700/60 hover:shadow-md dark:hover:shadow-slate-900/50 transition-all"
+                    className={`group flex items-stretch gap-4 px-4 py-3.5 bg-white dark:bg-slate-900/75 border border-gray-100 dark:border-slate-700/50 border-l-4 border-l-indigo-400 rounded-xl hover:shadow-sm dark:hover:shadow-slate-900/40 hover:border-gray-200 dark:hover:border-slate-600/60 transition-all`}
                   >
-                    <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/30 flex items-center justify-center">
-                      <Send className="h-5 w-5 text-indigo-500 dark:text-indigo-400" strokeWidth={1.75} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center flex-wrap gap-2 mb-1">
-                        <span className="font-bold text-gray-900 dark:text-slate-100 text-sm">{processo.numero}</span>
-                        <span className={s.cls}>{s.label}</span>
+                    {/* Conteúdo principal */}
+                    <div className="flex-1 min-w-0 space-y-1">
+                      {/* Assunto */}
+                      <p className="text-sm font-semibold text-gray-900 dark:text-slate-100 truncate leading-snug">
+                        {processo.assunto}
+                      </p>
+
+                      {/* Número + tipo + tramitação + prioridade */}
+                      <div className="flex items-center flex-wrap gap-1.5">
+                        <span className="text-[11px] font-mono text-gray-400 dark:text-slate-500">{processo.numero}</span>
                         {processo.tipoTramitacao && (
-                          <span className="badge bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
-                            {processo.tipoTramitacao === 'tramite' ? 'Tramitado' : 'Devolvido'}
+                          <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded ring-1 ring-inset bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 ring-indigo-200 dark:ring-indigo-800/40">
+                            {tramLabel}
                           </span>
                         )}
-                        <span className={p.cls}>{p.label}</span>
+                        {(isUrgente || isAlta) && (
+                          <span className={p.cls}>{p.label}</span>
+                        )}
                       </div>
-                      <p className="text-sm text-gray-700 dark:text-slate-300 truncate">{processo.assunto}</p>
-                      <div className="flex flex-wrap gap-3 mt-0.5">
+
+                      {/* Destinatário */}
+                      <div className="flex items-center flex-wrap gap-x-3 gap-y-0.5">
                         {processo.destinatario && (
-                          <span className="flex items-center gap-1 text-xs text-gray-400 dark:text-slate-500">
+                          <span className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-slate-500">
                             <MapPin className="h-3 w-3 flex-shrink-0" />
                             {processo.destinatario}
                           </span>
                         )}
                         {processo.destinatarioSetor && (
-                          <span className="flex items-center gap-1 text-xs text-gray-400 dark:text-slate-500">
+                          <span className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-slate-500">
                             <Layers className="h-3 w-3 flex-shrink-0" />
                             {processo.destinatarioSetor}
                           </span>
                         )}
                         {processo.destinatarioUsuario && (
-                          <span className="flex items-center gap-1 text-xs text-gray-400 dark:text-slate-500">
+                          <span className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-slate-500">
                             <User className="h-3 w-3 flex-shrink-0" />
                             {processo.destinatarioUsuario}
                           </span>
                         )}
                       </div>
                     </div>
-                    <div className="flex-shrink-0 text-right">
-                      <p className="text-xs text-gray-400 dark:text-slate-500">
-                        {new Date(processo.dataEnvio || processo.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
-                      </p>
-                      <ArrowRight className="h-4 w-4 text-gray-300 dark:text-slate-600 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all mt-1 ml-auto" />
+
+                    {/* Direita: status + data + seta */}
+                    <div className="flex-shrink-0 flex flex-col items-end justify-between gap-2 min-w-[90px]">
+                      <div className="flex flex-col items-end gap-1">
+                        <span className={s.cls}>{s.label}</span>
+                        <span className="text-[11px] text-gray-400 dark:text-slate-500 tabular-nums">
+                          {new Date(dataEnvio).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                        </span>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-gray-300 dark:text-slate-600 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all" />
                     </div>
                   </Link>
                 )
@@ -612,52 +628,51 @@ function ProcessoCard({ processo, subdomain, onClickSecretaria, onClickSetor, on
   const secretaria  = processo.secretariaAtual
   const setor       = processo.setorAtual
   const responsavel = processo.responsavelAtual
-
-  const dataRef = processo.updated_at || processo.updatedAt || processo.created_at || processo.createdAt
+  const dataRef     = processo.updated_at || processo.updatedAt || processo.created_at || processo.createdAt
+  const isUrgente   = processo.prioridade === 'urgente'
+  const isAlta      = processo.prioridade === 'alta'
 
   return (
-    <div className="group bg-white dark:bg-slate-900/75 border border-gray-200 dark:border-slate-700/70 rounded-2xl hover:border-blue-300 dark:hover:border-blue-700/60 hover:shadow-md dark:hover:shadow-slate-900/50 transition-all">
+    <div className={`group bg-white dark:bg-slate-900/75 border border-gray-100 dark:border-slate-700/50 border-l-4 ${s.border} rounded-xl hover:shadow-sm dark:hover:shadow-slate-900/40 hover:border-gray-200 dark:hover:border-slate-600/60 transition-all`}>
       <Link
         to={`/${subdomain}/processos/${processo.id}`}
-        className="flex items-start gap-4 p-4"
+        className="flex items-stretch gap-4 px-4 py-3.5"
       >
-        {/* Ícone */}
-        <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30 flex items-center justify-center mt-0.5">
-          <FileText className="h-5 w-5 text-blue-500 dark:text-blue-400" strokeWidth={1.75} />
-        </div>
+        {/* Conteúdo principal */}
+        <div className="flex-1 min-w-0 space-y-1">
+          {/* Assunto — texto principal */}
+          <p className="text-sm font-semibold text-gray-900 dark:text-slate-100 truncate leading-snug">
+            {processo.assunto}
+          </p>
 
-        {/* Conteúdo */}
-        <div className="flex-1 min-w-0">
-          {/* Linha 1: número + badges */}
-          <div className="flex items-center flex-wrap gap-2 mb-1">
-            <span className="font-bold text-gray-900 dark:text-slate-100 text-sm">{processo.numero}</span>
-            <span className={s.cls}>{s.label}</span>
+          {/* Número + tipo + prioridade (metadados discretos) */}
+          <div className="flex items-center flex-wrap gap-1.5">
+            <span className="text-[11px] font-mono text-gray-400 dark:text-slate-500">{processo.numero}</span>
             {processo.tipo_processo && (
-              <span className={`badge ${TIPO_BADGE[processo.tipo_processo] || 'bg-gray-100 dark:bg-slate-700/50 text-gray-600 dark:text-slate-400'}`}>
+              <span className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded ring-1 ring-inset ${TIPO_CLS[processo.tipo_processo] || 'bg-gray-50 dark:bg-slate-700/50 text-gray-500 dark:text-slate-400 ring-gray-200 dark:ring-slate-600/50'}`}>
                 {processo.tipo_processo}
               </span>
             )}
-            <span className={p.cls}>{p.label}</span>
+            {(isUrgente || isAlta) && (
+              <span className={p.cls}>{p.label}</span>
+            )}
           </div>
 
-          {/* Linha 2: assunto */}
-          <p className="text-sm text-gray-700 dark:text-slate-300 truncate mb-2">{processo.assunto}</p>
-
-          {/* Linha 3: chips de contexto clicáveis */}
-          <div className="flex flex-wrap gap-1.5">
+          {/* Contexto: secretaria · setor · responsável (links de texto) */}
+          <div className="flex items-center flex-wrap gap-x-3 gap-y-0.5">
             {secretaria ? (
               <button
                 type="button"
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClickSecretaria(secretaria.id) }}
-                className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800/40 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                 title={`Filtrar por ${secretaria.nome}`}
               >
-                <Building2 className="h-2.5 w-2.5 flex-shrink-0" />
+                <Building2 className="h-3 w-3 flex-shrink-0" />
                 {secretaria.sigla || secretaria.nome}
               </button>
             ) : (
-              <span className="flex items-center gap-1 text-xs text-gray-300 dark:text-slate-600">
-                <Building2 className="h-2.5 w-2.5 flex-shrink-0" /> —
+              <span className="text-[11px] text-gray-300 dark:text-slate-700 flex items-center gap-1">
+                <Building2 className="h-3 w-3" /> —
               </span>
             )}
 
@@ -665,15 +680,15 @@ function ProcessoCard({ processo, subdomain, onClickSecretaria, onClickSetor, on
               <button
                 type="button"
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClickSetor(setor.id) }}
-                className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600/50 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                 title={`Filtrar por ${setor.nome}`}
               >
-                <Layers className="h-2.5 w-2.5 flex-shrink-0" />
+                <Layers className="h-3 w-3 flex-shrink-0" />
                 {setor.nome}
               </button>
             ) : (
-              <span className="flex items-center gap-1 text-xs text-gray-300 dark:text-slate-600">
-                <Layers className="h-2.5 w-2.5 flex-shrink-0" /> —
+              <span className="text-[11px] text-gray-300 dark:text-slate-700 flex items-center gap-1">
+                <Layers className="h-3 w-3" /> —
               </span>
             )}
 
@@ -681,29 +696,32 @@ function ProcessoCard({ processo, subdomain, onClickSecretaria, onClickSetor, on
               <button
                 type="button"
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClickUsuario(responsavel.id) }}
-                className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
+                className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
                 title={`Filtrar por ${responsavel.nome}`}
               >
-                <User className="h-2.5 w-2.5 flex-shrink-0" />
+                <User className="h-3 w-3 flex-shrink-0" />
                 {responsavel.nome}
               </button>
             ) : (
-              <span className="flex items-center gap-1 text-xs text-gray-300 dark:text-slate-600">
-                <User className="h-2.5 w-2.5 flex-shrink-0" /> —
+              <span className="text-[11px] text-gray-300 dark:text-slate-700 flex items-center gap-1">
+                <User className="h-3 w-3" /> —
               </span>
             )}
           </div>
         </div>
 
-        {/* Data + chevron */}
-        <div className="flex-shrink-0 text-right">
-          <p className="text-xs font-medium text-gray-500 dark:text-slate-400">
-            {new Date(dataRef).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
-          </p>
-          <p className="text-xs text-gray-400 dark:text-slate-500">
-            {new Date(dataRef).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-          </p>
-          <ChevronRight className="h-4 w-4 text-gray-300 dark:text-slate-600 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all mt-1 ml-auto" />
+        {/* Direita: status + data + seta */}
+        <div className="flex-shrink-0 flex flex-col items-end justify-between gap-2 min-w-[90px]">
+          <div className="flex flex-col items-end gap-1">
+            <span className={s.cls}>{s.label}</span>
+            <span className="text-[11px] text-gray-400 dark:text-slate-500 tabular-nums">
+              {new Date(dataRef).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+            </span>
+            <span className="text-[11px] text-gray-300 dark:text-slate-600 tabular-nums">
+              {new Date(dataRef).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
+          <ChevronRight className="h-4 w-4 text-gray-300 dark:text-slate-600 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all" />
         </div>
       </Link>
     </div>
