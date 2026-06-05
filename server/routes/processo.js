@@ -10,6 +10,7 @@ const {
   concluirProcesso,
   listProcessosEnviados,
   getArquivoProcessos,
+  moverProcessoTipo,
   buscarProcessosPublico,
   consultarProcessoPublico,
   deleteProcesso,
@@ -23,8 +24,9 @@ router.get('/dashboard', ...tenantAuth, getDashboardStats);
 router.post('/', ...tenantAuth, createProcesso);
 router.get('/', ...tenantAuth, listProcessos);
 router.get('/enviados', ...tenantAuth, listProcessosEnviados);
-router.get('/arquivo',  ...tenantAuth, getArquivoProcessos);
-router.get('/:id', ...tenantAuth, getProcessoById);
+router.get('/arquivo',       ...tenantAuth, getArquivoProcessos);
+router.patch('/:id/tipo',   ...tenantAuth, moverProcessoTipo);
+router.get('/:id',          ...tenantAuth, getProcessoById);
 router.post('/:id/tramitar', ...tenantAuth, tramitarProcesso);
 router.post('/:id/devolver', ...tenantAuth, devolverProcesso);
 router.post('/:id/concluir', ...tenantAuth, concluirProcesso);

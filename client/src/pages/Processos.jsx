@@ -247,7 +247,6 @@ export default function Processos() {
                 <option value="pendente">Pendente</option>
                 <option value="devolvido">Devolvido</option>
                 <option value="concluido">Concluído</option>
-                <option value="arquivado">Arquivado</option>
               </select>
 
               <button
@@ -425,7 +424,6 @@ export default function Processos() {
                 <option value="pendente">Pendente</option>
                 <option value="devolvido">Devolvido</option>
                 <option value="concluido">Concluído</option>
-                <option value="arquivado">Arquivado</option>
               </select>
 
               <button

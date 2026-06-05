@@ -1033,6 +1033,32 @@ const consultarProcessoPublico = async (req, res) => {
   }
 };
 
+// ── Reorganizar processo: muda tipo_processo (move a "pasta" no arquivo) ──────
+const moverProcessoTipo = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tipo_processo } = req.body;
+    const { Processo } = req.models;
+
+    const TIPOS_VALIDOS = ['Did', 'Despacho', 'Pauta', 'Requisição', 'Geral'];
+    if (tipo_processo !== null && !TIPOS_VALIDOS.includes(tipo_processo)) {
+      return res.status(400).json({ error: 'Tipo de processo inválido' });
+    }
+
+    const processo = await Processo.findByPk(id, { attributes: ['id', 'status'] });
+    if (!processo) return res.status(404).json({ error: 'Processo não encontrado' });
+    if (processo.status !== 'concluido') {
+      return res.status(400).json({ error: 'Apenas processos concluídos podem ser reorganizados no arquivo' });
+    }
+
+    await processo.update({ tipo_processo: tipo_processo || null });
+    res.json({ message: 'Processo reorganizado com sucesso' });
+  } catch (error) {
+    console.error('Erro ao reorganizar processo:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
 // ── Arquivo: processos concluídos com documentos organizados hierarquicamente ──
 const getArquivoProcessos = async (req, res) => {
   try {
@@ -1160,6 +1186,7 @@ module.exports = {
   concluirProcesso,
   listProcessosEnviados,
   getArquivoProcessos,
+  moverProcessoTipo,
   buscarProcessosPublico,
   consultarProcessoPublico,
   deleteProcesso,

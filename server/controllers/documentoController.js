@@ -172,6 +172,37 @@ const deleteDocumento = async (req, res) => {
   }
 };
 
+// ── Mover documento para outro processo concluído ────────────────────────────
+const moverDocumento = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { processoDestinoId } = req.body;
+    const { Documento, Processo } = req.models;
+
+    if (!processoDestinoId) {
+      return res.status(400).json({ error: 'processoDestinoId é obrigatório' });
+    }
+
+    const documento = await Documento.findOne({
+      where: { id },
+      include: [{ model: Processo, as: 'processo', required: true, attributes: ['id'] }],
+    });
+    if (!documento) return res.status(404).json({ error: 'Documento não encontrado' });
+
+    const destino = await Processo.findOne({
+      where: { id: processoDestinoId, status: 'concluido' },
+      attributes: ['id', 'numero'],
+    });
+    if (!destino) return res.status(404).json({ error: 'Processo destino não encontrado ou não concluído' });
+
+    await documento.update({ processo_id: processoDestinoId });
+    res.json({ message: 'Documento movido com sucesso', processoNumero: destino.numero });
+  } catch (error) {
+    console.error('Erro ao mover documento:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
 // ── Visualizar documento em nova aba (retorna signed URL para inline) ────────
 const viewDocumento = async (req, res) => {
   try {
@@ -328,6 +359,7 @@ module.exports = {
   viewDocumento,
   downloadZip,
   downloadMerged,
+  moverDocumento,
   listDocumentos,
   deleteDocumento,
 };

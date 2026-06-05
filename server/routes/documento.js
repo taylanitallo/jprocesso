@@ -6,6 +6,7 @@ const {
   viewDocumento,
   downloadZip,
   downloadMerged,
+  moverDocumento,
   listDocumentos,
   deleteDocumento,
 } = require('../controllers/documentoController');
@@ -21,6 +22,7 @@ router.get('/download/:id',         ...tenantAuth, downloadDocumento);
 router.get('/view/:id',             ...tenantAuth, viewDocumento);
 router.get('/zip/:processoId',      ...tenantAuth, downloadZip);
 router.get('/merged/:processoId',   ...tenantAuth, downloadMerged);
+router.patch('/:id/mover',          ...tenantAuth, moverDocumento);
 router.get('/',                     ...tenantAuth, listDocumentos);
 router.delete('/:id',               ...tenantAuth, deleteDocumento);
 
