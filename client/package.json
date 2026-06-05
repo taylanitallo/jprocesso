@@ -8,6 +8,7 @@
     "date-fns": "^3.0.6",
     "jspdf": "^4.1.0",
     "jspdf-autotable": "^5.0.7",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.303.0",
     "postcss": "^8.4.32",
     "react": "^18.2.0",

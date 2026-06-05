@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useState, useRef, useCallback } from 'react';
+import JSZip from 'jszip';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import {
@@ -65,6 +66,27 @@ function slugify(str) {
 function daysSince(d) {
   if (!d) return null;
   return Math.floor((Date.now() - new Date(d).getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function formatCPF(v) {
+  const d = v.replace(/\D/g, '').slice(0, 11);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return `${d.slice(0,3)}.${d.slice(3)}`;
+  if (d.length <= 9) return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6)}`;
+  return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}`;
+}
+
+function validateCPF(cpf) {
+  const d = cpf.replace(/\D/g, '');
+  if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += parseInt(d[i]) * (10 - i);
+  let r = (sum * 10) % 11; if (r >= 10) r = 0;
+  if (r !== parseInt(d[9])) return false;
+  sum = 0;
+  for (let i = 0; i < 10; i++) sum += parseInt(d[i]) * (11 - i);
+  r = (sum * 10) % 11; if (r >= 10) r = 0;
+  return r === parseInt(d[10]);
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -449,9 +471,16 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
   const [deleteModal, setDeleteModal] = useState({ open: false, backup: null, modo: 'registro', confirmado: false });
   const [clearModal,  setClearModal]  = useState({ open: false, modo: 'falhas', deleteFiles: false, loading: false });
 
-  const [restoreFile, setRestoreFile]       = useState(null);
-  const [restoreLoading, setRestoreLoading] = useState(false);
+  const [deleteUserModal, setDeleteUserModal] = useState({ open: false, userId: null, userName: '' });
+
+  const [restoreFile, setRestoreFile]         = useState(null);
+  const [restoreInfo, setRestoreInfo]         = useState(null);  // parsed metadata
+  const [restoreError, setRestoreError]       = useState('');
+  const [restoreAnalyzing, setRestoreAnalyzing] = useState(false);
+  const [restoreConfirm, setRestoreConfirm]   = useState('');
+  const [restoreLoading, setRestoreLoading]   = useState(false);
   const restoreRef = useRef();
+  const editFormRef = useRef();
 
   const [logoLoginFile, setLogoLoginFile]       = useState(null);
   const [logoInternaFile, setLogoInternaFile]   = useState(null);
@@ -522,6 +551,11 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
   // ── User handlers ─────────────────────────────────────────────────────────
 
   const handleSaveUser = async () => {
+    const cpfDigits = (userForm.cpf || '').replace(/\D/g, '');
+    if (cpfDigits && !validateCPF(userForm.cpf)) {
+      alert('CPF inválido. Verifique os dígitos informados.');
+      return;
+    }
     try {
       if (editUser) {
         await api.put(`/superadmin/tenants/${tenant.id}/usuarios/${editUser.id}`, userForm);
@@ -536,10 +570,18 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
     }
   };
 
-  const handleDeleteUser = async (userId) => {
-    if (!window.confirm('Remover este usuário?')) return;
-    await api.delete(`/superadmin/tenants/${tenant.id}/usuarios/${userId}`);
-    refetchUsers();
+  const handleDeleteUser = (userId, userName) => {
+    setDeleteUserModal({ open: true, userId, userName });
+  };
+
+  const confirmDeleteUser = async () => {
+    try {
+      await api.delete(`/superadmin/tenants/${tenant.id}/usuarios/${deleteUserModal.userId}`);
+      setDeleteUserModal({ open: false, userId: null, userName: '' });
+      refetchUsers();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao remover usuário');
+    }
   };
 
   // ── Backup handlers ───────────────────────────────────────────────────────
@@ -615,12 +657,40 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
 
   // ── Restore handler ───────────────────────────────────────────────────────
 
-  const handleRestore = async () => {
-    if (!restoreFile) return alert('Selecione um arquivo de backup.');
-    if (!window.confirm(
-      `ATENÇÃO: Esta ação substituirá TODOS os dados do schema "${tenant.schema}".\n\nUm backup preventivo será criado automaticamente antes.\n\nContinuar?`
-    )) return;
+  const handleRestoreFileChange = async (file) => {
+    if (!file) { setRestoreFile(null); setRestoreInfo(null); setRestoreError(''); setRestoreConfirm(''); return; }
+    if (!file.name.toLowerCase().endsWith('.zip')) {
+      setRestoreFile(null); setRestoreInfo(null);
+      setRestoreError('Apenas arquivos .zip gerados por este sistema são aceitos.');
+      return;
+    }
+    setRestoreFile(file); setRestoreInfo(null); setRestoreError(''); setRestoreConfirm('');
+    setRestoreAnalyzing(true);
+    try {
+      const zip = await JSZip.loadAsync(file);
+      const metaFile = zip.file('metadata.json');
+      if (!metaFile) { setRestoreError('metadata.json não encontrado — não é um backup válido deste sistema'); setRestoreFile(null); setRestoreAnalyzing(false); return; }
+      const meta = JSON.parse(await metaFile.async('string'));
+      const tables = meta.tables || [];
+      const totalRows = tables.reduce((s, t) => s + (t.rows || 0), 0);
+      setRestoreInfo({
+        origem: meta.municipio || meta.tenant || '—',
+        data: meta.created_at || meta.date || '—',
+        tabelas: tables.length,
+        totalRows,
+        tamanho: fmtBytes(file.size),
+        tables,
+      });
+    } catch {
+      setRestoreError('Arquivo corrompido ou não é um backup válido deste sistema.');
+      setRestoreFile(null);
+    } finally {
+      setRestoreAnalyzing(false);
+    }
+  };
 
+  const handleRestore = async () => {
+    if (!restoreFile || !restoreInfo) return;
     setRestoreLoading(true);
     try {
       const form = new FormData();
@@ -629,7 +699,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       alert(`Restauração concluída!\n${data.tables_restored} tabelas · ${data.rows_restored} registros`);
-      setRestoreFile(null);
+      setRestoreFile(null); setRestoreInfo(null); setRestoreConfirm('');
       if (restoreRef.current) restoreRef.current.value = '';
     } catch (err) {
       alert(err.response?.data?.error || 'Erro ao restaurar');
@@ -659,7 +729,6 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
   };
 
   const handleRemoveLogo = async (tipo) => {
-    if (!window.confirm('Remover esta logo?')) return;
     await api.delete(`/superadmin/tenants/${tenant.id}/logos/${tipo}`);
     onUpdate();
   };
@@ -687,19 +756,30 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
     }
   };
 
-  const handleDesativar = async () => {
-    if (!window.confirm(`Desativar ${tenant.nome_municipio}? Os dados serão preservados.`)) return;
-    await api.delete(`/superadmin/tenants/${tenant.id}`);
-    onUpdate(); onClose();
+  const [desativarModal, setDesativarModal] = useState(false);
+
+  const handleDesativar = () => setDesativarModal(true);
+
+  const confirmDesativar = async () => {
+    try {
+      await api.delete(`/superadmin/tenants/${tenant.id}`);
+      onUpdate(); onClose();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao desativar');
+    }
   };
 
-  const handleExcluir = async () => {
-    const ok1 = window.confirm(`ATENÇÃO: Excluir definitivamente "${tenant.nome_municipio}"?\n\nTodos os dados, usuários e o schema do banco serão apagados permanentemente.`);
-    if (!ok1) return;
-    const confirm2 = window.prompt('Digite o nome do município para confirmar:');
-    if (confirm2 !== tenant.nome_municipio) return alert('Nome incorreto. Operação cancelada.');
-    await api.delete(`/superadmin/tenants/${tenant.id}`, { data: { confirmar_exclusao: true } });
-    onUpdate(); onClose();
+  const [excluirModal, setExcluirModal] = useState(false);
+
+  const handleExcluir = () => setExcluirModal(true);
+
+  const confirmExcluir = async () => {
+    try {
+      await api.delete(`/superadmin/tenants/${tenant.id}`, { data: { confirmar_exclusao: true } });
+      onUpdate(); onClose();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao excluir');
+    }
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -796,7 +876,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
               </div>
 
               {(newUser || editUser) && (
-                <div className="bg-blue-50 dark:bg-slate-700/50 rounded-xl p-4 space-y-3">
+                <div ref={editFormRef} className="bg-blue-50 dark:bg-slate-700/50 rounded-xl p-4 space-y-3">
                   <h4 className="font-medium text-gray-800 dark:text-white text-sm">
                     {editUser ? 'Editar Usuário' : 'Novo Usuário'}
                   </h4>
@@ -804,7 +884,6 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                     {[
                       ['Nome completo', 'nome', 'text'],
                       ['E-mail', 'email', 'email'],
-                      ['CPF', 'cpf', 'text'],
                       ['Senha', 'senha', 'password'],
                     ].map(([label, field, type]) => (
                       <div key={field}>
@@ -816,6 +895,24 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                         />
                       </div>
                     ))}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">CPF</label>
+                      <input
+                        type="text"
+                        value={userForm.cpf || ''}
+                        onChange={e => setUserForm(f => ({ ...f, cpf: formatCPF(e.target.value) }))}
+                        maxLength={14}
+                        placeholder="000.000.000-00"
+                        className={`w-full px-3 py-1.5 border rounded-lg text-sm bg-white dark:bg-slate-700 dark:text-white focus:ring-blue-500 focus:border-blue-500 ${
+                          userForm.cpf && userForm.cpf.replace(/\D/g,'').length === 11 && !validateCPF(userForm.cpf)
+                            ? 'border-red-400 dark:border-red-500'
+                            : 'border-gray-300 dark:border-slate-600'
+                        }`}
+                      />
+                      {userForm.cpf && userForm.cpf.replace(/\D/g,'').length === 11 && !validateCPF(userForm.cpf) && (
+                        <p className="text-xs text-red-500 mt-0.5">CPF inválido</p>
+                      )}
+                    </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Tipo</label>
                       <select value={userForm.tipo} onChange={e => setUserForm(f => ({ ...f, tipo: e.target.value }))}
@@ -865,11 +962,15 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                     <div className="flex items-center gap-2">
                       <Badge color={u.ativo ? 'green' : 'gray'}>{u.ativo ? 'Ativo' : 'Inativo'}</Badge>
                       <button
-                        onClick={() => { setEditUser(u); setNewUser(false); setUserForm({ nome: u.nome, email: u.email || '', cpf: u.cpf || '', senha: '', tipo: u.tipo, ativo: u.ativo }); }}
+                        onClick={() => {
+                          setEditUser(u); setNewUser(false);
+                          setUserForm({ nome: u.nome, email: u.email || '', cpf: u.cpf || '', senha: '', tipo: u.tipo, ativo: u.ativo });
+                          setTimeout(() => editFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+                        }}
                         className="p-1 text-blue-500 hover:text-blue-700">
                         <Edit2 className="h-4 w-4" />
                       </button>
-                      <button onClick={() => handleDeleteUser(u.id)} className="p-1 text-red-400 hover:text-red-600">
+                      <button onClick={() => handleDeleteUser(u.id, u.nome)} className="p-1 text-red-400 hover:text-red-600">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
@@ -877,6 +978,40 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                 ))}
                 {!usuarios.length && <p className="text-center text-gray-400 py-8 text-sm">Nenhum usuário encontrado</p>}
               </div>
+
+              {/* Modal Excluir Usuário */}
+              {deleteUserModal.open && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-sm shadow-2xl p-6 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-900/40 flex items-center justify-center shrink-0">
+                        <Trash2 className="h-5 w-5 text-red-600 dark:text-red-400" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-gray-900 dark:text-white">Remover Usuário</h3>
+                        <p className="text-sm text-gray-500">{deleteUserModal.userName}</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      O usuário será removido permanentemente. Esta ação não pode ser desfeita.
+                    </p>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setDeleteUserModal({ open: false, userId: null, userName: '' })}
+                        className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-xl text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={confirmDeleteUser}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl text-sm hover:bg-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" /> Remover
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1306,6 +1441,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
           {/* ── Restore ─────────────────────────────────────────────────────── */}
           {tab === 'restore' && (
             <div className="space-y-5">
+              {/* Aviso */}
               <div className="bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-300 dark:border-yellow-700 rounded-xl p-4">
                 <div className="flex items-start gap-3">
                   <AlertTriangle className="h-6 w-6 text-yellow-600 dark:text-yellow-400 shrink-0 mt-0.5" />
@@ -1314,39 +1450,136 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                     <p className="text-sm text-yellow-700 dark:text-yellow-400 mt-1">
                       Restaurar um backup substitui <strong>TODOS</strong> os dados atuais do schema{' '}
                       <code className="bg-yellow-100 dark:bg-yellow-800 px-1 rounded font-mono">{tenant.schema}</code>.
-                    </p>
-                    <p className="text-sm text-yellow-700 dark:text-yellow-400 mt-1">
                       Um backup preventivo será criado automaticamente antes da restauração.
+                      Somente backups no formato <strong>.zip</strong> gerados por este sistema são compatíveis.
                     </p>
                   </div>
                 </div>
               </div>
 
+              {/* Drop zone */}
               <div
-                className="border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-xl p-10 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors"
-                onClick={() => restoreRef.current?.click()}
+                className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors ${
+                  restoreAnalyzing
+                    ? 'border-blue-400 bg-blue-50/30 dark:bg-blue-900/10'
+                    : restoreInfo
+                    ? 'border-green-400 bg-green-50/30 dark:bg-green-900/10'
+                    : restoreError
+                    ? 'border-red-300 bg-red-50/30 dark:bg-red-900/10'
+                    : 'border-gray-300 dark:border-slate-600 hover:border-blue-400 hover:bg-blue-50/30 dark:hover:bg-blue-900/10'
+                }`}
+                onClick={() => !restoreAnalyzing && restoreRef.current?.click()}
                 onDragOver={e => e.preventDefault()}
-                onDrop={e => { e.preventDefault(); setRestoreFile(e.dataTransfer.files[0] || null); }}
+                onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleRestoreFileChange(f); }}
               >
-                <RotateCcw className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">
-                  Arraste o arquivo .zip ou .sql aqui ou clique para selecionar
-                </p>
-                <p className="text-xs text-gray-400 mt-1">
-                  {restoreFile ? restoreFile.name : 'Nenhum arquivo selecionado'}
-                </p>
-                <input ref={restoreRef} type="file" accept=".zip,.sql,.gz" className="hidden"
-                  onChange={e => setRestoreFile(e.target.files[0] || null)} />
+                {restoreAnalyzing ? (
+                  <>
+                    <RefreshCw className="h-10 w-10 text-blue-500 mx-auto mb-3 animate-spin" />
+                    <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">Analisando arquivo...</p>
+                  </>
+                ) : restoreInfo ? (
+                  <>
+                    <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-2" />
+                    <p className="text-sm text-green-700 dark:text-green-400 font-medium">{restoreFile?.name}</p>
+                    <p className="text-xs text-gray-400 mt-1">Clique para trocar o arquivo</p>
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+                      Clique ou arraste o arquivo de backup
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">Apenas arquivos .zip gerados por este sistema</p>
+                    {restoreError && <p className="text-xs text-red-500 mt-2 font-medium">{restoreError}</p>}
+                  </>
+                )}
+                <input ref={restoreRef} type="file" accept=".zip" className="hidden"
+                  onChange={e => { const f = e.target.files[0]; if (f) handleRestoreFileChange(f); }} />
               </div>
 
-              <button
-                onClick={handleRestore}
-                disabled={!restoreFile || restoreLoading}
-                className="w-full flex items-center justify-center gap-2 bg-red-600 text-white py-3 rounded-xl font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {restoreLoading ? <RefreshCw className="h-5 w-5 animate-spin" /> : <RotateCcw className="h-5 w-5" />}
-                {restoreLoading ? 'Restaurando...' : 'Restaurar dados'}
-              </button>
+              {/* Conteúdo do backup */}
+              {restoreInfo && (
+                <div className="border border-gray-200 dark:border-slate-700 rounded-xl overflow-hidden">
+                  <div className="bg-gray-50 dark:bg-slate-700/50 px-4 py-3 border-b border-gray-200 dark:border-slate-700">
+                    <h4 className="font-semibold text-sm text-gray-800 dark:text-white">Conteúdo do backup</h4>
+                  </div>
+                  <div className="p-4 space-y-1.5 text-sm">
+                    {[
+                      ['Origem', restoreInfo.origem],
+                      ['Data do backup', typeof restoreInfo.data === 'string' ? restoreInfo.data : fmtDate(restoreInfo.data)],
+                      ['Total de registros', restoreInfo.totalRows],
+                      ['Tabelas', restoreInfo.tabelas],
+                      ['Tamanho ZIP', restoreInfo.tamanho],
+                    ].map(([k, v]) => (
+                      <div key={k} className="flex justify-between">
+                        <span className="text-gray-500">{k}:</span>
+                        <span className="font-medium text-gray-900 dark:text-white">{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {restoreInfo.tables?.length > 0 && (
+                    <div className="border-t border-gray-200 dark:border-slate-700 max-h-40 overflow-y-auto">
+                      <table className="w-full text-xs">
+                        <thead className="bg-gray-50 dark:bg-slate-700/40">
+                          <tr>
+                            <th className="px-4 py-2 text-left font-medium text-gray-600 dark:text-gray-400">Tabela</th>
+                            <th className="px-4 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Registros</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {restoreInfo.tables.map(t => (
+                            <tr key={t.name || t.table} className="border-t border-gray-100 dark:border-slate-700">
+                              <td className="px-4 py-1.5 text-gray-700 dark:text-gray-300 font-mono">{t.name || t.table}</td>
+                              <td className="px-4 py-1.5 text-right text-gray-500">{t.rows ?? 0}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Confirmação */}
+              {restoreInfo && (
+                <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-xl p-4 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                    <p className="text-sm font-semibold text-red-700 dark:text-red-400">Atenção: ação irreversível</p>
+                  </div>
+                  <p className="text-xs text-red-600 dark:text-red-400">
+                    Esta operação irá <strong>deletar todos os dados atuais</strong> de{' '}
+                    <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded">{tenant.schema}</code> e substituí-los
+                    pelo conteúdo do backup. Um backup de segurança será criado antes do restore.
+                  </p>
+                  <p className="text-xs text-red-700 dark:text-red-400">
+                    Para confirmar, digite:{' '}
+                    <code className="bg-red-100 dark:bg-red-900/40 px-1.5 py-0.5 rounded font-bold">RESTAURAR {tenant.subdominio}</code>
+                  </p>
+                  <input
+                    value={restoreConfirm}
+                    onChange={e => setRestoreConfirm(e.target.value)}
+                    placeholder={`RESTAURAR ${tenant.subdominio}`}
+                    className="w-full px-3 py-2 border border-red-300 dark:border-red-700 rounded-lg text-sm bg-white dark:bg-slate-700 dark:text-white font-mono focus:ring-red-500 focus:border-red-500"
+                  />
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => { setRestoreFile(null); setRestoreInfo(null); setRestoreError(''); setRestoreConfirm(''); if (restoreRef.current) restoreRef.current.value = ''; }}
+                      className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-xl text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleRestore}
+                      disabled={restoreConfirm !== `RESTAURAR ${tenant.subdominio}` || restoreLoading}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl text-sm hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {restoreLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                      {restoreLoading ? 'Restaurando...' : 'Restaurar dados'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1486,6 +1719,61 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
           )}
         </div>
       </div>
+
+      {/* Modal Desativar */}
+      {desativarModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[70] p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-sm shadow-2xl p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center shrink-0">
+                <Power className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+              </div>
+              <h3 className="font-bold text-gray-900 dark:text-white">Desativar Município</h3>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              <strong>{tenant.nome_municipio}</strong> ficará inacessível, mas todos os dados serão preservados.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setDesativarModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-xl text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700">
+                Cancelar
+              </button>
+              <button onClick={confirmDesativar}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-xl text-sm hover:bg-orange-700">
+                <Power className="h-4 w-4" /> Desativar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Excluir Definitivamente */}
+      {excluirModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[70] p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-sm shadow-2xl p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-900/40 flex items-center justify-center shrink-0">
+                <Trash2 className="h-5 w-5 text-red-600 dark:text-red-400" />
+              </div>
+              <h3 className="font-bold text-gray-900 dark:text-white">Excluir Definitivamente</h3>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Excluir <strong>{tenant.nome_municipio}</strong>? Todos os dados, usuários e o schema do banco serão
+              apagados permanentemente. Esta ação não pode ser desfeita.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setExcluirModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-xl text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700">
+                Cancelar
+              </button>
+              <button onClick={confirmExcluir}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl text-sm hover:bg-red-700">
+                <Trash2 className="h-4 w-4" /> Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1686,8 +1974,6 @@ export default function AdminTenants() {
               <button
                 onClick={() => {
                   if (deleteMode === 'excluir') {
-                    const name = window.prompt('Digite o nome do município para confirmar:');
-                    if (name !== deleteTarget.nome_municipio) { alert('Nome incorreto.'); return; }
                     excluirMutation.mutate(deleteTarget.id);
                   } else {
                     desativarMutation.mutate(deleteTarget.id);
