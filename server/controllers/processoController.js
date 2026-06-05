@@ -543,11 +543,11 @@ const listProcessos = async (req, res) => {
       limit:    parseInt(limit),
       offset,
       order:    [['updated_at', 'DESC']],
-      subQuery: false,
+      distinct: true,
       include: [
-        { model: User,      as: 'usuarioAtual', attributes: ['id', 'nome'] },
+        { model: User, as: 'usuarioAtual', attributes: ['id', 'nome'], required: false },
         setorInclude,
-        { model: User,      as: 'criadoPor',    attributes: ['id', 'nome'] },
+        { model: User, as: 'criadoPor',    attributes: ['id', 'nome'], required: false },
         tramitacaoInclude,
       ],
     });
