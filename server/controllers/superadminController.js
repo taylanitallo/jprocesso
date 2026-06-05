@@ -299,14 +299,21 @@ const listBackups = async (req, res) => {
     let backups = [];
     let storageUsed = 0;
     try {
-      [backups, storageUsed] = await Promise.all([
-        masterDb.query(
-          `SELECT * FROM public.backup_jobs WHERE tenant_id = :tenantId ORDER BY criado_em DESC`,
-          { replacements: { tenantId: tenant.id }, type: QueryTypes.SELECT }
-        ),
-        backupService.getStorageUsed(tenant.subdominio)
-      ]);
+      backups = await masterDb.query(
+        `SELECT * FROM public.backup_jobs WHERE tenant_id = :tenantId ORDER BY criado_em DESC`,
+        { replacements: { tenantId: tenant.id }, type: QueryTypes.SELECT }
+      );
+      // Busca storage em segundo plano — não bloqueia o response
+      backupService.getStorageUsed(tenant.subdominio)
+        .then(mb => { /* ignorado — frontend atualiza no próximo refresh */ })
+        .catch(() => {});
     } catch { /* tabela pode não existir ainda */ }
+
+    // Calcular storage a partir dos tamanhos registrados em backup_jobs
+    storageUsed = parseFloat(
+      (backups.filter(b => b.status === 'concluido')
+        .reduce((s, b) => s + (b.tamanho_bytes || 0), 0) / (1024 * 1024)).toFixed(2)
+    );
 
     const concluidos = backups.filter(b => b.status === 'concluido').length;
     const falhas     = backups.filter(b => b.status === 'falhou').length;

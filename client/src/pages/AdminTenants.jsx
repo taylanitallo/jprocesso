@@ -453,26 +453,29 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
   const [modulosHabilitados, setModulosHabilitados] = useState(tenant.configuracoes?.modulos_habilitados || []);
   const [saveLoading, setSaveLoading] = useState(false);
 
+  const Q_OPTS = { retry: false, refetchOnWindowFocus: false };
+
   // Data fetching
   const { data: usersData,   refetch: refetchUsers   } = useQuery(
     ['sa-users', tenant.id],
     () => api.get(`/superadmin/tenants/${tenant.id}/usuarios`).then(r => r.data),
-    { enabled: tab === 'usuarios', staleTime: 30000 }
+    { ...Q_OPTS, enabled: tab === 'usuarios', staleTime: 30000 }
   );
   const { data: logsData,    refetch: refetchLogs    } = useQuery(
     ['sa-logs', tenant.id, logCategoria, logBusca],
     () => api.get(`/superadmin/tenants/${tenant.id}/logs`, { params: { categoria: logCategoria || undefined, busca: logBusca || undefined } }).then(r => r.data),
-    { enabled: tab === 'logs', staleTime: 15000 }
+    { ...Q_OPTS, enabled: tab === 'logs', staleTime: 15000 }
   );
   const { data: backupsData, refetch: refetchBackups } = useQuery(
     ['sa-backups', tenant.id],
     () => api.get(`/superadmin/tenants/${tenant.id}/backups`).then(r => r.data),
-    { enabled: tab === 'backup', staleTime: 15000 }
+    { ...Q_OPTS, enabled: tab === 'backup', staleTime: 15000 }
   );
   const { data: scheduleData, refetch: refetchSchedule } = useQuery(
     ['sa-schedule', tenant.id],
     () => api.get(`/superadmin/tenants/${tenant.id}/schedule`).then(r => r.data),
     {
+      ...Q_OPTS,
       enabled: tab === 'backup',
       staleTime: 30000,
       onSuccess: (d) => {
@@ -1241,7 +1244,7 @@ export default function AdminTenants() {
   const { data: tenantsData, refetch, isLoading } = useQuery(
     'sa-tenants',
     () => api.get('/superadmin/tenants').then(r => r.data),
-    { staleTime: 30000 }
+    { staleTime: 30000, retry: false, refetchOnWindowFocus: false }
   );
 
   const ativarMutation = useMutation(
