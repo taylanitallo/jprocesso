@@ -163,7 +163,7 @@ function TenantCard({ tenant, onGerenciar, onDelete, onAtivar }) {
 
       {/* Acessar */}
       <a
-        href={`https://${tenant.subdominio}.jeossistemas.com/${tenant.subdominio}`}
+        href={`https://processo.jeossistemas.com/${tenant.subdominio}`}
         target="_blank"
         rel="noopener noreferrer"
         className="flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-xl text-sm font-medium transition-colors"
@@ -457,24 +457,24 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
   const { data: usersData,   refetch: refetchUsers   } = useQuery(
     ['sa-users', tenant.id],
     () => api.get(`/superadmin/tenants/${tenant.id}/usuarios`).then(r => r.data),
-    { enabled: tab === 'usuarios', staleTime: 0 }
+    { enabled: tab === 'usuarios', staleTime: 30000 }
   );
   const { data: logsData,    refetch: refetchLogs    } = useQuery(
     ['sa-logs', tenant.id, logCategoria, logBusca],
     () => api.get(`/superadmin/tenants/${tenant.id}/logs`, { params: { categoria: logCategoria || undefined, busca: logBusca || undefined } }).then(r => r.data),
-    { enabled: tab === 'logs', staleTime: 0 }
+    { enabled: tab === 'logs', staleTime: 15000 }
   );
   const { data: backupsData, refetch: refetchBackups } = useQuery(
     ['sa-backups', tenant.id],
     () => api.get(`/superadmin/tenants/${tenant.id}/backups`).then(r => r.data),
-    { enabled: tab === 'backup', staleTime: 0 }
+    { enabled: tab === 'backup', staleTime: 15000 }
   );
   const { data: scheduleData, refetch: refetchSchedule } = useQuery(
     ['sa-schedule', tenant.id],
     () => api.get(`/superadmin/tenants/${tenant.id}/schedule`).then(r => r.data),
     {
       enabled: tab === 'backup',
-      staleTime: 0,
+      staleTime: 30000,
       onSuccess: (d) => {
         if (d?.schedule) setScheduleForm({
           ativo:         d.schedule.ativo ?? false,

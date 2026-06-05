@@ -1,33 +1,13 @@
-/**
- * superadminController.js
- * Controlador do Painel SuperAdmin — gestão global de tenants.
- *
- * Todas as rotas deste controller exigem requireSuperAdmin (token com isAdmin: true).
- */
-
-const Tenant  = require('../models/Tenant');
-const { masterDb } = require('../config/database');
-const bcrypt  = require('bcryptjs');
-const { Pool } = require('pg');
+const Tenant        = require('../models/Tenant');
+const { masterDb }  = require('../config/database');
+const { QueryTypes } = require('sequelize');
+const bcrypt        = require('bcryptjs');
 const backupService = require('../services/backupService');
 const storageService = require('../services/storageService');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function pgPool() {
-  const isSupabase = (process.env.DB_HOST || '').includes('supabase');
-  const isRailway  = (process.env.DB_HOST || '').includes('rlwy.net');
-  return new Pool({
-    host:     process.env.DB_HOST,
-    port:     process.env.DB_PORT,
-    database: process.env.DB_NAME,
-    user:     process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    ssl: (isSupabase || isRailway)
-      ? { require: true, rejectUnauthorized: false }
-      : false,
-  });
-}
+const qi = () => masterDb.getQueryInterface();
 
 async function getTenantOrFail(id, res) {
   const tenant = await Tenant.findByPk(id);
@@ -44,18 +24,16 @@ const listTenants = async (req, res) => {
       attributes: ['id','nome_municipio','cnpj','subdominio','schema','cidade','estado','ativo','configuracoes','created_at']
     });
 
-    // Contar backups das últimas 24h por tenant
     let backups24hMap = {};
     let total24h = 0;
     try {
-      const [b24rows] = await masterDb.query(
+      const rows = await masterDb.query(
         `SELECT slug, COUNT(*) AS total FROM public.backup_jobs
          WHERE criado_em >= NOW() - INTERVAL '24 hours' AND status = 'concluido'
          GROUP BY slug`,
-        { type: masterDb.QueryTypes.SELECT }
+        { type: QueryTypes.SELECT }
       );
-      const rows24h = Array.isArray(b24rows) ? b24rows : (b24rows ? [b24rows] : []);
-      rows24h.forEach(r => {
+      rows.forEach(r => {
         backups24hMap[r.slug] = parseInt(r.total) || 0;
         total24h += parseInt(r.total) || 0;
       });
@@ -71,9 +49,9 @@ const listTenants = async (req, res) => {
       tenants: tenantsJson,
       total: tenantsJson.length,
       stats: {
-        total:     tenantsJson.length,
-        ativos:    tenantsJson.filter(t => t.ativo).length,
-        inativos:  tenantsJson.filter(t => !t.ativo).length,
+        total:      tenantsJson.length,
+        ativos:     tenantsJson.filter(t => t.ativo).length,
+        inativos:   tenantsJson.filter(t => !t.ativo).length,
         backups24h: total24h
       }
     });
@@ -90,11 +68,11 @@ const getTenant = async (req, res) => {
 
     let ultimoBackup = null;
     try {
-      const [rows] = await masterDb.query(
+      const rows = await masterDb.query(
         `SELECT * FROM public.backup_jobs WHERE slug = :slug AND status = 'concluido' ORDER BY criado_em DESC LIMIT 1`,
-        { replacements: { slug: tenant.subdominio }, type: masterDb.QueryTypes.SELECT }
+        { replacements: { slug: tenant.subdominio }, type: QueryTypes.SELECT }
       );
-      ultimoBackup = Array.isArray(rows) ? rows[0] : (rows || null);
+      ultimoBackup = rows[0] || null;
     } catch { /* tabela pode não existir */ }
 
     res.json({ success: true, tenant, ultimoBackup });
@@ -105,26 +83,23 @@ const getTenant = async (req, res) => {
 };
 
 const createTenant = async (req, res) => {
-  // Delega para o tenantController que já tem toda a lógica de criação de schema
   const tenantController = require('./tenantController');
   return tenantController.createTenant(req, res);
 };
 
 const updateTenant = async (req, res) => {
   try {
-    const { id } = req.params;
     const { nome, cnpj, cidade, estado, ativo, configuracoes } = req.body;
-
-    const tenant = await getTenantOrFail(id, res);
+    const tenant = await getTenantOrFail(req.params.id, res);
     if (!tenant) return;
 
     await tenant.update({
       nome_municipio: nome ?? tenant.nome_municipio,
-      cnpj: cnpj ?? tenant.cnpj,
-      cidade: cidade ?? tenant.cidade,
-      estado: estado ?? tenant.estado,
-      ativo: ativo !== undefined ? ativo : tenant.ativo,
-      configuracoes: configuracoes !== undefined ? configuracoes : tenant.configuracoes
+      cnpj:           cnpj ?? tenant.cnpj,
+      cidade:         cidade ?? tenant.cidade,
+      estado:         estado ?? tenant.estado,
+      ativo:          ativo !== undefined ? ativo : tenant.ativo,
+      configuracoes:  configuracoes !== undefined ? configuracoes : tenant.configuracoes
     });
 
     res.json({ success: true, tenant });
@@ -142,29 +117,27 @@ const deleteTenant = async (req, res) => {
 // ─── Usuários do tenant ───────────────────────────────────────────────────────
 
 const listTenantUsers = async (req, res) => {
-  const pool = pgPool();
   try {
     const tenant = await getTenantOrFail(req.params.id, res);
     if (!tenant) return;
 
-    const result = await pool.query(
+    const schemaQ = qi().quoteIdentifier(tenant.schema);
+    const rows = await masterDb.query(
       `SELECT id, nome, email, cpf, tipo, ativo, created_at
-       FROM "${tenant.schema}".usuarios
+       FROM ${schemaQ}.usuarios
        WHERE tipo IN ('admin','gestor','operacional')
-       ORDER BY nome`
+       ORDER BY nome`,
+      { type: QueryTypes.SELECT }
     );
 
-    res.json({ success: true, usuarios: result.rows });
+    res.json({ success: true, usuarios: rows });
   } catch (error) {
     console.error('Erro ao listar usuários:', error);
     res.status(500).json({ error: 'Erro ao listar usuários' });
-  } finally {
-    await pool.end().catch(() => {});
   }
 };
 
 const createTenantUser = async (req, res) => {
-  const pool = pgPool();
   try {
     const tenant = await getTenantOrFail(req.params.id, res);
     if (!tenant) return;
@@ -175,24 +148,25 @@ const createTenantUser = async (req, res) => {
     }
 
     const senhaHash = await bcrypt.hash(senha, 10);
-    const result = await pool.query(
-      `INSERT INTO "${tenant.schema}".usuarios (nome, email, cpf, senha, tipo, ativo)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, nome, email, tipo, ativo`,
-      [nome, email || null, cpf, senhaHash, tipo, ativo]
+    const schemaQ = qi().quoteIdentifier(tenant.schema);
+    const rows = await masterDb.query(
+      `INSERT INTO ${schemaQ}.usuarios (nome, email, cpf, senha, tipo, ativo)
+       VALUES (:nome, :email, :cpf, :senha, :tipo, :ativo)
+       RETURNING id, nome, email, tipo, ativo`,
+      { replacements: { nome, email: email || null, cpf, senha: senhaHash, tipo, ativo }, type: QueryTypes.SELECT }
     );
 
-    res.status(201).json({ success: true, usuario: result.rows[0] });
+    res.status(201).json({ success: true, usuario: rows[0] });
   } catch (error) {
     console.error('Erro ao criar usuário:', error);
-    if (error.code === '23505') return res.status(400).json({ error: 'CPF ou e-mail já cadastrado' });
+    if (error.original?.code === '23505' || error.parent?.code === '23505') {
+      return res.status(400).json({ error: 'CPF ou e-mail já cadastrado' });
+    }
     res.status(500).json({ error: 'Erro ao criar usuário' });
-  } finally {
-    await pool.end().catch(() => {});
   }
 };
 
 const updateTenantUser = async (req, res) => {
-  const pool = pgPool();
   try {
     const tenant = await getTenantOrFail(req.params.id, res);
     if (!tenant) return;
@@ -203,53 +177,59 @@ const updateTenantUser = async (req, res) => {
     let senhaHash = null;
     if (senha) senhaHash = await bcrypt.hash(senha, 10);
 
-    await pool.query(
-      `UPDATE "${tenant.schema}".usuarios SET
-         nome  = COALESCE($1, nome),
-         email = COALESCE($2, email),
-         cpf   = COALESCE($3, cpf),
-         senha = CASE WHEN $4 IS NOT NULL THEN $4 ELSE senha END,
-         tipo  = COALESCE($5, tipo),
-         ativo = COALESCE($6, ativo),
+    const schemaQ = qi().quoteIdentifier(tenant.schema);
+    await masterDb.query(
+      `UPDATE ${schemaQ}.usuarios SET
+         nome       = COALESCE(:nome, nome),
+         email      = COALESCE(:email, email),
+         cpf        = COALESCE(:cpf, cpf),
+         senha      = CASE WHEN :senha IS NOT NULL THEN :senha ELSE senha END,
+         tipo       = COALESCE(:tipo, tipo),
+         ativo      = COALESCE(:ativo, ativo),
          updated_at = NOW()
-       WHERE id = $7`,
-      [nome || null, email || null, cpf || null, senhaHash, tipo || null,
-       ativo !== undefined ? ativo : null, userId]
+       WHERE id = :userId`,
+      {
+        replacements: {
+          nome:   nome   || null,
+          email:  email  || null,
+          cpf:    cpf    || null,
+          senha:  senhaHash,
+          tipo:   tipo   || null,
+          ativo:  ativo !== undefined ? ativo : null,
+          userId
+        },
+        type: QueryTypes.UPDATE
+      }
     );
 
     res.json({ success: true, message: 'Usuário atualizado' });
   } catch (error) {
     console.error('Erro ao atualizar usuário:', error);
     res.status(500).json({ error: 'Erro ao atualizar usuário' });
-  } finally {
-    await pool.end().catch(() => {});
   }
 };
 
 const deleteTenantUser = async (req, res) => {
-  const pool = pgPool();
   try {
     const tenant = await getTenantOrFail(req.params.id, res);
     if (!tenant) return;
 
-    await pool.query(
-      `DELETE FROM "${tenant.schema}".usuarios WHERE id = $1`,
-      [req.params.userId]
+    const schemaQ = qi().quoteIdentifier(tenant.schema);
+    await masterDb.query(
+      `DELETE FROM ${schemaQ}.usuarios WHERE id = :userId`,
+      { replacements: { userId: req.params.userId }, type: QueryTypes.DELETE }
     );
 
     res.json({ success: true, message: 'Usuário removido' });
   } catch (error) {
     console.error('Erro ao excluir usuário:', error);
     res.status(500).json({ error: 'Erro ao excluir usuário' });
-  } finally {
-    await pool.end().catch(() => {});
   }
 };
 
 // ─── Logs do tenant ───────────────────────────────────────────────────────────
 
 const listTenantLogs = async (req, res) => {
-  const pool = pgPool();
   try {
     const tenant = await getTenantOrFail(req.params.id, res);
     if (!tenant) return;
@@ -258,47 +238,54 @@ const listTenantLogs = async (req, res) => {
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
     const conditions = [];
-    const params = [];
+    const replacements = { limit: parseInt(limit), offset };
 
-    if (categoria) { params.push(categoria); conditions.push(`l.modulo = $${params.length}`); }
-    if (busca) {
-      params.push(`%${busca}%`);
-      conditions.push(`(l.acao ILIKE $${params.length} OR l.descricao ILIKE $${params.length})`);
+    if (categoria) {
+      conditions.push('l.modulo = :categoria');
+      replacements.categoria = categoria;
     }
-    if (data_inicio) { params.push(data_inicio); conditions.push(`l.created_at >= $${params.length}`); }
-    if (data_fim) { params.push(data_fim); conditions.push(`l.created_at <= $${params.length}`); }
+    if (busca) {
+      conditions.push('(l.acao ILIKE :busca OR l.descricao ILIKE :busca)');
+      replacements.busca = `%${busca}%`;
+    }
+    if (data_inicio) {
+      conditions.push('l.created_at >= :dataInicio');
+      replacements.dataInicio = data_inicio;
+    }
+    if (data_fim) {
+      conditions.push('l.created_at <= :dataFim');
+      replacements.dataFim = data_fim;
+    }
 
-    const where = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+    const where    = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+    const schemaQ  = qi().quoteIdentifier(tenant.schema);
 
-    const queryParams = [...params, parseInt(limit), offset];
-
-    const result = await pool.query(
-      `SELECT l.*, u.nome AS usuario_nome
-       FROM "${tenant.schema}".logs l
-       LEFT JOIN "${tenant.schema}".usuarios u ON l.usuario_id = u.id
-       ${where}
-       ORDER BY l.created_at DESC
-       LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
-      queryParams
-    );
-
-    const totalResult = await pool.query(
-      `SELECT COUNT(*) FROM "${tenant.schema}".logs l ${where}`,
-      params
-    );
+    const [rows, countRows] = await Promise.all([
+      masterDb.query(
+        `SELECT l.*, u.nome AS usuario_nome
+         FROM ${schemaQ}.logs l
+         LEFT JOIN ${schemaQ}.usuarios u ON l.usuario_id = u.id
+         ${where}
+         ORDER BY l.created_at DESC
+         LIMIT :limit OFFSET :offset`,
+        { replacements, type: QueryTypes.SELECT }
+      ),
+      masterDb.query(
+        `SELECT COUNT(*) AS total FROM ${schemaQ}.logs l ${where}`,
+        { replacements, type: QueryTypes.SELECT }
+      )
+    ]);
 
     res.json({
       success: true,
-      logs: result.rows,
-      total: parseInt(totalResult.rows[0].count),
-      page: parseInt(page),
+      logs:  rows,
+      total: parseInt(countRows[0]?.total || 0),
+      page:  parseInt(page),
       limit: parseInt(limit)
     });
   } catch (error) {
     console.error('Erro ao listar logs:', error);
     res.status(500).json({ error: 'Erro ao listar logs' });
-  } finally {
-    await pool.end().catch(() => {});
   }
 };
 
@@ -312,12 +299,13 @@ const listBackups = async (req, res) => {
     let backups = [];
     let storageUsed = 0;
     try {
-      const [rows] = await masterDb.query(
-        `SELECT * FROM public.backup_jobs WHERE tenant_id = :tenantId ORDER BY criado_em DESC`,
-        { replacements: { tenantId: tenant.id }, type: masterDb.QueryTypes.SELECT }
-      );
-      backups = Array.isArray(rows) ? rows : (rows ? [rows] : []);
-      storageUsed = await backupService.getStorageUsed(tenant.subdominio);
+      [backups, storageUsed] = await Promise.all([
+        masterDb.query(
+          `SELECT * FROM public.backup_jobs WHERE tenant_id = :tenantId ORDER BY criado_em DESC`,
+          { replacements: { tenantId: tenant.id }, type: QueryTypes.SELECT }
+        ),
+        backupService.getStorageUsed(tenant.subdominio)
+      ]);
     } catch { /* tabela pode não existir ainda */ }
 
     const concluidos = backups.filter(b => b.status === 'concluido').length;
@@ -327,12 +315,7 @@ const listBackups = async (req, res) => {
     res.json({
       success: true,
       backups,
-      stats: {
-        concluidos,
-        falhas,
-        storageUsed,
-        ultimoBackup: ultimo?.concluido_em || null
-      }
+      stats: { concluidos, falhas, storageUsed, ultimoBackup: ultimo?.concluido_em || null }
     });
   } catch (error) {
     console.error('Erro ao listar backups:', error);
@@ -345,14 +328,12 @@ const createBackup = async (req, res) => {
     const tenant = await getTenantOrFail(req.params.id, res);
     if (!tenant) return;
 
-    const iniciadoPor = req.user?.email || req.user?.nome || 'admin';
-
     const job = await backupService.createBackup({
-      schema: tenant.schema,
-      slug: tenant.subdominio,
-      tipo: 'manual',
-      tenantId: tenant.id,
-      iniciadoPor
+      schema:      tenant.schema,
+      slug:        tenant.subdominio,
+      tipo:        'manual',
+      tenantId:    tenant.id,
+      iniciadoPor: req.user?.email || req.user?.nome || 'admin'
     });
 
     res.json({ success: true, backup: job });
@@ -367,19 +348,14 @@ const downloadBackup = async (req, res) => {
     const tenant = await getTenantOrFail(req.params.id, res);
     if (!tenant) return;
 
-    const { backupId } = req.params;
-
-    const [rows] = await masterDb.query(
+    const rows = await masterDb.query(
       `SELECT storage_path FROM public.backup_jobs WHERE id = :backupId AND tenant_id = :tenantId`,
-      { replacements: { backupId, tenantId: tenant.id }, type: masterDb.QueryTypes.SELECT }
+      { replacements: { backupId: req.params.backupId, tenantId: tenant.id }, type: QueryTypes.SELECT }
     );
 
-    const job = Array.isArray(rows) ? rows[0] : (rows || null);
-    if (!job?.storage_path) {
-      return res.status(404).json({ error: 'Backup não encontrado' });
-    }
+    if (!rows[0]?.storage_path) return res.status(404).json({ error: 'Backup não encontrado' });
 
-    const signedUrl = await backupService.downloadBackup(job.storage_path);
+    const signedUrl = await backupService.downloadBackup(rows[0].storage_path);
     res.json({ success: true, url: signedUrl });
   } catch (error) {
     console.error('Erro ao gerar download:', error);
@@ -392,23 +368,17 @@ const deleteBackup = async (req, res) => {
     const tenant = await getTenantOrFail(req.params.id, res);
     if (!tenant) return;
 
-    const { backupId } = req.params;
-
-    const [rows] = await masterDb.query(
+    const rows = await masterDb.query(
       `SELECT storage_path FROM public.backup_jobs WHERE id = :backupId AND tenant_id = :tenantId`,
-      { replacements: { backupId, tenantId: tenant.id }, type: masterDb.QueryTypes.SELECT }
+      { replacements: { backupId: req.params.backupId, tenantId: tenant.id }, type: QueryTypes.SELECT }
     );
 
-    const job = Array.isArray(rows) ? rows[0] : (rows || null);
-    if (!job) return res.status(404).json({ error: 'Backup não encontrado' });
-
-    if (job.storage_path) {
-      await backupService.deleteBackup(job.storage_path).catch(() => {});
-    }
+    if (!rows[0]) return res.status(404).json({ error: 'Backup não encontrado' });
+    if (rows[0].storage_path) await backupService.deleteBackup(rows[0].storage_path).catch(() => {});
 
     await masterDb.query(
       `DELETE FROM public.backup_jobs WHERE id = :backupId`,
-      { replacements: { backupId }, type: masterDb.QueryTypes.DELETE }
+      { replacements: { backupId: req.params.backupId }, type: QueryTypes.DELETE }
     );
 
     res.json({ success: true, message: 'Backup removido' });
@@ -425,7 +395,7 @@ const clearBackupHistory = async (req, res) => {
 
     await masterDb.query(
       `DELETE FROM public.backup_jobs WHERE tenant_id = :tenantId`,
-      { replacements: { tenantId: tenant.id }, type: masterDb.QueryTypes.DELETE }
+      { replacements: { tenantId: tenant.id }, type: QueryTypes.DELETE }
     );
 
     res.json({ success: true, message: 'Histórico de backups limpo' });
@@ -444,11 +414,11 @@ const getSchedule = async (req, res) => {
 
     let schedule = null;
     try {
-      const [rows] = await masterDb.query(
+      const rows = await masterDb.query(
         `SELECT * FROM public.backup_schedules WHERE tenant_id = :tenantId`,
-        { replacements: { tenantId: tenant.id }, type: masterDb.QueryTypes.SELECT }
+        { replacements: { tenantId: tenant.id }, type: QueryTypes.SELECT }
       );
-      schedule = Array.isArray(rows) ? rows[0] : (rows || null);
+      schedule = rows[0] || null;
     } catch { /* tabela pode não existir */ }
 
     res.json({ success: true, schedule });
@@ -465,34 +435,33 @@ const updateSchedule = async (req, res) => {
 
     const { ativo = false, frequencia = 'diario', hora = 2, minuto = 0, retencao_dias = 7 } = req.body;
 
-    const agora = new Date();
-    const proximo = new Date(agora);
+    const proximo = new Date();
     proximo.setHours(parseInt(hora), parseInt(minuto), 0, 0);
-    if (proximo <= agora) proximo.setDate(proximo.getDate() + 1);
+    if (proximo <= new Date()) proximo.setDate(proximo.getDate() + 1);
 
     await masterDb.query(
       `INSERT INTO public.backup_schedules
          (tenant_id, ativo, frequencia, hora, minuto, retencao_dias, proximo_backup)
        VALUES (:tenantId, :ativo, :frequencia, :hora, :minuto, :retencaoDias, :proximo)
        ON CONFLICT (tenant_id) DO UPDATE SET
-         ativo = EXCLUDED.ativo,
-         frequencia = EXCLUDED.frequencia,
-         hora = EXCLUDED.hora,
-         minuto = EXCLUDED.minuto,
-         retencao_dias = EXCLUDED.retencao_dias,
+         ativo          = EXCLUDED.ativo,
+         frequencia     = EXCLUDED.frequencia,
+         hora           = EXCLUDED.hora,
+         minuto         = EXCLUDED.minuto,
+         retencao_dias  = EXCLUDED.retencao_dias,
          proximo_backup = EXCLUDED.proximo_backup,
-         atualizado_em = NOW()`,
+         atualizado_em  = NOW()`,
       {
         replacements: {
           tenantId: tenant.id,
-          ativo: ativo !== undefined ? ativo : false,
+          ativo:        ativo !== undefined ? ativo : false,
           frequencia,
-          hora: parseInt(hora),
-          minuto: parseInt(minuto),
+          hora:         parseInt(hora),
+          minuto:       parseInt(minuto),
           retencaoDias: parseInt(retencao_dias),
-          proximo: proximo.toISOString()
+          proximo:      proximo.toISOString()
         },
-        type: masterDb.QueryTypes.UPSERT
+        type: QueryTypes.UPSERT
       }
     );
 
@@ -509,10 +478,10 @@ const runBackupNow = async (req, res) => {
     if (!tenant) return;
 
     const job = await backupService.createBackup({
-      schema: tenant.schema,
-      slug: tenant.subdominio,
-      tipo: 'automatico',
-      tenantId: tenant.id,
+      schema:      tenant.schema,
+      slug:        tenant.subdominio,
+      tipo:        'automatico',
+      tenantId:    tenant.id,
       iniciadoPor: 'scheduler'
     });
 
@@ -520,7 +489,7 @@ const runBackupNow = async (req, res) => {
       `UPDATE public.backup_schedules
        SET ultimo_backup_automatico = NOW(), ultimo_status = 'concluido'
        WHERE tenant_id = :tenantId`,
-      { replacements: { tenantId: tenant.id }, type: masterDb.QueryTypes.UPDATE }
+      { replacements: { tenantId: tenant.id }, type: QueryTypes.UPDATE }
     ).catch(() => {});
 
     res.json({ success: true, backup: job });
@@ -533,46 +502,31 @@ const runBackupNow = async (req, res) => {
 // ─── Restore ──────────────────────────────────────────────────────────────────
 
 const restoreTenant = async (req, res) => {
-  const pool = pgPool();
   try {
     const tenant = await getTenantOrFail(req.params.id, res);
     if (!tenant) return;
 
-    if (!req.file) {
-      return res.status(400).json({ error: 'Arquivo de backup não enviado' });
-    }
+    if (!req.file) return res.status(400).json({ error: 'Arquivo de backup não enviado' });
 
-    // 1. Criar backup pre-restore (não bloqueia se falhar)
     const iniciadoPor = req.user?.email || 'admin';
+
+    // 1. Backup de segurança pré-restore
     await backupService.createBackup({
-      schema: tenant.schema,
-      slug: tenant.subdominio,
-      tipo: 'pre-restore',
-      tenantId: tenant.id,
-      iniciadoPor
+      schema: tenant.schema, slug: tenant.subdominio,
+      tipo: 'pre-restore', tenantId: tenant.id, iniciadoPor
     }).catch(err => console.warn('Pre-restore backup falhou:', err.message));
 
-    // 2. Extrair SQL do arquivo enviado
-    let sqlContent = '';
+    // 2. Extrair SQL
     const buf = req.file.buffer;
-
-    // Tentar descompactar zip usando archiver-compatible approach
-    try {
-      // Verificar se começa com PK (zip)
-      if (buf[0] === 0x50 && buf[1] === 0x4B) {
-        // É um zip — usar JSZip-like via buffer parsing manual não é simples;
-        // vamos tentar via archiver extract stream approach simplificado
-        // Fallback: tentar ler como texto UTF-8
-        const text = buf.toString('utf8');
-        if (text.includes('INSERT') || text.includes('CREATE')) {
-          sqlContent = text;
-        } else {
-          return res.status(400).json({ error: 'Arquivo ZIP detectado mas não foi possível extrair SQL sem adm-zip. Envie o .sql diretamente.' });
-        }
+    let sqlContent = '';
+    if (buf[0] === 0x50 && buf[1] === 0x4B) {
+      const text = buf.toString('utf8');
+      if (text.includes('INSERT') || text.includes('CREATE')) {
+        sqlContent = text;
       } else {
-        sqlContent = buf.toString('utf8');
+        return res.status(400).json({ error: 'Arquivo ZIP detectado mas não foi possível extrair SQL. Envie o .sql diretamente.' });
       }
-    } catch {
+    } else {
       sqlContent = buf.toString('utf8');
     }
 
@@ -581,40 +535,32 @@ const restoreTenant = async (req, res) => {
     }
 
     // 3. Recriar schema
-    await pool.query(`DROP SCHEMA IF EXISTS "${tenant.schema}" CASCADE`);
-    await pool.query(`CREATE SCHEMA "${tenant.schema}"`);
+    const schemaQ = qi().quoteIdentifier(tenant.schema);
+    await masterDb.query(`DROP SCHEMA IF EXISTS ${schemaQ} CASCADE`, { type: QueryTypes.RAW });
+    await masterDb.query(`CREATE SCHEMA ${schemaQ}`, { type: QueryTypes.RAW });
 
-    // 4. Executar SQL statement a statement
+    // 4. Executar statements
     const statements = sqlContent
       .split(/;\s*(?:\n|$)/)
       .map(s => s.trim())
       .filter(s => s.length > 5 && !s.startsWith('--'));
 
     let tablesRestored = 0;
-    let rowsRestored = 0;
+    let rowsRestored   = 0;
 
     for (const stmt of statements) {
       try {
-        await pool.query(stmt);
-        const upper = stmt.toUpperCase();
-        if (upper.startsWith('INSERT')) rowsRestored++;
-        if (upper.startsWith('CREATE TABLE')) tablesRestored++;
-      } catch {
-        // Ignora erros individuais
-      }
+        await masterDb.query(stmt, { type: QueryTypes.RAW });
+        const up = stmt.toUpperCase();
+        if (up.startsWith('INSERT'))       rowsRestored++;
+        if (up.startsWith('CREATE TABLE')) tablesRestored++;
+      } catch { /* ignora erros individuais */ }
     }
 
-    res.json({
-      success: true,
-      message: 'Restauração concluída com sucesso',
-      tables_restored: tablesRestored,
-      rows_restored: rowsRestored
-    });
+    res.json({ success: true, message: 'Restauração concluída', tables_restored: tablesRestored, rows_restored: rowsRestored });
   } catch (error) {
     console.error('Erro ao restaurar:', error);
     res.status(500).json({ error: `Erro ao restaurar: ${error.message}` });
-  } finally {
-    await pool.end().catch(() => {});
   }
 };
 
@@ -625,39 +571,23 @@ const updateLogos = async (req, res) => {
     const tenant = await getTenantOrFail(req.params.id, res);
     if (!tenant) return;
 
-    const { tipo } = req.params; // 'login' | 'interna'
-    if (!['login', 'interna'].includes(tipo)) {
-      return res.status(400).json({ error: 'Tipo inválido. Use "login" ou "interna"' });
-    }
+    const { tipo } = req.params;
+    if (!['login', 'interna'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido. Use "login" ou "interna"' });
+    if (!req.file) return res.status(400).json({ error: 'Arquivo de logo não enviado' });
 
-    if (!req.file) {
-      return res.status(400).json({ error: 'Arquivo de logo não enviado' });
-    }
-
-    const ext = (req.file.originalname.split('.').pop() || 'png').toLowerCase();
+    const ext         = (req.file.originalname.split('.').pop() || 'png').toLowerCase();
     const storagePath = `${tenant.subdominio}/logos/logo_${tipo}.${ext}`;
 
-    // Upload usando jprocesso-documentos (bucket de documentos padrão)
-    await storageService.uploadArquivo({
-      buffer: req.file.buffer,
-      path: storagePath,
-      contentType: req.file.mimetype
-    });
+    await storageService.uploadArquivo({ buffer: req.file.buffer, path: storagePath, contentType: req.file.mimetype });
 
-    // Montar URL pública
     const { createClient } = require('@supabase/supabase-js');
-    const supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY,
-      { auth: { persistSession: false } }
-    );
-    const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'jprocesso-documentos';
-    const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(storagePath);
-    const logoUrl = urlData?.publicUrl || storagePath;
+    const supabase  = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+    const bucket    = process.env.SUPABASE_STORAGE_BUCKET || 'jprocesso-documentos';
+    const { data }  = supabase.storage.from(bucket).getPublicUrl(storagePath);
+    const logoUrl   = data?.publicUrl || storagePath;
 
-    const campo = tipo === 'login' ? 'logo_login_url' : 'logo_interna_url';
-    const novoConf = { ...(tenant.configuracoes || {}), [campo]: logoUrl };
-    await tenant.update({ configuracoes: novoConf });
+    const campo   = tipo === 'login' ? 'logo_login_url' : 'logo_interna_url';
+    await tenant.update({ configuracoes: { ...(tenant.configuracoes || {}), [campo]: logoUrl } });
 
     res.json({ success: true, url: logoUrl, campo });
   } catch (error) {
@@ -672,29 +602,20 @@ const deleteLogo = async (req, res) => {
     if (!tenant) return;
 
     const { tipo } = req.params;
-    if (!['login', 'interna'].includes(tipo)) {
-      return res.status(400).json({ error: 'Tipo inválido' });
-    }
+    if (!['login', 'interna'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
 
-    const campo = tipo === 'login' ? 'logo_login_url' : 'logo_interna_url';
+    const campo    = tipo === 'login' ? 'logo_login_url' : 'logo_interna_url';
     const urlAtual = tenant.configuracoes?.[campo];
 
     if (urlAtual) {
       const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'jprocesso-documentos';
-      let storagePath = null;
-      if (urlAtual.includes(`/object/public/${bucket}/`)) {
-        storagePath = urlAtual.split(`/object/public/${bucket}/`)[1];
-      } else {
-        storagePath = `${tenant.subdominio}/logos/logo_${tipo}.png`;
-      }
-      if (storagePath) {
-        await storageService.deletarArquivo(storagePath).catch(() => {});
-      }
+      const storagePath = urlAtual.includes(`/object/public/${bucket}/`)
+        ? urlAtual.split(`/object/public/${bucket}/`)[1]
+        : `${tenant.subdominio}/logos/logo_${tipo}.png`;
+      if (storagePath) await storageService.deletarArquivo(storagePath).catch(() => {});
     }
 
-    const novoConf = { ...(tenant.configuracoes || {}), [campo]: null };
-    await tenant.update({ configuracoes: novoConf });
-
+    await tenant.update({ configuracoes: { ...(tenant.configuracoes || {}), [campo]: null } });
     res.json({ success: true, message: 'Logo removida' });
   } catch (error) {
     console.error('Erro ao remover logo:', error);
@@ -708,13 +629,10 @@ const updateConfig = async (req, res) => {
     if (!tenant) return;
 
     const { nome, ativo, configuracoes } = req.body;
-
-    const novoConf = { ...(tenant.configuracoes || {}), ...(configuracoes || {}) };
-
     await tenant.update({
       nome_municipio: nome ?? tenant.nome_municipio,
-      ativo: ativo !== undefined ? ativo : tenant.ativo,
-      configuracoes: novoConf
+      ativo:          ativo !== undefined ? ativo : tenant.ativo,
+      configuracoes:  { ...(tenant.configuracoes || {}), ...(configuracoes || {}) }
     });
 
     res.json({ success: true, tenant });
@@ -746,54 +664,14 @@ const ativarTenant = async (req, res) => {
   }
 };
 
-// Alias usado pela rota antiga de usuários
-const getTenantUsers   = listTenantUsers;
-const getTenantLogs    = listTenantLogs;
-const uploadLogo       = updateLogos;
-const restoreBackup    = restoreTenant;
-
 module.exports = {
-  // Tenants
-  listTenants,
-  getTenant,
-  createTenant,
-  updateTenant,
-  deleteTenant,
-
-  // Usuários
-  listTenantUsers,
-  createTenantUser,
-  updateTenantUser,
-  deleteTenantUser,
-  getTenantUsers,   // alias
-
-  // Logs
-  listTenantLogs,
-  getTenantLogs,    // alias
-
-  // Backup
-  listBackups,
-  createBackup,
-  downloadBackup,
-  deleteBackup,
-  clearBackupHistory,
-
-  // Agendamento
-  getSchedule,
-  updateSchedule,
-  runBackupNow,
-
-  // Restore
-  restoreTenant,
-  restoreBackup,    // alias
-
-  // Logos e Config
-  updateLogos,
-  deleteLogo,
-  updateConfig,
-  uploadLogo,       // alias
-
-  // Utilitários
-  criarBucket,
-  ativarTenant,
+  listTenants, getTenant, createTenant, updateTenant, deleteTenant,
+  listTenantUsers, createTenantUser, updateTenantUser, deleteTenantUser,
+  getTenantUsers: listTenantUsers,
+  listTenantLogs, getTenantLogs: listTenantLogs,
+  listBackups, createBackup, downloadBackup, deleteBackup, clearBackupHistory,
+  getSchedule, updateSchedule, runBackupNow,
+  restoreTenant, restoreBackup: restoreTenant,
+  updateLogos, deleteLogo, updateConfig, uploadLogo: updateLogos,
+  criarBucket, ativarTenant,
 };
