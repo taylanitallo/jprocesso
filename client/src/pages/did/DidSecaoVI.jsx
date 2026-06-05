@@ -93,11 +93,12 @@ export default function DidSecaoVI({ form, inp, chk, vliq, saving, didId, onSave
       <div className="col-span-2">
         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Certidões</label>
         <div className="flex flex-wrap gap-4">
-          <Checkbox label="Unificada" checked={form.cert_teso_cnd} onChange={chk('cert_teso_cnd')} disabled={locked} />
+          <Checkbox label="Municipal" checked={form.cert_teso_municipal} onChange={chk('cert_teso_municipal')} disabled={locked} />
+          <Checkbox label="Trabalhista" checked={form.cert_teso_trabalhista} onChange={chk('cert_teso_trabalhista')} disabled={locked} />
           <Checkbox label="FGTS" checked={form.cert_teso_fgts} onChange={chk('cert_teso_fgts')} disabled={locked} />
           <Checkbox label="Estadual" checked={form.cert_teso_estadual} onChange={chk('cert_teso_estadual')} disabled={locked} />
-          <Checkbox label="Trabalhista" checked={form.cert_teso_trabalhista} onChange={chk('cert_teso_trabalhista')} disabled={locked} />
-          <Checkbox label="Municipal" checked={form.cert_teso_municipal} onChange={chk('cert_teso_municipal')} disabled={locked} />
+          <Checkbox label="Federal" checked={form.cert_teso_federal} onChange={chk('cert_teso_federal')} disabled={locked} />
+          <Checkbox label="Simples Nacional" checked={form.cert_teso_simples_nac} onChange={chk('cert_teso_simples_nac')} disabled={locked} />
         </div>
       </div>
       {/* Demonstrativo de Descontos */}

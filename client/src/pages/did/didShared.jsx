@@ -49,8 +49,8 @@ export const EMPTY = {
   // Seção VII
   contab_fech_finalizado: '', contab_fech_tce: '',
   cnpj_fornecedor: '', banco_fornecedor: '', ag_fornecedor: '', cc_fornecedor: '',
-  cert_teso_cnd: false, cert_teso_fgts: false,
-  cert_teso_estadual: false, cert_teso_trabalhista: false, cert_teso_municipal: false,
+  cert_teso_municipal: false, cert_teso_trabalhista: false, cert_teso_fgts: false,
+  cert_teso_estadual: false, cert_teso_federal: false, cert_teso_simples_nac: false,
   analisado_por: '',
   valor_bruto: '', desconto_inss: '', desconto_iss: '', desconto_irrf: '',
   desconto_sindicato: '', desconto_bb: '', desconto_caixa: '', desconto_pensao: '', desconto_outros: '',
