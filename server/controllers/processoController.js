@@ -458,64 +458,142 @@ const concluirProcesso = async (req, res) => {
 
 const listProcessos = async (req, res) => {
   try {
-    const { status, prioridade, page = 1, limit = 10, search } = req.query;
-    const { Processo, User, Setor } = req.models;
+    const {
+      status, prioridade, tipo,
+      secretariaId, setorId: setorIdFiltro, usuarioId,
+      page = 1, limit = 10, search,
+    } = req.query;
+    const { Processo, Tramitacao, User, Setor, Secretaria } = req.models;
 
     const where = {};
-    
-    if (status) where.status = status;
-    if (prioridade) where.prioridade = prioridade;
 
-    if (search) {
-      where[Op.or] = [
-        { numero: { [Op.iLike]: `%${search}%` } },
-        { assunto: { [Op.iLike]: `%${search}%` } },
-        { interessado_nome: { [Op.iLike]: `%${search}%` } }
-      ];
-    }
+    if (status)         where.status          = status;
+    if (prioridade)     where.prioridade       = prioridade;
+    if (tipo)           where.tipo_processo    = tipo;
+    if (setorIdFiltro)  where.setor_atual_id   = setorIdFiltro;
+    if (usuarioId)      where.usuario_atual_id = usuarioId;
 
-    const offset = (page - 1) * limit;
+    // Busca textual: número, assunto, interessado, tipo_processo
+    // Secretaria/setor/responsável são resolvidos via JOIN — aqui apenas campos diretos
+    const searchCond = search ? {
+      [Op.or]: [
+        { numero:           { [Op.iLike]: `%${search}%` } },
+        { assunto:          { [Op.iLike]: `%${search}%` } },
+        { interessado_nome: { [Op.iLike]: `%${search}%` } },
+        { tipo_processo:    { [Op.iLike]: `%${search}%` } },
+      ],
+    } : null;
 
-    // Filtra processos conforme o tipo do usuário:
-    // - admin: vê tudo
-    // - gestor: vê todos os processos da sua secretaria
-    // - operacional: vê apenas processos no seu setor ou destinados a ele diretamente
+    const offset = (parseInt(page) - 1) * parseInt(limit);
     const tipoUsuario = req.user.tipo;
 
+    // Visibilidade por perfil (combinada com search via Op.and)
+    let accessCond = null;
     if (tipoUsuario === 'operacional') {
-      // Busca setorId atualizado do banco
       const userInfo = await User.findByPk(req.user.id, { attributes: ['id', 'setorId'] });
-      const setorId = userInfo?.setorId || null;
+      const sId = userInfo?.setorId || null;
       const orCond = [{ usuario_atual_id: req.user.id }];
-      if (setorId) orCond.push({ setor_atual_id: setorId });
-      where[Op.or] = orCond;
+      if (sId) orCond.push({ setor_atual_id: sId });
+      accessCond = { [Op.or]: orCond };
     }
 
-    const setorInclude = (tipoUsuario !== 'admin' && req.user.secretariaId)
-      ? { model: Setor, as: 'setorAtual', attributes: ['id', 'nome', 'sigla'], where: { secretariaId: req.user.secretariaId }, required: true }
-      : { model: Setor, as: 'setorAtual', attributes: ['id', 'nome', 'sigla'] };
+    // Combina search + access sem sobrescrever um ao outro
+    if (searchCond && accessCond) {
+      where[Op.and] = [searchCond, accessCond];
+    } else if (searchCond) {
+      Object.assign(where, searchCond);
+    } else if (accessCond) {
+      Object.assign(where, accessCond);
+    }
+
+    // Filtro por secretaria: param explícito tem prioridade; gestor usa a sua
+    const secFiltro = secretariaId ||
+      (tipoUsuario !== 'admin' && req.user.secretariaId ? req.user.secretariaId : null);
+
+    // Include Setor + Secretaria aninhada (com filtro opcional por secretaria)
+    const setorInclude = {
+      model: Setor,
+      as: 'setorAtual',
+      attributes: ['id', 'nome', 'sigla'],
+      ...(secFiltro ? { where: { secretariaId: secFiltro }, required: true } : { required: false }),
+      include: [{
+        model: Secretaria,
+        as: 'secretaria',
+        attributes: ['id', 'nome', 'sigla'],
+      }],
+    };
+
+    // Include última tramitação via subquery separada (evita multiplicação de linhas)
+    const tramitacaoInclude = {
+      model: Tramitacao,
+      as: 'tramitacoes',
+      attributes: ['id', 'tipo_acao', 'data_hora', 'despacho'],
+      separate: true,
+      order: [['data_hora', 'DESC']],
+      limit: 1,
+      include: [
+        { model: Setor, as: 'origemSetor',  attributes: ['id', 'nome', 'sigla'] },
+        { model: Setor, as: 'destinoSetor', attributes: ['id', 'nome', 'sigla'] },
+        { model: User,  as: 'origemUsuario', attributes: ['id', 'nome'] },
+      ],
+    };
 
     const { count, rows: processos } = await Processo.findAndCountAll({
       where,
-      limit: parseInt(limit),
+      limit:    parseInt(limit),
       offset,
-      order: [['created_at', 'DESC']],
+      order:    [['updated_at', 'DESC']],
       subQuery: false,
       include: [
-        { model: User, as: 'usuarioAtual', attributes: ['id', 'nome', 'email'] },
+        { model: User,      as: 'usuarioAtual', attributes: ['id', 'nome'] },
         setorInclude,
-        { model: User, as: 'criadoPor', attributes: ['id', 'nome', 'email'] }
-      ]
+        { model: User,      as: 'criadoPor',    attributes: ['id', 'nome'] },
+        tramitacaoInclude,
+      ],
+    });
+
+    // Monta resposta estruturada sem vazar PII
+    const PII = ['interessado_cpf_cnpj', 'interessado_email', 'interessado_telefone'];
+    const resultado = processos.map(p => {
+      const obj = p.toJSON();
+      PII.forEach(k => delete obj[k]);
+
+      const ultimaTram = (obj.tramitacoes || [])[0] || null;
+
+      return {
+        ...obj,
+        secretariaAtual: obj.setorAtual?.secretaria || null,
+        setorAtual:      obj.setorAtual
+          ? { id: obj.setorAtual.id, nome: obj.setorAtual.nome, sigla: obj.setorAtual.sigla }
+          : null,
+        responsavelAtual: obj.usuarioAtual
+          ? { id: obj.usuarioAtual.id, nome: obj.usuarioAtual.nome }
+          : null,
+        ultimaTramitacao: ultimaTram
+          ? {
+              id:      ultimaTram.id,
+              data:    ultimaTram.data_hora,
+              tipo:    ultimaTram.tipo_acao,
+              despacho: ultimaTram.despacho,
+              origem:  ultimaTram.origemSetor || null,
+              destino: ultimaTram.destinoSetor || null,
+              usuario: ultimaTram.origemUsuario || null,
+            }
+          : null,
+        // mantém retrocompatibilidade com campos antigos
+        tramitacoes: undefined,
+        usuarioAtual: undefined,
+      };
     });
 
     res.json({
-      processos,
+      processos: resultado,
       pagination: {
-        total: count,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalPages: Math.ceil(count / limit)
-      }
+        total:      count,
+        page:       parseInt(page),
+        limit:      parseInt(limit),
+        totalPages: Math.ceil(count / parseInt(limit)),
+      },
     });
   } catch (error) {
     console.error('Erro ao listar processos:', error);
