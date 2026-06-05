@@ -657,17 +657,9 @@ export default function DidFixasSecaoI({
           )}
         </Field>
 
-        {/* ── Objeto (bloqueado após contrato) ── */}
+        {/* ── Objeto ── */}
         <Field label="Objeto *">
-          {camposContratoBloqueados ? (
-            <div className="flex items-start gap-2 w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600
-              bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 min-h-[80px]">
-              <Lock className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
-              <span className="leading-relaxed">{form.objeto || '—'}</span>
-            </div>
-          ) : (
-            <Textarea value={form.objeto} onChange={inp('objeto')} placeholder="Selecione um contrato para preencher o objeto..." disabled={!credorSel && !contratoSel} />
-          )}
+          <Textarea value={form.objeto} onChange={inp('objeto')} placeholder="Descreva o objeto do DID..." />
         </Field>
 
         {/* Tabela de Itens — Ordem de Compra (modal) */}

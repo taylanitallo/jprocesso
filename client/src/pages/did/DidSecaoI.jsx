@@ -498,7 +498,7 @@ export default function DidSecaoI({
 
         {/* Objeto */}
         <Field label="Objeto *">
-          <Textarea value={form.objeto} onChange={inp('objeto')} placeholder="Descreva o objeto do DID..." disabled={locked} />
+          <Textarea value={form.objeto} onChange={inp('objeto')} placeholder="Descreva o objeto do DID..." />
         </Field>
 
         {/* Tabela de Itens */}
