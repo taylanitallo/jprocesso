@@ -515,73 +515,80 @@ const listProcessos = async (req, res) => {
       model: Setor,
       as: 'setorAtual',
       attributes: ['id', 'nome', 'sigla'],
-      ...(secFiltro ? { where: { secretariaId: secFiltro }, required: true } : { required: false }),
-      include: [{
-        model: Secretaria,
-        as: 'secretaria',
-        attributes: ['id', 'nome', 'sigla'],
-      }],
+      required: !!secFiltro,
+      ...(secFiltro ? { where: { secretariaId: secFiltro } } : {}),
+      include: [{ model: Secretaria, as: 'secretaria', attributes: ['id', 'nome', 'sigla'] }],
     };
 
-    // Include última tramitação via subquery separada (evita multiplicação de linhas)
-    const tramitacaoInclude = {
-      model: Tramitacao,
-      as: 'tramitacoes',
-      attributes: ['id', 'tipo_acao', 'data_hora', 'despacho'],
-      separate: true,
-      order: [['data_hora', 'DESC']],
-      limit: 1,
-      include: [
-        { model: Setor, as: 'origemSetor',  attributes: ['id', 'nome', 'sigla'] },
-        { model: Setor, as: 'destinoSetor', attributes: ['id', 'nome', 'sigla'] },
-        { model: User,  as: 'origemUsuario', attributes: ['id', 'nome'] },
-      ],
-    };
+    // ── 1. COUNT separado (evita quirks de findAndCountAll + separate:true) ──
+    const countOptions = { where };
+    if (secFiltro) {
+      countOptions.include = [{
+        model: Setor, as: 'setorAtual', required: true,
+        where: { secretariaId: secFiltro }, attributes: [],
+      }];
+    }
+    const total = await Processo.count(countOptions);
 
-    const { count, rows: processos } = await Processo.findAndCountAll({
+    // ── 2. Busca as linhas ─────────────────────────────────────────────────
+    const processos = await Processo.findAll({
       where,
-      limit:    parseInt(limit),
+      limit:  parseInt(limit),
       offset,
-      order:    [['updated_at', 'DESC']],
-      distinct: true,
+      order:  [['updated_at', 'DESC']],
       include: [
         { model: User, as: 'usuarioAtual', attributes: ['id', 'nome'], required: false },
         setorInclude,
         { model: User, as: 'criadoPor',    attributes: ['id', 'nome'], required: false },
-        tramitacaoInclude,
       ],
     });
 
-    // Monta resposta estruturada sem vazar PII
+    // ── 3. Última tramitação por processo (query própria, sem separate:true) ─
+    const tramMap = {};
+    if (processos.length > 0) {
+      const ids = processos.map(p => p.id);
+      const trams = await Tramitacao.findAll({
+        where:      { processo_id: { [Op.in]: ids } },
+        attributes: ['id', 'tipo_acao', 'data_hora', 'despacho', 'processo_id'],
+        order:      [['data_hora', 'DESC']],
+        include: [
+          { model: Setor, as: 'origemSetor',   attributes: ['id', 'nome', 'sigla'] },
+          { model: Setor, as: 'destinoSetor',  attributes: ['id', 'nome', 'sigla'] },
+          { model: User,  as: 'origemUsuario', attributes: ['id', 'nome'] },
+        ],
+      });
+      trams.forEach(t => { if (!tramMap[t.processo_id]) tramMap[t.processo_id] = t; });
+    }
+
+    // ── 4. Monta resposta estruturada sem vazar PII ────────────────────────
     const PII = ['interessado_cpf_cnpj', 'interessado_email', 'interessado_telefone'];
     const resultado = processos.map(p => {
       const obj = p.toJSON();
       PII.forEach(k => delete obj[k]);
 
-      const ultimaTram = (obj.tramitacoes || [])[0] || null;
+      const ut = tramMap[p.id] ? tramMap[p.id].toJSON() : null;
 
       return {
         ...obj,
-        secretariaAtual: obj.setorAtual?.secretaria || null,
-        setorAtual:      obj.setorAtual
+        secretariaAtual:  obj.setorAtual?.secretaria || null,
+        setorAtual:       obj.setorAtual
           ? { id: obj.setorAtual.id, nome: obj.setorAtual.nome, sigla: obj.setorAtual.sigla }
           : null,
         responsavelAtual: obj.usuarioAtual
           ? { id: obj.usuarioAtual.id, nome: obj.usuarioAtual.nome }
           : null,
-        ultimaTramitacao: ultimaTram
+        ultimaTramitacao: ut
           ? {
-              id:      ultimaTram.id,
-              data:    ultimaTram.data_hora,
-              tipo:    ultimaTram.tipo_acao,
-              despacho: ultimaTram.despacho,
-              origem:  ultimaTram.origemSetor || null,
-              destino: ultimaTram.destinoSetor || null,
-              usuario: ultimaTram.origemUsuario || null,
+              id:       ut.id,
+              data:     ut.data_hora,
+              tipo:     ut.tipo_acao,
+              despacho: ut.despacho,
+              origem:   ut.origemSetor  || null,
+              destino:  ut.destinoSetor || null,
+              usuario:  ut.origemUsuario || null,
             }
           : null,
-        // mantém retrocompatibilidade com campos antigos
-        tramitacoes: undefined,
+        tramitacoes:  undefined,
         usuarioAtual: undefined,
       };
     });
@@ -589,10 +596,10 @@ const listProcessos = async (req, res) => {
     res.json({
       processos: resultado,
       pagination: {
-        total:      count,
+        total:      total,
         page:       parseInt(page),
         limit:      parseInt(limit),
-        totalPages: Math.ceil(count / parseInt(limit)),
+        totalPages: Math.ceil(total / parseInt(limit)),
       },
     });
   } catch (error) {
