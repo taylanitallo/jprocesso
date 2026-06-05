@@ -375,13 +375,18 @@ const deleteBackup = async (req, res) => {
     const tenant = await getTenantOrFail(req.params.id, res);
     if (!tenant) return;
 
+    const deleteFile = req.query.deleteFile === 'true';
+
     const rows = await masterDb.query(
       `SELECT storage_path FROM public.backup_jobs WHERE id = :backupId AND tenant_id = :tenantId`,
       { replacements: { backupId: req.params.backupId, tenantId: tenant.id }, type: QueryTypes.SELECT }
     );
 
     if (!rows[0]) return res.status(404).json({ error: 'Backup não encontrado' });
-    if (rows[0].storage_path) await backupService.deleteBackup(rows[0].storage_path).catch(() => {});
+
+    if (deleteFile && rows[0].storage_path) {
+      await backupService.deleteBackup(rows[0].storage_path).catch(() => {});
+    }
 
     await masterDb.query(
       `DELETE FROM public.backup_jobs WHERE id = :backupId`,
@@ -400,12 +405,39 @@ const clearBackupHistory = async (req, res) => {
     const tenant = await getTenantOrFail(req.params.id, res);
     if (!tenant) return;
 
+    const { modo = 'falhas', deleteFiles = false } = req.body || {};
+
+    // Determinar filtro SQL
+    let filtro = '';
+    const reps = { tenantId: tenant.id };
+
+    if (modo === 'falhas') {
+      filtro = `AND status = 'falhou'`;
+    } else if (modo === 'antigos') {
+      filtro = `AND status = 'concluido' AND criado_em < NOW() - INTERVAL '30 days'`;
+    }
+    // modo === 'todos': sem filtro adicional (exceto pendente)
+    const excluiPendente = `AND status != 'pendente'`;
+
+    // Se deleteFiles, buscar paths antes de deletar
+    if (deleteFiles) {
+      const toDelete = await masterDb.query(
+        `SELECT storage_path FROM public.backup_jobs
+         WHERE tenant_id = :tenantId ${filtro} ${excluiPendente}
+           AND storage_path IS NOT NULL`,
+        { replacements: reps, type: QueryTypes.SELECT }
+      );
+      await Promise.allSettled(
+        toDelete.map(r => backupService.deleteBackup(r.storage_path))
+      );
+    }
+
     await masterDb.query(
-      `DELETE FROM public.backup_jobs WHERE tenant_id = :tenantId`,
-      { replacements: { tenantId: tenant.id }, type: QueryTypes.DELETE }
+      `DELETE FROM public.backup_jobs WHERE tenant_id = :tenantId ${filtro} ${excluiPendente}`,
+      { replacements: reps, type: QueryTypes.DELETE }
     );
 
-    res.json({ success: true, message: 'Histórico de backups limpo' });
+    res.json({ success: true, message: 'Histórico limpo' });
   } catch (error) {
     console.error('Erro ao limpar histórico:', error);
     res.status(500).json({ error: 'Erro ao limpar histórico' });

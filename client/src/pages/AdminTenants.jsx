@@ -439,6 +439,9 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
   const [showSchedule, setShowSchedule]   = useState(false);
   const [scheduleForm, setScheduleForm]   = useState({ ativo: false, frequencia: 'diario', hora: 2, minuto: 0, retencao_dias: 7 });
 
+  const [deleteModal, setDeleteModal] = useState({ open: false, backup: null, modo: 'registro', confirmado: false });
+  const [clearModal,  setClearModal]  = useState({ open: false, modo: 'falhas', deleteFiles: false, loading: false });
+
   const [restoreFile, setRestoreFile]       = useState(null);
   const [restoreLoading, setRestoreLoading] = useState(false);
   const restoreRef = useRef();
@@ -542,16 +545,41 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
     }
   };
 
-  const handleDeleteBackup = async (backupId) => {
-    if (!window.confirm('Excluir este backup?')) return;
-    await api.delete(`/superadmin/tenants/${tenant.id}/backups/${encodeURIComponent(backupId)}`);
-    refetchBackups();
+  const handleDeleteBackup = (backup) => {
+    setDeleteModal({ open: true, backup, modo: 'registro', confirmado: false });
   };
 
-  const handleClearHistory = async () => {
-    if (!window.confirm('Limpar todo o histórico de backups? Os arquivos no storage serão mantidos.')) return;
-    await api.delete(`/superadmin/tenants/${tenant.id}/backups`);
-    refetchBackups();
+  const confirmDeleteBackup = async () => {
+    const { backup, modo } = deleteModal;
+    try {
+      await api.delete(
+        `/superadmin/tenants/${tenant.id}/backups/${encodeURIComponent(backup.id)}`,
+        { params: { deleteFile: modo === 'arquivo' } }
+      );
+      setDeleteModal({ open: false, backup: null, modo: 'registro', confirmado: false });
+      refetchBackups();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao excluir backup');
+    }
+  };
+
+  const handleClearHistory = () => {
+    setClearModal({ open: true, modo: 'falhas', deleteFiles: false, loading: false });
+  };
+
+  const confirmClearHistory = async () => {
+    const { modo, deleteFiles } = clearModal;
+    setClearModal(s => ({ ...s, loading: true }));
+    try {
+      await api.delete(`/superadmin/tenants/${tenant.id}/backups`, {
+        data: { modo, deleteFiles }
+      });
+      setClearModal({ open: false, modo: 'falhas', deleteFiles: false, loading: false });
+      refetchBackups();
+    } catch (err) {
+      setClearModal(s => ({ ...s, loading: false }));
+      alert(err.response?.data?.error || 'Erro ao limpar histórico');
+    }
   };
 
   const handleSaveSchedule = async () => {
@@ -1015,7 +1043,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                           <Download className="h-4 w-4" />
                         </button>
                       )}
-                      <button onClick={() => handleDeleteBackup(b.id)}
+                      <button onClick={() => handleDeleteBackup(b)}
                         className="p-1.5 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-300 hover:text-red-600" title="Excluir">
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -1030,6 +1058,122 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                   </div>
                 )}
               </div>
+
+              {/* ── Modal Excluir Backup ─────────────────────────────────────── */}
+              {deleteModal.open && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
+                        <Trash2 className="h-5 w-5 text-red-600 dark:text-red-400" />
+                      </div>
+                      <h3 className="font-bold text-gray-900 dark:text-white">Excluir este backup</h3>
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Backup de {fmtDate(deleteModal.backup?.criado_em)}
+                      {deleteModal.backup?.tamanho_bytes ? ` · ${fmtBytes(deleteModal.backup.tamanho_bytes)}` : ''}
+                    </p>
+
+                    <div className="space-y-2">
+                      {[
+                        { val: 'registro', label: 'Somente o registro do histórico', desc: 'O arquivo no Supabase Storage é mantido' },
+                        { val: 'arquivo',  label: 'Registro + arquivo do Supabase Storage', desc: 'O ZIP será apagado permanentemente' },
+                      ].map(({ val, label, desc }) => (
+                        <label key={val} className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                          deleteModal.modo === val
+                            ? 'border-red-400 bg-red-50 dark:bg-red-900/20'
+                            : 'border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700/40'
+                        }`}>
+                          <input type="radio" name="deleteModo" value={val} checked={deleteModal.modo === val}
+                            onChange={() => setDeleteModal(s => ({ ...s, modo: val }))}
+                            className="mt-0.5 accent-red-600" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">{label}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{desc}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+
+                    <label className={`flex items-center gap-2 p-3 rounded-xl border cursor-pointer transition-colors ${
+                      deleteModal.confirmado ? 'border-orange-400 bg-orange-50 dark:bg-orange-900/20' : 'border-gray-200 dark:border-slate-600'
+                    }`}>
+                      <input type="checkbox" checked={deleteModal.confirmado}
+                        onChange={e => setDeleteModal(s => ({ ...s, confirmado: e.target.checked }))}
+                        className="accent-orange-500" />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Entendo que esta ação é irreversível</span>
+                    </label>
+
+                    <div className="flex gap-3 pt-1">
+                      <button onClick={() => setDeleteModal({ open: false, backup: null, modo: 'registro', confirmado: false })}
+                        className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-xl text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700">
+                        Cancelar
+                      </button>
+                      <button onClick={confirmDeleteBackup} disabled={!deleteModal.confirmado}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl text-sm hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed">
+                        <Trash2 className="h-4 w-4" /> Excluir
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Modal Limpar Histórico ───────────────────────────────────── */}
+              {clearModal.open && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
+                        <Trash2 className="h-5 w-5 text-red-600 dark:text-red-400" />
+                      </div>
+                      <h3 className="font-bold text-gray-900 dark:text-white">Limpar Histórico de Backups</h3>
+                    </div>
+
+                    <div className="space-y-2">
+                      {[
+                        { val: 'falhas',  label: 'Limpar apenas falhas',       desc: 'Remove somente registros com status "Falhou"' },
+                        { val: 'antigos', label: 'Limpar concluídos antigos',  desc: 'Remove concluídos mais antigos que 30 dias' },
+                        { val: 'todos',   label: 'Limpar tudo visível',        desc: 'Remove tudo exceto backups em andamento' },
+                      ].map(({ val, label, desc }) => (
+                        <label key={val} className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                          clearModal.modo === val
+                            ? 'border-red-400 bg-red-50 dark:bg-red-900/20'
+                            : 'border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700/40'
+                        }`}>
+                          <input type="radio" name="clearModo" value={val} checked={clearModal.modo === val}
+                            onChange={() => setClearModal(s => ({ ...s, modo: val }))}
+                            className="mt-0.5 accent-red-600" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">{label}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{desc}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+
+                    <label className={`flex items-center gap-2 p-3 rounded-xl border cursor-pointer transition-colors ${
+                      clearModal.deleteFiles ? 'border-orange-400 bg-orange-50 dark:bg-orange-900/20' : 'border-gray-200 dark:border-slate-600'
+                    }`}>
+                      <input type="checkbox" checked={clearModal.deleteFiles}
+                        onChange={e => setClearModal(s => ({ ...s, deleteFiles: e.target.checked }))}
+                        className="accent-orange-500" />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Também apagar arquivos do storage</span>
+                    </label>
+
+                    <div className="flex gap-3 pt-1">
+                      <button onClick={() => setClearModal({ open: false, modo: 'falhas', deleteFiles: false, loading: false })}
+                        className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-xl text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700">
+                        Cancelar
+                      </button>
+                      <button onClick={confirmClearHistory} disabled={clearModal.loading}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl text-sm hover:bg-red-700 disabled:opacity-50">
+                        {clearModal.loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                        {clearModal.loading ? 'Limpando...' : 'Limpar'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
