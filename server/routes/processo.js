@@ -9,9 +9,10 @@ const {
   devolverProcesso,
   concluirProcesso,
   listProcessosEnviados,
+  getArquivoProcessos,
   buscarProcessosPublico,
   consultarProcessoPublico,
-  deleteProcesso
+  deleteProcesso,
 } = require('../controllers/processoController');
 const { authenticate, tenantMiddleware, requireTenant, authorize } = require('../middleware/auth');
 
@@ -22,6 +23,7 @@ router.get('/dashboard', ...tenantAuth, getDashboardStats);
 router.post('/', ...tenantAuth, createProcesso);
 router.get('/', ...tenantAuth, listProcessos);
 router.get('/enviados', ...tenantAuth, listProcessosEnviados);
+router.get('/arquivo',  ...tenantAuth, getArquivoProcessos);
 router.get('/:id', ...tenantAuth, getProcessoById);
 router.post('/:id/tramitar', ...tenantAuth, tramitarProcesso);
 router.post('/:id/devolver', ...tenantAuth, devolverProcesso);

@@ -4,7 +4,7 @@ import { useTheme } from '../context/ThemeContext'
 import {
   Home, Building2, LogOut, Menu, X, Inbox, BarChart3, Settings,
   Users, Package, Sun, Moon, ChevronRight, DollarSign, ScrollText,
-  Lock, Landmark, ClipboardList,
+  Lock, Landmark, ClipboardList, Archive,
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import JAI from './JAI'
@@ -74,6 +74,7 @@ export default function Layout() {
   const menuItems = [
     { path: `/${subdomain}`,              icon: Home,        label: 'Dashboard',    exact: true },
     { path: `/${subdomain}/processos`,    icon: Inbox,       label: 'Processos',    modulo: 'processos' },
+    { path: `/${subdomain}/arquivo`,      icon: Archive,     label: 'Arquivo',      modulo: 'processos' },
     { path: `/${subdomain}/almoxarifado`, icon: Package,     label: 'Almoxarifado', modulo: 'almoxarifado', permissao: 'acessar_almoxarifado' },
     { path: `/${subdomain}/patrimonio`,   icon: Landmark,    label: 'Patrimônio',   modulo: 'patrimonio',   permissao: 'acessar_almoxarifado' },
     { path: `/${subdomain}/financeiro`,   icon: DollarSign,  label: 'Financeiro',   modulo: 'financeiro',   permissao: 'acessar_financeiro' },

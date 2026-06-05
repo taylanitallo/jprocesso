@@ -29,6 +29,7 @@ const Relatorios         = lazy(() => import('./pages/Relatorios'))
 const Configuracoes      = lazy(() => import('./pages/Configuracoes'))
 const Registros          = lazy(() => import('./pages/Registros'))
 const AdminTenants       = lazy(() => import('./pages/AdminTenants'))
+const Arquivo            = lazy(() => import('./pages/Arquivo'))
 
 // ── PageLoader — fallback enquanto chunk carrega ──────────────────────────────
 function PageLoader() {
@@ -133,6 +134,9 @@ function App() {
                 <Route path="processos/:id"      element={<DetalhesProcesso />} />
                 <Route path="processos/:id/did"  element={<FormularioDid />} />
                 <Route path="enviados"           element={<EnviadosRedirect />} />
+
+                {/* Arquivo de Processos */}
+                <Route path="arquivo" element={<Arquivo />} />
 
                 {/* Organização */}
                 <Route path="organizacao"      element={<PermissionRoute permissao="gerenciar_secretarias"><Secretarias /></PermissionRoute>} />

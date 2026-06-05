@@ -19,6 +19,10 @@ const uploadDocumento = async (req, res) => {
       return res.status(404).json({ error: 'Processo não encontrado' });
     }
 
+    if (processo.status === 'concluido') {
+      return res.status(400).json({ error: 'Processos concluídos não aceitam novos documentos' });
+    }
+
     const buffer = req.file.buffer;
     const hash_sha256 = crypto.createHash('sha256').update(buffer).digest('hex');
     const hash_md5    = crypto.createHash('md5').update(buffer).digest('hex');

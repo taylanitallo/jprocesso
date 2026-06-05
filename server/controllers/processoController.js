@@ -1033,6 +1033,77 @@ const consultarProcessoPublico = async (req, res) => {
   }
 };
 
+// ── Arquivo: processos concluídos com documentos organizados hierarquicamente ──
+const getArquivoProcessos = async (req, res) => {
+  try {
+    const { Processo, User, Setor, Secretaria, Documento } = req.models;
+    const tipoUsuario = req.user.tipo;
+
+    // Filtro de visibilidade (mesmo critério do listProcessos)
+    const setorInclude = {
+      model: Setor,
+      as: 'setorAtual',
+      attributes: [],
+      required: false,
+    };
+
+    // Para gestor, restringe à secretaria dele (via setor criador)
+    const criadoPorInclude = {
+      model: User,
+      as: 'criadoPor',
+      attributes: ['id', 'nome', 'secretariaId'],
+      required: false,
+      include: [{
+        model: Secretaria,
+        as: 'secretaria',
+        attributes: ['id', 'nome', 'sigla'],
+        ...(tipoUsuario === 'gestor' && req.user.secretariaId
+          ? { where: { id: req.user.secretariaId }, required: true }
+          : {}),
+      }],
+    };
+
+    const processos = await Processo.findAll({
+      where: { status: 'concluido' },
+      attributes: ['id', 'numero', 'ano', 'sequencial', 'assunto', 'tipo_processo', 'data_conclusao'],
+      order: [['ano', 'DESC'], ['sequencial', 'ASC']],
+      include: [
+        criadoPorInclude,
+        {
+          model: Documento,
+          as: 'documentos',
+          attributes: ['id', 'nome_arquivo', 'tamanho_bytes', 'tipo_mime', 'data_upload'],
+          separate: true,
+          order: [['data_upload', 'ASC']],
+        },
+      ],
+    });
+
+    const resultado = processos.map(p => ({
+      id:           p.id,
+      numero:       p.numero,
+      ano:          p.ano,
+      assunto:      p.assunto,
+      tipo_processo: p.tipo_processo || 'Geral',
+      secretaria:   p.criadoPor?.secretaria
+        ? { id: p.criadoPor.secretaria.id, nome: p.criadoPor.secretaria.nome, sigla: p.criadoPor.secretaria.sigla }
+        : null,
+      documentos:   (p.documentos || []).map(d => ({
+        id:            d.id,
+        nome_arquivo:  d.nome_arquivo,
+        tamanho_bytes: d.tamanho_bytes,
+        tipo_mime:     d.tipo_mime,
+        data_upload:   d.data_upload,
+      })),
+    }));
+
+    res.json({ processos: resultado });
+  } catch (error) {
+    console.error('Erro ao carregar arquivo:', error);
+    res.status(500).json({ error: 'Erro ao carregar arquivo de processos' });
+  }
+};
+
 // ── DELETE PROCESSO (somente admin) ─────────────────────────────────────────
 const deleteProcesso = async (req, res) => {
   // Verificação já feita na rota via authorize(), mas checamos novamente por segurança
@@ -1088,7 +1159,8 @@ module.exports = {
   devolverProcesso,
   concluirProcesso,
   listProcessosEnviados,
+  getArquivoProcessos,
   buscarProcessosPublico,
   consultarProcessoPublico,
-  deleteProcesso
+  deleteProcesso,
 };

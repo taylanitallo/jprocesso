@@ -442,14 +442,16 @@ export default function DetalhesProcesso() {
                       </button>
                     </>
                   )}
-                  <button
-                    onClick={() => setShowAnexar(true)}
-                    className="flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400
-                               hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Anexar documento
-                  </button>
+                  {processo.status !== 'concluido' && (
+                    <button
+                      onClick={() => setShowAnexar(true)}
+                      className="flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400
+                                 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Anexar documento
+                    </button>
+                  )}
                 </div>
               }
             />
@@ -517,13 +519,15 @@ export default function DetalhesProcesso() {
                 </div>
                 <p className="text-sm font-medium text-gray-600 dark:text-slate-300 mb-1">Nenhum arquivo anexado</p>
                 <p className="text-xs text-gray-400 dark:text-slate-500 mb-4">Ainda não há documentos vinculados a este processo.</p>
-                <button
-                  onClick={() => setShowAnexar(true)}
-                  className="btn-primary"
-                >
-                  <Plus className="h-4 w-4" />
-                  Anexar documento
-                </button>
+                {processo.status !== 'concluido' && (
+                  <button
+                    onClick={() => setShowAnexar(true)}
+                    className="btn-primary"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Anexar documento
+                  </button>
+                )}
               </div>
             )}
           </div>
