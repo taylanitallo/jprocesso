@@ -204,10 +204,18 @@ export default function DidFixasSecaoI({
   saving,
 }) {
   const [contratos, setContratos] = useState([])
+  // Credores para lookup (todos, necessário para recuperar credor do form salvo)
   const [credoresStorage, setCredoresStorage] = useState([])
+  // Resultados do autocomplete (server-side search)
+  const [credoresOpts, setCredoresOpts]         = useState([])
+  const [buscandoCredores, setBuscandoCredores] = useState(false)
+
   useEffect(() => {
-    api.get('/contratos').then(r => setContratos(r.data)).catch(() => {})
-    api.get('/contratos/credores').then(r => setCredoresStorage(r.data)).catch(() => {})
+    api.get('/contratos').then(r => setContratos(Array.isArray(r.data) ? r.data : [])).catch(() => {})
+    // Carrega lista completa para uso interno (lookup por form salvo)
+    api.get('/contratos/credores')
+      .then(r => setCredoresStorage(Array.isArray(r.data) ? r.data : []))
+      .catch(() => {})
   }, [])
 
   // ── Estado do autocomplete de Credor ─────────────────────────────────────
@@ -217,23 +225,41 @@ export default function DidFixasSecaoI({
 
   // Recupera credor a partir do form já salvo
   useEffect(() => {
-    if (form.credor_sec1 && !credorSel && credoresStorage.length > 0) {
+    if (form.credor_sec1 && !credorSel) {
+      // Tenta primeiro no cache local
       const found = credoresStorage.find(c =>
         c.razao_social === form.credor_sec1 || c.cnpj_cpf === form.cnpj_cpf_credor_sec1
       )
-      if (found) setCredorSel(found)
+      if (found) {
+        setCredorSel(found)
+      } else if (credoresStorage.length === 0) {
+        // Fallback: monta objeto com os dados do form
+        setCredorSel({ razao_social: form.credor_sec1, cnpj_cpf: form.cnpj_cpf_credor_sec1 })
+      }
     }
   }, [form.credor_sec1, credoresStorage])
 
-  const credoresFiltrados = (() => {
-    const q = buscaCredor.trim().toLowerCase()
-    const ativos = credoresStorage.filter(c => c.ativo !== false)
-    if (!q) return ativos.slice(0, 10)
-    return ativos.filter(c =>
-      (c.razao_social || '').toLowerCase().includes(q) ||
-      (c.cnpj_cpf || '').replace(/\D/g, '').includes(q.replace(/\D/g, ''))
-    ).slice(0, 10)
-  })()
+  // Busca server-side com debounce de 300ms
+  useEffect(() => {
+    if (credorSel || !dropdownCredor) return
+    const q = buscaCredor.trim()
+
+    // Sem texto: carrega os primeiros da lista completa
+    if (!q) {
+      setCredoresOpts(credoresStorage.slice(0, 12))
+      return
+    }
+
+    setBuscandoCredores(true)
+    const timer = setTimeout(() => {
+      api.get(`/contratos/credores?q=${encodeURIComponent(q)}`)
+        .then(r => setCredoresOpts(Array.isArray(r.data) ? r.data.slice(0, 12) : []))
+        .catch(() => setCredoresOpts([]))
+        .finally(() => setBuscandoCredores(false))
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [buscaCredor, dropdownCredor, credorSel, credoresStorage])
 
   const selecionarCredor = (credor) => {
     setCredorSel(credor)
@@ -452,12 +478,16 @@ export default function DidFixasSecaoI({
               />
               {dropdownCredor && (
                 <div className="absolute z-40 top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl max-h-56 overflow-y-auto">
-                  {credoresFiltrados.length === 0 ? (
+                  {buscandoCredores ? (
+                    <div className="flex items-center gap-2 px-3 py-3 text-sm text-gray-400">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Buscando...
+                    </div>
+                  ) : credoresOpts.length === 0 ? (
                     <p className="px-3 py-3 text-sm text-gray-400">
-                      {buscaCredor.trim() ? 'Nenhum credor encontrado.' : 'Nenhum credor cadastrado.'}
+                      {buscaCredor.trim() ? 'Nenhum credor encontrado para esta busca.' : 'Nenhum credor cadastrado.'}
                     </p>
-                  ) : credoresFiltrados.map(cr => (
-                    <button key={cr.id} type="button" onMouseDown={() => selecionarCredor(cr)}
+                  ) : credoresOpts.map((cr, i) => (
+                    <button key={cr.id ?? i} type="button" onMouseDown={() => selecionarCredor(cr)}
                       className="w-full text-left px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b border-gray-100 dark:border-gray-700 last:border-0">
                       <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{cr.razao_social}</p>
                       <p className="text-xs text-gray-400 font-mono mt-0.5">{cr.cnpj_cpf}</p>
