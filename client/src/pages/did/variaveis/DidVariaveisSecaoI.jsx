@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from 'react'
-import { FileText, Plus, Trash2, Search, X, Check, CheckCircle, Pencil, Loader2, ListPlus } from 'lucide-react'
+import { FileText, Plus, Trash2, Search, X, Check, CheckCircle, Pencil, Loader2, ListPlus, Lock } from 'lucide-react'
 import { Field, Input, Textarea, SectionCard, DidReadOnlyContext } from '../didShared'
 import api from '../../../services/api'
 
@@ -205,10 +205,62 @@ export default function DidVariaveisSecaoI({
 }) {
   const [contratos, setContratos] = useState([])
   const [credoresStorage, setCredoresStorage] = useState([])
+  const [credoresOpts, setCredoresOpts] = useState([])
+  const [buscandoCredores, setBuscandoCredores] = useState(false)
+
   useEffect(() => {
-    api.get('/contratos').then(r => setContratos(r.data)).catch(() => {})
-    api.get('/contratos/credores').then(r => setCredoresStorage(r.data)).catch(() => {})
+    api.get('/contratos').then(r => setContratos(Array.isArray(r.data) ? r.data : [])).catch(() => {})
+    api.get('/contratos/credores').then(r => setCredoresStorage(Array.isArray(r.data) ? r.data : [])).catch(() => {})
   }, [])
+
+  // ── Autocomplete de Credor (server-side) ─────────────────────────────────
+  const [credorSel,      setCredorSel]      = useState(null)
+  const [buscaCredor,    setBuscaCredor]    = useState(form.credor_sec1 || '')
+  const [dropdownCredor, setDropdownCredor] = useState(false)
+
+  // Recupera credor do form salvo
+  useEffect(() => {
+    if (form.credor_sec1 && !credorSel) {
+      const found = credoresStorage.find(c =>
+        c.razao_social === form.credor_sec1 || c.cnpj_cpf === form.cnpj_cpf_credor_sec1
+      )
+      if (found) setCredorSel(found)
+      else if (credoresStorage.length === 0)
+        setCredorSel({ razao_social: form.credor_sec1, cnpj_cpf: form.cnpj_cpf_credor_sec1 })
+    }
+  }, [form.credor_sec1, credoresStorage])
+
+  // Busca server-side com debounce 300ms
+  useEffect(() => {
+    if (credorSel || !dropdownCredor) return
+    const q = buscaCredor.trim()
+    if (!q) { setCredoresOpts(credoresStorage.slice(0, 12)); return }
+    setBuscandoCredores(true)
+    const timer = setTimeout(() => {
+      api.get(`/contratos/credores?q=${encodeURIComponent(q)}`)
+        .then(r => setCredoresOpts(Array.isArray(r.data) ? r.data.slice(0, 12) : []))
+        .catch(() => setCredoresOpts([]))
+        .finally(() => setBuscandoCredores(false))
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [buscaCredor, dropdownCredor, credorSel, credoresStorage])
+
+  const selecionarCredor = (credor) => {
+    setCredorSel(credor)
+    setBuscaCredor(credor.razao_social)
+    setDropdownCredor(false)
+    set('credor_sec1', credor.razao_social)
+    set('cnpj_cpf_credor_sec1', credor.cnpj_cpf || '')
+  }
+
+  const limparCredor = () => {
+    setCredorSel(null)
+    setBuscaCredor('')
+    set('credor_sec1', '')
+    set('cnpj_cpf_credor_sec1', '')
+  }
+
+  // ── Contrato (opcional) ───────────────────────────────────────────────────
   const [contratoSel, setContratoSel] = useState(null)
   const [buscaContrato, setBuscaContrato] = useState('')
   const [dropdownContrato, setDropdownContrato] = useState(false)
@@ -221,15 +273,17 @@ export default function DidVariaveisSecaoI({
   const readOnly = useContext(DidReadOnlyContext)
 
   useEffect(() => {
-    if (form.contrato_ref && !contratoSel) {
+    if (form.contrato_ref && !contratoSel && contratos.length > 0) {
       const c = contratos.find(c => c.numero_contrato === form.contrato_ref)
       if (c) { setContratoSel(c); setBuscaContrato(c.numero_contrato) }
     }
-  }, [form.contrato_ref])
+  }, [form.contrato_ref, contratos])
 
+  // Filtra contratos pelo credor selecionado (se houver)
   const contratosFiltrados = (() => {
     const q = buscaContrato.trim().toLowerCase()
-    const lista = contratos.filter(c => c.status !== 'EXCLUÍDO')
+    let lista = contratos.filter(c => c.status !== 'EXCLUÍDO')
+    if (credorSel?.id) lista = lista.filter(c => String(c.credor_id) === String(credorSel.id))
     if (!q) return lista.slice(0, 12)
     return lista.filter(c =>
       (c.numero_contrato || '').toLowerCase().includes(q) ||
@@ -254,12 +308,19 @@ export default function DidVariaveisSecaoI({
     setContratoSel(c)
     setBuscaContrato(c.numero_contrato)
     setDropdownContrato(false)
-    const credor = credoresStorage.find(cr => cr.id === c.credor_id)
     const dataRef = form.data_did || new Date().toISOString().slice(0, 10)
     const gestor = getResponsavelVigente(c.secretaria || '', dataRef)
     set('contrato_ref', c.numero_contrato || '')
-    set('credor_sec1', credor?.razao_social || '')
-    set('cnpj_cpf_credor_sec1', credor?.cnpj_cpf || '')
+    // Pré-preenche credor/CNPJ apenas se não estiver já selecionado
+    if (!credorSel) {
+      const credor = credoresStorage.find(cr => String(cr.id) === String(c.credor_id))
+      if (credor) {
+        setCredorSel(credor)
+        setBuscaCredor(credor.razao_social)
+        set('credor_sec1', credor.razao_social)
+        set('cnpj_cpf_credor_sec1', credor.cnpj_cpf || '')
+      }
+    }
     set('objeto', c.objeto || form.objeto)
     set('secretaria_sec1', c.secretaria || '')
     set('secretario_nome', gestor)
@@ -348,25 +409,85 @@ export default function DidVariaveisSecaoI({
     <SectionCard icon={FileText} title="Seção I - Secretaria Geral · Contas Variáveis"
       color="bg-gray-800 text-white dark:bg-gray-900">
 
-      {/* N° DID | Contrato (opcional) */}
+      {/* ── Linha 1: N° DID | Credor (autocomplete) ── */}
       <Field label="N° do DID" half>
         <input type="text" inputMode="numeric" value={form.numero_did ?? ''}
           onChange={e => inp('numero_did')({ target: { value: e.target.value.replace(/\D/g, '') } })}
           disabled={locked} placeholder="Ex: 123"
           className={`input-field text-sm font-mono${locked ? ' opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800' : ''}`} />
       </Field>
-      <Field label="Contrato (opcional — para pré-preencher dados)" half>
+
+      <Field label="Credor *" half>
+        {credorSel ? (
+          <div className="flex items-center gap-2">
+            <div className="flex-1 px-3 py-2 text-sm rounded-lg border border-green-300 dark:border-green-700
+              bg-green-50 dark:bg-green-900/20 flex items-center gap-2 min-w-0">
+              <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
+              <span className="font-semibold text-gray-800 dark:text-gray-100 truncate">{credorSel.razao_social}</span>
+            </div>
+            {!locked && (
+              <button type="button" onClick={limparCredor}
+                className="p-1.5 rounded border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 shrink-0"
+                title="Trocar credor">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+            <input
+              value={buscaCredor}
+              onChange={e => { setBuscaCredor(e.target.value); setDropdownCredor(true) }}
+              onFocus={() => !locked && setDropdownCredor(true)}
+              onBlur={() => setTimeout(() => setDropdownCredor(false), 180)}
+              disabled={locked}
+              placeholder="Buscar credor cadastrado..."
+              className={`w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600
+                bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none${locked ? ' opacity-60 cursor-not-allowed' : ''}`}
+            />
+            {dropdownCredor && (
+              <div className="absolute z-40 top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl max-h-56 overflow-y-auto">
+                {buscandoCredores ? (
+                  <div className="flex items-center gap-2 px-3 py-3 text-sm text-gray-400">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Buscando...
+                  </div>
+                ) : credoresOpts.length === 0 ? (
+                  <p className="px-3 py-3 text-sm text-gray-400">
+                    {buscaCredor.trim() ? 'Nenhum credor encontrado.' : 'Nenhum credor cadastrado.'}
+                  </p>
+                ) : credoresOpts.map((cr, i) => (
+                  <button key={cr.id ?? i} type="button" onMouseDown={() => selecionarCredor(cr)}
+                    className="w-full text-left px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{cr.razao_social}</p>
+                    <p className="text-xs text-gray-400 font-mono mt-0.5">{cr.cnpj_cpf}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </Field>
+
+      {/* ── Linha 2: CNPJ (editável, pré-preenchido) | Contrato (opcional, filtrado pelo credor) ── */}
+      <Field label="CNPJ / CPF do Credor *" half>
+        <Input value={form.cnpj_cpf_credor_sec1} onChange={inp('cnpj_cpf_credor_sec1')}
+          placeholder="Ex: 00.000.000/0001-00" disabled={locked} />
+      </Field>
+
+      <Field label={<span>Contrato <span className="font-normal text-gray-400 dark:text-slate-500">(opcional — pré-preenche dados)</span></span>} half>
         {contratoSel ? (
           <div className="flex items-center gap-2">
             <div className="flex-1 px-3 py-2 text-sm rounded-lg border border-green-300 dark:border-green-700
-              bg-green-50 dark:bg-green-900/20 flex items-center gap-2">
+              bg-green-50 dark:bg-green-900/20 flex items-center gap-2 min-w-0">
               <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
               <span className="font-mono font-bold text-blue-700 dark:text-blue-400 shrink-0">{contratoSel.numero_contrato}</span>
-              <span className="text-gray-500 text-xs truncate">{contratoSel.objeto?.slice(0, 35)}</span>
+              <span className="text-gray-500 text-xs truncate">{contratoSel.objeto?.slice(0, 30)}</span>
             </div>
             {!locked && (
               <button type="button" onClick={limparContrato}
-                className="p-1.5 rounded border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
+                className="p-1.5 rounded border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 shrink-0">
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
@@ -379,7 +500,7 @@ export default function DidVariaveisSecaoI({
           </div>
         ) : (
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
             <input value={buscaContrato}
               onChange={e => { setBuscaContrato(e.target.value); setDropdownContrato(true) }}
               onFocus={() => !locked && setDropdownContrato(true)}
@@ -388,35 +509,33 @@ export default function DidVariaveisSecaoI({
               className={`w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600
                 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
                 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none${locked ? ' opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800' : ''}`}
-              placeholder="Buscar por número ou objeto (facultativo)..." />
+              placeholder={credorSel ? 'Buscar por número ou objeto...' : 'Buscar por número ou objeto (facultativo)...'} />
             {dropdownContrato && (
               <div className="absolute z-30 top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl max-h-60 overflow-y-auto">
                 {contratosFiltrados.length === 0 ? (
                   <p className="px-3 py-3 text-sm text-gray-400">
-                    {buscaContrato.trim() ? 'Nenhum contrato encontrado.' : 'Nenhum contrato cadastrado.'}
+                    {credorSel
+                      ? 'Nenhum contrato encontrado para este credor.'
+                      : buscaContrato.trim() ? 'Nenhum contrato encontrado.' : 'Nenhum contrato cadastrado.'}
                   </p>
-                ) : contratosFiltrados.map(c => {
-                  const credor = credoresStorage.find(cr => cr.id === c.credor_id)
-                  return (
-                    <button key={c.id} type="button" onMouseDown={() => selecionarContrato(c)}
-                      className="w-full text-left px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b border-gray-100 dark:border-gray-700 last:border-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="font-mono font-bold text-blue-700 dark:text-blue-400 text-sm">{c.numero_contrato}</span>
-                        <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${c.status === 'ATIVO' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{c.status}</span>
-                        <span className="text-xs text-gray-400 ml-auto">{c.tipo_contrato}</span>
-                      </div>
-                      <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{c.objeto}</p>
-                      {credor && <p className="text-xs text-gray-400 truncate mt-0.5">{credor.razao_social}</p>}
-                    </button>
-                  )
-                })}
+                ) : contratosFiltrados.map(c => (
+                  <button key={c.id} type="button" onMouseDown={() => selecionarContrato(c)}
+                    className="w-full text-left px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="font-mono font-bold text-blue-700 dark:text-blue-400 text-sm">{c.numero_contrato}</span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${c.status === 'ATIVO' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{c.status}</span>
+                      <span className="text-xs text-gray-400 ml-auto">{c.tipo_contrato}</span>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{c.objeto}</p>
+                  </button>
+                ))}
               </div>
             )}
           </div>
         )}
       </Field>
 
-      {/* Secretaria | Secretário */}
+      {/* ── Linha 3: Secretaria | Secretário ── */}
       <Field label="Secretaria" half>
         <div className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600
           bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
@@ -446,14 +565,6 @@ export default function DidVariaveisSecaoI({
         ) : (
           <Input value={form.secretario_nome} onChange={inp('secretario_nome')} />
         )}
-      </Field>
-
-      {/* Credor | CNPJ/CPF */}
-      <Field label="Credor *" half>
-        <Input value={form.credor_sec1} onChange={inp('credor_sec1')} disabled={locked} />
-      </Field>
-      <Field label="CNPJ / CPF do Credor *" half>
-        <Input value={form.cnpj_cpf_credor_sec1} onChange={inp('cnpj_cpf_credor_sec1')} placeholder="Ex: 00.000.000/0001-00" disabled={locked} />
       </Field>
 
       {/* Data | Fonte de Recurso */}
