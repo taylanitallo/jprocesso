@@ -719,6 +719,48 @@ const closeTenantConnection = (tenantSchema) => {
   }
 };
 
+// Cria as tabelas de backup no schema public se não existirem
+const criarTabelasBackup = async () => {
+  await masterDb.query(`
+    CREATE TABLE IF NOT EXISTS public.backup_jobs (
+      id           UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id    UUID         REFERENCES public.clientes(id) ON DELETE CASCADE,
+      slug         VARCHAR(100) NOT NULL,
+      schema_name  VARCHAR(100) NOT NULL,
+      tipo         VARCHAR(20)  NOT NULL,
+      status       VARCHAR(20)  NOT NULL DEFAULT 'pendente',
+      storage_path TEXT,
+      tamanho_bytes BIGINT,
+      tabelas_count INTEGER,
+      linhas_count  BIGINT,
+      erro          TEXT,
+      iniciado_por  VARCHAR(255),
+      criado_em     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+      concluido_em  TIMESTAMPTZ
+    );
+    CREATE INDEX IF NOT EXISTS backup_jobs_tenant_id_idx ON public.backup_jobs (tenant_id);
+    CREATE INDEX IF NOT EXISTS backup_jobs_slug_idx      ON public.backup_jobs (slug);
+    CREATE INDEX IF NOT EXISTS backup_jobs_status_idx    ON public.backup_jobs (status);
+    CREATE INDEX IF NOT EXISTS backup_jobs_criado_em_idx ON public.backup_jobs (criado_em DESC);
+
+    CREATE TABLE IF NOT EXISTS public.backup_schedules (
+      id                        UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id                 UUID         REFERENCES public.clientes(id) ON DELETE CASCADE UNIQUE,
+      ativo                     BOOLEAN      NOT NULL DEFAULT false,
+      frequencia                VARCHAR(20)  NOT NULL DEFAULT 'diario',
+      hora                      INTEGER      NOT NULL DEFAULT 2,
+      minuto                    INTEGER      NOT NULL DEFAULT 0,
+      retencao_dias             INTEGER      NOT NULL DEFAULT 7,
+      proximo_backup            TIMESTAMPTZ,
+      ultimo_backup_automatico  TIMESTAMPTZ,
+      ultimo_status             VARCHAR(20),
+      criado_em                 TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+      atualizado_em             TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS backup_schedules_tenant_id_idx ON public.backup_schedules (tenant_id);
+  `).catch(() => {});
+};
+
 // Garante que a tabela public.refresh_tokens existe no masterDb (para admin users)
 const ensureMasterRefreshTokensTable = async () => {
   await masterDb.query(`
@@ -754,4 +796,5 @@ module.exports = {
   closeTenantConnection,
   ensureMasterRefreshTokensTable,
   ensureAdminsEmailColumn,
+  criarTabelasBackup,
 };

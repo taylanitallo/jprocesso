@@ -6,7 +6,7 @@ const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
-const { masterDb, getTenantConnection, ensureMasterRefreshTokensTable, ensureAdminsEmailColumn } = require('./config/database');
+const { masterDb, getTenantConnection, ensureMasterRefreshTokensTable, ensureAdminsEmailColumn, criarTabelasBackup } = require('./config/database');
 const Tenant = require('./models/Tenant');
 const { migrarTodosOsSchemas } = require('./controllers/tenantController');
 const routes = require('./routes');
@@ -179,6 +179,8 @@ const initDatabase = async () => {
     await ensureMasterRefreshTokensTable();
     // Garantir coluna email em public.admins (login SuperAdmin por email)
     await ensureAdminsEmailColumn();
+    // Criar tabelas de backup se não existirem
+    await criarTabelasBackup();
     // Migração automática: garantir colunas ausentes em todos os schemas
     await migrarTodosOsSchemas();
 
