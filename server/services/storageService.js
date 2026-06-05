@@ -132,10 +132,48 @@ function isLocalPath(urlArquivo) {
   );
 }
 
+async function criarBucket(bucketName) {
+  const nome = bucketName || BUCKET;
+  const supabase = getClient();
+  const { data: buckets, error: listErr } = await supabase.storage.listBuckets();
+  if (listErr) throw new Error(`Erro ao listar buckets: ${listErr.message}`);
+  const existe = buckets?.some(b => b.name === nome);
+  if (existe) return { criado: false, bucket: nome, mensagem: 'Bucket já existe' };
+  const { error } = await supabase.storage.createBucket(nome, { public: false });
+  if (error) throw new Error(`Erro ao criar bucket: ${error.message}`);
+  return { criado: true, bucket: nome };
+}
+
+async function uploadArquivo({ buffer, path: storagePath, contentType, bucket }) {
+  const supabase = getClient();
+  const { error } = await supabase.storage
+    .from(bucket || BUCKET)
+    .upload(storagePath, buffer, { contentType, upsert: true });
+  if (error) throw new Error(`Supabase Storage upload error: ${error.message}`);
+  return storagePath;
+}
+
+async function listarArquivos(prefix, bucket) {
+  const supabase = getClient();
+  const { data, error } = await supabase.storage.from(bucket || BUCKET).list(prefix);
+  if (error) throw new Error(`Supabase Storage list error: ${error.message}`);
+  return data || [];
+}
+
+async function deletarArquivo(storagePath, bucket) {
+  const supabase = getClient();
+  const { error } = await supabase.storage.from(bucket || BUCKET).remove([storagePath]);
+  if (error) throw new Error(`Supabase Storage delete error: ${error.message}`);
+}
+
 module.exports = {
   uploadDocumento,
   downloadDocumento,
   deleteDocumento,
   createSignedUrl,
-  isLocalPath
+  isLocalPath,
+  criarBucket,
+  uploadArquivo,
+  listarArquivos,
+  deletarArquivo,
 };

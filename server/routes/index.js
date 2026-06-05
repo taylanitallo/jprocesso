@@ -12,6 +12,7 @@ const importexportRoutes = require('./importexport');
 const patrimonioRoutes   = require('./patrimonio');
 const logRoutes          = require('./log');
 const aylaRoutes         = require('./ayla');
+const superadminRoutes   = require('./superadmin');
 
 module.exports = (app) => {
   app.use('/api/auth', authRoutes);
@@ -29,4 +30,5 @@ module.exports = (app) => {
   app.use('/api/patrimonio', patrimonioRoutes);
   app.use('/api/logs',       logRoutes);
   app.use('/api/ayla',       aylaRoutes);
+  app.use('/api/superadmin', superadminRoutes);
 };
