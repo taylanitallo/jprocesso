@@ -3,17 +3,25 @@ const router = express.Router();
 const {
   uploadDocumento,
   downloadDocumento,
+  viewDocumento,
+  downloadZip,
+  downloadMerged,
   listDocumentos,
-  deleteDocumento
+  deleteDocumento,
 } = require('../controllers/documentoController');
 const { authenticate, tenantMiddleware, requireTenant } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 const { validateFileContent } = require('../middleware/upload');
 
+const tenantAuth = [tenantMiddleware, requireTenant, authenticate];
+
 // A-1: validateFileContent verifica magic bytes após o multer receber o buffer
-router.post('/upload', tenantMiddleware, requireTenant, authenticate, upload.single('file'), validateFileContent, uploadDocumento);
-router.get('/download/:id', tenantMiddleware, requireTenant, authenticate, downloadDocumento);
-router.get('/', tenantMiddleware, requireTenant, authenticate, listDocumentos);
-router.delete('/:id', tenantMiddleware, requireTenant, authenticate, deleteDocumento);
+router.post('/upload',              ...tenantAuth, upload.single('file'), validateFileContent, uploadDocumento);
+router.get('/download/:id',         ...tenantAuth, downloadDocumento);
+router.get('/view/:id',             ...tenantAuth, viewDocumento);
+router.get('/zip/:processoId',      ...tenantAuth, downloadZip);
+router.get('/merged/:processoId',   ...tenantAuth, downloadMerged);
+router.get('/',                     ...tenantAuth, listDocumentos);
+router.delete('/:id',               ...tenantAuth, deleteDocumento);
 
 module.exports = router;

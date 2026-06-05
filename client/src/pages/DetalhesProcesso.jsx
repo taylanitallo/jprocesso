@@ -11,7 +11,7 @@ import {
   ArrowLeft, Send, ArrowLeftCircle, CheckCircle, Paperclip,
   FileText, Calendar, User, Clock, MapPin, AlertCircle, Download,
   ClipboardList, FileDown, Trash2, QrCode, Shield, Zap, ChevronRight,
-  Plus, X, Upload,
+  Plus, X, Upload, ExternalLink, Archive, FilePlus2,
 } from 'lucide-react'
 import { PageHeader, SectionTitle, EmptyState } from '../components/ui'
 
@@ -116,6 +116,47 @@ export default function DetalhesProcesso() {
       window.URL.revokeObjectURL(url)
     } catch (err) {
       alert('Erro ao baixar arquivo: ' + (err.response?.data?.error || err.message))
+    }
+  }
+
+  const handleViewDocumento = async (doc) => {
+    try {
+      const { data } = await api.get(`/documentos/view/${doc.id}`)
+      window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+    } catch (err) {
+      alert('Erro ao abrir arquivo: ' + (err.response?.data?.error || err.message))
+    }
+  }
+
+  const handleDownloadZip = async () => {
+    try {
+      const response = await api.get(`/documentos/zip/${id}`, { responseType: 'blob' })
+      const url  = window.URL.createObjectURL(new Blob([response.data], { type: 'application/zip' }))
+      const link = document.createElement('a')
+      link.href  = url
+      link.setAttribute('download', `${processo.numero}-documentos.zip`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      alert('Erro ao gerar ZIP: ' + (err.response?.data?.error || err.message))
+    }
+  }
+
+  const handleDownloadMerged = async () => {
+    try {
+      const response = await api.get(`/documentos/merged/${id}`, { responseType: 'blob' })
+      const url  = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }))
+      const link = document.createElement('a')
+      link.href  = url
+      link.setAttribute('download', `${processo.numero}-unificado.pdf`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      alert('Erro ao mesclar PDFs: ' + (err.response?.data?.error || err.message))
     }
   }
 
@@ -376,14 +417,40 @@ export default function DetalhesProcesso() {
                   : 'Documentos Anexados'
               }
               action={
-                <button
-                  onClick={() => setShowAnexar(true)}
-                  className="flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400
-                             hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Anexar documento
-                </button>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {processo.documentos?.length > 0 && (
+                    <>
+                      <button
+                        onClick={handleDownloadZip}
+                        title="Baixar todos os arquivos em ZIP"
+                        className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg
+                                   bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300
+                                   hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                      >
+                        <Archive className="h-3.5 w-3.5" />
+                        ZIP
+                      </button>
+                      <button
+                        onClick={handleDownloadMerged}
+                        title="Baixar todos os PDFs mesclados em um único arquivo"
+                        className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg
+                                   bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300
+                                   hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                      >
+                        <FilePlus2 className="h-3.5 w-3.5" />
+                        PDF Único
+                      </button>
+                    </>
+                  )}
+                  <button
+                    onClick={() => setShowAnexar(true)}
+                    className="flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400
+                               hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Anexar documento
+                  </button>
+                </div>
               }
             />
             {processo.documentos && processo.documentos.length > 0 ? (
@@ -401,7 +468,16 @@ export default function DetalhesProcesso() {
                       <FileText className="h-4 w-4 text-red-500 dark:text-red-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-slate-100 truncate">{doc.nome_arquivo}</p>
+                      <button
+                        onClick={() => handleViewDocumento(doc)}
+                        className="flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400
+                                   hover:text-blue-800 dark:hover:text-blue-300 hover:underline truncate
+                                   max-w-full text-left transition-colors"
+                        title={`Abrir ${doc.nome_arquivo} em nova aba`}
+                      >
+                        <span className="truncate">{doc.nome_arquivo}</span>
+                        <ExternalLink className="h-3 w-3 flex-shrink-0 opacity-60" />
+                      </button>
                       <p className="text-xs text-gray-500 dark:text-slate-500">
                         {(doc.tamanho_bytes / 1024).toFixed(1)} KB
                         {' · '}

@@ -1,6 +1,8 @@
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const archiver = require('archiver');
+const { PDFDocument } = require('pdf-lib');
 const storage = require('../services/storageService');
 
 const uploadDocumento = async (req, res) => {
@@ -166,6 +168,141 @@ const deleteDocumento = async (req, res) => {
   }
 };
 
+// ── Visualizar documento em nova aba (retorna signed URL para inline) ────────
+const viewDocumento = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { Documento, Processo } = req.models;
+
+    const documento = await Documento.findOne({
+      where: { id },
+      include: [{ model: Processo, as: 'processo', required: true, attributes: ['id'] }],
+    });
+
+    if (!documento) {
+      return res.status(404).json({ error: 'Documento não encontrado' });
+    }
+
+    if (storage.isLocalPath(documento.url_arquivo)) {
+      return res.status(400).json({ error: 'Visualização não disponível para arquivos legados' });
+    }
+
+    // TTL de 5 min — suficiente para o navegador abrir e renderizar o PDF
+    const signedUrl = await storage.createSignedUrl(documento.url_arquivo, 300);
+    res.json({ signedUrl });
+  } catch (error) {
+    console.error('Erro ao gerar URL de visualização:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+// ── Download ZIP com todos os documentos do processo ─────────────────────────
+const downloadZip = async (req, res) => {
+  try {
+    const { processoId } = req.params;
+    const { Documento, Processo } = req.models;
+
+    const processo = await Processo.findByPk(processoId, { attributes: ['id', 'numero'] });
+    if (!processo) return res.status(404).json({ error: 'Processo não encontrado' });
+
+    const documentos = await Documento.findAll({
+      where: { processo_id: processoId },
+      order: [['data_upload', 'ASC']],
+    });
+
+    if (documentos.length === 0) {
+      return res.status(404).json({ error: 'Nenhum documento encontrado' });
+    }
+
+    const nomeZip = `${processo.numero.replace(/[/\\?%*:|"<>]/g, '-')}-documentos.zip`;
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${nomeZip}"`);
+
+    const archive = archiver('zip', { zlib: { level: 6 } });
+    archive.on('error', (err) => { throw err; });
+    archive.pipe(res);
+
+    // Nomes únicos dentro do ZIP
+    const usados = {};
+    for (const doc of documentos) {
+      let nome = doc.nome_arquivo || 'documento';
+      if (usados[nome]) {
+        const ext  = path.extname(nome);
+        const base = path.basename(nome, ext);
+        nome = `${base}_(${usados[nome]})${ext}`;
+      }
+      usados[doc.nome_arquivo || 'documento'] = (usados[doc.nome_arquivo || 'documento'] || 0) + 1;
+
+      let buffer;
+      if (storage.isLocalPath(doc.url_arquivo)) {
+        if (!fs.existsSync(doc.url_arquivo)) continue;
+        buffer = fs.readFileSync(doc.url_arquivo);
+      } else {
+        buffer = await storage.downloadDocumento(doc.url_arquivo);
+      }
+      archive.append(buffer, { name: nome });
+    }
+
+    await archive.finalize();
+  } catch (error) {
+    console.error('Erro ao gerar ZIP:', error);
+    if (!res.headersSent) res.status(500).json({ error: 'Erro ao gerar arquivo ZIP' });
+  }
+};
+
+// ── Download PDF único (junção sequencial de todos os PDFs) ──────────────────
+const downloadMerged = async (req, res) => {
+  try {
+    const { processoId } = req.params;
+    const { Documento, Processo } = req.models;
+
+    const processo = await Processo.findByPk(processoId, { attributes: ['id', 'numero'] });
+    if (!processo) return res.status(404).json({ error: 'Processo não encontrado' });
+
+    const documentos = await Documento.findAll({
+      where: { processo_id: processoId },
+      order: [['data_upload', 'ASC']],
+    });
+
+    const pdfDocs = documentos.filter(d => d.tipo_mime === 'application/pdf');
+    if (pdfDocs.length === 0) {
+      return res.status(404).json({ error: 'Nenhum PDF encontrado para mesclar' });
+    }
+
+    const merged = await PDFDocument.create();
+
+    for (const doc of pdfDocs) {
+      let buffer;
+      if (storage.isLocalPath(doc.url_arquivo)) {
+        if (!fs.existsSync(doc.url_arquivo)) continue;
+        buffer = fs.readFileSync(doc.url_arquivo);
+      } else {
+        buffer = await storage.downloadDocumento(doc.url_arquivo);
+      }
+      try {
+        const pdf   = await PDFDocument.load(buffer, { ignoreEncryption: true });
+        const pages = await merged.copyPages(pdf, pdf.getPageIndices());
+        pages.forEach(p => merged.addPage(p));
+      } catch {
+        // PDF corrompido ou protegido — pula sem abortar o restante
+      }
+    }
+
+    if (merged.getPageCount() === 0) {
+      return res.status(422).json({ error: 'Nenhum PDF pôde ser processado' });
+    }
+
+    const bytes    = await merged.save();
+    const nomePdf  = `${processo.numero.replace(/[/\\?%*:|"<>]/g, '-')}-unificado.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${nomePdf}"`);
+    res.send(Buffer.from(bytes));
+  } catch (error) {
+    console.error('Erro ao mesclar PDFs:', error);
+    if (!res.headersSent) res.status(500).json({ error: 'Erro ao mesclar documentos' });
+  }
+};
+
 // MIME derivado da extensão — nunca do campo reportado pelo cliente
 function _mimeFromExt(ext) {
   const map = {
@@ -184,6 +321,9 @@ function _mimeFromExt(ext) {
 module.exports = {
   uploadDocumento,
   downloadDocumento,
+  viewDocumento,
+  downloadZip,
+  downloadMerged,
   listDocumentos,
   deleteDocumento,
 };
