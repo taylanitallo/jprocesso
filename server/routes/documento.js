@@ -9,6 +9,7 @@ const {
   moverDocumento,
   listDocumentos,
   deleteDocumento,
+  reorderDocumentos,
 } = require('../controllers/documentoController');
 const { authenticate, tenantMiddleware, requireTenant } = require('../middleware/auth');
 const upload = require('../middleware/upload');
@@ -24,6 +25,7 @@ router.get('/zip/:processoId',      ...tenantAuth, downloadZip);
 router.get('/merged/:processoId',   ...tenantAuth, downloadMerged);
 router.patch('/:id/mover',          ...tenantAuth, moverDocumento);
 router.get('/',                     ...tenantAuth, listDocumentos);
+router.put('/reorder',              ...tenantAuth, reorderDocumentos);
 router.delete('/:id',               ...tenantAuth, deleteDocumento);
 
 module.exports = router;

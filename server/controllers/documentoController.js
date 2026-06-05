@@ -40,6 +40,8 @@ const uploadDocumento = async (req, res) => {
       contentType: mimeSeguro,
     });
 
+    const countExistentes = await Documento.count({ where: { processo_id: processoId } });
+
     const documento = await Documento.create({
       processo_id:   processoId,
       nome_sistema:  nomeSistema,
@@ -50,6 +52,7 @@ const uploadDocumento = async (req, res) => {
       hash_md5,
       hash_sha256,
       upload_por_id: req.user.id,
+      ordem:         countExistentes,
     });
 
     res.status(201).json({
@@ -124,7 +127,7 @@ const listDocumentos = async (req, res) => {
     const documentos = await Documento.findAll({
       where,
       include: [{ model: User, as: 'uploadPor', attributes: ['id', 'nome'] }],
-      order: [['data_upload', 'DESC']],
+      order: [['ordem', 'ASC'], ['data_upload', 'ASC']],
     });
 
     res.json({ documentos });
@@ -353,6 +356,23 @@ function _mimeFromExt(ext) {
   return map[ext] || null;
 }
 
+const reorderDocumentos = async (req, res) => {
+  try {
+    const { items } = req.body; // [{id, ordem}]
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Lista de itens inválida' });
+    }
+    const { Documento } = req.models;
+    await Promise.all(
+      items.map(({ id, ordem }) => Documento.update({ ordem }, { where: { id } }))
+    );
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('Erro ao reordenar documentos:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
 module.exports = {
   uploadDocumento,
   downloadDocumento,
@@ -362,4 +382,5 @@ module.exports = {
   moverDocumento,
   listDocumentos,
   deleteDocumento,
+  reorderDocumentos,
 };

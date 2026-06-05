@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from 'react-query'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import ModalTramitacao from '../components/ModalTramitacao'
@@ -11,7 +11,7 @@ import {
   ArrowLeft, Send, ArrowLeftCircle, CheckCircle, Paperclip,
   FileText, Calendar, User, Clock, MapPin, AlertCircle, Download,
   ClipboardList, FileDown, Trash2, QrCode, Shield, Zap, ChevronRight,
-  Plus, X, Upload, ExternalLink, Archive, FilePlus2,
+  Plus, X, Upload, ExternalLink, Archive, FilePlus2, GripVertical,
 } from 'lucide-react'
 import { PageHeader, SectionTitle, EmptyState } from '../components/ui'
 
@@ -59,10 +59,19 @@ export default function DetalhesProcesso() {
   const [uploadError, setUploadError] = useState('')
   const [uploading,   setUploading]   = useState(false)
 
+  /* ── drag-and-drop de documentos ── */
+  const [localDocs,  setLocalDocs]  = useState([])
+  const dragIdx      = useRef(null)
+  const dragOverIdx  = useRef(null)
+
   const { data: processo, refetch } = useQuery(['processo', id], async () => {
     const { data } = await api.get(`/processos/${id}`)
     return data.processo
   })
+
+  useEffect(() => {
+    if (processo?.documentos) setLocalDocs(processo.documentos)
+  }, [processo?.documentos])
 
   const { user: currentUser } = useAuth()
 
@@ -167,6 +176,35 @@ export default function DetalhesProcesso() {
       refetch()
     } catch (err) {
       alert('Erro ao excluir documento: ' + (err.response?.data?.error || err.message))
+    }
+  }
+
+  const handleDragStart = (idx) => { dragIdx.current = idx }
+
+  const handleDragOver = (e, idx) => {
+    e.preventDefault()
+    dragOverIdx.current = idx
+  }
+
+  const handleDrop = async () => {
+    const from = dragIdx.current
+    const to   = dragOverIdx.current
+    if (from === null || to === null || from === to) return
+
+    const reordered = [...localDocs]
+    const [moved]   = reordered.splice(from, 1)
+    reordered.splice(to, 0, moved)
+    setLocalDocs(reordered)
+    dragIdx.current     = null
+    dragOverIdx.current = null
+
+    try {
+      await api.put('/documentos/reorder', {
+        items: reordered.map((doc, i) => ({ id: doc.id, ordem: i }))
+      })
+    } catch (err) {
+      alert('Erro ao salvar nova ordem: ' + (err.response?.data?.error || err.message))
+      refetch()
     }
   }
 
@@ -412,13 +450,13 @@ export default function DetalhesProcesso() {
             <SectionTitle
               icon={Paperclip}
               title={
-                processo.documentos?.length
-                  ? `Documentos Anexados (${processo.documentos.length})`
+                localDocs.length
+                  ? `Documentos Anexados (${localDocs.length})`
                   : 'Documentos Anexados'
               }
               action={
                 <div className="flex items-center gap-2 flex-wrap">
-                  {processo.documentos?.length > 0 && (
+                  {localDocs.length > 0 && (
                     <>
                       <button
                         onClick={handleDownloadZip}
@@ -455,17 +493,28 @@ export default function DetalhesProcesso() {
                 </div>
               }
             />
-            {processo.documentos && processo.documentos.length > 0 ? (
+            {localDocs.length > 0 ? (
               <div className="space-y-2">
-                {processo.documentos.map((doc) => (
+                {localDocs.map((doc, idx) => (
                   <div
                     key={doc.id}
+                    draggable
+                    onDragStart={() => handleDragStart(idx)}
+                    onDragOver={(e) => handleDragOver(e, idx)}
+                    onDrop={handleDrop}
                     className="flex items-center gap-3 px-3 py-2.5
                                bg-gray-50 dark:bg-slate-700/30
                                border border-gray-100 dark:border-slate-700/40
                                rounded-xl hover:bg-gray-100 dark:hover:bg-slate-700/60
-                               transition-colors group"
+                               transition-colors group cursor-default"
                   >
+                    <div
+                      className="shrink-0 flex items-center justify-center w-6 h-6 cursor-grab active:cursor-grabbing
+                                 text-gray-300 dark:text-slate-600 hover:text-gray-500 dark:hover:text-slate-400 transition-colors"
+                      title="Arraste para reordenar"
+                    >
+                      <GripVertical className="h-4 w-4" />
+                    </div>
                     <div className="shrink-0 flex items-center justify-center w-9 h-9 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-100 dark:border-red-800/40">
                       <FileText className="h-4 w-4 text-red-500 dark:text-red-400" />
                     </div>

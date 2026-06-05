@@ -765,7 +765,7 @@ const getProcessoById = async (req, res) => {
           model: Documento,
           as: 'documentos',
           include: [{ model: User, as: 'uploadPor', attributes: ['id', 'nome'] }],
-          order: [['data_upload', 'DESC']],
+          order: [['ordem', 'ASC'], ['data_upload', 'ASC']],
           separate: true
         }
       ]

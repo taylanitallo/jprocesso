@@ -65,6 +65,11 @@ const defineDocumentoModel = (sequelize) => {
       type: DataTypes.INTEGER,
       defaultValue: 1,
       comment: 'Versão do documento (para controle de versões)'
+    },
+    ordem: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+      comment: 'Posição de exibição (drag-and-drop)'
     }
   }, {
     tableName: 'anexos',
