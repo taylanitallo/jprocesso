@@ -85,6 +85,8 @@ const authorize = (...roles) => {
     if (!req.user) {
       return res.status(401).json({ error: 'Não autenticado' });
     }
+    // Administrador Jeos tem acesso irrestrito a todas as rotas do tenant
+    if (req.user.tipo === 'jeos') return next();
 
     if (!roles.includes(req.user.tipo)) {
       return res.status(403).json({ error: 'Acesso negado' });

@@ -285,6 +285,17 @@ const login = async (req, res) => {
     });
     setRefreshTokenCookie(res, rtTenant);
 
+    // Log de sessão (exceto Administrador Jeos)
+    if (user.tipo !== 'jeos' && models.Log) {
+      const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || null;
+      models.Log.create({
+        usuario_id: user.id, acao: 'login', modulo: 'sessao',
+        descricao:  `${user.nome} entrou no sistema`,
+        ip, user_agent: (req.headers['user-agent'] || '').substring(0, 300),
+        created_at: new Date()
+      }).catch(() => {});
+    }
+
     res.json({
       message: 'Login realizado com sucesso',
       user: {
@@ -506,10 +517,11 @@ const refreshToken = async (req, res) => {
 const logoutUser = async (req, res) => {
   try {
     const cookieToken = req.cookies?.refreshToken;
+    let decoded = null;
     if (cookieToken) {
       try {
         // C-3: algoritmo fixado
-        const decoded = jwt.verify(cookieToken, _getRefreshSecret(), { algorithms: ['HS256'] });
+        decoded = jwt.verify(cookieToken, _getRefreshSecret(), { algorithms: ['HS256'] });
         if (decoded?.jti) {
           const dbCtx = await _getRefreshDb(decoded);
           await _revokeRefreshToken(dbCtx.db, dbCtx.isAdmin, decoded.jti);
@@ -518,6 +530,28 @@ const logoutUser = async (req, res) => {
         // Token inválido/expirado — apenas limpar o cookie
       }
     }
+
+    // Log de sessão (apenas tenant users, exceto Administrador Jeos)
+    if (decoded?.subdomain && decoded?.id && !decoded?.isAdmin) {
+      try {
+        const tenant = await Tenant.findOne({ where: { subdominio: decoded.subdomain, ativo: true } });
+        if (tenant) {
+          const tenantDb = await getTenantConnection(tenant.schema);
+          const models   = initTenantModels(tenantDb);
+          const user = await models.User?.findByPk(decoded.id, { attributes: ['nome', 'tipo'] }).catch(() => null);
+          if (user && user.tipo !== 'jeos' && models.Log) {
+            const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || null;
+            models.Log.create({
+              usuario_id: decoded.id, acao: 'logout', modulo: 'sessao',
+              descricao:  `${user.nome} saiu do sistema`,
+              ip, user_agent: (req.headers['user-agent'] || '').substring(0, 300),
+              created_at: new Date()
+            }).catch(() => {});
+          }
+        }
+      } catch { /* não bloqueia o logout se o log falhar */ }
+    }
+
     clearRefreshTokenCookie(res);
     res.json({ success: true, message: 'Logout realizado com sucesso' });
   } catch (error) {

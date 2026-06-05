@@ -26,6 +26,7 @@ const TABS = [
   { id: 'info',       label: 'Informações', Icon: Building },
   { id: 'usuarios',   label: 'Usuários',    Icon: Users },
   { id: 'logs',       label: 'Logs',        Icon: FileText },
+  { id: 'relatorio',  label: 'Relatório',   Icon: Activity },
   { id: 'backup',     label: 'Backup',      Icon: HardDrive },
   { id: 'restore',    label: 'Restore',     Icon: RotateCcw },
   { id: 'configurar', label: 'Configurar',  Icon: Settings },
@@ -435,6 +436,12 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
   const [logCategoria, setLogCategoria] = useState('');
   const [logBusca, setLogBusca]         = useState('');
 
+  const [relBusca,      setRelBusca]      = useState('');
+  const [relStatus,     setRelStatus]     = useState('todos');
+  const [relUsuario,    setRelUsuario]    = useState('');
+  const [relDataInicio, setRelDataInicio] = useState('');
+  const [relDataFim,    setRelDataFim]    = useState('');
+
   const [backupLoading, setBackupLoading] = useState(false);
   const [showSchedule, setShowSchedule]   = useState(false);
   const [scheduleForm, setScheduleForm]   = useState({ ativo: false, frequencia: 'diario', hora: 2, minuto: 0, retencao_dias: 7 });
@@ -474,6 +481,19 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
     () => api.get(`/superadmin/tenants/${tenant.id}/backups`).then(r => r.data),
     { ...Q_OPTS, enabled: tab === 'backup', staleTime: 15000 }
   );
+  const { data: relatorioData, refetch: refetchRelatorio } = useQuery(
+    ['sa-relatorio', tenant.id, relBusca, relStatus, relUsuario, relDataInicio, relDataFim],
+    () => api.get(`/superadmin/tenants/${tenant.id}/access-report`, {
+      params: {
+        busca:       relUsuario || relBusca || undefined,
+        status:      relStatus !== 'todos' ? relStatus : undefined,
+        data_inicio: relDataInicio || undefined,
+        data_fim:    relDataFim    || undefined,
+      }
+    }).then(r => r.data),
+    { ...Q_OPTS, enabled: tab === 'relatorio', staleTime: 15000 }
+  );
+
   const { data: scheduleData, refetch: refetchSchedule } = useQuery(
     ['sa-schedule', tenant.id],
     () => api.get(`/superadmin/tenants/${tenant.id}/schedule`).then(r => r.data),
@@ -803,6 +823,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                         <option value="operacional">Operacional</option>
                         <option value="gestor">Gestor</option>
                         <option value="admin">Administrador</option>
+                        <option value="jeos">Administrador Jeos</option>
                       </select>
                     </div>
                     <div>
@@ -901,6 +922,111 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
               </div>
             </div>
           )}
+
+          {/* ── Relatório de Acessos ─────────────────────────────────────── */}
+          {tab === 'relatorio' && (() => {
+            const relLogs   = relatorioData?.logs  || [];
+            const relTotal  = relatorioData?.total || 0;
+            const relAtivos = relatorioData?.ativos || 0;
+
+            const usuariosUnicos = [...new Map(relLogs.map(l => [l.usuario_nome, l])).values()].map(l => l.usuario_nome).filter(Boolean);
+
+            const exportCSV = () => {
+              const header = 'Usuário,Ação,Data/Hora,IP\n';
+              const rows   = relLogs.map(l =>
+                `"${l.usuario_nome || ''}","${l.acao || ''}","${fmtDate(l.created_at)}","${l.ip || ''}"`
+              ).join('\n');
+              const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+              const url  = URL.createObjectURL(blob);
+              const a    = Object.assign(document.createElement('a'), { href: url, download: `acessos_${tenant.subdominio}.csv` });
+              a.click(); URL.revokeObjectURL(url);
+            };
+
+            return (
+              <div className="space-y-4">
+                {/* Usuários ativos */}
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 flex items-center justify-between">
+                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Usuários Ativos no Momento</span>
+                  <span className="text-2xl font-bold text-blue-700 dark:text-blue-300">{relAtivos}</span>
+                </div>
+
+                {/* Barra de filtros */}
+                <div className="flex flex-wrap gap-2 items-center">
+                  <input
+                    value={relBusca}
+                    onChange={e => setRelBusca(e.target.value)}
+                    placeholder="Buscar por nome..."
+                    className="flex-1 min-w-[140px] px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 dark:text-white"
+                  />
+
+                  <select value={relStatus} onChange={e => setRelStatus(e.target.value)}
+                    className="px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 dark:text-white">
+                    <option value="todos">Todos</option>
+                    <option value="login">Login</option>
+                    <option value="logout">Logout</option>
+                  </select>
+
+                  <input type="date" value={relDataInicio} onChange={e => setRelDataInicio(e.target.value)}
+                    className="px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 dark:text-white" />
+                  <input type="date" value={relDataFim} onChange={e => setRelDataFim(e.target.value)}
+                    className="px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 dark:text-white" />
+
+                  <button onClick={refetchRelatorio}
+                    className="p-1.5 rounded-lg border border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700">
+                    <RefreshCw className="h-4 w-4 text-gray-500" />
+                  </button>
+                  <button onClick={exportCSV}
+                    className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-slate-700 dark:text-gray-300">
+                    <Download className="h-4 w-4" /> Exportar CSV
+                  </button>
+                  <span className="text-sm text-gray-500">{relTotal} registros</span>
+                </div>
+
+                {/* Lista */}
+                <div className="space-y-2">
+                  {relLogs.map(l => {
+                    const isLogin  = l.acao === 'login';
+                    const isLogout = l.acao === 'logout';
+                    return (
+                      <div key={l.id} className="flex items-center gap-3 p-3 border border-gray-200 dark:border-slate-700 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700/30">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                          isLogin  ? 'bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400' :
+                          isLogout ? 'bg-red-100   dark:bg-red-900/40   text-red-600   dark:text-red-400'   :
+                                     'bg-blue-100  dark:bg-blue-900/40  text-blue-600  dark:text-blue-400'
+                        }`}>
+                          {isLogin  ? <Zap    className="h-4 w-4" /> :
+                           isLogout ? <LogOut className="h-4 w-4" /> :
+                                      <Eye    className="h-4 w-4" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">
+                            {l.usuario_nome || 'Usuário desconhecido'}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {l.descricao || (isLogin ? 'Entrou no sistema' : isLogout ? 'Saiu do sistema' : l.acao)}
+                          </p>
+                          {l.ip && <p className="text-xs text-gray-400 font-mono">IP {l.ip}</p>}
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <Badge color={isLogin ? 'green' : isLogout ? 'red' : 'blue'}>
+                            {isLogin ? 'Login' : isLogout ? 'Logout' : 'Ativo'}
+                          </Badge>
+                          <p className="text-xs text-gray-400 mt-1">{fmtDate(l.created_at)}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {!relLogs.length && (
+                    <div className="text-center py-10">
+                      <Activity className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+                      <p className="text-gray-400 text-sm">Nenhum acesso registrado</p>
+                      <p className="text-gray-400 text-xs mt-1">Os logins e logouts aparecem aqui</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* ── Backup ──────────────────────────────────────────────────────── */}
           {tab === 'backup' && (

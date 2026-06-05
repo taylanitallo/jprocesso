@@ -17,6 +17,8 @@ const registrarLog = async (req, { acao, modulo, descricao, referencia_id, refer
   try {
     // Precisa do modelo Log no contexto do tenant
     if (!req.models?.Log) return;
+    // Administrador Jeos: não gera rastro em logs
+    if (req.user?.tipo === 'jeos') return;
 
     const { Log } = req.models;
     const user = req.user;

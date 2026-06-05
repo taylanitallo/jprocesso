@@ -289,6 +289,80 @@ const listTenantLogs = async (req, res) => {
   }
 };
 
+// ─── Relatório de Acessos ─────────────────────────────────────────────────────
+
+const listAccessReport = async (req, res) => {
+  try {
+    const tenant = await getTenantOrFail(req.params.id, res);
+    if (!tenant) return;
+
+    const { busca, status, data_inicio, data_fim, page = 1, limit = 50 } = req.query;
+    const offset  = (parseInt(page) - 1) * parseInt(limit);
+    const schemaQ = qi().quoteIdentifier(tenant.schema);
+
+    const conditions = [`l.modulo = 'sessao'`, `(u.tipo IS NULL OR u.tipo != 'jeos')`];
+    const replacements = { limit: parseInt(limit), offset };
+
+    if (status && status !== 'todos') {
+      conditions.push('l.acao = :status');
+      replacements.status = status; // 'login' | 'logout'
+    }
+    if (busca) {
+      conditions.push('u.nome ILIKE :busca');
+      replacements.busca = `%${busca}%`;
+    }
+    if (data_inicio) {
+      conditions.push('l.created_at >= :dataInicio');
+      replacements.dataInicio = data_inicio;
+    }
+    if (data_fim) {
+      conditions.push('l.created_at <= :dataFim::date + interval \'1 day\'');
+      replacements.dataFim = data_fim;
+    }
+
+    const where = 'WHERE ' + conditions.join(' AND ');
+
+    const [rows, countRows, activeRows] = await Promise.all([
+      masterDb.query(
+        `SELECT l.id, l.acao, l.descricao, l.ip, l.user_agent, l.created_at,
+                u.nome AS usuario_nome, u.tipo AS usuario_tipo, u.email AS usuario_email
+         FROM ${schemaQ}.logs l
+         LEFT JOIN ${schemaQ}.usuarios u ON l.usuario_id = u.id
+         ${where}
+         ORDER BY l.created_at DESC
+         LIMIT :limit OFFSET :offset`,
+        { replacements, type: QueryTypes.SELECT }
+      ),
+      masterDb.query(
+        `SELECT COUNT(*) AS total
+         FROM ${schemaQ}.logs l
+         LEFT JOIN ${schemaQ}.usuarios u ON l.usuario_id = u.id
+         ${where}`,
+        { replacements, type: QueryTypes.SELECT }
+      ),
+      masterDb.query(
+        `SELECT COUNT(DISTINCT rt.user_id) AS ativos
+         FROM ${schemaQ}.refresh_tokens rt
+         JOIN ${schemaQ}.usuarios u ON rt.user_id = u.id
+         WHERE rt.expires_at > NOW() AND u.tipo != 'jeos'`,
+        { type: QueryTypes.SELECT }
+      ).catch(() => [{ ativos: 0 }])
+    ]);
+
+    res.json({
+      success: true,
+      logs:    rows,
+      total:   parseInt(countRows[0]?.total || 0),
+      ativos:  parseInt(activeRows[0]?.ativos || 0),
+      page:    parseInt(page),
+      limit:   parseInt(limit)
+    });
+  } catch (error) {
+    console.error('Erro ao buscar relatório de acessos:', error);
+    res.status(500).json({ error: 'Erro ao buscar relatório de acessos' });
+  }
+};
+
 // ─── Backup ───────────────────────────────────────────────────────────────────
 
 const listBackups = async (req, res) => {
@@ -708,6 +782,7 @@ module.exports = {
   listTenantUsers, createTenantUser, updateTenantUser, deleteTenantUser,
   getTenantUsers: listTenantUsers,
   listTenantLogs, getTenantLogs: listTenantLogs,
+  listAccessReport,
   listBackups, createBackup, downloadBackup, deleteBackup, clearBackupHistory,
   getSchedule, updateSchedule, runBackupNow,
   restoreTenant, restoreBackup: restoreTenant,
