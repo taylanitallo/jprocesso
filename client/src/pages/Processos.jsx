@@ -52,8 +52,15 @@ export default function Processos() {
   const [usuarioId,      setUsuarioId]      = useState('')
   const [mostrarFiltros, setMostrarFiltros] = useState(false)
 
-  // ── Filtro Aba Enviados ──────────────────────────────────────────────────
-  const [statusEnv, setStatusEnv] = useState('')
+  // ── Filtros Aba Enviados ─────────────────────────────────────────────────
+  const [statusEnv,      setStatusEnv]      = useState('')
+  const [searchEnv,      setSearchEnv]      = useState('')
+  const [tipoEnv,        setTipoEnv]        = useState('')
+  const [prioridadeEnv,  setPrioridadeEnv]  = useState('')
+  const [secretariaIdEnv,setSecretariaIdEnv]= useState('')
+  const [setorIdEnv,     setSetorIdEnv]     = useState('')
+  const [usuarioIdEnv,   setUsuarioIdEnv]   = useState('')
+  const [mostrarFiltrosEnv, setMostrarFiltrosEnv] = useState(false)
 
   const reset = useCallback(() => setPage(1), [])
 
@@ -95,6 +102,18 @@ export default function Processos() {
     { staleTime: 60 * 1000, keepPreviousData: true }
   )
 
+  const { data: dataSetoresEnv } = useQuery(
+    ['setores-lista-env', secretariaIdEnv],
+    async () => {
+      const url = secretariaIdEnv
+        ? `/organizacao/secretarias/${secretariaIdEnv}/setores`
+        : '/organizacao/setores'
+      const { data } = await api.get(url)
+      return data?.setores || []
+    },
+    { staleTime: 60 * 1000, keepPreviousData: true }
+  )
+
   const { data: dataUsuarios } = useQuery(
     ['usuarios-lista'],
     async () => {
@@ -123,24 +142,41 @@ export default function Processos() {
 
   // ── Query: Enviados ───────────────────────────────────────────────────────
   const { data: dataEnviados, isLoading: loadEnv } = useQuery(
-    ['processos-enviados', statusEnv],
+    ['processos-enviados', statusEnv, searchEnv, tipoEnv, prioridadeEnv, secretariaIdEnv, setorIdEnv, usuarioIdEnv],
     async () => {
-      const params = statusEnv ? `?status=${statusEnv}` : ''
-      const { data } = await api.get(`/processos/enviados${params}`)
+      const params = new URLSearchParams()
+      if (statusEnv)        params.append('status',       statusEnv)
+      if (searchEnv)        params.append('search',       searchEnv)
+      if (tipoEnv)          params.append('tipo',         tipoEnv)
+      if (prioridadeEnv)    params.append('prioridade',   prioridadeEnv)
+      if (secretariaIdEnv)  params.append('secretariaId', secretariaIdEnv)
+      if (setorIdEnv)       params.append('setorId',      setorIdEnv)
+      if (usuarioIdEnv)     params.append('usuarioId',    usuarioIdEnv)
+      const q = params.toString()
+      const { data } = await api.get(`/processos/enviados${q ? `?${q}` : ''}`)
       return data
     }
   )
   const processosEnv = dataEnviados?.processos || []
 
-  // ── Limpar todos os filtros ───────────────────────────────────────────────
+  // ── Limpar filtros ────────────────────────────────────────────────────────
   const limparFiltros = () => {
     setStatus(''); setPrioridade(''); setTipo('')
     setSecretariaId(''); setSetorId(''); setUsuarioId('')
     setSearch(''); setPage(1)
   }
 
+  const filtrosAtivosEnv = [statusEnv, tipoEnv, prioridadeEnv, secretariaIdEnv, setorIdEnv, usuarioIdEnv].filter(Boolean).length
+
+  const limparFiltrosEnv = () => {
+    setStatusEnv(''); setTipoEnv(''); setPrioridadeEnv('')
+    setSecretariaIdEnv(''); setSetorIdEnv(''); setUsuarioIdEnv('')
+    setSearchEnv('')
+  }
+
   const secretariaOpts = dataSecretarias || []
   const setorOpts      = dataSetores || []
+  const setorOptsEnv   = dataSetoresEnv || []
   const usuarioOpts    = dataUsuarios || []
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -364,19 +400,128 @@ export default function Processos() {
       {/* ══ ABA: Enviados ══ */}
       {aba === 'enviados' && (
         <>
-          <div className="bg-white dark:bg-slate-900/70 border border-gray-200 dark:border-slate-700/70 rounded-2xl p-4 flex flex-col sm:flex-row gap-3">
-            <select
-              value={statusEnv}
-              onChange={(e) => setStatusEnv(e.target.value)}
-              className="input-field sm:w-56 text-sm"
-            >
-              <option value="">Todos os Status</option>
-              <option value="aberto">Aberto</option>
-              <option value="em_analise">Em Análise</option>
-              <option value="concluido">Concluído</option>
-              <option value="devolvido">Devolvido</option>
-              <option value="arquivado">Arquivado</option>
-            </select>
+          {/* ── Painel de Filtros Enviados ── */}
+          <div className="bg-white dark:bg-slate-900/70 border border-gray-200 dark:border-slate-700/70 rounded-2xl overflow-hidden">
+            <div className="p-4 flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Buscar por número, assunto ou interessado..."
+                  value={searchEnv}
+                  onChange={(e) => setSearchEnv(e.target.value)}
+                  className="input-field pl-9 text-sm"
+                />
+              </div>
+
+              <select
+                value={statusEnv}
+                onChange={(e) => setStatusEnv(e.target.value)}
+                className="input-field sm:w-44 text-sm"
+              >
+                <option value="">Todos os Status</option>
+                <option value="aberto">Aberto</option>
+                <option value="em_analise">Em Análise</option>
+                <option value="pendente">Pendente</option>
+                <option value="devolvido">Devolvido</option>
+                <option value="concluido">Concluído</option>
+                <option value="arquivado">Arquivado</option>
+              </select>
+
+              <button
+                onClick={() => setMostrarFiltrosEnv(v => !v)}
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border transition-all ${
+                  mostrarFiltrosEnv || filtrosAtivosEnv > 0
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'
+                }`}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                Filtros
+                {filtrosAtivosEnv > 0 && (
+                  <span className="ml-1 bg-white text-blue-600 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
+                    {filtrosAtivosEnv}
+                  </span>
+                )}
+                {mostrarFiltrosEnv ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              </button>
+            </div>
+
+            {mostrarFiltrosEnv && (
+              <div className="border-t border-gray-100 dark:border-slate-700/50 p-4 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Tipo</label>
+                    <select value={tipoEnv} onChange={(e) => setTipoEnv(e.target.value)} className="input-field text-sm w-full">
+                      <option value="">Todos os Tipos</option>
+                      <option value="Did">Did</option>
+                      <option value="Despacho">Despacho</option>
+                      <option value="Pauta">Pauta</option>
+                      <option value="Requisição">Requisição</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Prioridade</label>
+                    <select value={prioridadeEnv} onChange={(e) => setPrioridadeEnv(e.target.value)} className="input-field text-sm w-full">
+                      <option value="">Todas</option>
+                      <option value="urgente">Urgente</option>
+                      <option value="alta">Alta</option>
+                      <option value="normal">Normal</option>
+                      <option value="baixa">Baixa</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Secretaria</label>
+                    <select
+                      value={secretariaIdEnv}
+                      onChange={(e) => { setSecretariaIdEnv(e.target.value); setSetorIdEnv('') }}
+                      className="input-field text-sm w-full"
+                    >
+                      <option value="">Todas</option>
+                      {secretariaOpts.map(s => (
+                        <option key={s.id} value={s.id}>{s.sigla ? `${s.sigla} — ` : ''}{s.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Setor</label>
+                    <select value={setorIdEnv} onChange={(e) => setSetorIdEnv(e.target.value)} className="input-field text-sm w-full">
+                      <option value="">Todos</option>
+                      {setorOptsEnv.map(s => (
+                        <option key={s.id} value={s.id}>{s.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Responsável</label>
+                    <select value={usuarioIdEnv} onChange={(e) => setUsuarioIdEnv(e.target.value)} className="input-field text-sm w-full">
+                      <option value="">Todos</option>
+                      {usuarioOpts.map(u => (
+                        <option key={u.id} value={u.id}>{u.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                </div>
+
+                {(filtrosAtivosEnv > 0 || searchEnv) && (
+                  <div className="flex justify-end pt-1">
+                    <button
+                      onClick={limparFiltrosEnv}
+                      className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                      Limpar filtros
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {loadEnv && (

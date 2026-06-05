@@ -506,9 +506,9 @@ const listProcessos = async (req, res) => {
       Object.assign(where, accessCond);
     }
 
-    // Filtro por secretaria: param explícito tem prioridade; gestor usa a sua
+    // Filtro por secretaria: param explícito tem prioridade; apenas gestor recebe filtro implícito
     const secFiltro = secretariaId ||
-      (tipoUsuario !== 'admin' && req.user.secretariaId ? req.user.secretariaId : null);
+      (tipoUsuario === 'gestor' && req.user.secretariaId ? req.user.secretariaId : null);
 
     // Include Setor + Secretaria aninhada (com filtro opcional por secretaria)
     const setorInclude = {
@@ -777,59 +777,78 @@ const getProcessoById = async (req, res) => {
 
 const listProcessosEnviados = async (req, res) => {
   try {
-    const { status, page = 1, limit = 50 } = req.query;
+    const {
+      status, search, tipo, prioridade,
+      secretariaId, setorId, usuarioId,
+      page = 1, limit = 50,
+    } = req.query;
     const { Processo, Tramitacao, User, Setor, Secretaria } = req.models;
 
-    // Buscar tramitações feitas pelo usuário (exceto abertura)
+    // Filtros aplicados ao processo
+    const processoWhere = {};
+    if (status)     processoWhere.status          = status;
+    if (tipo)       processoWhere.tipo_processo    = tipo;
+    if (prioridade) processoWhere.prioridade       = prioridade;
+    if (setorId)    processoWhere.setor_atual_id   = setorId;
+    if (usuarioId)  processoWhere.usuario_atual_id = usuarioId;
+    if (search) {
+      processoWhere[Op.or] = [
+        { numero:           { [Op.iLike]: `%${search}%` } },
+        { assunto:          { [Op.iLike]: `%${search}%` } },
+        { interessado_nome: { [Op.iLike]: `%${search}%` } },
+      ];
+    }
+
+    const setorAtualInclude = {
+      model: Setor,
+      as: 'setorAtual',
+      required: !!secretariaId,
+      ...(secretariaId ? { where: { secretariaId } } : {}),
+      include: [{ model: Secretaria, as: 'secretaria' }],
+    };
+
     const tramitacoes = await Tramitacao.findAll({
       where: {
         origem_usuario_id: req.user.id,
-        tipo_acao: ['tramite', 'devolucao'] // Não incluir abertura e conclusão
+        tipo_acao: { [Op.in]: ['tramite', 'devolucao'] },
       },
       include: [
         {
           model: Processo,
           as: 'processo',
-          where: status ? { status } : {},
+          where: processoWhere,
+          required: true,
           include: [
-            { model: Setor, as: 'setorAtual', include: [{ model: Secretaria, as: 'secretaria' }] },
-            { model: User, as: 'usuarioAtual', attributes: ['id', 'nome', 'email'] }
-          ]
+            setorAtualInclude,
+            { model: User, as: 'usuarioAtual', attributes: ['id', 'nome', 'email'] },
+          ],
         },
         { model: Setor, as: 'destinoSetor', include: [{ model: Secretaria, as: 'secretaria' }] },
-        { model: User, as: 'destinoUsuario', attributes: ['id', 'nome', 'email'] }
+        { model: User, as: 'destinoUsuario', attributes: ['id', 'nome', 'email'] },
       ],
       order: [['data_hora', 'DESC']],
-      limit: parseInt(limit)
+      limit: parseInt(limit),
     });
 
-    // Remover duplicatas (mesmo processo tramitado várias vezes)
+    // Remover duplicatas (mesmo processo tramitado várias vezes — manter tramitação mais recente)
     const processosMap = new Map();
     tramitacoes.forEach(tram => {
       if (tram.processo && !processosMap.has(tram.processo.id)) {
-        processosMap.set(tram.processo.id, {
-          processo: tram.processo,
-          ultimaTramitacao: tram
-        });
+        processosMap.set(tram.processo.id, { processo: tram.processo, ultimaTramitacao: tram });
       }
     });
 
     const processos = Array.from(processosMap.values()).map(item => ({
       ...item.processo.toJSON(),
-      destinatario: item.ultimaTramitacao.destinoSetor?.secretaria?.nome || 
+      destinatario: item.ultimaTramitacao.destinoSetor?.secretaria?.nome ||
                     item.ultimaTramitacao.destinoSetor?.nome || 'Destino não identificado',
-      destinatarioSetor: item.ultimaTramitacao.destinoSetor?.nome,
+      destinatarioSetor:   item.ultimaTramitacao.destinoSetor?.nome,
       destinatarioUsuario: item.ultimaTramitacao.destinoUsuario?.nome,
-      dataEnvio: item.ultimaTramitacao.data_hora,
-      tipoTramitacao: item.ultimaTramitacao.tipo_acao
-    })).sort((a, b) => a.assunto.localeCompare(b.assunto, 'pt-BR'));
+      dataEnvio:           item.ultimaTramitacao.data_hora,
+      tipoTramitacao:      item.ultimaTramitacao.tipo_acao,
+    })).sort((a, b) => new Date(b.dataEnvio) - new Date(a.dataEnvio));
 
-    res.json({
-      processos,
-      total: processos.length,
-      page: parseInt(page),
-      limit: parseInt(limit)
-    });
+    res.json({ processos, total: processos.length, page: parseInt(page), limit: parseInt(limit) });
   } catch (error) {
     console.error('Erro ao listar processos enviados:', error);
     res.status(500).json({ error: 'Erro ao listar processos enviados' });
