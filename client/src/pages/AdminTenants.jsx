@@ -1,8 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useState, useRef, useCallback } from 'react';
 import JSZip from 'jszip';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import {
@@ -1363,66 +1361,89 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
               a.click(); URL.revokeObjectURL(url);
             };
 
-            const exportPDF = async () => {
-              const doc = new jsPDF({ orientation: 'portrait', format: 'a4', unit: 'mm' });
-              const pw = doc.internal.pageSize.getWidth();
-              const ph = doc.internal.pageSize.getHeight();
+            const exportPDF = () => {
+              const timbradoUrl = tenant.configuracoes?.timbrado_url || '';
+              const rows = relLogs.map(l => `
+                <tr>
+                  <td>${fmtDate(l.created_at)}</td>
+                  <td>${l.usuario_nome || '—'}</td>
+                  <td class="${l.acao === 'login' ? 'ev-login' : l.acao === 'logout' ? 'ev-logout' : ''}">${
+                    l.acao === 'login' ? 'Login' : l.acao === 'logout' ? 'Logout' : l.acao
+                  }</td>
+                  <td>${l.ip || '—'}</td>
+                </tr>`).join('');
 
-              // Carrega timbrado das configurações do tenant
-              const timbradoUrl = tenant.configuracoes?.timbrado_url;
-              let timbradoB64 = null;
-              if (timbradoUrl) {
-                timbradoB64 = await new Promise((resolve) => {
-                  const img = new window.Image();
-                  img.crossOrigin = 'anonymous';
-                  img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = img.naturalWidth;
-                    canvas.height = img.naturalHeight;
-                    canvas.getContext('2d').drawImage(img, 0, 0);
-                    resolve(canvas.toDataURL('image/png'));
-                  };
-                  img.onerror = () => resolve(null);
-                  img.src = timbradoUrl;
-                });
-              }
-              if (timbradoB64) doc.addImage(timbradoB64, 'PNG', 0, 0, pw, ph);
+              const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<title>Relatório de Acessos — ${tenant.nome_municipio}</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:Arial,sans-serif;background:#e5e7eb}
+  .toolbar{position:fixed;top:0;left:0;right:0;height:52px;background:#1e293b;
+    display:flex;align-items:center;justify-content:space-between;padding:0 24px;z-index:99}
+  .toolbar-title{color:#f1f5f9;font-size:14px;display:flex;align-items:center;gap:8px}
+  .toolbar-btns{display:flex;gap:8px}
+  .btn-fechar{padding:7px 18px;border-radius:6px;background:transparent;
+    border:1px solid rgba(255,255,255,.3);color:#f1f5f9;cursor:pointer;font-size:13px}
+  .btn-fechar:hover{background:rgba(255,255,255,.1)}
+  .btn-imprimir{padding:7px 18px;border-radius:6px;background:#2563eb;border:none;
+    color:#fff;cursor:pointer;font-size:13px;font-weight:700;letter-spacing:.3px}
+  .btn-imprimir:hover{background:#1d4ed8}
+  .wrapper{padding-top:68px;padding-bottom:32px;display:flex;justify-content:center}
+  .page{width:210mm;min-height:297mm;background:#fff;position:relative;
+    box-shadow:0 4px 24px rgba(0,0,0,.2);margin:0 auto}
+  .timbrado-img{position:absolute;top:0;left:0;width:100%;height:100%;
+    object-fit:fill;display:block;pointer-events:none}
+  .content{position:relative;z-index:1;padding:46mm 14mm 20mm}
+  .report-title{text-align:center;color:#1e40af;font-size:13px;font-weight:700;margin-bottom:4px}
+  .report-sub{text-align:center;color:#374151;font-size:11px;margin-bottom:3px}
+  .report-meta{text-align:center;color:#6b7280;font-size:9px;margin-bottom:16px}
+  table{width:100%;border-collapse:collapse;font-size:9px}
+  thead tr{background:#2563eb}
+  thead th{color:#fff;padding:7px 8px;text-align:left;font-weight:700;font-size:9px}
+  tbody tr:nth-child(even){background:#f5f7fa}
+  tbody td{padding:6px 8px;color:#374151;border-bottom:1px solid #e5e7eb}
+  .ev-login{color:#16a34a;font-weight:600}
+  .ev-logout{color:#dc2626;font-weight:600}
+  @media print{
+    body{background:#fff}
+    .toolbar{display:none}
+    .wrapper{padding-top:0;padding-bottom:0}
+    .page{box-shadow:none;margin:0}
+    @page{size:A4 portrait;margin:0}
+  }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <span class="toolbar-title">📄 Visualização de Impressão</span>
+  <div class="toolbar-btns">
+    <button class="btn-fechar" onclick="window.close()">Fechar</button>
+    <button class="btn-imprimir" onclick="window.print()">🖨️ IMPRIMIR</button>
+  </div>
+</div>
+<div class="wrapper">
+  <div class="page">
+    ${timbradoUrl ? `<img src="${timbradoUrl}" class="timbrado-img" crossorigin="anonymous"/>` : ''}
+    <div class="content">
+      <div class="report-title">jProcesso - Sistema de Tramitação Digital</div>
+      <div class="report-sub">Relatório de Acessos — ${tenant.nome_municipio}</div>
+      <div class="report-meta">Gerado em ${fmtDate(new Date())} · ${relTotal} registros</div>
+      <table>
+        <thead><tr><th>Data/Hora</th><th>Usuário</th><th>Evento</th><th>IP</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</body>
+</html>`;
 
-              // Título
-              doc.setFont('helvetica', 'bold');
-              doc.setFontSize(11);
-              doc.setTextColor(30, 64, 175);
-              doc.text('jProcesso - Sistema de Tramitação Digital', pw / 2, 48, { align: 'center' });
-              doc.setFontSize(10);
-              doc.setFont('helvetica', 'normal');
-              doc.setTextColor(40);
-              doc.text(`Relatório de Acessos — ${tenant.nome_municipio}`, pw / 2, 55, { align: 'center' });
-              doc.setFontSize(8);
-              doc.setTextColor(120);
-              doc.text(`Gerado em ${fmtDate(new Date())} · ${relTotal} registros`, pw / 2, 61, { align: 'center' });
-              doc.setTextColor(0);
-
-              autoTable(doc, {
-                startY: 67,
-                head: [['Data/Hora', 'Usuário', 'Evento', 'IP']],
-                body: relLogs.map(l => [
-                  fmtDate(l.created_at),
-                  l.usuario_nome || '—',
-                  l.acao === 'login' ? 'Login' : l.acao === 'logout' ? 'Logout' : l.acao,
-                  l.ip || '—',
-                ]),
-                styles: { fontSize: 8, cellPadding: 3 },
-                headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold' },
-                alternateRowStyles: { fillColor: [245, 247, 250] },
-                columnStyles: { 0: { cellWidth: 40 }, 1: { cellWidth: 68 }, 2: { cellWidth: 24 } },
-                margin: { left: 14, right: 14 },
-                didDrawPage: ({ pageNumber }) => {
-                  if (pageNumber > 1 && timbradoB64) doc.addImage(timbradoB64, 'PNG', 0, 0, pw, ph);
-                },
-              });
-
-              const blobUrl = doc.output('bloburl');
-              window.open(blobUrl, '_blank');
+              const win = window.open('', '_blank');
+              win.document.write(html);
+              win.document.close();
             };
 
             return (
