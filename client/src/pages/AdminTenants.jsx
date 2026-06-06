@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useState, useRef, useCallback } from 'react';
 import JSZip from 'jszip';
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import {
@@ -1370,7 +1370,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
               doc.setTextColor(120);
               doc.text(`Gerado em ${fmtDate(new Date())} · ${relTotal} registros`, 14, 22);
               doc.setTextColor(0);
-              doc.autoTable({
+              autoTable(doc, {
                 startY: 27,
                 head: [['Usuário', 'Ação', 'Descrição', 'IP', 'Data/Hora']],
                 body: relLogs.map(l => [

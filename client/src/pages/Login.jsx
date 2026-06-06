@@ -12,6 +12,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [tenantInfo, setTenantInfo] = useState(null)
+  const [tenantNotFound, setTenantNotFound] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
 
   const { login } = useAuth()
@@ -28,7 +29,7 @@ export default function Login() {
       const response = await api.get(`/tenants/info?subdomain=${sub}`)
       setTenantInfo(response.data)
     } catch (err) {
-      console.error('Erro ao buscar informações do tenant:', err)
+      setTenantNotFound(true)
     }
   }
 
@@ -56,6 +57,40 @@ export default function Login() {
 
   const nomeMunicipio = tenantInfo?.tenant?.nome_municipio
   const brasaoUrl = tenantInfo?.tenant?.configuracoes?.brasao_url
+
+  if (tenantNotFound) {
+    return (
+      <div
+        className="relative h-screen overflow-hidden flex items-center justify-center"
+        style={{ backgroundImage: "url('/background.png')", backgroundSize: 'cover', backgroundPosition: 'center' }}
+      >
+        <div className="absolute inset-0 bg-slate-950/60 pointer-events-none" />
+        <div className="relative z-10 text-center px-8 max-w-md">
+          <div className="mb-6 flex justify-center">
+            <img src="/logo_jprocesso.png" alt="jProcesso" className="w-48 object-contain drop-shadow-[0_0_20px_rgba(168,85,247,0.40)]" />
+          </div>
+          <div className="bg-[#050816]/90 backdrop-blur-xl border border-red-500/30 shadow-[0_0_40px_rgba(239,68,68,0.20)] rounded-[28px] px-8 py-8">
+            <div className="mb-4 w-16 h-16 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto">
+              <span className="text-3xl">🔒</span>
+            </div>
+            <h1 className="text-xl font-bold text-white mb-2">Página não encontrada</h1>
+            <p className="text-slate-400 text-sm mb-6">
+              O município <span className="text-white font-semibold">/{subdomain}</span> não existe ou foi desativado no sistema.
+            </p>
+            <a
+              href="/"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white text-sm font-semibold hover:from-fuchsia-500 hover:to-violet-500 transition-all"
+            >
+              Voltar ao início
+            </a>
+          </div>
+          <p className="mt-6 text-xs text-white/30 uppercase tracking-widest">
+            © 2026 JEOS SISTEMAS E ASSESSORIAS LTDA
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div
