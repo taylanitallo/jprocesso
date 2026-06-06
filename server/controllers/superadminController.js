@@ -344,7 +344,10 @@ const listAccessReport = async (req, res) => {
         `SELECT COUNT(DISTINCT rt.user_id) AS ativos
          FROM ${schemaQ}.refresh_tokens rt
          JOIN ${schemaQ}.usuarios u ON rt.user_id = u.id
-         WHERE rt.expires_at > NOW() AND u.tipo != 'jeos'`,
+         WHERE rt.expires_at > NOW()
+           AND rt.revoked_at IS NULL
+           AND u.ativo = true
+           AND u.tipo NOT IN ('jeos', 'admin')`,
         { type: QueryTypes.SELECT }
       ).catch(() => [{ ativos: 0 }])
     ]);

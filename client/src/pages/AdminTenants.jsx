@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useState, useRef, useCallback } from 'react';
 import JSZip from 'jszip';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import {
@@ -1077,6 +1079,32 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
               a.click(); URL.revokeObjectURL(url);
             };
 
+            const exportPDF = () => {
+              const doc = new jsPDF({ orientation: 'landscape' });
+              doc.setFontSize(14);
+              doc.text(`Relatório de Acessos — ${tenant.nome_municipio}`, 14, 16);
+              doc.setFontSize(9);
+              doc.setTextColor(120);
+              doc.text(`Gerado em ${fmtDate(new Date())} · ${relTotal} registros`, 14, 22);
+              doc.setTextColor(0);
+              doc.autoTable({
+                startY: 27,
+                head: [['Usuário', 'Ação', 'Descrição', 'IP', 'Data/Hora']],
+                body: relLogs.map(l => [
+                  l.usuario_nome || '—',
+                  l.acao === 'login' ? 'Login' : l.acao === 'logout' ? 'Logout' : l.acao,
+                  l.descricao || '—',
+                  l.ip || '—',
+                  fmtDate(l.created_at),
+                ]),
+                styles: { fontSize: 8, cellPadding: 3 },
+                headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold' },
+                alternateRowStyles: { fillColor: [245, 247, 250] },
+                columnStyles: { 0: { cellWidth: 50 }, 2: { cellWidth: 60 }, 4: { cellWidth: 42 } },
+              });
+              doc.save(`acessos_${tenant.subdominio}_${new Date().toISOString().slice(0,10)}.pdf`);
+            };
+
             return (
               <div className="space-y-4">
                 {/* Usuários ativos */}
@@ -1112,7 +1140,11 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                   </button>
                   <button onClick={exportCSV}
                     className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-slate-700 dark:text-gray-300">
-                    <Download className="h-4 w-4" /> Exportar CSV
+                    <Download className="h-4 w-4" /> CSV
+                  </button>
+                  <button onClick={exportPDF}
+                    className="flex items-center gap-1.5 px-3 py-1.5 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg text-sm hover:bg-red-50 dark:hover:bg-red-900/20">
+                    <Download className="h-4 w-4" /> PDF
                   </button>
                   <span className="text-sm text-gray-500">{relTotal} registros</span>
                 </div>
