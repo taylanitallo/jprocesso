@@ -1362,29 +1362,55 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
               a.click(); URL.revokeObjectURL(url);
             };
 
-            const exportPDF = () => {
-              const doc = new jsPDF({ orientation: 'landscape' });
-              doc.setFontSize(14);
-              doc.text(`Relatório de Acessos — ${tenant.nome_municipio}`, 14, 16);
-              doc.setFontSize(9);
+            const exportPDF = async () => {
+              const doc = new jsPDF({ orientation: 'portrait', format: 'a4', unit: 'mm' });
+              const pw = doc.internal.pageSize.getWidth();
+              const ph = doc.internal.pageSize.getHeight();
+
+              // Carrega timbrado como fundo da página
+              let timbradoB64 = null;
+              try {
+                const resp = await fetch('/TIMBRADO - A4 (RETRATO).png');
+                const blob = await resp.blob();
+                timbradoB64 = await new Promise(res => {
+                  const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(blob);
+                });
+                doc.addImage(timbradoB64, 'PNG', 0, 0, pw, ph);
+              } catch (_) {}
+
+              // Título
+              doc.setFont('helvetica', 'bold');
+              doc.setFontSize(11);
+              doc.setTextColor(30, 64, 175);
+              doc.text('jProcesso - Sistema de Tramitação Digital', pw / 2, 48, { align: 'center' });
+              doc.setFontSize(10);
+              doc.setFont('helvetica', 'normal');
+              doc.setTextColor(40);
+              doc.text(`Relatório de Acessos — ${tenant.nome_municipio}`, pw / 2, 55, { align: 'center' });
+              doc.setFontSize(8);
               doc.setTextColor(120);
-              doc.text(`Gerado em ${fmtDate(new Date())} · ${relTotal} registros`, 14, 22);
+              doc.text(`Gerado em ${fmtDate(new Date())} · ${relTotal} registros`, pw / 2, 61, { align: 'center' });
               doc.setTextColor(0);
+
               autoTable(doc, {
-                startY: 27,
-                head: [['Usuário', 'Ação', 'Descrição', 'IP', 'Data/Hora']],
+                startY: 67,
+                head: [['Data/Hora', 'Usuário', 'Evento', 'IP']],
                 body: relLogs.map(l => [
+                  fmtDate(l.created_at),
                   l.usuario_nome || '—',
                   l.acao === 'login' ? 'Login' : l.acao === 'logout' ? 'Logout' : l.acao,
-                  l.descricao || '—',
                   l.ip || '—',
-                  fmtDate(l.created_at),
                 ]),
                 styles: { fontSize: 8, cellPadding: 3 },
                 headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold' },
                 alternateRowStyles: { fillColor: [245, 247, 250] },
-                columnStyles: { 0: { cellWidth: 50 }, 2: { cellWidth: 60 }, 4: { cellWidth: 42 } },
+                columnStyles: { 0: { cellWidth: 40 }, 1: { cellWidth: 68 }, 2: { cellWidth: 24 } },
+                margin: { left: 14, right: 14 },
+                didDrawPage: ({ pageNumber }) => {
+                  if (pageNumber > 1 && timbradoB64) doc.addImage(timbradoB64, 'PNG', 0, 0, pw, ph);
+                },
               });
+
               doc.save(`acessos_${tenant.subdominio}_${new Date().toISOString().slice(0,10)}.pdf`);
             };
 
