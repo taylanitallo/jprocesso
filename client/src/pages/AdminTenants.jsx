@@ -1367,16 +1367,21 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
               const pw = doc.internal.pageSize.getWidth();
               const ph = doc.internal.pageSize.getHeight();
 
-              // Carrega timbrado como fundo da página
+              // Carrega timbrado via Image+canvas (suporta nomes com espaços/parênteses)
               let timbradoB64 = null;
-              try {
-                const resp = await fetch('/TIMBRADO - A4 (RETRATO).png');
-                const blob = await resp.blob();
-                timbradoB64 = await new Promise(res => {
-                  const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(blob);
-                });
-                doc.addImage(timbradoB64, 'PNG', 0, 0, pw, ph);
-              } catch (_) {}
+              timbradoB64 = await new Promise((resolve) => {
+                const img = new window.Image();
+                img.onload = () => {
+                  const canvas = document.createElement('canvas');
+                  canvas.width = img.naturalWidth;
+                  canvas.height = img.naturalHeight;
+                  canvas.getContext('2d').drawImage(img, 0, 0);
+                  resolve(canvas.toDataURL('image/png'));
+                };
+                img.onerror = () => resolve(null);
+                img.src = '/TIMBRADO - A4 (RETRATO).png';
+              });
+              if (timbradoB64) doc.addImage(timbradoB64, 'PNG', 0, 0, pw, ph);
 
               // Título
               doc.setFont('helvetica', 'bold');
