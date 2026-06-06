@@ -459,6 +459,9 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
 
   const [logCategoria, setLogCategoria] = useState('');
   const [logBusca, setLogBusca]         = useState('');
+  const [logPage, setLogPage]           = useState(1);
+  const LOG_LIMIT = 20;
+  const [clearLogsModal, setClearLogsModal] = useState({ open: false, modo: 'antigos', loading: false });
 
   const [relBusca,      setRelBusca]      = useState('');
   const [relStatus,     setRelStatus]     = useState('todos');
@@ -503,9 +506,11 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
     { ...Q_OPTS, enabled: tab === 'usuarios', staleTime: 30000 }
   );
   const { data: logsData,    refetch: refetchLogs    } = useQuery(
-    ['sa-logs', tenant.id, logCategoria, logBusca],
-    () => api.get(`/superadmin/tenants/${tenant.id}/logs`, { params: { categoria: logCategoria || undefined, busca: logBusca || undefined } }).then(r => r.data),
-    { ...Q_OPTS, enabled: tab === 'logs', staleTime: 15000 }
+    ['sa-logs', tenant.id, logCategoria, logBusca, logPage],
+    () => api.get(`/superadmin/tenants/${tenant.id}/logs`, {
+      params: { categoria: logCategoria || undefined, busca: logBusca || undefined, page: logPage, limit: LOG_LIMIT }
+    }).then(r => r.data),
+    { ...Q_OPTS, enabled: tab === 'logs', staleTime: 0, keepPreviousData: true }
   );
   const { data: backupsData, refetch: refetchBackups } = useQuery(
     ['sa-backups', tenant.id],
@@ -643,6 +648,20 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
     } catch (err) {
       setClearModal(s => ({ ...s, loading: false }));
       alert(err.response?.data?.error || 'Erro ao limpar histórico');
+    }
+  };
+
+  const confirmClearLogs = async () => {
+    const { modo } = clearLogsModal;
+    setClearLogsModal(s => ({ ...s, loading: true }));
+    try {
+      await api.delete(`/superadmin/tenants/${tenant.id}/logs`, { data: { modo } });
+      setClearLogsModal({ open: false, modo: 'antigos', loading: false });
+      setLogPage(1);
+      refetchLogs();
+    } catch (err) {
+      setClearLogsModal(s => ({ ...s, loading: false }));
+      alert(err.response?.data?.error || 'Erro ao limpar logs');
     }
   };
 
@@ -1018,47 +1037,132 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
           )}
 
           {/* ── Logs ────────────────────────────────────────────────────────── */}
-          {tab === 'logs' && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 flex-wrap">
-                <select value={logCategoria} onChange={e => setLogCategoria(e.target.value)}
-                  className="px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 dark:text-white">
-                  <option value="">Todas categorias</option>
-                  {['processos','almoxarifado','patrimonio','financeiro','contratos','auth','configuracoes'].map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-                <input
-                  value={logBusca}
-                  onChange={e => setLogBusca(e.target.value)}
-                  placeholder="Buscar..."
-                  className="px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 dark:text-white flex-1 min-w-[120px]"
-                />
-                <button onClick={refetchLogs} className="p-1.5 rounded-lg border border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700">
-                  <RefreshCw className="h-4 w-4 text-gray-500" />
-                </button>
-                <span className="text-sm text-gray-500">{logsData?.total || 0} registros</span>
-              </div>
+          {tab === 'logs' && (() => {
+            const logTotal = logsData?.total || 0;
+            const totalPages = Math.max(1, Math.ceil(logTotal / LOG_LIMIT));
 
-              <div className="space-y-2">
-                {logs.map(l => (
-                  <div key={l.id} className="flex items-start gap-3 p-3 border border-gray-200 dark:border-slate-700 rounded-xl">
-                    <div className="w-2 h-2 rounded-full bg-green-500 mt-2 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">{l.acao}</p>
-                      <p className="text-xs text-gray-500 truncate">{l.usuario_nome || 'Sistema'} · {l.ip || '—'}</p>
-                      {l.descricao && <p className="text-xs text-gray-400 mt-0.5 truncate">{l.descricao}</p>}
+            return (
+              <div className="space-y-4">
+                {/* Barra de filtros + ações */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <select value={logCategoria} onChange={e => { setLogCategoria(e.target.value); setLogPage(1); }}
+                    className="px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 dark:text-white">
+                    <option value="">Todas categorias</option>
+                    {['processos','almoxarifado','patrimonio','financeiro','contratos','sessao','configuracoes'].map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                  <input
+                    value={logBusca}
+                    onChange={e => { setLogBusca(e.target.value); setLogPage(1); }}
+                    placeholder="Buscar..."
+                    className="flex-1 min-w-[120px] px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 dark:text-white"
+                  />
+                  <button onClick={() => { setLogPage(1); refetchLogs(); }}
+                    className="p-1.5 rounded-lg border border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700">
+                    <RefreshCw className="h-4 w-4 text-gray-500" />
+                  </button>
+                  <span className="text-sm text-gray-500 whitespace-nowrap">{logTotal} registros</span>
+                  <button
+                    onClick={() => setClearLogsModal({ open: true, modo: 'antigos', loading: false })}
+                    className="flex items-center gap-1.5 px-3 py-1.5 border border-red-200 dark:border-red-800 text-red-500 dark:text-red-400 rounded-lg text-sm hover:bg-red-50 dark:hover:bg-red-900/20"
+                  >
+                    <Trash2 className="h-4 w-4" /> Apagar Logs
+                  </button>
+                </div>
+
+                {/* Lista de logs */}
+                <div className="space-y-2">
+                  {logs.map(l => (
+                    <div key={l.id} className="flex items-start gap-3 p-3 border border-gray-200 dark:border-slate-700 rounded-xl">
+                      <div className="w-2 h-2 rounded-full bg-green-500 mt-2 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{l.acao}</p>
+                        <p className="text-xs text-gray-500 truncate">{l.usuario_nome || 'Sistema'} · {l.ip || '—'}</p>
+                        {l.descricao && <p className="text-xs text-gray-400 mt-0.5 truncate">{l.descricao}</p>}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <Badge color="blue">{l.modulo || 'sistema'}</Badge>
+                        <p className="text-xs text-gray-400 mt-1">{fmtDate(l.created_at)}</p>
+                      </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <Badge color="blue">{l.modulo || 'sistema'}</Badge>
-                      <p className="text-xs text-gray-400 mt-1">{fmtDate(l.created_at)}</p>
+                  ))}
+                  {!logs.length && <p className="text-center text-gray-400 py-8 text-sm">Nenhum log encontrado</p>}
+                </div>
+
+                {/* Paginação */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-slate-700">
+                    <button
+                      onClick={() => setLogPage(p => Math.max(1, p - 1))}
+                      disabled={logPage <= 1}
+                      className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      ← Anterior
+                    </button>
+                    <span className="text-sm text-gray-500">
+                      Página {logPage} de {totalPages}
+                    </span>
+                    <button
+                      onClick={() => setLogPage(p => Math.min(totalPages, p + 1))}
+                      disabled={logPage >= totalPages}
+                      className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Próxima →
+                    </button>
+                  </div>
+                )}
+
+                {/* Modal Apagar Logs */}
+                {clearLogsModal.open && (
+                  <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-900/40 flex items-center justify-center shrink-0">
+                          <Trash2 className="h-5 w-5 text-red-600 dark:text-red-400" />
+                        </div>
+                        <h3 className="font-bold text-gray-900 dark:text-white">Apagar Logs</h3>
+                      </div>
+
+                      <div className="space-y-2">
+                        {[
+                          { val: 'antigos', label: 'Logs com mais de 7 dias', desc: 'Remove apenas registros mais antigos que 7 dias (regra padrão do sistema)' },
+                          { val: 'todos',   label: 'Todos os logs',           desc: 'Remove completamente o histórico de atividades — ação irreversível' },
+                        ].map(({ val, label, desc }) => (
+                          <label key={val} className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                            clearLogsModal.modo === val
+                              ? 'border-red-400 bg-red-50 dark:bg-red-900/20'
+                              : 'border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700/40'
+                          }`}>
+                            <input type="radio" name="clearLogsModo" value={val}
+                              checked={clearLogsModal.modo === val}
+                              onChange={() => setClearLogsModal(s => ({ ...s, modo: val }))}
+                              className="mt-0.5 accent-red-600" />
+                            <div>
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">{label}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{desc}</p>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+
+                      <div className="flex gap-3 pt-1">
+                        <button onClick={() => setClearLogsModal({ open: false, modo: 'antigos', loading: false })}
+                          className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-xl text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700">
+                          Cancelar
+                        </button>
+                        <button onClick={confirmClearLogs} disabled={clearLogsModal.loading}
+                          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl text-sm hover:bg-red-700 disabled:opacity-50">
+                          {clearLogsModal.loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                          {clearLogsModal.loading ? 'Apagando...' : 'Apagar'}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                ))}
-                {!logs.length && <p className="text-center text-gray-400 py-8 text-sm">Nenhum log encontrado</p>}
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* ── Relatório de Acessos ─────────────────────────────────────── */}
           {tab === 'relatorio' && (() => {

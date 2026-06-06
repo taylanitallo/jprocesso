@@ -11,7 +11,7 @@ const {
   listTenantUsers, createTenantUser, updateTenantUser, deleteTenantUser,
 
   // Logs
-  listTenantLogs, listAccessReport,
+  listTenantLogs, clearTenantLogs, listAccessReport,
 
   // Backup
   listBackups, createBackup, downloadBackup, deleteBackup, clearBackupHistory,
@@ -62,8 +62,9 @@ router.delete('/tenants/:id/usuarios/:userId', ...sa, deleteTenantUser);
 router.delete('/tenants/:id/users/:userId',    ...sa, deleteTenantUser);
 
 // ─── Logs ─────────────────────────────────────────────────────────────────────
-router.get('/tenants/:id/logs',          ...sa, listTenantLogs);
-router.get('/tenants/:id/access-report', ...sa, listAccessReport);
+router.get   ('/tenants/:id/logs',          ...sa, listTenantLogs);
+router.delete('/tenants/:id/logs',          ...sa, clearTenantLogs);
+router.get   ('/tenants/:id/access-report', ...sa, listAccessReport);
 
 // ─── Backup ───────────────────────────────────────────────────────────────────
 router.get   ('/tenants/:id/backups',                        ...sa, listBackups);

@@ -234,7 +234,15 @@ const listTenantLogs = async (req, res) => {
     const tenant = await getTenantOrFail(req.params.id, res);
     if (!tenant) return;
 
-    const { categoria, busca, data_inicio, data_fim, page = 1, limit = 50 } = req.query;
+    const schemaQ = qi().quoteIdentifier(tenant.schema);
+
+    // Auto-purge logs com mais de 7 dias
+    masterDb.query(
+      `DELETE FROM ${schemaQ}.logs WHERE created_at < NOW() - INTERVAL '7 days'`,
+      { type: QueryTypes.DELETE }
+    ).catch(() => {});
+
+    const { categoria, busca, data_inicio, data_fim, page = 1, limit = 20 } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
     const conditions = [];
@@ -257,8 +265,7 @@ const listTenantLogs = async (req, res) => {
       replacements.dataFim = data_fim;
     }
 
-    const where    = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
-    const schemaQ  = qi().quoteIdentifier(tenant.schema);
+    const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
 
     const [rows, countRows] = await Promise.all([
       masterDb.query(
@@ -286,6 +293,33 @@ const listTenantLogs = async (req, res) => {
   } catch (error) {
     console.error('Erro ao listar logs:', error);
     res.status(500).json({ error: 'Erro ao listar logs' });
+  }
+};
+
+// ─── Limpar logs do tenant ────────────────────────────────────────────────────
+
+const clearTenantLogs = async (req, res) => {
+  try {
+    const tenant = await getTenantOrFail(req.params.id, res);
+    if (!tenant) return;
+
+    const { modo = 'antigos' } = req.body; // 'antigos' | 'todos'
+    const schemaQ = qi().quoteIdentifier(tenant.schema);
+
+    let sql;
+    if (modo === 'todos') {
+      sql = `DELETE FROM ${schemaQ}.logs`;
+    } else {
+      sql = `DELETE FROM ${schemaQ}.logs WHERE created_at < NOW() - INTERVAL '7 days'`;
+    }
+
+    const [, meta] = await masterDb.query(sql);
+    const removidos = meta?.rowCount ?? 0;
+
+    res.json({ success: true, removidos });
+  } catch (error) {
+    console.error('Erro ao limpar logs:', error);
+    res.status(500).json({ error: 'Erro ao limpar logs' });
   }
 };
 
@@ -784,7 +818,7 @@ module.exports = {
   listTenants, getTenant, createTenant, updateTenant, deleteTenant,
   listTenantUsers, createTenantUser, updateTenantUser, deleteTenantUser,
   getTenantUsers: listTenantUsers,
-  listTenantLogs, getTenantLogs: listTenantLogs,
+  listTenantLogs, clearTenantLogs, getTenantLogs: listTenantLogs,
   listAccessReport,
   listBackups, createBackup, downloadBackup, deleteBackup, clearBackupHistory,
   getSchedule, updateSchedule, runBackupNow,
