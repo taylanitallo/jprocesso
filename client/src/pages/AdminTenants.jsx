@@ -1421,7 +1421,8 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                 },
               });
 
-              doc.save(`acessos_${tenant.subdominio}_${new Date().toISOString().slice(0,10)}.pdf`);
+              const blobUrl = doc.output('bloburl');
+              window.open(blobUrl, '_blank');
             };
 
             return (
