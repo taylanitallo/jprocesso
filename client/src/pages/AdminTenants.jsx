@@ -1361,8 +1361,26 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
               a.click(); URL.revokeObjectURL(url);
             };
 
-            const exportPDF = () => {
+            const exportPDF = async () => {
               const timbradoUrl = tenant.configuracoes?.timbrado_url || '';
+
+              // Pré-carrega o timbrado como base64 para evitar CORS no about:blank
+              let timbradoSrc = '';
+              if (timbradoUrl) {
+                timbradoSrc = await new Promise((resolve) => {
+                  const img = new window.Image();
+                  img.crossOrigin = 'anonymous';
+                  img.onload = () => {
+                    const c = document.createElement('canvas');
+                    c.width = img.naturalWidth; c.height = img.naturalHeight;
+                    c.getContext('2d').drawImage(img, 0, 0);
+                    resolve(c.toDataURL('image/png'));
+                  };
+                  img.onerror = () => resolve('');
+                  img.src = timbradoUrl;
+                });
+              }
+
               const rows = relLogs.map(l => `
                 <tr>
                   <td>${fmtDate(l.created_at)}</td>
@@ -1426,7 +1444,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
 </div>
 <div class="wrapper">
   <div class="page">
-    ${timbradoUrl ? `<img src="${timbradoUrl}" class="timbrado-img" crossorigin="anonymous"/>` : ''}
+    ${timbradoSrc ? `<img src="${timbradoSrc}" class="timbrado-img"/>` : ''}
     <div class="content">
       <div class="report-title">jProcesso - Sistema de Tramitação Digital</div>
       <div class="report-sub">Relatório de Acessos — ${tenant.nome_municipio}</div>
