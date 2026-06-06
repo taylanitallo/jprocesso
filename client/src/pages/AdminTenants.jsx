@@ -526,9 +526,10 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
   const restoreRef = useRef();
   const editFormRef = useRef();
 
-  const [logoLoginFile, setLogoLoginFile]       = useState(null);
-  const [logoInternaFile, setLogoInternaFile]   = useState(null);
-  const [logoLoading, setLogoLoading]           = useState('');
+  const [logoLoginFile, setLogoLoginFile]         = useState(null);
+  const [logoInternaFile, setLogoInternaFile]     = useState(null);
+  const [logoTimbradoFile, setLogoTimbradoFile]   = useState(null);
+  const [logoLoading, setLogoLoading]             = useState('');
 
   const [editNome, setEditNome]   = useState(tenant.nome_municipio);
   const [editAtivo, setEditAtivo] = useState(tenant.ativo);
@@ -1367,20 +1368,24 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
               const pw = doc.internal.pageSize.getWidth();
               const ph = doc.internal.pageSize.getHeight();
 
-              // Carrega timbrado via Image+canvas (suporta nomes com espaços/parênteses)
+              // Carrega timbrado das configurações do tenant
+              const timbradoUrl = tenant.configuracoes?.timbrado_url;
               let timbradoB64 = null;
-              timbradoB64 = await new Promise((resolve) => {
-                const img = new window.Image();
-                img.onload = () => {
-                  const canvas = document.createElement('canvas');
-                  canvas.width = img.naturalWidth;
-                  canvas.height = img.naturalHeight;
-                  canvas.getContext('2d').drawImage(img, 0, 0);
-                  resolve(canvas.toDataURL('image/png'));
-                };
-                img.onerror = () => resolve(null);
-                img.src = '/TIMBRADO - A4 (RETRATO).png';
-              });
+              if (timbradoUrl) {
+                timbradoB64 = await new Promise((resolve) => {
+                  const img = new window.Image();
+                  img.crossOrigin = 'anonymous';
+                  img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    canvas.getContext('2d').drawImage(img, 0, 0);
+                    resolve(canvas.toDataURL('image/png'));
+                  };
+                  img.onerror = () => resolve(null);
+                  img.src = timbradoUrl;
+                });
+              }
               if (timbradoB64) doc.addImage(timbradoB64, 'PNG', 0, 0, pw, ph);
 
               // Título
@@ -1939,21 +1944,23 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
                   {[
-                    { tipo: 'login',   label: 'Logo da tela de login',   field: 'logo_login_url',   file: logoLoginFile,   setFile: setLogoLoginFile },
-                    { tipo: 'interna', label: 'Logo interna do sistema', field: 'logo_interna_url', file: logoInternaFile, setFile: setLogoInternaFile },
-                  ].map(({ tipo, label, field, file, setFile }) => {
+                    { tipo: 'login',    label: 'Logo da tela de login',     field: 'logo_login_url',   file: logoLoginFile,    setFile: setLogoLoginFile },
+                    { tipo: 'interna',  label: 'Logo interna do sistema',   field: 'logo_interna_url', file: logoInternaFile,  setFile: setLogoInternaFile },
+                    { tipo: 'timbrado', label: 'Timbrado para relatórios (PDF) — A4 retrato PNG', field: 'timbrado_url', file: logoTimbradoFile, setFile: setLogoTimbradoFile, accept: 'image/png' },
+                  ].map(({ tipo, label, field, file, setFile, accept }) => {
                     const currentUrl = tenant.configuracoes?.[field];
+                    const isTimbrado = tipo === 'timbrado';
                     return (
-                      <div key={tipo} className="border border-gray-200 dark:border-slate-700 rounded-xl p-4">
+                      <div key={tipo} className={`border border-gray-200 dark:border-slate-700 rounded-xl p-4${isTimbrado ? ' col-span-2' : ''}`}>
                         <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{label}</p>
                         <div className="flex gap-3 items-start">
-                          <div className="w-20 h-20 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg flex items-center justify-center bg-gray-50 dark:bg-slate-700 overflow-hidden shrink-0">
+                          <div className={`border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg flex items-center justify-center bg-gray-50 dark:bg-slate-700 overflow-hidden shrink-0${isTimbrado ? ' w-28 h-40' : ' w-20 h-20'}`}>
                             {currentUrl
                               ? <img src={currentUrl} alt="Logo" className="max-w-full max-h-full object-contain" />
                               : <Image className="h-8 w-8 text-gray-300" />}
                           </div>
                           <div className="flex-1 space-y-2">
-                            <input type="file" accept="image/*"
+                            <input type="file" accept={accept || 'image/*'}
                               onChange={e => setFile(e.target.files[0] || null)}
                               className="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-700 dark:text-gray-400" />
                             <div className="flex gap-2">

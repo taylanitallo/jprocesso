@@ -780,7 +780,7 @@ const updateLogos = async (req, res) => {
     if (!tenant) return;
 
     const { tipo } = req.params;
-    if (!['login', 'interna'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido. Use "login" ou "interna"' });
+    if (!['login', 'interna', 'timbrado'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido. Use "login", "interna" ou "timbrado"' });
     if (!req.file) return res.status(400).json({ error: 'Arquivo de logo não enviado' });
 
     const ext         = (req.file.originalname.split('.').pop() || 'png').toLowerCase();
@@ -794,7 +794,8 @@ const updateLogos = async (req, res) => {
     const { data }  = supabase.storage.from(bucket).getPublicUrl(storagePath);
     const logoUrl   = data?.publicUrl || storagePath;
 
-    const campo   = tipo === 'login' ? 'logo_login_url' : 'logo_interna_url';
+    const campoMap = { login: 'logo_login_url', interna: 'logo_interna_url', timbrado: 'timbrado_url' };
+    const campo    = campoMap[tipo];
     await tenant.update({ configuracoes: { ...(tenant.configuracoes || {}), [campo]: logoUrl } });
 
     res.json({ success: true, url: logoUrl, campo });
@@ -810,9 +811,10 @@ const deleteLogo = async (req, res) => {
     if (!tenant) return;
 
     const { tipo } = req.params;
-    if (!['login', 'interna'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
+    if (!['login', 'interna', 'timbrado'].includes(tipo)) return res.status(400).json({ error: 'Tipo inválido' });
 
-    const campo    = tipo === 'login' ? 'logo_login_url' : 'logo_interna_url';
+    const campoMap = { login: 'logo_login_url', interna: 'logo_interna_url', timbrado: 'timbrado_url' };
+    const campo    = campoMap[tipo];
     const urlAtual = tenant.configuracoes?.[campo];
 
     if (urlAtual) {
