@@ -8,7 +8,7 @@ const {
   listTenants, getTenant, createTenant, updateTenant, deleteTenant,
 
   // Usuários
-  listTenantUsers, createTenantUser, updateTenantUser, deleteTenantUser,
+  listTenantUsers, listTenantSecretarias, createTenantUser, updateTenantUser, deleteTenantUser,
 
   // Logs
   listTenantLogs, clearTenantLogs, listAccessReport,
@@ -52,8 +52,9 @@ router.delete('/tenants/:id', ...sa, deleteTenant);
 router.patch('/tenants/:id/ativar', ...sa, ativarTenant);
 
 // ─── Usuários ─────────────────────────────────────────────────────────────────
-router.get   ('/tenants/:id/usuarios',         ...sa, listTenantUsers);
-router.get   ('/tenants/:id/users',            ...sa, listTenantUsers);
+router.get   ('/tenants/:id/usuarios',             ...sa, listTenantUsers);
+router.get   ('/tenants/:id/users',                ...sa, listTenantUsers);
+router.get   ('/tenants/:id/secretarias-setores',  ...sa, listTenantSecretarias);
 router.post  ('/tenants/:id/usuarios',         ...sa, createTenantUser);
 router.post  ('/tenants/:id/users',            ...sa, createTenantUser);
 router.put   ('/tenants/:id/usuarios/:userId', ...sa, updateTenantUser);

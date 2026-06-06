@@ -37,6 +37,44 @@ const TABS = [
 
 const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
+const DEFAULT_PERMS = {
+  criar_processo: true, editar_processo: true, excluir_processo: false,
+  tramitar_processo: true, acessar_almoxarifado: false, acessar_financeiro: false,
+  acessar_contratos: false, acessar_patrimonio: false, visualizar_relatorios: false,
+  gerenciar_usuarios: false, gerenciar_secretarias: false, gerenciar_configuracoes: false,
+  modulos_visiveis: ['processos'],
+};
+
+const PERM_GROUPS = [
+  {
+    label: 'Processos', color: 'blue',
+    perms: [
+      { key: 'criar_processo',    label: 'Criar processo' },
+      { key: 'editar_processo',   label: 'Editar processo' },
+      { key: 'tramitar_processo', label: 'Tramitar processo' },
+      { key: 'excluir_processo',  label: 'Excluir processo' },
+    ],
+  },
+  {
+    label: 'Acesso a módulos', color: 'purple',
+    perms: [
+      { key: 'acessar_almoxarifado', label: 'Almoxarifado' },
+      { key: 'acessar_financeiro',   label: 'Financeiro' },
+      { key: 'acessar_contratos',    label: 'Contratos' },
+      { key: 'acessar_patrimonio',   label: 'Patrimônio' },
+    ],
+  },
+  {
+    label: 'Administração', color: 'orange',
+    perms: [
+      { key: 'visualizar_relatorios',    label: 'Ver relatórios' },
+      { key: 'gerenciar_usuarios',       label: 'Gerenciar usuários' },
+      { key: 'gerenciar_secretarias',    label: 'Gerenciar secretarias' },
+      { key: 'gerenciar_configuracoes',  label: 'Configurações do sistema' },
+    ],
+  },
+];
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmtBytes(b) {
@@ -455,7 +493,8 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
   const [tab, setTab] = useState(initialTab);
   const [editUser, setEditUser] = useState(null);
   const [newUser, setNewUser] = useState(false);
-  const [userForm, setUserForm] = useState({ nome: '', email: '', cpf: '', senha: '', tipo: 'operacional', ativo: true });
+  const EMPTY_USER = { nome: '', email: '', cpf: '', senha: '', tipo: 'operacional', ativo: true, secretaria_id: '', setor_id: '', permissoes: { ...DEFAULT_PERMS } };
+  const [userForm, setUserForm] = useState(EMPTY_USER);
 
   const [logCategoria, setLogCategoria] = useState('');
   const [logBusca, setLogBusca]         = useState('');
@@ -504,6 +543,11 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
     ['sa-users', tenant.id],
     () => api.get(`/superadmin/tenants/${tenant.id}/usuarios`).then(r => r.data),
     { ...Q_OPTS, enabled: tab === 'usuarios', staleTime: 30000 }
+  );
+  const { data: secretariasData } = useQuery(
+    ['sa-secretarias', tenant.id],
+    () => api.get(`/superadmin/tenants/${tenant.id}/secretarias-setores`).then(r => r.data),
+    { ...Q_OPTS, enabled: tab === 'usuarios', staleTime: 60000 }
   );
   const { data: logsData,    refetch: refetchLogs    } = useQuery(
     ['sa-logs', tenant.id, logCategoria, logBusca, logPage],
@@ -570,7 +614,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
         await api.post(`/superadmin/tenants/${tenant.id}/usuarios`, userForm);
       }
       setEditUser(null); setNewUser(false);
-      setUserForm({ nome: '', email: '', cpf: '', senha: '', tipo: 'operacional', ativo: true });
+      setUserForm(EMPTY_USER);
       refetchUsers();
     } catch (err) {
       alert(err.response?.data?.error || 'Erro ao salvar usuário');
@@ -889,82 +933,211 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                   )}
                 </h3>
                 <button
-                  onClick={() => { setNewUser(true); setEditUser(null); setUserForm({ nome: '', email: '', cpf: '', senha: '', tipo: 'operacional', ativo: true }); }}
+                  onClick={() => { setNewUser(true); setEditUser(null); setUserForm(EMPTY_USER); }}
                   className="flex items-center gap-1.5 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-blue-700"
                 >
                   <UserPlus className="h-4 w-4" /> Novo Usuário
                 </button>
               </div>
 
-              {(newUser || editUser) && (
-                <div ref={editFormRef} className="bg-blue-50 dark:bg-slate-700/50 rounded-xl p-4 space-y-3">
-                  <h4 className="font-medium text-gray-800 dark:text-white text-sm">
-                    {editUser ? 'Editar Usuário' : 'Novo Usuário'}
-                  </h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      ['Nome completo', 'nome', 'text'],
-                      ['E-mail', 'email', 'email'],
-                      ['Senha', 'senha', 'password'],
-                    ].map(([label, field, type]) => (
-                      <div key={field}>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{label}</label>
-                        <input type={type} value={userForm[field] || ''}
-                          onChange={e => setUserForm(f => ({ ...f, [field]: e.target.value }))}
-                          className="w-full px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
-                          placeholder={editUser && field === 'senha' ? '(deixe em branco para manter)' : ''}
-                        />
+              {(newUser || editUser) && (() => {
+                  const secretarias = secretariasData?.secretarias || [];
+                  const setoresDaSecretaria = secretarias.find(s => s.id === userForm.secretaria_id)?.setores || [];
+                  const isFullAccess = userForm.tipo === 'admin' || userForm.tipo === 'jeos';
+                  const setP = (key, val) => setUserForm(f => ({ ...f, permissoes: { ...f.permissoes, [key]: val } }));
+                  const toggleMod = (id) => {
+                    const cur = userForm.permissoes?.modulos_visiveis || [];
+                    setP('modulos_visiveis', cur.includes(id) ? cur.filter(m => m !== id) : [...cur, id]);
+                  };
+
+                  return (
+                    <div ref={editFormRef} className="border border-blue-200 dark:border-blue-800 rounded-xl overflow-hidden">
+                      {/* Cabeçalho do form */}
+                      <div className="bg-blue-600 px-4 py-2.5 flex items-center justify-between">
+                        <h4 className="font-semibold text-white text-sm">
+                          {editUser ? 'Editar Usuário' : 'Novo Usuário'}
+                        </h4>
+                        <button onClick={() => { setNewUser(false); setEditUser(null); }}
+                          className="text-blue-200 hover:text-white text-xs">✕ Fechar</button>
                       </div>
-                    ))}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">CPF</label>
-                      <input
-                        type="text"
-                        value={userForm.cpf || ''}
-                        onChange={e => setUserForm(f => ({ ...f, cpf: formatCPF(e.target.value) }))}
-                        maxLength={14}
-                        placeholder="000.000.000-00"
-                        className={`w-full px-3 py-1.5 border rounded-lg text-sm bg-white dark:bg-slate-700 dark:text-white focus:ring-blue-500 focus:border-blue-500 ${
-                          userForm.cpf && userForm.cpf.replace(/\D/g,'').length === 11 && !validateCPF(userForm.cpf)
-                            ? 'border-red-400 dark:border-red-500'
-                            : 'border-gray-300 dark:border-slate-600'
-                        }`}
-                      />
-                      {userForm.cpf && userForm.cpf.replace(/\D/g,'').length === 11 && !validateCPF(userForm.cpf) && (
-                        <p className="text-xs text-red-500 mt-0.5">CPF inválido</p>
-                      )}
+
+                      <div className="p-4 space-y-4 bg-white dark:bg-slate-800">
+                        {/* Dados básicos */}
+                        <div className="grid grid-cols-2 gap-3">
+                          {[
+                            ['Nome completo', 'nome', 'text'],
+                            ['E-mail', 'email', 'email'],
+                            ['Senha', 'senha', 'password'],
+                          ].map(([label, field, type]) => (
+                            <div key={field}>
+                              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{label}</label>
+                              <input type={type} value={userForm[field] || ''}
+                                onChange={e => setUserForm(f => ({ ...f, [field]: e.target.value }))}
+                                className="w-full px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500"
+                                placeholder={editUser && field === 'senha' ? '(deixe em branco para manter)' : ''}
+                              />
+                            </div>
+                          ))}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">CPF</label>
+                            <input type="text" value={userForm.cpf || ''}
+                              onChange={e => setUserForm(f => ({ ...f, cpf: formatCPF(e.target.value) }))}
+                              maxLength={14} placeholder="000.000.000-00"
+                              className={`w-full px-3 py-1.5 border rounded-lg text-sm bg-white dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 ${
+                                userForm.cpf && userForm.cpf.replace(/\D/g,'').length === 11 && !validateCPF(userForm.cpf)
+                                  ? 'border-red-400' : 'border-gray-300 dark:border-slate-600'
+                              }`}
+                            />
+                            {userForm.cpf && userForm.cpf.replace(/\D/g,'').length === 11 && !validateCPF(userForm.cpf) && (
+                              <p className="text-xs text-red-500 mt-0.5">CPF inválido</p>
+                            )}
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Tipo</label>
+                            <select value={userForm.tipo} onChange={e => setUserForm(f => ({ ...f, tipo: e.target.value }))}
+                              className="w-full px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 dark:text-white">
+                              <option value="operacional">Operacional</option>
+                              <option value="gestor">Gestor</option>
+                              <option value="admin">Administrador</option>
+                              <option value="jeos">Administrador Jeos</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Status</label>
+                            <select value={String(userForm.ativo)} onChange={e => setUserForm(f => ({ ...f, ativo: e.target.value === 'true' }))}
+                              className="w-full px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 dark:text-white">
+                              <option value="true">Ativo</option>
+                              <option value="false">Inativo</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Secretaria / Setor (apenas para não-admin) */}
+                        {!isFullAccess && (
+                          <div className="border-t border-gray-100 dark:border-slate-700 pt-4">
+                            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                              Lotação
+                            </p>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Secretaria</label>
+                                <select
+                                  value={userForm.secretaria_id || ''}
+                                  onChange={e => setUserForm(f => ({ ...f, secretaria_id: e.target.value, setor_id: '' }))}
+                                  className="w-full px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 dark:text-white"
+                                >
+                                  <option value="">— Todas as secretarias —</option>
+                                  {secretarias.map(s => (
+                                    <option key={s.id} value={s.id}>{s.sigla} — {s.nome}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Setor</label>
+                                <select
+                                  value={userForm.setor_id || ''}
+                                  onChange={e => setUserForm(f => ({ ...f, setor_id: e.target.value }))}
+                                  disabled={!userForm.secretaria_id}
+                                  className="w-full px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 dark:text-white disabled:opacity-50"
+                                >
+                                  <option value="">— Todos os setores —</option>
+                                  {setoresDaSecretaria.map(st => (
+                                    <option key={st.id} value={st.id}>{st.sigla ? `${st.sigla} — ` : ''}{st.nome}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Abas visíveis (apenas para não-admin) */}
+                        {!isFullAccess && (
+                          <div className="border-t border-gray-100 dark:border-slate-700 pt-4">
+                            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                              Módulos visíveis
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {SYSTEM_MODULES.map(({ id, label, Icon }) => {
+                                const ativo = (userForm.permissoes?.modulos_visiveis || []).includes(id);
+                                return (
+                                  <button key={id} type="button" onClick={() => toggleMod(id)}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border-2 font-medium transition-all ${
+                                      ativo
+                                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                                        : 'border-gray-200 dark:border-slate-600 text-gray-400 dark:text-gray-500 line-through'
+                                    }`}>
+                                    <Icon className="h-3 w-3" /> {label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            <p className="text-xs text-gray-400 mt-2">Módulos não selecionados serão ocultos para este usuário</p>
+                          </div>
+                        )}
+
+                        {/* Permissões (apenas para não-admin) */}
+                        {!isFullAccess && (
+                          <div className="border-t border-gray-100 dark:border-slate-700 pt-4 space-y-4">
+                            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              Permissões
+                            </p>
+                            {PERM_GROUPS.map(({ label, color, perms }) => {
+                              const colors = {
+                                blue:   'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800',
+                                purple: 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800',
+                                orange: 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800',
+                              };
+                              const textColors = {
+                                blue:   'text-blue-700 dark:text-blue-300',
+                                purple: 'text-purple-700 dark:text-purple-300',
+                                orange: 'text-orange-700 dark:text-orange-300',
+                              };
+                              return (
+                                <div key={label} className={`rounded-xl border p-3 ${colors[color]}`}>
+                                  <p className={`text-xs font-semibold mb-2 ${textColors[color]}`}>{label}</p>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    {perms.map(({ key, label: pLabel }) => {
+                                      const val = userForm.permissoes?.[key] ?? false;
+                                      return (
+                                        <label key={key} className="flex items-center gap-2 cursor-pointer select-none">
+                                          <button type="button" onClick={() => setP(key, !val)}
+                                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0 ${val ? 'bg-green-500' : 'bg-gray-300 dark:bg-slate-600'}`}>
+                                            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform shadow ${val ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                                          </button>
+                                          <span className="text-xs text-gray-700 dark:text-gray-300">{pLabel}</span>
+                                        </label>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {isFullAccess && (
+                          <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+                            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
+                            <p className="text-xs text-green-700 dark:text-green-300">
+                              {userForm.tipo === 'jeos' ? 'Administrador Jeos' : 'Administrador'} tem acesso irrestrito a todas as secretarias, setores e funcionalidades do sistema.
+                            </p>
+                          </div>
+                        )}
+
+                        <div className="flex gap-2 justify-end pt-1 border-t border-gray-100 dark:border-slate-700">
+                          <button onClick={() => { setNewUser(false); setEditUser(null); }}
+                            className="px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700">
+                            Cancelar
+                          </button>
+                          <button onClick={handleSaveUser}
+                            className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+                            Salvar
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Tipo</label>
-                      <select value={userForm.tipo} onChange={e => setUserForm(f => ({ ...f, tipo: e.target.value }))}
-                        className="w-full px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 dark:text-white">
-                        <option value="operacional">Operacional</option>
-                        <option value="gestor">Gestor</option>
-                        <option value="admin">Administrador</option>
-                        <option value="jeos">Administrador Jeos</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Status</label>
-                      <select value={String(userForm.ativo)} onChange={e => setUserForm(f => ({ ...f, ativo: e.target.value === 'true' }))}
-                        className="w-full px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 dark:text-white">
-                        <option value="true">Ativo</option>
-                        <option value="false">Inativo</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 justify-end pt-1">
-                    <button onClick={() => { setNewUser(false); setEditUser(null); }}
-                      className="px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700">
-                      Cancelar
-                    </button>
-                    <button onClick={handleSaveUser}
-                      className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
-                      Salvar
-                    </button>
-                  </div>
-                </div>
-              )}
+                  );
+                })()}
 
               <div className="space-y-2">
                 {usuarios.map(u => (
@@ -985,7 +1158,13 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                       <button
                         onClick={() => {
                           setEditUser(u); setNewUser(false);
-                          setUserForm({ nome: u.nome, email: u.email || '', cpf: u.cpf || '', senha: '', tipo: u.tipo, ativo: u.ativo });
+                          setUserForm({
+                            nome: u.nome, email: u.email || '', cpf: u.cpf || '', senha: '',
+                            tipo: u.tipo, ativo: u.ativo,
+                            secretaria_id: u.secretaria_id || '',
+                            setor_id:      u.setor_id      || '',
+                            permissoes:    { ...DEFAULT_PERMS, ...(u.permissoes || {}) },
+                          });
                           setTimeout(() => editFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
                         }}
                         className="p-1 text-blue-500 hover:text-blue-700">

@@ -123,10 +123,14 @@ const listTenantUsers = async (req, res) => {
 
     const schemaQ = qi().quoteIdentifier(tenant.schema);
     const rows = await masterDb.query(
-      `SELECT id, nome, email, cpf, tipo, ativo, created_at
-       FROM ${schemaQ}.usuarios
-       WHERE tipo IN ('admin','gestor','operacional')
-       ORDER BY nome`,
+      `SELECT u.id, u.nome, u.email, u.cpf, u.tipo, u.ativo, u.created_at,
+              u.secretaria_id, u.setor_id, u.permissoes,
+              s.nome  AS secretaria_nome,
+              st.nome AS setor_nome
+       FROM ${schemaQ}.usuarios u
+       LEFT JOIN ${schemaQ}.secretarias s  ON s.id = u.secretaria_id
+       LEFT JOIN ${schemaQ}.setores     st ON st.id = u.setor_id
+       ORDER BY u.nome`,
       { type: QueryTypes.SELECT }
     );
 
@@ -137,23 +141,66 @@ const listTenantUsers = async (req, res) => {
   }
 };
 
+const listTenantSecretarias = async (req, res) => {
+  try {
+    const tenant = await getTenantOrFail(req.params.id, res);
+    if (!tenant) return;
+
+    const schemaQ = qi().quoteIdentifier(tenant.schema);
+    const rows = await masterDb.query(
+      `SELECT s.id, s.nome, s.sigla,
+              COALESCE(json_agg(
+                json_build_object('id', st.id, 'nome', st.nome, 'sigla', st.sigla)
+                ORDER BY st.nome
+              ) FILTER (WHERE st.id IS NOT NULL), '[]') AS setores
+       FROM ${schemaQ}.secretarias s
+       LEFT JOIN ${schemaQ}.setores st ON st.secretaria_id = s.id AND st.ativo = true
+       WHERE s.ativo = true
+       GROUP BY s.id, s.nome, s.sigla
+       ORDER BY s.nome`,
+      { type: QueryTypes.SELECT }
+    );
+
+    res.json({ success: true, secretarias: rows });
+  } catch (error) {
+    console.error('Erro ao listar secretarias:', error);
+    res.status(500).json({ error: 'Erro ao listar secretarias' });
+  }
+};
+
 const createTenantUser = async (req, res) => {
   try {
     const tenant = await getTenantOrFail(req.params.id, res);
     if (!tenant) return;
 
-    const { nome, email, cpf, senha, tipo = 'operacional', ativo = true } = req.body;
+    const { nome, email, cpf, senha, tipo = 'operacional', ativo = true,
+            secretaria_id, setor_id, permissoes } = req.body;
     if (!nome || !cpf || !senha) {
       return res.status(400).json({ error: 'nome, cpf e senha são obrigatórios' });
     }
 
     const senhaHash = await bcrypt.hash(senha, 10);
     const schemaQ = qi().quoteIdentifier(tenant.schema);
+
+    const cpfDigits = cpf.replace(/\D/g, '');
+    const permsJson = permissoes ? JSON.stringify(permissoes) : null;
+
     const rows = await masterDb.query(
-      `INSERT INTO ${schemaQ}.usuarios (nome, email, cpf, senha, tipo, ativo)
-       VALUES (:nome, :email, :cpf, :senha, :tipo, :ativo)
+      `INSERT INTO ${schemaQ}.usuarios
+         (nome, email, cpf, senha, tipo, ativo, secretaria_id, setor_id, permissoes)
+       VALUES
+         (:nome, :email, :cpf, :senha, :tipo, :ativo,
+          :secretaria_id::uuid, :setor_id::uuid, :permissoes::jsonb)
        RETURNING id, nome, email, tipo, ativo`,
-      { replacements: { nome, email: email || null, cpf, senha: senhaHash, tipo, ativo }, type: QueryTypes.SELECT }
+      {
+        replacements: {
+          nome, email: email || null, cpf: cpfDigits, senha: senhaHash, tipo, ativo,
+          secretaria_id: secretaria_id || null,
+          setor_id:      setor_id      || null,
+          permissoes:    permsJson,
+        },
+        type: QueryTypes.SELECT
+      }
     );
 
     res.status(201).json({ success: true, usuario: rows[0] });
@@ -172,30 +219,41 @@ const updateTenantUser = async (req, res) => {
     if (!tenant) return;
 
     const { userId } = req.params;
-    const { nome, email, cpf, senha, tipo, ativo } = req.body;
+    const { nome, email, cpf, senha, tipo, ativo, secretaria_id, setor_id, permissoes } = req.body;
 
     let senhaHash = null;
     if (senha) senhaHash = await bcrypt.hash(senha, 10);
 
+    const cpfDigits = cpf ? cpf.replace(/\D/g, '') : null;
+    const permsJson = permissoes !== undefined ? JSON.stringify(permissoes) : null;
+
     const schemaQ = qi().quoteIdentifier(tenant.schema);
     await masterDb.query(
       `UPDATE ${schemaQ}.usuarios SET
-         nome       = COALESCE(:nome, nome),
-         email      = COALESCE(:email, email),
-         cpf        = COALESCE(:cpf, cpf),
-         senha      = CASE WHEN :senha IS NOT NULL THEN :senha ELSE senha END,
-         tipo       = COALESCE(:tipo, tipo),
-         ativo      = COALESCE(:ativo, ativo),
-         updated_at = NOW()
+         nome          = COALESCE(:nome, nome),
+         email         = COALESCE(:email, email),
+         cpf           = COALESCE(:cpf, cpf),
+         senha         = CASE WHEN :senha IS NOT NULL THEN :senha ELSE senha END,
+         tipo          = COALESCE(:tipo, tipo),
+         ativo         = COALESCE(:ativo, ativo),
+         secretaria_id = CASE WHEN :hasSec THEN :secretaria_id::uuid ELSE secretaria_id END,
+         setor_id      = CASE WHEN :hasSec THEN :setor_id::uuid      ELSE setor_id      END,
+         permissoes    = CASE WHEN :hasPerms THEN :permissoes::jsonb  ELSE permissoes    END,
+         updated_at    = NOW()
        WHERE id = :userId`,
       {
         replacements: {
-          nome:   nome   || null,
-          email:  email  || null,
-          cpf:    cpf    || null,
-          senha:  senhaHash,
-          tipo:   tipo   || null,
-          ativo:  ativo !== undefined ? ativo : null,
+          nome:          nome      || null,
+          email:         email     || null,
+          cpf:           cpfDigits || null,
+          senha:         senhaHash,
+          tipo:          tipo      || null,
+          ativo:         ativo !== undefined ? ativo : null,
+          secretaria_id: secretaria_id || null,
+          setor_id:      setor_id      || null,
+          hasSec:        secretaria_id !== undefined,
+          permissoes:    permsJson,
+          hasPerms:      permsJson !== null,
           userId
         },
         type: QueryTypes.UPDATE
@@ -816,7 +874,7 @@ const ativarTenant = async (req, res) => {
 
 module.exports = {
   listTenants, getTenant, createTenant, updateTenant, deleteTenant,
-  listTenantUsers, createTenantUser, updateTenantUser, deleteTenantUser,
+  listTenantUsers, listTenantSecretarias, createTenantUser, updateTenantUser, deleteTenantUser,
   getTenantUsers: listTenantUsers,
   listTenantLogs, clearTenantLogs, getTenantLogs: listTenantLogs,
   listAccessReport,
