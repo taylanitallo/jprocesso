@@ -73,10 +73,10 @@ const initTenantModels = (sequelize) => {
   ContratoItemVinculo.belongsTo(ContratoItem, { foreignKey: 'item_id', as: 'catalogo', constraints: false });
 
   // Contrato → Ordens de Compra/Serviço
-  Contrato.hasMany(ContratoOrdem,     { foreignKey: 'contrato_id', as: 'ordens' });
-  ContratoOrdem.belongsTo(Contrato,   { foreignKey: 'contrato_id', as: 'contrato' });
-  ContratoOrdem.hasMany(ContratoOrdemItem, { foreignKey: 'ordem_id', as: 'itens' });
-  ContratoOrdemItem.belongsTo(ContratoOrdem, { foreignKey: 'ordem_id', as: 'ordemPai' });
+  Contrato.hasMany(ContratoOrdem,     { foreignKey: 'contrato_id', as: 'ordens',    constraints: false });
+  ContratoOrdem.belongsTo(Contrato,   { foreignKey: 'contrato_id', as: 'contrato',  constraints: false });
+  ContratoOrdem.hasMany(ContratoOrdemItem, { foreignKey: 'ordem_id', as: 'itens',   constraints: false });
+  ContratoOrdemItem.belongsTo(ContratoOrdem, { foreignKey: 'ordem_id', as: 'ordemPai', constraints: false });
   ContratoOrdemItem.belongsTo(ContratoItem, { foreignKey: 'item_id', as: 'catalogo', constraints: false });
 
   Secretaria.hasMany(Setor, { foreignKey: 'secretariaId', as: 'setores' });

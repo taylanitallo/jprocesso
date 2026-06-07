@@ -42,7 +42,12 @@ const tenantCache = new Map();
 // OTIMIZADO: de ~30 queries sequenciais → 2 rodadas paralelas (~10x mais rápido no primeiro acesso)
 const runTenantMigrations = async (tenantDb, tenantSchema) => {
   // Helper: executa query ignorando erros (IF NOT EXISTS torna tudo idempotente)
-  const run = (sql) => tenantDb.query(sql).catch(() => {});
+  const run = (sql) => tenantDb.query(sql).catch((err) => {
+    // Log apenas erros que não sejam "já existe" — útil para diagnóstico em produção
+    if (!err.message?.includes('already exists')) {
+      console.warn(`[migration] ${tenantSchema}: ${err.message?.slice(0, 120)}`);
+    }
+  });
 
   // SET search_path uma única vez para esta conexão
   await tenantDb.query(`SET search_path = "${tenantSchema}"`);
@@ -676,7 +681,7 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
       id                    SERIAL PRIMARY KEY,
       tipo                  VARCHAR(20)   NOT NULL,
       numero                VARCHAR(50)   NOT NULL,
-      contrato_id           INTEGER       NOT NULL REFERENCES contratos(id),
+      contrato_id           INTEGER       NOT NULL,
       data_emissao          DATE          NOT NULL,
       data_entrega_prevista DATE,
       objeto                TEXT          NOT NULL,
@@ -697,7 +702,7 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
   await run(`
     CREATE TABLE IF NOT EXISTS contratos_ordens_itens (
       id             SERIAL PRIMARY KEY,
-      ordem_id       INTEGER       NOT NULL REFERENCES contratos_ordens(id) ON DELETE CASCADE,
+      ordem_id       INTEGER       NOT NULL,
       item_id        INTEGER,
       descricao      VARCHAR(500)  NOT NULL,
       unidade        VARCHAR(50),
