@@ -24,7 +24,7 @@ function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
   const [catFiltro, setCatFiltro] = useState('')
   const [expId, setExpId] = useState(null)
 
-  const todos = catalogoItens.filter(i => i.status !== 'INATIVO')
+  const todos = catalogoItens.filter(i => i.status === 'ATIVO')
   const categorias = [...new Set(todos.map(i => (i.categoria || '').toUpperCase()).filter(Boolean))].sort()
 
   const filtrados = todos.filter(i => {
@@ -354,9 +354,9 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
   // ── Itens do contrato ─────────────────────────────────────────────────────
   const itemCatalogFiltrado = (busca) => {
     const q = (busca || '').trim().toLowerCase()
-    if (!q) return catalogoItens.filter(i => i.status !== 'INATIVO').slice(0, 10)
+    if (!q) return catalogoItens.filter(i => i.status === 'ATIVO').slice(0, 10)
     return catalogoItens.filter(i =>
-      i.status !== 'INATIVO' && (
+      i.status === 'ATIVO' && (
         (i.descricao || '').toLowerCase().includes(q) ||
         (i.codigo    || '').toLowerCase().includes(q)
       )
@@ -1126,9 +1126,9 @@ function TabContratos() {
 
   const fmtData = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR') : '—'
   const fmtValor = (v) => {
-    if (!v) return '—'
-    const n = parseFloat(String(v).replace(/[^\d,]/g, '').replace(',', '.'))
-    return isNaN(n) ? v : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+    if (v == null || v === '') return '—'
+    const n = parseFloat(v)
+    return isNaN(n) || n === 0 ? '—' : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
   }
 
   const statusCor = (s) => {

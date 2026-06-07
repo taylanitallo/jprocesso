@@ -424,7 +424,7 @@ function ConfirmModal({ item, onConfirm, onClose }) {
 
 function TabItens() {
   const [itens, setItens] = useState([])
-  const FILTROS_VAZIOS = { descricao: '', codigo: '', catalogo: '', categoria: '', status: '', mostrarExcluido: false }
+  const FILTROS_VAZIOS = { descricao: '', codigo: '', categoria: '', status: '' }
   const [filtros, setFiltros]           = useState(FILTROS_VAZIOS)
   const [filtrosAtivos, setFiltrosAtivos] = useState(FILTROS_VAZIOS)
   const [selecionado, setSelecionado]   = useState(null)
@@ -452,10 +452,10 @@ function TabItens() {
   const f = filtrosAtivos
   const itensFiltrados = itens
     .filter(item => {
-      if (!f.mostrarExcluido && item.status === 'EXCLUÍDO') return false
+      if (item.status === 'EXCLUÍDO') return false
       if (f.descricao && !item.descricao.toLowerCase().includes(f.descricao.toLowerCase())) return false
       if (f.codigo && !String(item.codigo || '').includes(f.codigo)) return false
-      if (f.catalogo && !String(item.catalogo || '').toLowerCase().includes(f.catalogo.toLowerCase())) return false
+
       if (f.categoria && item.categoria !== f.categoria) return false
       if (f.status && item.status !== f.status) return false
       return true
@@ -540,8 +540,8 @@ function TabItens() {
         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Opções para filtro</p>
 
         {/* Linha 1 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="md:col-span-2">
+        <div className="grid grid-cols-1 gap-3">
+          <div>
             <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Descrição</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
@@ -549,12 +549,6 @@ function TabItens() {
                 onKeyDown={e => e.key === 'Enter' && pesquisar()}
                 placeholder="Pesquisar pela descrição" className="input-field pl-8 text-sm" />
             </div>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Catálogo</label>
-            <input value={filtros.catalogo} onChange={e => setF('catalogo', e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && pesquisar()}
-              placeholder="Pesquisar catálogo" className="input-field text-sm" />
           </div>
         </div>
 
@@ -564,13 +558,6 @@ function TabItens() {
             <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Código</label>
             <input value={filtros.codigo} onChange={e => setF('codigo', e.target.value)}
               placeholder="Código" className="input-field text-sm" />
-          </div>
-          <div className="flex items-center pb-2">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={filtros.mostrarExcluido} onChange={e => setF('mostrarExcluido', e.target.checked)}
-                className="w-4 h-4 rounded text-blue-600" />
-              <span className="text-sm text-gray-600 dark:text-slate-400 whitespace-nowrap">Mostrar excluído</span>
-            </label>
           </div>
           <div className="w-40">
             <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Categoria</label>
@@ -611,7 +598,6 @@ function TabItens() {
                   { col: 'descricao',     label: 'Descrição',         cls: 'text-left px-3 py-2.5 font-semibold min-w-[260px]' },
                   { col: 'unidade_medida',label: 'Unid. de medida',   cls: 'text-left px-3 py-2.5 font-semibold whitespace-nowrap' },
                   { col: 'categoria',     label: 'Categoria',         cls: 'text-left px-3 py-2.5 font-semibold' },
-                  { col: 'catmat_serv',   label: 'CatMat\\Serv',      cls: 'text-left px-3 py-2.5 font-semibold whitespace-nowrap' },
                   { col: 'status',        label: 'Status',            cls: 'text-center px-3 py-2.5 font-semibold' },
                 ].map(({ col, label, cls }) => (
                   <th key={col} className={cls} onClick={() => toggleSort(col)}
@@ -624,7 +610,7 @@ function TabItens() {
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
               {itensFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-center py-14 text-gray-400 dark:text-slate-500">
+                  <td colSpan={5} className="text-center py-14 text-gray-400 dark:text-slate-500">
                     <PackageOpen className="w-10 h-10 mx-auto mb-2 opacity-30" />
                     Nenhum item encontrado
                   </td>
@@ -646,7 +632,6 @@ function TabItens() {
                     <td className="px-3 py-2 max-w-xs truncate font-medium">{item.descricao}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{item.unidade_medida}</td>
                     <td className="px-3 py-2">{item.categoria}</td>
-                    <td className="px-3 py-2 text-gray-500 dark:text-slate-400">{item.catmat_serv || '—'}</td>
                     <td className="px-3 py-2 text-center">
                       <span className={`font-bold px-2 py-0.5 rounded-full text-xs ${
                         item.status === 'ATIVO'
