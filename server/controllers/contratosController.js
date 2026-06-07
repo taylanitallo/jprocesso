@@ -86,10 +86,22 @@ const listItens = async (req, res) => {
   }
 };
 
+// Retorna status automático: ativo se categoria estiver preenchida (código é sempre gerado automaticamente)
+const calcStatusItem = (data) => {
+  const categoria = (data.categoria || '').trim();
+  return categoria ? 'ATIVO' : 'INATIVO';
+};
+
 const createItem = async (req, res) => {
   try {
     const { ContratoItem } = req.models;
-    const item = await ContratoItem.create(req.body);
+    // Gera codigo automaticamente no servidor — ignora qualquer valor enviado pelo front
+    const ultimo = await ContratoItem.findOne({ order: [['codigo', 'DESC']], where: { codigo: { [Op.not]: null } } });
+    const proxNum = ultimo ? (parseInt(ultimo.codigo, 10) || 0) + 1 : 1;
+    const codigo = String(proxNum).padStart(5, '0');
+    const { codigo: _ignorado, ...body } = req.body;
+    const payload = { ...body, codigo, status: calcStatusItem({ ...body, codigo }) };
+    const item = await ContratoItem.create(payload);
     res.status(201).json(item);
   } catch (err) {
     console.error('createItem:', err);
@@ -102,7 +114,21 @@ const updateItem = async (req, res) => {
     const { ContratoItem } = req.models;
     const item = await ContratoItem.findByPk(req.params.id);
     if (!item) return notFound(res, 'Item');
-    await item.update(req.body);
+    // Nunca usa o codigo vindo do frontend — é sempre imutável após setado
+    const { codigo: _ignorado, ...rest } = req.body;
+    // Se o item ainda não tem código, gera um novo primeiro (antes de calcular o status)
+    let codigoFinal = item.codigo || null;
+    if (!codigoFinal) {
+      const ultimo = await ContratoItem.findOne({
+        order: [['codigo', 'DESC']],
+        where: { codigo: { [Op.not]: null } },
+      });
+      const proxNum = ultimo ? (parseInt(ultimo.codigo, 10) || 0) + 1 : 1;
+      codigoFinal = String(proxNum).padStart(5, '0');
+    }
+    const merged = { ...item.toJSON(), ...rest, codigo: codigoFinal };
+    const payload = { ...rest, codigo: codigoFinal, status: calcStatusItem(merged) };
+    await item.update(payload);
     res.json(item);
   } catch (err) {
     console.error('updateItem:', err);
@@ -115,7 +141,7 @@ const deleteItem = async (req, res) => {
     const { ContratoItem } = req.models;
     const item = await ContratoItem.findByPk(req.params.id);
     if (!item) return notFound(res, 'Item');
-    await item.update({ status: 'EXCLUÃDO' });
+    await item.update({ status: 'EXCLUÍDO' });
     res.json({ success: true });
   } catch (err) {
     console.error('deleteItem:', err);

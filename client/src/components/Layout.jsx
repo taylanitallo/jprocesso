@@ -67,7 +67,7 @@ export default function Layout() {
 
   const temPermissao = (permissao) => {
     if (!permissao) return true
-    if (user?.tipo === 'admin') return true
+    if (user?.tipo === 'admin' || user?.tipo === 'jeos') return true
     return !!user?.permissoes?.[permissao]
   }
 
