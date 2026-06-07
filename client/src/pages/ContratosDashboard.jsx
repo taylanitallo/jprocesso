@@ -4,7 +4,8 @@ import {
   FileText, BarChart3, DollarSign, CheckCircle2, AlertTriangle, Clock3,
   Building2, User, TrendingUp, Search, X, RefreshCw, ArrowLeft,
   Calendar, Tag, Loader2, Shield, Award, ChevronLeft, ChevronRight,
-  ChevronsLeft, ChevronsRight, Filter,
+  ChevronsLeft, ChevronsRight, Filter, ShoppingCart, Wrench, ClipboardList,
+  ShoppingCart, Wrench, ClipboardList,
 } from 'lucide-react'
 import api from '../services/api'
 import { PageHeader } from '../components/ui'
@@ -188,6 +189,7 @@ export default function ContratosDashboard() {
 
   const [contratos,  setContratos]  = useState([])
   const [credores,   setCredores]   = useState([])
+  const [ordens,     setOrdens]     = useState([])
   const [loading,    setLoading]    = useState(true)
   const [lastUpdate, setLastUpdate] = useState(null)
 
@@ -212,12 +214,14 @@ export default function ContratosDashboard() {
   const load = async () => {
     setLoading(true)
     try {
-      const [cRes, credRes] = await Promise.all([
+      const [cRes, credRes, ordRes] = await Promise.all([
         api.get('/contratos'),
         api.get('/contratos/credores'),
+        api.get('/contratos/ordens').catch(() => ({ data: [] })),
       ])
       setContratos(cRes.data || [])
       setCredores(credRes.data || [])
+      setOrdens(ordRes.data || [])
       setLastUpdate(new Date())
     } catch { /* silenciar */ }
     setLoading(false)
@@ -344,6 +348,49 @@ export default function ContratosDashboard() {
     })
     return Object.entries(map).map(([label, v]) => ({ label, ...v })).sort((a, b) => b.qtd - a.qtd)
   }, [contratosFiltrados])
+
+  // ─── KPIs de Ordens ───────────────────────────────────────────────────────
+  const ordensFiltradas = useMemo(() => {
+    if (!filtrosAtivos.secretaria) return ordens
+    return ordens.filter(o => {
+      if (filtrosAtivos.secretaria && o.secretaria !== filtrosAtivos.secretaria) return false
+      return true
+    })
+  }, [ordens, filtrosAtivos])
+
+  const ordensKpi = useMemo(() => {
+    const total     = ordensFiltradas.length
+    const compras   = ordensFiltradas.filter(o => o.tipo === 'COMPRA').length
+    const servicos  = ordensFiltradas.filter(o => o.tipo === 'SERVICO').length
+    const emitidas  = ordensFiltradas.filter(o => o.status === 'EMITIDA').length
+    const atendidas = ordensFiltradas.filter(o => o.status === 'ATENDIDA').length
+    const canceladas= ordensFiltradas.filter(o => o.status === 'CANCELADA').length
+    const valorTotal= ordensFiltradas.filter(o => o.status !== 'CANCELADA')
+      .reduce((acc, o) => acc + parseValor(o.valor_total), 0)
+    return { total, compras, servicos, emitidas, atendidas, canceladas, valorTotal }
+  }, [ordensFiltradas])
+
+  const ordensPorContrato = useMemo(() => {
+    const map = {}
+    ordensFiltradas.filter(o => o.status !== 'CANCELADA').forEach(o => {
+      const num = o.contrato?.numero_contrato || `Contrato #${o.contrato_id}`
+      if (!map[num]) map[num] = { qtd: 0, valor: 0 }
+      map[num].qtd++
+      map[num].valor += parseValor(o.valor_total)
+    })
+    return Object.entries(map).map(([label, v]) => ({ label, ...v })).sort((a, b) => b.valor - a.valor).slice(0, 8)
+  }, [ordensFiltradas])
+
+  const ordensPorSecretaria = useMemo(() => {
+    const map = {}
+    ordensFiltradas.filter(o => o.status !== 'CANCELADA').forEach(o => {
+      const s = o.secretaria || 'Não informada'
+      if (!map[s]) map[s] = { qtd: 0, valor: 0 }
+      map[s].qtd++
+      map[s].valor += parseValor(o.valor_total)
+    })
+    return Object.entries(map).map(([label, v]) => ({ label, ...v })).sort((a, b) => b.valor - a.valor).slice(0, 6)
+  }, [ordensFiltradas])
 
   // ─── Maiores contratos (todos, paginados) ─────────────────────────────────
   const todosComValor = useMemo(() =>
@@ -866,6 +913,112 @@ export default function ContratosDashboard() {
                   </div>
                   <Paginacao total={maioresFiltrados.length} page={contratosPage} onChange={setContratosPage} />
                 </>
+              )
+            }
+          </DashCard>
+
+          {/* ── Ordens de Compra / Serviço ───────────────────────────────── */}
+          <DashCard icon={ClipboardList} title="Ordens de Compra / Serviço" badge={`${ordensKpi.total} ordens`}>
+            {ordensKpi.total === 0
+              ? <p className="text-sm text-gray-400 text-center py-6">Nenhuma ordem emitida</p>
+              : (
+                <div className="space-y-5">
+                  {/* KPIs de ordens */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    {[
+                      { icon: ClipboardList, label: 'Total de Ordens',   value: ordensKpi.total,       color: 'from-slate-500 to-slate-600' },
+                      { icon: ShoppingCart,  label: 'Ordens de Compra',  value: ordensKpi.compras,     color: 'from-blue-500 to-indigo-600' },
+                      { icon: Wrench,        label: 'Ordens de Serviço', value: ordensKpi.servicos,    color: 'from-orange-500 to-amber-600' },
+                      { icon: AlertTriangle, label: 'Emitidas',          value: ordensKpi.emitidas,    color: 'from-yellow-400 to-orange-500' },
+                      { icon: CheckCircle2,  label: 'Atendidas',         value: ordensKpi.atendidas,   color: 'from-green-500 to-emerald-600' },
+                      { icon: DollarSign,    label: 'Valor Emitido',     value: fmtMoeda(ordensKpi.valorTotal), color: 'from-teal-500 to-cyan-600' },
+                    ].map(({ icon: Icon, label, value, color }) => (
+                      <div key={label} className="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-3 flex flex-col gap-1.5">
+                        <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center`}>
+                          <Icon className="w-3.5 h-3.5 text-white" />
+                        </div>
+                        <p className="text-base font-black text-gray-900 dark:text-white tabular-nums leading-tight">{value}</p>
+                        <p className="text-[10px] text-gray-500 dark:text-slate-400">{label}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {/* Por contrato */}
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-3">Valor por Contrato</p>
+                      {ordensPorContrato.length === 0
+                        ? <p className="text-xs text-gray-400 text-center py-4">Sem dados</p>
+                        : (
+                          <div className="space-y-2.5">
+                            {ordensPorContrato.map((item, i) => {
+                              const maxVal = ordensPorContrato[0]?.valor || 1
+                              return (
+                                <BarRow
+                                  key={item.label}
+                                  label={item.label}
+                                  value={fmtMoeda(item.valor)}
+                                  pct={Math.min(100, (item.valor / maxVal) * 100)}
+                                  color={MODAL_CORES[i % MODAL_CORES.length]}
+                                  extra={`${item.qtd} ordem(ns)`}
+                                />
+                              )
+                            })}
+                          </div>
+                        )
+                      }
+                    </div>
+
+                    {/* Por secretaria */}
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-3">Valor por Secretaria</p>
+                      {ordensPorSecretaria.length === 0
+                        ? <p className="text-xs text-gray-400 text-center py-4">Sem dados</p>
+                        : (
+                          <div className="space-y-2.5">
+                            {ordensPorSecretaria.map((item, i) => {
+                              const maxVal = ordensPorSecretaria[0]?.valor || 1
+                              return (
+                                <BarRow
+                                  key={item.label}
+                                  label={item.label}
+                                  value={fmtMoeda(item.valor)}
+                                  pct={Math.min(100, (item.valor / maxVal) * 100)}
+                                  color={MODAL_CORES[(i + 4) % MODAL_CORES.length]}
+                                  extra={`${item.qtd} ordem(ns)`}
+                                />
+                              )
+                            })}
+                          </div>
+                        )
+                      }
+                    </div>
+                  </div>
+
+                  {/* Status das ordens */}
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-3">Status das Ordens</p>
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { label: 'EMITIDA',   value: ordensKpi.emitidas,   bg: 'bg-yellow-50 dark:bg-yellow-900/10', text: 'text-yellow-700 dark:text-yellow-400', bar: 'bg-yellow-400',  ring: 'ring-yellow-200 dark:ring-yellow-900/30' },
+                        { label: 'ATENDIDA',  value: ordensKpi.atendidas,  bg: 'bg-green-50 dark:bg-green-900/10',   text: 'text-green-700 dark:text-green-400',   bar: 'bg-green-500',   ring: 'ring-green-200 dark:ring-green-900/30'   },
+                        { label: 'CANCELADA', value: ordensKpi.canceladas, bg: 'bg-red-50 dark:bg-red-900/10',       text: 'text-red-700 dark:text-red-400',       bar: 'bg-red-500',     ring: 'ring-red-200 dark:ring-red-900/30'       },
+                      ].map(item => {
+                        const pct = ordensKpi.total > 0 ? Math.round((item.value / ordensKpi.total) * 100) : 0
+                        return (
+                          <div key={item.label} className={`p-3 rounded-xl ${item.bg} ring-1 ${item.ring}`}>
+                            <p className={`text-[10px] font-bold uppercase tracking-wide ${item.text} mb-1`}>{item.label}</p>
+                            <p className={`text-2xl font-black ${item.text}`}>{item.value}</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">{pct}% do total</p>
+                            <div className="mt-2 h-1 bg-white/60 dark:bg-slate-800/60 rounded-full overflow-hidden">
+                              <div className={`h-1 ${item.bar} rounded-full`} style={{ width: pct + '%' }} />
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
               )
             }
           </DashCard>
