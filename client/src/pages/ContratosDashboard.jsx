@@ -5,7 +5,6 @@ import {
   Building2, User, TrendingUp, Search, X, RefreshCw, ArrowLeft,
   Calendar, Tag, Loader2, Shield, Award, ChevronLeft, ChevronRight,
   ChevronsLeft, ChevronsRight, Filter, ShoppingCart, Wrench, ClipboardList,
-  ShoppingCart, Wrench, ClipboardList,
 } from 'lucide-react'
 import api from '../services/api'
 import { PageHeader } from '../components/ui'
