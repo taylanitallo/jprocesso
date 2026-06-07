@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import api from '../../services/api'
 import {
-  MODALIDADES,
+  MODALIDADES, TIPOS_OBJETO,
   VigenciaProgress, SectionCard, ModalStepper, PremiumInput,
   PremiumSelect, PremiumTextarea, ViewField, PortalDropdown
 } from './ContratosShared'
@@ -168,6 +168,151 @@ function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
 const STATUS_CONTRATO  = ['ATIVO','ENCERRADO','SUSPENSO','RESCINDIDO']
 const TIPOS_CONTRATO   = ['CONTRATO','ATA DE REGISTRO DE PREÇO','TERMO ADITIVO','CONVÊNIO','ACORDO','OUTRO']
 
+// ══════════════════════════════════════════════════════════════════════════════
+//  MODAL: ITEM DO CONTRATO
+// ══════════════════════════════════════════════════════════════════════════════
+function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
+  const [form, setForm] = useState({
+    lote:           item?.lote           || '',
+    codigo_item:    item?.codigo_item    || '',
+    item_id:        item?.item_id        || '',
+    descricao:      item?.descricao      || '',
+    unidade:        item?.unidade        || '',
+    quantidade:     item?.quantidade     || '',
+    valor_unitario: item?.valor_unitario || '',
+    valor_total:    item?.valor_total    || '',
+  })
+  const [busca, setBusca] = useState(item?.descricao || '')
+  const [drop, setDrop] = useState(false)
+  const [dropRef, setDropRef] = useState(null)
+  const set = (k, v) => setForm(p => {
+    const next = { ...p, [k]: v }
+    if (k === 'quantidade' || k === 'valor_unitario') {
+      const qtd = parseFloat(String(k === 'quantidade' ? v : next.quantidade).replace(',', '.')) || 0
+      const vun = parseFloat(String(k === 'valor_unitario' ? v : next.valor_unitario).replace(',', '.')) || 0
+      next.valor_total = qtd && vun ? (qtd * vun).toFixed(2) : ''
+    }
+    return next
+  })
+
+  const itensFiltrados = catalogoItens.filter(i => {
+    if (i.status !== 'ATIVO') return false
+    const q = busca.trim().toLowerCase()
+    return !q || i.descricao.toLowerCase().includes(q) || (i.codigo || '').toLowerCase().includes(q)
+  }).slice(0, 10)
+
+  const selecionarCatalogo = (i) => {
+    setForm(p => ({ ...p, item_id: i.id, descricao: i.descricao, unidade: i.unidade_medida || '' }))
+    setBusca(i.descricao)
+    setDrop(false)
+  }
+
+  const salvar = () => {
+    if (!form.descricao.trim()) { alert('Informe a descrição do item.'); return }
+    onSave({ ...form, _id: item?._id || (Date.now() + Math.random()) })
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full flex flex-col" style={{ maxWidth: '560px' }}>
+        {/* Header */}
+        <div className="flex items-center justify-between bg-slate-900 px-5 py-3.5 rounded-t-2xl">
+          <div className="flex items-center gap-3">
+            <ShoppingBag className="w-4 h-4 text-white/80" />
+            <span className="text-sm font-semibold text-white">
+              {item?.descricao ? 'Editar Item' : 'Novo Item'}
+            </span>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded hover:bg-white/10 text-white/70 hover:text-white">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {/* Lote + Nº Item */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Lote</label>
+              <PremiumInput value={form.lote} onChange={e => set('lote', e.target.value)} placeholder="Ex: 01, A..." />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Nº do Item</label>
+              <PremiumInput value={form.codigo_item} onChange={e => set('codigo_item', e.target.value)} placeholder="Ex: 1, A-01..." />
+            </div>
+          </div>
+
+          {/* Descrição com busca no catálogo */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Descrição *</label>
+            <div className="relative">
+              <input
+                value={busca}
+                onChange={e => { setBusca(e.target.value); set('descricao', e.target.value); setDrop(true) }}
+                onFocus={e => { setDrop(true); setDropRef(e.currentTarget.closest('.relative')) }}
+                onBlur={() => setTimeout(() => { setDrop(false); setDropRef(null) }, 150)}
+                placeholder="Buscar no catálogo ou digitar livremente..."
+                className="w-full h-11 px-3.5 text-sm rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 dark:text-white"
+              />
+              {drop && dropRef && createPortal(
+                <div style={{ position: 'fixed', zIndex: 10001, top: dropRef.getBoundingClientRect().bottom + 4, left: dropRef.getBoundingClientRect().left, width: dropRef.getBoundingClientRect().width }}
+                  className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl shadow-2xl max-h-44 overflow-y-auto">
+                  {itensFiltrados.length === 0
+                    ? <p className="px-3 py-2 text-xs text-gray-400">Nenhum item do catálogo — descrição livre</p>
+                    : itensFiltrados.map(i => (
+                      <button key={i.id} type="button" onMouseDown={() => selecionarCatalogo(i)}
+                        className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b border-gray-100 dark:border-slate-700/50 last:border-0">
+                        <p className="font-medium text-gray-800 dark:text-slate-200 truncate">{i.descricao}</p>
+                        <p className="text-gray-400 mt-0.5 font-mono text-[10px]">{i.codigo} · {i.unidade_medida} · {i.categoria}</p>
+                      </button>
+                    ))
+                  }
+                </div>,
+                document.body
+              )}
+            </div>
+          </div>
+
+          {/* Unidade + Qtd + V. Unit */}
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Unidade</label>
+              <PremiumInput value={form.unidade} onChange={e => set('unidade', e.target.value)} placeholder="UNID, KG..." />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Quantidade *</label>
+              <PremiumInput type="number" min={0} value={form.quantidade} onChange={e => set('quantidade', e.target.value)} placeholder="0" className="text-right font-mono" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">V. Unitário *</label>
+              <PremiumInput type="number" min={0} step="0.01" value={form.valor_unitario} onChange={e => set('valor_unitario', e.target.value)} placeholder="0,00" className="text-right font-mono" />
+            </div>
+          </div>
+
+          {/* V. Total */}
+          {form.valor_total && (
+            <div className="flex items-center justify-end gap-2 text-sm font-bold text-blue-700 dark:text-blue-400">
+              <span className="text-xs font-medium text-gray-500 dark:text-slate-400">Valor total:</span>
+              R$ {parseFloat(form.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 pb-5 flex items-center justify-between gap-3">
+          <button onClick={onClose}
+            className="px-4 py-2 text-sm rounded-xl border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+            Cancelar
+          </button>
+          <button onClick={salvar}
+            className="flex items-center gap-2 px-5 py-2 text-sm rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm transition-colors">
+            <Check className="w-4 h-4" /> Confirmar Item
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
   const readonly = modo === 'visualizar'
 
@@ -186,6 +331,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
     numero_contrato:  contrato?.numero_contrato  || '',
     objeto:           contrato?.objeto           || '',
     modalidade:       contrato?.modalidade       || '',
+    tipo_objeto:      contrato?.tipo_objeto      || '',
     numero_licitacao: contrato?.numero_licitacao || '',
     credor_id:        contrato?.credor_id        || '',
     valor:            contrato?.valor            || '',
@@ -212,11 +358,13 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
   const [itensContrato, setItensContrato] = useState(() =>
     contrato?.itens ? [...contrato.itens] : []
   )
-  // Linha de item sendo editada inline
-  const [itemBusca, setItemBusca] = useState({})   // { [idx]: string }
-  const [itemDrop,  setItemDrop]  = useState(null)  // idx com dropdown aberto
-  const [itemModalIdx, setItemModalIdx] = useState(null) // idx para modal de busca
-  const [showAddPicker, setShowAddPicker] = useState(false) // modal de seleção ao clicar + Adicionar Item
+  const [itemContratoModal, setItemContratoModal] = useState(null) // null | { idx: number|null, data: object }
+  // estado legado necessário para o modal BuscarItemModal
+  const [itemBusca, setItemBusca] = useState({})
+  const [itemDrop,  setItemDrop]  = useState(null)
+  const [itemDropEl, setItemDropEl] = useState(null)
+  const [itemModalIdx, setItemModalIdx] = useState(null)
+  const [showAddPicker, setShowAddPicker] = useState(false)
 
   // Credor
   const [credorSel, setCredorSel] = useState(credorInicial)
@@ -230,9 +378,6 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
   const [buscaSec, setBuscaSec] = useState(contrato?.secretaria || '')
   const [dropdownSec, setDropdownSec] = useState(false)
   const secAnchorRef = useRef(null)
-
-  // Item table dropdown anchor
-  const [itemDropEl, setItemDropEl] = useState(null)
 
   useEffect(() => {
     api.get('/organizacao/secretarias')
@@ -290,8 +435,8 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
 
   const selecionarSecretaria = (s) => {
     setSecSel(s)
-    setBuscaSec(s.sigla || s.nome)
-    set('secretaria', s.sigla || s.nome)
+    setBuscaSec(s.nome)
+    set('secretaria', s.nome)
     setDropdownSec(false)
     // auto-seleciona o primeiro fiscal dentro do período de vigência
     const d = form.vigencia_inicio || form.data_assinatura || ''
@@ -366,6 +511,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
   const novoItemRow = () => ({
     _id: Date.now() + Math.random(),
     lote: '',
+    codigo_item: '',
     item_id: '',
     descricao: '',
     unidade: '',
@@ -463,7 +609,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-gray-50 dark:bg-slate-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-        style={{ width: '720px', maxWidth: '95vw', maxHeight: '92vh' }}>
+        style={{ width: '1000px', maxWidth: '96vw', maxHeight: '92vh' }}>
 
         {/* ── Header ───────────────────────────────────────────────────── */}
         <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4 flex items-center gap-4 shrink-0">
@@ -544,8 +690,9 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                 {readonly ? (
                   <div className="grid grid-cols-12 gap-4">
                     <div className="col-span-12"><ViewField label="Objeto" value={form.objeto} /></div>
-                    <div className="col-span-6"><ViewField label="Modalidade" value={form.modalidade || '—'} /></div>
-                    <div className="col-span-6"><ViewField label="Nº Licitação" value={form.numero_licitacao || '—'} mono /></div>
+                    <div className="col-span-4"><ViewField label="Tipo de Objeto" value={form.tipo_objeto || '—'} /></div>
+                    <div className="col-span-4"><ViewField label="Modalidade" value={form.modalidade || '—'} /></div>
+                    <div className="col-span-4"><ViewField label="Nº Licitação" value={form.numero_licitacao || '—'} mono /></div>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -554,7 +701,14 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                       <PremiumTextarea value={form.objeto} onChange={e => set('objeto', e.target.value.toUpperCase())}
                         rows={3} className="uppercase resize-none" placeholder="Descrição do objeto do contrato..." />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Tipo de Objeto *</label>
+                        <PremiumSelect value={form.tipo_objeto} onChange={e => set('tipo_objeto', e.target.value)}>
+                          <option value="">Selecione...</option>
+                          {TIPOS_OBJETO.map(t => <option key={t} value={t}>{t}</option>)}
+                        </PremiumSelect>
+                      </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Modalidade</label>
                         <PremiumSelect value={form.modalidade} onChange={e => set('modalidade', e.target.value)}>
@@ -725,7 +879,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                     <ShoppingBag className="w-8 h-8 mx-auto mb-2 opacity-40" />
                     <p className="text-sm">Nenhum item adicionado</p>
                     {!readonly && (
-                      <button type="button" onClick={adicionarItem}
+                      <button type="button" onClick={() => setItemContratoModal({ idx: null, data: {} })}
                         className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors">
                         <Plus className="w-4 h-4" /> Adicionar Item
                       </button>
@@ -737,103 +891,73 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                       <table className="w-full text-xs">
                         <thead className="bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 uppercase tracking-wide">
                           <tr>
+                            <th className="px-3 py-2 text-left font-semibold w-8">#</th>
                             <th className="px-3 py-2 text-left font-semibold">Lote</th>
+                            <th className="px-3 py-2 text-left font-semibold">Nº Item</th>
                             <th className="px-3 py-2 text-left font-semibold">Descrição</th>
                             <th className="px-3 py-2 text-left font-semibold">Unid.</th>
                             <th className="px-3 py-2 text-right font-semibold">Qtd.</th>
                             <th className="px-3 py-2 text-right font-semibold">V. Unit.</th>
                             <th className="px-3 py-2 text-right font-semibold">V. Total</th>
-                            {!readonly && <th className="px-3 py-2" />}
+                            <th className="px-3 py-2 w-20" />
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
                           {itensContrato.map((it, idx) => (
-                            <tr key={it._id || idx} className="bg-white dark:bg-slate-900/50 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors">
-                              <td className="px-2 py-1.5">
-                                {readonly ? <span className="font-mono">{it.lote || '—'}</span> : (
-                                  <input value={it.lote} onChange={e => setItem(idx, 'lote', e.target.value)}
-                                    className="w-14 h-8 px-2 text-xs rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono" />
-                                )}
+                            <tr key={it._id || idx} className="bg-white dark:bg-slate-900/50 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors group">
+                              <td className="px-3 py-2 text-gray-400 font-mono">{idx + 1}</td>
+                              <td className="px-3 py-2 font-mono text-gray-500">{it.lote || '—'}</td>
+                              <td className="px-3 py-2 font-mono text-gray-500">{it.codigo_item || '—'}</td>
+                              <td className="px-3 py-2 max-w-xs">
+                                <p className="truncate text-gray-800 dark:text-slate-200 font-medium">{it.descricao || '—'}</p>
                               </td>
-                              <td className="px-2 py-1.5 max-w-xs">
-                                {readonly ? <span className="text-gray-800 dark:text-slate-200">{it.descricao || '—'}</span> : (
-                                  <div className="relative">
-                                    <input
-                                      value={itemBusca[idx] !== undefined ? itemBusca[idx] : (it.descricao || '')}
-                                      onChange={e => { setItemBusca(p => ({ ...p, [idx]: e.target.value })); setItemDrop(idx) }}
-                                      onFocus={e => { setItemDrop(idx); setItemDropEl(e.currentTarget.closest('.relative')) }}
-                                      onBlur={() => setTimeout(() => { setItemDrop(null); setItemDropEl(null) }, 150)}
-                                      className="w-48 h-8 px-2 text-xs rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                                      placeholder="Buscar item..."
-                                    />
-                                    {itemDrop === idx && itemDropEl && createPortal(
-                                      <div style={{ position: 'fixed', zIndex: 10000, top: itemDropEl.getBoundingClientRect().bottom + 4, left: itemDropEl.getBoundingClientRect().left, width: 288 }}
-                                        className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl shadow-2xl max-h-40 overflow-y-auto">
-                                        {itemCatalogFiltrado(itemBusca[idx]).length === 0
-                                          ? <p className="px-3 py-2 text-xs text-gray-400">Nenhum item encontrado</p>
-                                          : itemCatalogFiltrado(itemBusca[idx]).map(i => (
-                                            <button key={i.id} type="button" onMouseDown={() => selecionarItemCatalogo(idx, i)}
-                                              className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b border-gray-100 dark:border-slate-700/50 last:border-0">
-                                              <p className="font-medium text-gray-800 dark:text-slate-200 truncate">{i.descricao}</p>
-                                              <p className="text-gray-400 mt-0.5 font-mono">{i.codigo} · {i.unidade_medida}</p>
-                                            </button>
-                                          ))
-                                        }
-                                        <button type="button" onMouseDown={() => { setItemModalIdx(idx); setItemDrop(null); setItemDropEl(null) }}
-                                          className="w-full px-3 py-2 text-xs text-blue-600 font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20 border-t border-gray-100 dark:border-slate-700 flex items-center gap-1">
-                                          <Search className="w-3 h-3" /> Busca avançada
-                                        </button>
-                                      </div>,
-                                      document.body
-                                    )}
-                                  </div>
-                                )}
+                              <td className="px-3 py-2 text-gray-500">{it.unidade || '—'}</td>
+                              <td className="px-3 py-2 text-right font-mono">{it.quantidade || '—'}</td>
+                              <td className="px-3 py-2 text-right font-mono">
+                                {it.valor_unitario ? `R$ ${parseFloat(it.valor_unitario).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}
                               </td>
-                              <td className="px-2 py-1.5">
-                                {readonly ? <span>{it.unidade || '—'}</span> : (
-                                  <input value={it.unidade} onChange={e => setItem(idx, 'unidade', e.target.value)}
-                                    className="w-16 h-8 px-2 text-xs rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
-                                )}
-                              </td>
-                              <td className="px-2 py-1.5 text-right">
-                                {readonly ? <span className="font-mono">{it.quantidade || '—'}</span> : (
-                                  <input type="number" min={0} value={it.quantidade} onChange={e => setItem(idx, 'quantidade', e.target.value)}
-                                    className="w-20 h-8 px-2 text-xs rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-right font-mono" />
-                                )}
-                              </td>
-                              <td className="px-2 py-1.5 text-right">
-                                {readonly ? <span className="font-mono">{it.valor_unitario || '—'}</span> : (
-                                  <input type="number" min={0} step="0.01" value={it.valor_unitario} onChange={e => setItem(idx, 'valor_unitario', e.target.value)}
-                                    className="w-24 h-8 px-2 text-xs rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-right font-mono" />
-                                )}
-                              </td>
-                              <td className="px-2 py-1.5 text-right font-mono font-semibold text-blue-700 dark:text-blue-400 whitespace-nowrap">
+                              <td className="px-3 py-2 text-right font-mono font-semibold text-blue-700 dark:text-blue-400 whitespace-nowrap">
                                 {it.valor_total ? `R$ ${parseFloat(it.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}
                               </td>
-                              {!readonly && (
-                                <td className="px-2 py-1.5">
-                                  <button type="button" onClick={() => removerItem(idx)}
-                                    className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                                    <X className="w-3.5 h-3.5" />
-                                  </button>
-                                </td>
-                              )}
+                              <td className="px-2 py-1.5">
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  {!readonly && (
+                                    <>
+                                      <button type="button" title="Editar item"
+                                        onClick={() => setItemContratoModal({ idx, data: { ...it } })}
+                                        className="p-1.5 rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                                        <Edit3 className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button type="button" title="Remover item"
+                                        onClick={() => removerItem(idx)}
+                                        className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                                        <X className="w-3.5 h-3.5" />
+                                      </button>
+                                    </>
+                                  )}
+                                  {readonly && (
+                                    <button type="button" title="Ver item"
+                                      onClick={() => setItemContratoModal({ idx, data: { ...it }, readonly: true })}
+                                      className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                                      <Eye className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
                             </tr>
                           ))}
                         </tbody>
-                        {itensContrato.length > 0 && (
-                          <tfoot className="bg-gray-100 dark:bg-slate-800 border-t-2 border-gray-200 dark:border-slate-700">
-                            <tr>
-                              <td colSpan={readonly ? 5 : 5} className="px-3 py-2 text-right text-xs font-bold text-gray-600 dark:text-slate-300 uppercase tracking-wide">Total do Contrato:</td>
-                              <td className="px-3 py-2 text-right font-bold text-blue-700 dark:text-blue-400 font-mono whitespace-nowrap">{fmtBRL(valorTotalItens) || '—'}</td>
-                              {!readonly && <td />}
-                            </tr>
-                          </tfoot>
-                        )}
+                        <tfoot className="bg-gray-100 dark:bg-slate-800 border-t-2 border-gray-200 dark:border-slate-700">
+                          <tr>
+                            <td colSpan={7} className="px-3 py-2 text-right text-xs font-bold text-gray-600 dark:text-slate-300 uppercase tracking-wide">Total do Contrato:</td>
+                            <td className="px-3 py-2 text-right font-bold text-blue-700 dark:text-blue-400 font-mono whitespace-nowrap">{fmtBRL(valorTotalItens) || '—'}</td>
+                            <td />
+                          </tr>
+                        </tfoot>
                       </table>
                     </div>
                     {!readonly && (
-                      <button type="button" onClick={adicionarItem}
+                      <button type="button" onClick={() => setItemContratoModal({ idx: null, data: {} })}
                         className="mt-3 flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors">
                         <Plus className="w-4 h-4" /> Adicionar Item
                       </button>
@@ -841,6 +965,50 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                   </>
                 )}
               </SectionCard>
+
+              {itemContratoModal && !itemContratoModal.readonly && (
+                <ItemContratoModal
+                  item={itemContratoModal.data}
+                  catalogoItens={catalogoItens}
+                  onSave={saved => {
+                    const { idx } = itemContratoModal
+                    if (idx === null) {
+                      setItensContrato(p => [...p, { ...saved, _id: saved._id || (Date.now() + Math.random()) }])
+                    } else {
+                      setItensContrato(p => p.map((it, i) => i === idx ? { ...it, ...saved } : it))
+                    }
+                    setItemContratoModal(null)
+                  }}
+                  onClose={() => setItemContratoModal(null)}
+                />
+              )}
+              {itemContratoModal?.readonly && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full p-6 space-y-3" style={{ maxWidth: '480px' }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-bold text-gray-900 dark:text-white">Detalhes do Item</h3>
+                      <button onClick={() => setItemContratoModal(null)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-400"><X className="w-4 h-4" /></button>
+                    </div>
+                    {[
+                      ['Lote', itemContratoModal.data.lote],
+                      ['Nº Item', itemContratoModal.data.codigo_item],
+                      ['Descrição', itemContratoModal.data.descricao],
+                      ['Unidade', itemContratoModal.data.unidade],
+                      ['Quantidade', itemContratoModal.data.quantidade],
+                      ['Valor Unitário', itemContratoModal.data.valor_unitario ? `R$ ${parseFloat(itemContratoModal.data.valor_unitario).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : null],
+                      ['Valor Total', itemContratoModal.data.valor_total ? `R$ ${parseFloat(itemContratoModal.data.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : null],
+                    ].map(([label, val]) => val ? (
+                      <div key={label} className="flex justify-between text-sm border-b border-gray-100 dark:border-slate-700 pb-2">
+                        <span className="text-gray-500 dark:text-slate-400">{label}</span>
+                        <span className="font-medium text-gray-800 dark:text-slate-200">{val}</span>
+                      </div>
+                    ) : null)}
+                    <div className="flex justify-end pt-1">
+                      <button onClick={() => setItemContratoModal(null)} className="px-4 py-2 text-sm rounded-xl border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700">Fechar</button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* SectionCard — Recursos */}
               <SectionCard icon={DollarSign} title="Recursos" subtitle="Valor, fontes de recurso e dotações orçamentárias">

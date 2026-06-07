@@ -177,6 +177,7 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
       CREATE TABLE IF NOT EXISTS contratos_itens (
         id               SERIAL       PRIMARY KEY,
         codigo           VARCHAR(10)  UNIQUE,
+        codigo_item      VARCHAR(100),
         descricao        VARCHAR(500) NOT NULL,
         categoria        VARCHAR(20),
         unidade_medida   VARCHAR(50),
@@ -201,6 +202,7 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
         numero_contrato  VARCHAR(50)   NOT NULL,
         objeto           TEXT          NOT NULL,
         modalidade       VARCHAR(100),
+        tipo_objeto      VARCHAR(100),
         numero_licitacao VARCHAR(100),
         credor_id        INTEGER       NOT NULL REFERENCES credores(id),
         valor            NUMERIC(15,2),
@@ -659,6 +661,57 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
       ADD COLUMN IF NOT EXISTS contabil_pc_data_liquidacao   DATE,
       ADD COLUMN IF NOT EXISTS contabil_pc_doc_caixa         VARCHAR(200)
   `);
+
+  // Contratos — coluna tipo_objeto
+  await run(`ALTER TABLE contratos ADD COLUMN IF NOT EXISTS tipo_objeto VARCHAR(100)`);
+
+  // Itens — colunas extras
+  await run(`ALTER TABLE contratos_itens ADD COLUMN IF NOT EXISTS codigo_item VARCHAR(100)`);
+  await run(`ALTER TABLE contratos_itens ADD COLUMN IF NOT EXISTS lote VARCHAR(50)`);
+  await run(`ALTER TABLE contratos_itens_vinculo ADD COLUMN IF NOT EXISTS codigo_item VARCHAR(100)`);
+
+  // ── Ordens de Compra/Serviço ──────────────────────────────────────────────
+  await run(`
+    CREATE TABLE IF NOT EXISTS contratos_ordens (
+      id                    SERIAL PRIMARY KEY,
+      tipo                  VARCHAR(20)   NOT NULL,
+      numero                VARCHAR(50)   NOT NULL,
+      contrato_id           INTEGER       NOT NULL REFERENCES contratos(id),
+      data_emissao          DATE          NOT NULL,
+      data_entrega_prevista DATE,
+      objeto                TEXT          NOT NULL,
+      secretaria            VARCHAR(200),
+      fiscal_responsavel    VARCHAR(200),
+      local_entrega         VARCHAR(500),
+      valor_total           NUMERIC(15,2) NOT NULL DEFAULT 0,
+      observacoes           TEXT,
+      status                VARCHAR(20)   NOT NULL DEFAULT 'EMITIDA',
+      created_at            TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      updated_at            TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run(`CREATE INDEX IF NOT EXISTS idx_contratos_ordens_contrato ON contratos_ordens(contrato_id)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_contratos_ordens_status   ON contratos_ordens(status)`);
+  await run(`ALTER TABLE contratos_ordens ADD COLUMN IF NOT EXISTS justificativa TEXT`);
+
+  await run(`
+    CREATE TABLE IF NOT EXISTS contratos_ordens_itens (
+      id             SERIAL PRIMARY KEY,
+      ordem_id       INTEGER       NOT NULL REFERENCES contratos_ordens(id) ON DELETE CASCADE,
+      item_id        INTEGER,
+      descricao      VARCHAR(500)  NOT NULL,
+      unidade        VARCHAR(50),
+      quantidade     NUMERIC(15,4) NOT NULL DEFAULT 1,
+      valor_unitario NUMERIC(15,2) NOT NULL DEFAULT 0,
+      valor_total    NUMERIC(15,2) NOT NULL DEFAULT 0,
+      ordem          INTEGER       NOT NULL DEFAULT 0,
+      created_at     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      updated_at     TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run(`CREATE INDEX IF NOT EXISTS idx_contratos_ordens_itens_ordem ON contratos_ordens_itens(ordem_id)`);
+  await run(`ALTER TABLE contratos_ordens_itens ADD COLUMN IF NOT EXISTS lote VARCHAR(50)`);
+  await run(`ALTER TABLE contratos_ordens_itens ADD COLUMN IF NOT EXISTS codigo_item VARCHAR(100)`);
 };
 
 const getTenantConnection = async (tenantSchema) => {

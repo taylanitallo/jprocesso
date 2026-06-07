@@ -7,6 +7,7 @@ module.exports = (sequelize) => {
     numero_contrato: { type: DataTypes.STRING(50), allowNull: false },
     objeto: { type: DataTypes.TEXT, allowNull: false },
     modalidade: { type: DataTypes.STRING(100) },
+    tipo_objeto: { type: DataTypes.STRING(100) },
     numero_licitacao: { type: DataTypes.STRING(100) },
     credor_id: { type: DataTypes.INTEGER },
     valor: { type: DataTypes.DECIMAL(15, 2) },

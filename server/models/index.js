@@ -19,6 +19,8 @@ const defineCredorModel = require('./Credor');
 const defineContratoItemModel = require('./ContratoItem');
 const defineContratoItemVinculoModel = require('./ContratoItemVinculo');
 const defineContratoModel = require('./Contrato');
+const defineContratoOrdemModel = require('./ContratoOrdem');
+const defineContratoOrdemItemModel = require('./ContratoOrdemItem');
 const definePatGrupoModel = require('./PatGrupo');
 const definePatBemModel = require('./PatBem');
 const definePatResponsabilidadeModel = require('./PatResponsabilidade');
@@ -50,6 +52,8 @@ const initTenantModels = (sequelize) => {
   const ContratoItem = defineContratoItemModel(sequelize);
   const ContratoItemVinculo = defineContratoItemVinculoModel(sequelize);
   const Contrato = defineContratoModel(sequelize);
+  const ContratoOrdem = defineContratoOrdemModel(sequelize);
+  const ContratoOrdemItem = defineContratoOrdemItemModel(sequelize);
   const PatGrupo = definePatGrupoModel(sequelize);
   const PatBem = definePatBemModel(sequelize);
   const PatResponsabilidade = definePatResponsabilidadeModel(sequelize);
@@ -66,6 +70,14 @@ const initTenantModels = (sequelize) => {
   // Contrato → Itens vinculados (itens do contrato específico, com qtd/valor)
   Contrato.hasMany(ContratoItemVinculo, { foreignKey: 'contrato_id', as: 'itens' });
   ContratoItemVinculo.belongsTo(Contrato, { foreignKey: 'contrato_id', as: 'contrato' });
+  ContratoItemVinculo.belongsTo(ContratoItem, { foreignKey: 'item_id', as: 'catalogo', constraints: false });
+
+  // Contrato → Ordens de Compra/Serviço
+  Contrato.hasMany(ContratoOrdem,     { foreignKey: 'contrato_id', as: 'ordens' });
+  ContratoOrdem.belongsTo(Contrato,   { foreignKey: 'contrato_id', as: 'contrato' });
+  ContratoOrdem.hasMany(ContratoOrdemItem, { foreignKey: 'ordem_id', as: 'itens' });
+  ContratoOrdemItem.belongsTo(ContratoOrdem, { foreignKey: 'ordem_id', as: 'ordemPai' });
+  ContratoOrdemItem.belongsTo(ContratoItem, { foreignKey: 'item_id', as: 'catalogo', constraints: false });
 
   Secretaria.hasMany(Setor, { foreignKey: 'secretariaId', as: 'setores' });
   Setor.belongsTo(Secretaria, { foreignKey: 'secretariaId', as: 'secretaria' });
@@ -189,6 +201,8 @@ const initTenantModels = (sequelize) => {
     ContratoItem,
     ContratoItemVinculo,
     Contrato,
+    ContratoOrdem,
+    ContratoOrdemItem,
     PatGrupo,
     PatBem,
     PatResponsabilidade,

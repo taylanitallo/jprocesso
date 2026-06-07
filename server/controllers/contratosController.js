@@ -212,6 +212,7 @@ const syncItens = async (ContratoItemVinculo, contratoId, itens) => {
       contrato_id:    contratoId,
       item_id:        it.item_id || null,
       lote:           it.lote || null,
+      codigo_item:    it.codigo_item || null,
       descricao:      String(it.descricao).trim(),
       unidade:        it.unidade || null,
       quantidade:     it.quantidade ? parseFloat(String(it.quantidade).replace(',', '.')) : null,

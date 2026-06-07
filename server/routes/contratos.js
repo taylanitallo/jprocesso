@@ -6,6 +6,9 @@ const {
   listContratos, createContrato, updateContrato, deleteContrato,
   syncFromDids,
 } = require('../controllers/contratosController');
+const {
+  listOrdens, getSaldoContrato, getItensContrato, createOrdem, updateOrdem, deleteOrdem,
+} = require('../controllers/ordensController');
 const { authenticate, tenantMiddleware, requireTenant } = require('../middleware/auth');
 
 // Todos os endpoints exigem autenticaÃ§Ã£o + tenant
@@ -23,6 +26,14 @@ router.get('/itens',       listItens);
 router.post('/itens',      createItem);
 router.put('/itens/:id',   updateItem);
 router.delete('/itens/:id', deleteItem);
+
+// Ordens de Compra/Serviço
+router.get('/ordens',                              listOrdens);
+router.get('/ordens/saldo/:contrato_id',           getSaldoContrato);
+router.get('/ordens/itens-contrato/:contrato_id',  getItensContrato);
+router.post('/ordens',                             createOrdem);
+router.put('/ordens/:id',                          updateOrdem);
+router.delete('/ordens/:id',                       deleteOrdem);
 
 // Contratos // SSE â€” deve vir antes de /:id
 router.get('/',       listContratos);

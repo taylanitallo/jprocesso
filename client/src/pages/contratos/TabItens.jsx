@@ -19,6 +19,8 @@ function ItemModal({ modo, item, onSave, onClose }) {
     descricao:        item?.descricao        || '',
     categoria:        item?.categoria        || '',
     unidade_medida:   item?.unidade_medida   || '',
+    codigo_item:      item?.codigo_item      || '',
+    lote:             item?.lote             || '',
     catalogo:         item?.catalogo         || '',
     classificacao:    item?.classificacao    || '',
     subclassificacao: item?.subclassificacao || '',
@@ -90,17 +92,17 @@ function ItemModal({ modo, item, onSave, onClose }) {
               {/* Identificação */}
               <SectionCard icon={Tag} title="Identificação" subtitle="Código, descrição e classificação do item">
                 <div className="grid grid-cols-12 gap-4">
-                  {/* Código */}
-                  <div className="col-span-3">
+                  {/* Código sequencial */}
+                  <div className="col-span-2">
                     <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Código</label>
                     {modo === 'novo'
-                      ? <p className="h-11 flex items-center px-3.5 rounded-xl border border-dashed border-gray-300 dark:border-slate-600 text-xs text-gray-400 dark:text-slate-500 italic">Gerado automaticamente</p>
+                      ? <p className="h-11 flex items-center px-3.5 rounded-xl border border-dashed border-gray-300 dark:border-slate-600 text-xs text-gray-400 dark:text-slate-500 italic">Auto</p>
                       : <p className="font-mono font-bold text-lg text-gray-800 dark:text-slate-200">{item?.codigo || '—'}</p>
                     }
                   </div>
 
                   {/* Categoria */}
-                  <div className="col-span-4">
+                  <div className="col-span-5">
                     <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Categoria *</label>
                     {readonly
                       ? <p className="text-sm font-medium text-gray-800 dark:text-slate-200">{form.categoria || '—'}</p>

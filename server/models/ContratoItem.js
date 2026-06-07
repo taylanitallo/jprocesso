@@ -4,6 +4,8 @@ module.exports = (sequelize) => {
   return sequelize.define('ContratoItem', {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
     codigo: { type: DataTypes.STRING(10) },
+    codigo_item: { type: DataTypes.STRING(100) },
+    lote: { type: DataTypes.STRING(50) },
     descricao: { type: DataTypes.STRING(500), allowNull: false },
     categoria: { type: DataTypes.STRING(100) },
     unidade_medida: { type: DataTypes.STRING(50) },
