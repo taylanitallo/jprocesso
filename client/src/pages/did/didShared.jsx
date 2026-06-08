@@ -11,6 +11,8 @@ export const EMPTY = {
   contrato_ref: '', credor_sec1: '', cnpj_cpf_credor_sec1: '', nro_licitacao_sec1: '', tipo_licitacao_sec1: '', valor_did: '',
   mes_referencia: '', nf_sec1: '',
   cert_sec1_municipal: false, cert_sec1_trabalhista: false, cert_sec1_fgts: false, cert_sec1_estadual: false, cert_sec1_federal: false, cert_sec1_simples_nac: false,
+  // Vínculo com Ordem de Compra
+  ordem_compra_id: '', ordem_ref: '',
   // Seção II
   ci_recebido_em: '', ci_responsavel: '', despacho_ci: '', dotacao_numero: '', fonte_recurso_numero: '',
   // Seção III

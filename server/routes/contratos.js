@@ -7,7 +7,7 @@ const {
   syncFromDids,
 } = require('../controllers/contratosController');
 const {
-  listOrdens, getSaldoContrato, getItensContrato, createOrdem, updateOrdem, deleteOrdem,
+  listOrdens, listOrdemDisponivelDid, getSaldoContrato, getItensContrato, createOrdem, updateOrdem, deleteOrdem,
 } = require('../controllers/ordensController');
 const { authenticate, tenantMiddleware, requireTenant } = require('../middleware/auth');
 
@@ -29,6 +29,7 @@ router.delete('/itens/:id', deleteItem);
 
 // Ordens de Compra/Serviço
 router.get('/ordens',                              listOrdens);
+router.get('/ordens/disponiveis-did',              listOrdemDisponivelDid);
 router.get('/ordens/saldo/:contrato_id',           getSaldoContrato);
 router.get('/ordens/itens-contrato/:contrato_id',  getItensContrato);
 router.post('/ordens',                             createOrdem);

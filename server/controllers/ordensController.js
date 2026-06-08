@@ -318,4 +318,88 @@ const getItensContrato = async (req, res) => {
   }
 };
 
-module.exports = { listOrdens, getSaldoContrato, getItensContrato, createOrdem, updateOrdem, deleteOrdem };
+// ── ORDENS DISPONÍVEIS PARA DID ───────────────────────────────────────────────
+// Retorna ordens com status EMITIDA que ainda não foram vinculadas a nenhum DID,
+// filtradas pela secretaria do usuário logado (exceto admin/jeos que veem todas).
+
+const listOrdemDisponivelDid = async (req, res) => {
+  try {
+    const { ContratoOrdem, ContratoOrdemItem, Contrato, Credor, Did, Secretaria } = req.models;
+    const { q } = req.query;
+
+    // IDs de ordens já vinculadas a algum DID (coluna pode não existir em bancos antigos)
+    let idsVinculados = [];
+    try {
+      const vinculadas = await Did.findAll({
+        where: { ordem_compra_id: { [Op.not]: null } },
+        attributes: ['ordem_compra_id'],
+        raw: true,
+      });
+      idsVinculados = vinculadas.map(d => d.ordem_compra_id).filter(Boolean);
+    } catch (_) { /* coluna ainda não existe — ignora */ }
+
+    const where = { status: 'EMITIDA' };
+    if (idsVinculados.length > 0) {
+      where.id = { [Op.notIn]: idsVinculados };
+    }
+
+    // Usuários não-admin/jeos só veem ordens da própria secretaria
+    const userTipo = req.user?.tipo;
+    if (userTipo !== 'admin' && userTipo !== 'jeos') {
+      const secretariaId = req.user?.secretariaId;
+      if (secretariaId && Secretaria) {
+        // Busca nome e sigla da secretaria para comparar com o campo texto das ordens
+        const sec = await Secretaria.findByPk(secretariaId, { attributes: ['nome', 'sigla'], raw: true });
+        if (sec) {
+          const filtros = [];
+          if (sec.nome)  filtros.push({ secretaria: { [Op.iLike]: `%${sec.nome}%`  } });
+          if (sec.sigla) filtros.push({ secretaria: { [Op.iLike]: `%${sec.sigla}%` } });
+          if (filtros.length > 0) {
+            where[Op.or] = filtros;
+          }
+        }
+      } else if (req.user?.secretariaNome) {
+        // Fallback: usar nome do JWT quando Secretaria model não disponível
+        where.secretaria = { [Op.iLike]: `%${req.user.secretariaNome}%` };
+      }
+    }
+
+    if (q) {
+      const qLike = `%${q}%`;
+      // Só substitui o Op.or se não houver filtro de secretaria (senão usa Op.and)
+      if (where[Op.or]) {
+        where[Op.and] = [
+          { [Op.or]: where[Op.or] },
+          { [Op.or]: [{ numero: { [Op.iLike]: qLike } }, { objeto: { [Op.iLike]: qLike } }] },
+        ];
+        delete where[Op.or];
+      } else {
+        where[Op.or] = [
+          { numero: { [Op.iLike]: qLike } },
+          { objeto:  { [Op.iLike]: qLike } },
+        ];
+      }
+    }
+
+    const ordens = await ContratoOrdem.findAll({
+      where,
+      include: [
+        {
+          model: Contrato,
+          as: 'contrato',
+          attributes: ['id', 'numero_contrato', 'objeto', 'valor', 'status', 'modalidade', 'numero_licitacao'],
+          include: [{ model: Credor, as: 'credor', attributes: ['id', 'razao_social', 'cnpj_cpf'] }],
+        },
+        { model: ContratoOrdemItem, as: 'itens' },
+      ],
+      order: [['created_at', 'DESC']],
+    });
+
+    res.json(ordens);
+  } catch (err) {
+    console.error('listOrdemDisponivelDid:', err);
+    res.status(500).json({ error: 'Erro ao listar ordens disponíveis para DID' });
+  }
+};
+
+module.exports = { listOrdens, listOrdemDisponivelDid, getSaldoContrato, getItensContrato, createOrdem, updateOrdem, deleteOrdem };

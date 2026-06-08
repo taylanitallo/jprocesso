@@ -664,7 +664,9 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
       ADD COLUMN IF NOT EXISTS contabil_pc_data_empenho      DATE,
       ADD COLUMN IF NOT EXISTS contabil_pc_liquidacao_numero VARCHAR(200),
       ADD COLUMN IF NOT EXISTS contabil_pc_data_liquidacao   DATE,
-      ADD COLUMN IF NOT EXISTS contabil_pc_doc_caixa         VARCHAR(200)
+      ADD COLUMN IF NOT EXISTS contabil_pc_doc_caixa         VARCHAR(200),
+      ADD COLUMN IF NOT EXISTS ordem_compra_id               INTEGER,
+      ADD COLUMN IF NOT EXISTS ordem_ref                     VARCHAR(100)
   `);
 
   // Contratos — coluna tipo_objeto

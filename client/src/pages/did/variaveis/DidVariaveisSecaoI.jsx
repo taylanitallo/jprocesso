@@ -1,7 +1,148 @@
-import { useState, useEffect, useContext } from 'react'
-import { FileText, Plus, Trash2, Search, X, Check, CheckCircle, Pencil, Loader2, ListPlus, Lock } from 'lucide-react'
+import { useState, useEffect, useContext, useMemo } from 'react'
+import { FileText, Plus, Trash2, Search, X, Check, CheckCircle, Pencil, Loader2, ListPlus, Lock, ClipboardList } from 'lucide-react'
 import { Field, Input, Textarea, SectionCard, DidReadOnlyContext } from '../didShared'
 import api from '../../../services/api'
+
+// ─── Modal de seleção de Ordem de Compra disponível para DID ─────────────────
+function ModalOrdemCompra({ onConfirm, onClose }) {
+  const [ordens, setOrdens] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [busca, setBusca] = useState('')
+
+  useEffect(() => {
+    setLoading(true)
+    api.get('/contratos/ordens/disponiveis-did')
+      .then(r => setOrdens(Array.isArray(r.data) ? r.data : []))
+      .catch(() => setOrdens([]))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const ordensFiltradas = useMemo(() => {
+    const q = busca.trim().toLowerCase()
+    if (!q) return ordens
+    return ordens.filter(o =>
+      (o.numero || '').toLowerCase().includes(q) ||
+      (o.objeto || '').toLowerCase().includes(q) ||
+      (o.contrato?.numero_contrato || '').toLowerCase().includes(q) ||
+      (o.contrato?.credor?.razao_social || '').toLowerCase().includes(q)
+    )
+  }, [ordens, busca])
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl flex flex-col" style={{ maxHeight: '85vh' }}>
+        {/* Header */}
+        <div className="flex items-center justify-between bg-gray-800 dark:bg-gray-900 px-4 py-3 rounded-t-xl shrink-0">
+          <div className="flex items-center gap-2">
+            <ClipboardList className="w-4 h-4 text-orange-400" />
+            <span className="text-sm font-semibold text-white">Ordens de Compra Disponíveis</span>
+            <span className="text-xs text-gray-400 ml-1">· somente EMITIDAS e não vinculadas</span>
+          </div>
+          <button onClick={onClose} className="p-0.5 rounded hover:bg-gray-700 text-white/80 hover:text-white">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 shrink-0">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+            <input
+              autoFocus
+              value={busca}
+              onChange={e => setBusca(e.target.value)}
+              placeholder="Buscar por número, objeto, contrato ou credor..."
+              className="w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600
+                bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                outline-none focus:ring-2 focus:ring-orange-400"
+            />
+          </div>
+        </div>
+
+        {/* List */}
+        <div className="flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="flex items-center justify-center h-32 gap-2 text-gray-400">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span className="text-sm">Carregando ordens...</span>
+            </div>
+          ) : ordensFiltradas.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-32 text-gray-400 px-6 text-center">
+              <ClipboardList className="w-8 h-8 mb-2 opacity-40" />
+              <p className="text-sm font-medium">
+                {busca ? 'Nenhuma ordem encontrada para a busca.' : 'Nenhuma ordem de compra disponível.'}
+              </p>
+              <p className="text-xs mt-1 text-gray-400">
+                Apenas ordens com status EMITIDA e ainda não vinculadas a um DID são exibidas.
+              </p>
+            </div>
+          ) : (
+            <table className="w-full text-xs">
+              <thead className="bg-gray-50 dark:bg-gray-700/50 sticky top-0">
+                <tr>
+                  <th className="px-3 py-2 text-left font-semibold text-gray-500 dark:text-gray-400 w-28">Nº Ordem</th>
+                  <th className="px-3 py-2 text-center font-semibold text-gray-500 dark:text-gray-400 w-12">Tipo</th>
+                  <th className="px-3 py-2 text-left font-semibold text-gray-500 dark:text-gray-400 w-32">Contrato</th>
+                  <th className="px-3 py-2 text-left font-semibold text-gray-500 dark:text-gray-400">Objeto / Credor</th>
+                  <th className="px-3 py-2 text-right font-semibold text-gray-500 dark:text-gray-400 w-32">Valor Total</th>
+                  <th className="px-3 py-2 text-right font-semibold text-gray-500 dark:text-gray-400 w-24">Emissão</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                {ordensFiltradas.map(o => (
+                  <tr key={o.id} onClick={() => onConfirm(o)}
+                    className="cursor-pointer hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors">
+                    <td className="px-3 py-2.5 font-mono font-bold text-orange-700 dark:text-orange-400">
+                      {o.numero}
+                    </td>
+                    <td className="px-3 py-2.5 text-center">
+                      <span className={`px-1.5 py-0.5 rounded text-xs font-semibold ${
+                        o.tipo === 'COMPRA'
+                          ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300'
+                          : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                      }`}>
+                        {o.tipo === 'COMPRA' ? 'OC' : 'OS'}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 font-mono text-gray-700 dark:text-gray-300">
+                      {o.contrato?.numero_contrato || <span className="text-gray-400">—</span>}
+                    </td>
+                    <td className="px-3 py-2.5 max-w-xs">
+                      <p className="truncate text-gray-700 dark:text-gray-200 font-medium">{o.objeto || '—'}</p>
+                      {o.contrato?.credor?.razao_social && (
+                        <p className="truncate text-gray-400 text-xs">{o.contrato.credor.razao_social}</p>
+                      )}
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-mono font-semibold text-gray-800 dark:text-gray-200">
+                      {parseFloat(o.valor_total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </td>
+                    <td className="px-3 py-2.5 text-right text-gray-500">
+                      {o.data_emissao
+                        ? new Date(o.data_emissao + 'T12:00:00').toLocaleDateString('pt-BR')
+                        : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-3 shrink-0">
+          <span className="text-xs text-gray-400">
+            {loading ? '…' : `${ordensFiltradas.length} ordem(ns) disponível(is)`}
+          </span>
+          <button onClick={onClose}
+            className="ml-auto px-4 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600
+              text-gray-700 dark:text-gray-200 rounded text-sm font-semibold transition-colors">
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // ─── Modal de seleção de itens do contrato (com Saldo DID + Estoque Almoxarifado) ────
 function ModalItensContrato({ contrato, itensDid, onConfirm, onClose, stockData = {}, almStockData = {}, loadingStock = false }) {
@@ -208,6 +349,10 @@ export default function DidVariaveisSecaoI({
   const [credoresOpts, setCredoresOpts] = useState([])
   const [buscandoCredores, setBuscandoCredores] = useState(false)
 
+  // ── Estado da Ordem de Compra ─────────────────────────────────────────────
+  const [ordemSel, setOrdemSel] = useState(null)
+  const [modalOrdens, setModalOrdens] = useState(false)
+
   useEffect(() => {
     api.get('/contratos').then(r => setContratos(Array.isArray(r.data) ? r.data : [])).catch(() => {})
     api.get('/contratos/credores').then(r => setCredoresStorage(Array.isArray(r.data) ? r.data : [])).catch(() => {})
@@ -332,6 +477,69 @@ export default function DidVariaveisSecaoI({
     set('contrato_ref', '')
   }
 
+  // ── Seleção de Ordem de Compra ────────────────────────────────────────────
+  // Ao selecionar uma ordem, preenche automaticamente credor, contrato, objeto e itens
+  const selecionarOrdem = (ordem) => {
+    setOrdemSel(ordem)
+    setModalOrdens(false)
+    set('ordem_compra_id', ordem.id)
+    set('ordem_ref', ordem.numero || '')
+
+    const credor = ordem.contrato?.credor
+    const contrato = ordem.contrato
+
+    // Preenche credor
+    if (credor) {
+      setCredorSel(credor)
+      setBuscaCredor(credor.razao_social)
+      set('credor_sec1', credor.razao_social)
+      set('cnpj_cpf_credor_sec1', credor.cnpj_cpf || '')
+    }
+
+    // Preenche contrato
+    if (contrato) {
+      setContratoSel(contrato)
+      setBuscaContrato(contrato.numero_contrato)
+      set('contrato_ref', contrato.numero_contrato || '')
+      set('nro_licitacao_sec1', contrato.numero_licitacao || '')
+      set('tipo_licitacao_sec1', contrato.modalidade || '')
+    }
+
+    // Preenche objeto
+    if (ordem.objeto) set('objeto', ordem.objeto)
+
+    // Preenche secretaria e secretário
+    if (ordem.secretaria) {
+      set('secretaria_sec1', ordem.secretaria)
+      const dataRef = form.data_did || new Date().toISOString().slice(0, 10)
+      const gestor = getResponsavelVigente(ordem.secretaria, dataRef)
+      if (gestor) set('secretario_nome', gestor)
+    }
+
+    // Preenche itens do DID a partir dos itens da ordem
+    if (ordem.itens?.length) {
+      const novosItens = ordem.itens.map((it, i) => {
+        const q = parseFloat(it.quantidade) || 0
+        const u = parseFloat(it.valor_unitario) || 0
+        return {
+          _id: Date.now() + i,
+          descricao: it.descricao || '',
+          unidade: it.unidade || '',
+          quantidade: String(it.quantidade || ''),
+          valor_unitario: String(it.valor_unitario || ''),
+          valor_total: q && u ? (q * u).toFixed(2) : '',
+        }
+      })
+      setItensDid(novosItens)
+    }
+  }
+
+  const limparOrdem = () => {
+    setOrdemSel(null)
+    set('ordem_compra_id', '')
+    set('ordem_ref', '')
+  }
+
   const abrirModal = async () => {
     if (!contratoSel) return
     setModalItens(true)
@@ -408,6 +616,53 @@ export default function DidVariaveisSecaoI({
     <>
     <SectionCard icon={FileText} title="Seção I - Secretaria Geral · Contas Variáveis"
       color="bg-gray-800 text-white dark:bg-gray-900">
+
+      {/* ── Ordem de Compra (seletor principal — pré-preenche toda a seção) ── */}
+      <div className="col-span-2">
+        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          Ordem de Compra <span className="font-normal text-gray-400 dark:text-slate-500">(opcional — pré-preenche credor, contrato, objeto e itens)</span>
+        </label>
+        {ordemSel || form.ordem_ref ? (
+          <div className="flex items-center gap-2">
+            <div className="flex-1 px-3 py-2 text-sm rounded-lg border border-orange-300 dark:border-orange-700
+              bg-orange-50 dark:bg-orange-900/20 flex items-center gap-2 min-w-0">
+              <ClipboardList className="w-4 h-4 text-orange-500 shrink-0" />
+              <span className="font-mono font-bold text-orange-700 dark:text-orange-400 shrink-0">
+                {ordemSel?.numero || form.ordem_ref}
+              </span>
+              {ordemSel?.objeto && (
+                <span className="text-gray-500 text-xs truncate">{ordemSel.objeto.slice(0, 50)}</span>
+              )}
+              {ordemSel?.valor_total && (
+                <span className="ml-auto text-xs font-semibold text-gray-600 dark:text-gray-300 shrink-0">
+                  {parseFloat(ordemSel.valor_total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </span>
+              )}
+            </div>
+            {!locked && (
+              <button type="button" onClick={limparOrdem}
+                title="Desvincular ordem"
+                className="p-1.5 rounded border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 shrink-0">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => !locked && setModalOrdens(true)}
+            disabled={locked}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-colors
+              ${locked
+                ? 'border-gray-200 dark:border-gray-700 text-gray-400 cursor-not-allowed opacity-60'
+                : 'border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30'
+              }`}
+          >
+            <ClipboardList className="w-4 h-4" />
+            Selecionar Ordem de Compra
+          </button>
+        )}
+      </div>
 
       {/* ── Linha 1: N° DID | Credor (autocomplete) ── */}
       <Field label="N° do DID" half>
@@ -739,6 +994,13 @@ export default function DidVariaveisSecaoI({
           setModalItens(false)
         }}
         onClose={() => setModalItens(false)}
+      />
+    )}
+
+    {modalOrdens && (
+      <ModalOrdemCompra
+        onConfirm={selecionarOrdem}
+        onClose={() => setModalOrdens(false)}
       />
     )}
   </>

@@ -174,7 +174,11 @@ const defineDidModel = (sequelize) => {
       type: DataTypes.STRING(20),
       defaultValue: 'rascunho'
     },
-    criado_por_id: { type: DataTypes.UUID }
+    criado_por_id: { type: DataTypes.UUID },
+
+    // ── Vínculo com Ordem de Compra ───────────────────────────────────────
+    ordem_compra_id: { type: DataTypes.INTEGER, allowNull: true },
+    ordem_ref:       { type: DataTypes.STRING(100), allowNull: true },
   }, {
     tableName: 'dids',
     timestamps: true,
