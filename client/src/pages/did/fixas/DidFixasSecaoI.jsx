@@ -459,7 +459,7 @@ export default function DidFixasSecaoI({
 
         {/* ── Linha 1: N° DID | Credor (autocomplete) ── */}
         <Field label="N° do DID" half>
-          <input type="text" inputMode="numeric" value={form.numero_did ?? ''}
+          <input type="text" value={numeroDIDFmt}
             readOnly disabled
             className="input-field text-sm font-mono opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800" />
         </Field>
