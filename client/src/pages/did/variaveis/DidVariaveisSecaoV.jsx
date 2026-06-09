@@ -2,7 +2,7 @@ import { Calculator } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Field, Input, SectionCard, SecaoBotoes } from '../didShared'
 
-export default function DidVariaveisSecaoV({ form, inp, saving, didId, onSave }) {
+export default function DidVariaveisSecaoV({ form, inp, saving, didId, onSave, onLimpar }) {
   const [locked, setLocked] = useState(false)
   useEffect(() => { if (didId) setLocked(true) }, [didId])
 
@@ -10,6 +10,8 @@ export default function DidVariaveisSecaoV({ form, inp, saving, didId, onSave })
     const ok = await onSave?.()
     if (ok !== false) setLocked(true)
   }
+
+  const limpar = () => { setLocked(false); onLimpar?.() }
 
   return (
     <SectionCard icon={Calculator} title="Seção V - Contabilidade (Empenho)"
@@ -38,7 +40,7 @@ export default function DidVariaveisSecaoV({ form, inp, saving, didId, onSave })
       <Field label="Data do Empenho" half>
         <Input type="date" value={form.data_empenho} onChange={inp('data_empenho')} disabled={locked} />
       </Field>
-      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção IV" />
+      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção V" onLimpar={limpar} />
     </SectionCard>
   )
 }

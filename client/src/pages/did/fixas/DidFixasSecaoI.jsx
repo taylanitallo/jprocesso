@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from 'react'
-import { FileText, Plus, Trash2, Search, X, Check, CheckCircle, Pencil, Loader2, Lock } from 'lucide-react'
+import { FileText, Plus, Trash2, Search, X, Check, CheckCircle, Pencil, Loader2, Lock, RotateCcw } from 'lucide-react'
 import { Field, Input, Textarea, SectionCard, DidReadOnlyContext } from '../didShared'
 import api from '../../../services/api'
 
@@ -302,6 +302,7 @@ export default function DidFixasSecaoI({
   const [almStockData, setAlmStockData] = useState({})
   const [loadingStock, setLoadingStock] = useState(false)
   const [locked, setLocked] = useState(false)
+  const [tentouSalvar, setTentouSalvar] = useState(false)
   useEffect(() => { if (didId) setLocked(true) }, [didId])
   const readOnly = useContext(DidReadOnlyContext)
 
@@ -428,9 +429,27 @@ export default function DidFixasSecaoI({
   }
 
   const handleSalvarSecaoI = async () => {
+    setTentouSalvar(true)
+    if (!secaoICompleta) return
     if (!onSaveSecaoI) { setLocked(true); return }
     const ok = await onSaveSecaoI()
     if (ok !== false) setLocked(true)
+  }
+
+  const handleLimparSecaoI = () => {
+    if (!window.confirm('Limpar todos os campos da Seção I? Os dados salvos serão apagados ao salvar.')) return
+    // Limpa campos do formulário
+    const camposI = ['credor_sec1','cnpj_cpf_credor_sec1','contrato_ref','nro_licitacao_sec1','tipo_licitacao_sec1',
+      'secretaria_sec1','secretario_nome','data_did','mes_referencia','objeto','fonte_recurso','valor_did']
+    camposI.forEach(c => set(c, ''))
+    setItensDid([{ _id: Date.now(), descricao: '', unidade: '', quantidade: '', valor_unitario: '', valor_total: '' }])
+    // Limpa estado local
+    setCredorSel(null)
+    setBuscaCredor('')
+    setContratoSel(null)
+    setBuscaContrato('')
+    setLocked(false)
+    setTentouSalvar(false)
   }
 
   return (
@@ -441,12 +460,11 @@ export default function DidFixasSecaoI({
         {/* ── Linha 1: N° DID | Credor (autocomplete) ── */}
         <Field label="N° do DID" half>
           <input type="text" inputMode="numeric" value={form.numero_did ?? ''}
-            onChange={e => inp('numero_did')({ target: { value: e.target.value.replace(/\D/g, '') } })}
-            disabled={locked} placeholder="Ex: 123"
-            className={`input-field text-sm font-mono${locked ? ' opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800' : ''}`} />
+            readOnly disabled
+            className="input-field text-sm font-mono opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800" />
         </Field>
 
-        <Field label="Credor *" half>
+        <Field label="Credor *" half error={tentouSalvar && !form.credor_sec1 ? 'Selecione o credor' : ''}>
           {credorSel ? (
             <div className="flex items-center gap-2">
               <div className="flex-1 px-3 py-2 text-sm rounded-lg border border-green-300 dark:border-green-700
@@ -500,7 +518,7 @@ export default function DidFixasSecaoI({
         </Field>
 
         {/* ── Linha 2: CNPJ (bloqueado) | Contrato (filtrado pelo credor) ── */}
-        <Field label="CNPJ / CPF do Credor" half>
+        <Field label="CNPJ / CPF do Credor" half error={tentouSalvar && !form.cnpj_cpf_credor_sec1 ? 'Campo obrigatório' : ''}>
           <div className={`flex items-center gap-2 w-full px-3 py-2 text-sm rounded-lg border
             bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300
             ${credorSel ? 'border-gray-200 dark:border-gray-600' : 'border-dashed border-gray-200 dark:border-gray-700'}`}>
@@ -509,7 +527,7 @@ export default function DidFixasSecaoI({
           </div>
         </Field>
 
-        <Field label="Contrato *" half>
+        <Field label="Contrato *" half error={tentouSalvar && !form.contrato_ref ? 'Selecione o contrato' : ''}>
           {contratoSel ? (
             <div className="flex items-center gap-2">
               <div className="flex-1 px-3 py-2 text-sm rounded-lg border border-green-300 dark:border-green-700
@@ -571,7 +589,7 @@ export default function DidFixasSecaoI({
         </Field>
 
         {/* ── Linha 3: Secretaria | Secretário ── */}
-        <Field label="Secretaria" half>
+        <Field label="Secretaria" half error={tentouSalvar && !form.secretaria_sec1 ? 'Campo obrigatório' : ''}>
           <div className={`flex items-center gap-2 w-full px-3 py-2 text-sm rounded-lg border
             bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300
             ${camposContratoBloqueados ? 'border-gray-200 dark:border-gray-600' : 'border-dashed border-gray-200 dark:border-gray-700'}`}>
@@ -579,7 +597,7 @@ export default function DidFixasSecaoI({
             <span>{secDidObj?.nome || form.secretaria_sec1 || secretariaNome || '—'}</span>
           </div>
         </Field>
-        <Field label="Secretário Responsável" half>
+        <Field label="Secretário Responsável" half error={tentouSalvar && !form.secretario_nome ? 'Selecione o responsável' : ''}>
           {responsaveisDid.length > 0 ? (
             <div className="space-y-1">
               <select value={form.secretario_nome} onChange={inp('secretario_nome')} disabled={locked}
@@ -605,7 +623,7 @@ export default function DidFixasSecaoI({
         </Field>
 
         {/* ── Linha 4: N° Licitação | Tipo Licitação (bloqueados após contrato) ── */}
-        <Field label="N° da Licitação *" half>
+        <Field label="N° da Licitação *" half error={tentouSalvar && !form.nro_licitacao_sec1 ? 'Campo obrigatório' : ''}>
           <div className={`flex items-center gap-2 w-full px-3 py-2 text-sm rounded-lg border
             ${camposContratoBloqueados
               ? 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300'
@@ -619,7 +637,7 @@ export default function DidFixasSecaoI({
             }
           </div>
         </Field>
-        <Field label="Tipo de Licitação *" half>
+        <Field label="Tipo de Licitação *" half error={tentouSalvar && !form.tipo_licitacao_sec1 ? 'Campo obrigatório' : ''}>
           {camposContratoBloqueados ? (
             <div className="flex items-center gap-2 w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600
               bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
@@ -638,7 +656,7 @@ export default function DidFixasSecaoI({
         </Field>
 
         {/* Data | Fonte de Recurso */}
-        <Field label="Data" half>
+        <Field label="Data *" half error={tentouSalvar && !form.data_did ? 'Informe a data' : ''}>
           <Input type="date" value={form.data_did} onChange={inp('data_did')} disabled={locked} />
         </Field>
         <Field label="Fonte de Recurso" half>
@@ -658,15 +676,15 @@ export default function DidFixasSecaoI({
         </Field>
 
         {/* ── Objeto ── */}
-        <Field label="Objeto *">
-          <Textarea value={form.objeto} onChange={inp('objeto')} placeholder="Descreva o objeto do DID..." />
+        <Field label="Objeto *" error={tentouSalvar && !form.objeto ? 'Descreva o objeto' : ''}>
+          <Textarea value={form.objeto} onChange={inp('objeto')} placeholder="Descreva o objeto do DID..." disabled={locked} />
         </Field>
 
         {/* Tabela de Itens — Ordem de Compra (modal) */}
         <div className="col-span-2">
           <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400">
-              Itens do DID — Ordem de Compra
+            <label className={`text-xs font-medium ${tentouSalvar && !temItensPreenchidos ? 'text-red-500 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
+              Itens do DID — Ordem de Compra{tentouSalvar && !temItensPreenchidos ? ' — Adicione ao menos um item' : ''}
             </label>
             {!locked && (
               <button type="button" onClick={abrirModal}
@@ -786,7 +804,13 @@ export default function DidFixasSecaoI({
         </Field>
 
         {/* Botões */}
-        <div className="col-span-2 flex justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-700 mt-1">
+        <div className="col-span-2 flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700 mt-1">
+          {!readOnly && (
+            <button type="button" onClick={handleLimparSecaoI}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-700 rounded-lg text-sm font-semibold transition-colors">
+              <RotateCcw className="w-3.5 h-3.5" /> Limpar Seção
+            </button>
+          )}
           {!readOnly && (locked ? (
             <button type="button" onClick={() => setLocked(false)}
               className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
@@ -794,8 +818,8 @@ export default function DidFixasSecaoI({
             </button>
           ) : (
             <button type="button" onClick={handleSalvarSecaoI}
-              disabled={!secaoICompleta || saving}
-              title={!secaoICompleta ? 'Preencha todos os campos obrigatórios para salvar' : 'Salvar e bloquear Seção I'}
+              disabled={saving}
+              title="Salvar e bloquear Seção I"
               className="flex items-center gap-1.5 px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} Salvar Seção I
             </button>

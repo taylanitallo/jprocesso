@@ -29,7 +29,8 @@ const getByProcesso = async (req, res) => {
 const NUMERIC_FIELDS = [
   'valor_did', 'nf_valor', 'valor_bruto',
   'desconto_inss', 'desconto_iss', 'desconto_irrf', 'desconto_sindicato',
-  'desconto_bb', 'desconto_caixa', 'desconto_pensao', 'desconto_outros'
+  'desconto_bb', 'desconto_caixa', 'desconto_pensao', 'desconto_outros',
+  'ordem_compra_id'
 ];
 
 const ENUM_FIELDS = ['tipo_did', 'tipo_empenho', 'status'];
@@ -77,10 +78,12 @@ const createOrUpdate = async (req, res) => {
 
     if (!did) {
       const count = await Did.count();
+      // Usa o numero_did fornecido (digitado no início do processo) ou auto-incrementa
+      const numeroDid = body.numero_did ? String(body.numero_did).trim() : String(count + 1);
       did = await Did.create({
         ...body,
         processo_id: processoId,
-        numero_did: count + 1,
+        numero_did: numeroDid,
         criado_por_id: req.user.id
       });
     } else {

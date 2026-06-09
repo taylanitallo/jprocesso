@@ -2,9 +2,11 @@ import { Calculator } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Field, Input, SectionCard, SecaoBotoes } from '../didShared'
 
-export default function DidFixasSecaoIV({ form, inp, saving, didId, onSave }) {
+export default function DidFixasSecaoIV({ form, inp, saving, didId, onSave, onLimpar }) {
   const [locked, setLocked] = useState(false)
   useEffect(() => { if (didId) setLocked(true) }, [didId])
+
+  const limpar = () => { setLocked(false); onLimpar?.() }
 
   const salvar = async () => {
     const ok = await onSave?.()
@@ -47,7 +49,7 @@ export default function DidFixasSecaoIV({ form, inp, saving, didId, onSave }) {
       <Field label="Doc. Caixa" half>
         <Input value={form.doc_caixa} onChange={inp('doc_caixa')} disabled={locked} />
       </Field>
-      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção IV" />
+      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção IV" onLimpar={limpar} />
     </SectionCard>
   )
 }

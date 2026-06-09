@@ -2,7 +2,7 @@ import { ShoppingCart } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Field, Input, SectionCard, SecaoBotoes } from '../didShared'
 
-export default function DidVariaveisSecaoVIII({ form, inp, set, saving, didId, onSave }) {
+export default function DidVariaveisSecaoVIII({ form, inp, set, saving, didId, onSave, onLimpar }) {
   const [locked, setLocked] = useState(false)
   useEffect(() => { if (didId) setLocked(true) }, [didId])
 
@@ -10,6 +10,8 @@ export default function DidVariaveisSecaoVIII({ form, inp, set, saving, didId, o
     const ok = await onSave?.()
     if (ok !== false) setLocked(true)
   }
+
+  const limpar = () => { setLocked(false); onLimpar?.() }
 
   return (
     <SectionCard icon={ShoppingCart} title="Seção VIII - Setor de Compras (Ateste de NF)"
@@ -25,7 +27,7 @@ export default function DidVariaveisSecaoVIII({ form, inp, set, saving, didId, o
         <Input type="date" value={form.compras3_local_entrega} onChange={inp('compras3_local_entrega')} disabled={locked} />
       </Field>
 
-      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Setor de Compras" />
+      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Setor de Compras" onLimpar={limpar} />
     </SectionCard>
   )
 }

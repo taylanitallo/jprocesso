@@ -48,7 +48,7 @@ function BancoSelect({ value, onChange, disabled }) {
   )
 }
 
-export default function DidVariaveisSecaoXI({ form, inp, chk, vliq, saving, didId, onSave }) {
+export default function DidVariaveisSecaoXI({ form, inp, chk, vliq, saving, didId, onSave, onLimpar }) {
   const [locked, setLocked] = useState(false)
   useEffect(() => { if (didId) setLocked(true) }, [didId])
 
@@ -56,6 +56,8 @@ export default function DidVariaveisSecaoXI({ form, inp, chk, vliq, saving, didI
     const ok = await onSave?.()
     if (ok !== false) setLocked(true)
   }
+
+  const limpar = () => { setLocked(false); onLimpar?.() }
 
   return (
     <SectionCard icon={Banknote} title="Seção XI - Tesouraria"
@@ -194,7 +196,7 @@ export default function DidVariaveisSecaoXI({ form, inp, chk, vliq, saving, didI
         />
       </Field>
 
-      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção Tesouraria" />
+      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção Tesouraria" onLimpar={limpar} />
     </SectionCard>
   )
 }

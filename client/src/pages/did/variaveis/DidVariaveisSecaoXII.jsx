@@ -17,7 +17,7 @@ function SimNao({ value, onChange, disabled }) {
   )
 }
 
-export default function DidVariaveisSecaoXII({ form, inp, saving, didId, onSave }) {
+export default function DidVariaveisSecaoXII({ form, inp, saving, didId, onSave, onLimpar }) {
   const [locked, setLocked] = useState(false)
   useEffect(() => { if (didId) setLocked(true) }, [didId])
 
@@ -25,6 +25,8 @@ export default function DidVariaveisSecaoXII({ form, inp, saving, didId, onSave 
     const ok = await onSave?.()
     if (ok !== false) setLocked(true)
   }
+
+  const limpar = () => { setLocked(false); onLimpar?.() }
 
   return (
     <SectionCard icon={BookCheck} title="Seção XII - Contabilidade Fechamento"
@@ -35,7 +37,7 @@ export default function DidVariaveisSecaoXII({ form, inp, saving, didId, onSave 
       <Field label="Enviado para o TCE/SIM" half>
         <SimNao value={form.contab_fech_tce} onChange={inp('contab_fech_tce')} disabled={locked} />
       </Field>
-      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar" />
+      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção XII" onLimpar={limpar} />
     </SectionCard>
   )
 }

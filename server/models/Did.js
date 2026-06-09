@@ -13,8 +13,8 @@ const defineDidModel = (sequelize) => {
       comment: 'FK: Processo vinculado'
     },
     numero_did: {
-      type: DataTypes.INTEGER,
-      comment: 'Número sequencial do DID'
+      type: DataTypes.STRING(30),
+      comment: 'Número do DID (string para preservar zeros à esquerda)'
     },
     tipo_did: {
       type: DataTypes.STRING(20),

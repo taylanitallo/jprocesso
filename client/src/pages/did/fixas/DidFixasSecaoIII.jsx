@@ -2,7 +2,7 @@ import { Landmark } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Field, Input, SectionCard, SecaoBotoes } from '../didShared'
 
-export default function DidFixasSecaoIII({ form, inp, saving, didId, onSave }) {
+export default function DidFixasSecaoIII({ form, inp, saving, didId, onSave, onLimpar }) {
   const [locked, setLocked] = useState(false)
   useEffect(() => { if (didId) setLocked(true) }, [didId])
 
@@ -10,6 +10,8 @@ export default function DidFixasSecaoIII({ form, inp, saving, didId, onSave }) {
     const ok = await onSave?.()
     if (ok !== false) setLocked(true)
   }
+
+  const limpar = () => { setLocked(false); onLimpar?.() }
 
   return (
     <SectionCard icon={Landmark} title="Seção III - Secretaria de Finanças"
@@ -20,7 +22,7 @@ export default function DidFixasSecaoIII({ form, inp, saving, didId, onSave }) {
       <Field label="Responsável" half>
         <Input value={form.financas_responsavel} onChange={inp('financas_responsavel')} disabled={locked} />
       </Field>
-      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção III" />
+      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção III" onLimpar={limpar} />
     </SectionCard>
   )
 }

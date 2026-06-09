@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext, useMemo } from 'react'
-import { FileText, Plus, Trash2, Search, X, Check, CheckCircle, Pencil, Loader2, ListPlus, Lock, ClipboardList } from 'lucide-react'
+import { FileText, Plus, Trash2, Search, X, Check, CheckCircle, Pencil, Loader2, ListPlus, Lock, ClipboardList, RotateCcw } from 'lucide-react'
 import { Field, Input, Textarea, SectionCard, DidReadOnlyContext } from '../didShared'
 import api from '../../../services/api'
 
@@ -341,6 +341,7 @@ export default function DidVariaveisSecaoI({
   secDidObj, responsaveisDid, dataRefDid,
   secretariaNome,
   didId,
+  processoId,
   onSaveSecaoI,
   saving,
 }) {
@@ -410,12 +411,16 @@ export default function DidVariaveisSecaoI({
   const [buscaContrato, setBuscaContrato] = useState('')
   const [dropdownContrato, setDropdownContrato] = useState(false)
   const [locked, setLocked] = useState(false)
+  const [tentouSalvar, setTentouSalvar] = useState(false)
   const [modalItens, setModalItens] = useState(false)
   const [stockData, setStockData] = useState({})
   const [almStockData, setAlmStockData] = useState({})
   const [loadingStock, setLoadingStock] = useState(false)
   useEffect(() => { if (didId) setLocked(true) }, [didId])
   const readOnly = useContext(DidReadOnlyContext)
+
+  // Quando há uma ordem de compra vinculada, credor/contrato/secretaria/secretário ficam bloqueados
+  const ordemVinculada = !!(ordemSel || form.ordem_ref)
 
   useEffect(() => {
     if (form.contrato_ref && !contratoSel && contratos.length > 0) {
@@ -534,10 +539,35 @@ export default function DidVariaveisSecaoI({
     }
   }
 
-  const limparOrdem = () => {
+  const limparOrdem = async () => {
     setOrdemSel(null)
     set('ordem_compra_id', '')
     set('ordem_ref', '')
+    // Limpa todos os campos que foram preenchidos automaticamente pela ordem
+    setCredorSel(null)
+    setBuscaCredor('')
+    set('credor_sec1', '')
+    set('cnpj_cpf_credor_sec1', '')
+    setContratoSel(null)
+    setBuscaContrato('')
+    set('contrato_ref', '')
+    set('nro_licitacao_sec1', '')
+    set('tipo_licitacao_sec1', '')
+    set('objeto', '')
+    set('secretaria_sec1', '')
+    set('secretario_nome', '')
+    setItensDid([{ _id: Date.now(), descricao: '', unidade: '', quantidade: '', valor_unitario: '', valor_total: '' }])
+
+    // Persiste a remoção do vínculo da ordem no banco imediatamente
+    // (apenas os campos de referência da ordem — os demais o usuário preenche e salva)
+    if (didId && processoId && processoId !== 'novo') {
+      try {
+        await api.post(`/did/processo/${processoId}`, {
+          ordem_compra_id: null,
+          ordem_ref: null,
+        })
+      } catch { /* silently ignore — o usuário vai ver ao tentar salvar manualmente */ }
+    }
   }
 
   const abrirModal = async () => {
@@ -592,7 +622,7 @@ export default function DidVariaveisSecaoI({
   const secaoICompleta = !!(
     form.secretaria_sec1 && form.secretario_nome &&
     form.credor_sec1 && form.cnpj_cpf_credor_sec1 &&
-    form.data_did && form.objeto && temItensPreenchidos
+    form.data_did && form.mes_referencia && form.objeto && temItensPreenchidos
   )
 
   // Auto-calculate total when qty or unit price changes
@@ -607,9 +637,18 @@ export default function DidVariaveisSecaoI({
   }
 
   const handleSalvarSecaoI = async () => {
+    setTentouSalvar(true)
+    if (!secaoICompleta) return
     if (!onSaveSecaoI) { setLocked(true); return }
     const ok = await onSaveSecaoI()
     if (ok !== false) setLocked(true)
+  }
+
+  const handleLimparSecaoI = async () => {
+    if (!window.confirm('Limpar todos os campos da Seção I? Os dados salvos serão apagados ao salvar.')) return
+    await limparOrdem()
+    setLocked(false)
+    setTentouSalvar(false)
   }
 
   return (
@@ -667,12 +706,11 @@ export default function DidVariaveisSecaoI({
       {/* ── Linha 1: N° DID | Credor (autocomplete) ── */}
       <Field label="N° do DID" half>
         <input type="text" inputMode="numeric" value={form.numero_did ?? ''}
-          onChange={e => inp('numero_did')({ target: { value: e.target.value.replace(/\D/g, '') } })}
-          disabled={locked} placeholder="Ex: 123"
-          className={`input-field text-sm font-mono${locked ? ' opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800' : ''}`} />
+          readOnly disabled
+          className="input-field text-sm font-mono opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800" />
       </Field>
 
-      <Field label="Credor *" half>
+      <Field label="Credor *" half error={tentouSalvar && !form.credor_sec1 ? 'Selecione o credor' : ''}>
         {credorSel ? (
           <div className="flex items-center gap-2">
             <div className="flex-1 px-3 py-2 text-sm rounded-lg border border-green-300 dark:border-green-700
@@ -680,7 +718,7 @@ export default function DidVariaveisSecaoI({
               <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
               <span className="font-semibold text-gray-800 dark:text-gray-100 truncate">{credorSel.razao_social}</span>
             </div>
-            {!locked && (
+            {!locked && !ordemVinculada && (
               <button type="button" onClick={limparCredor}
                 className="p-1.5 rounded border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 shrink-0"
                 title="Trocar credor">
@@ -726,9 +764,9 @@ export default function DidVariaveisSecaoI({
       </Field>
 
       {/* ── Linha 2: CNPJ (editável, pré-preenchido) | Contrato (opcional, filtrado pelo credor) ── */}
-      <Field label="CNPJ / CPF do Credor *" half>
+      <Field label="CNPJ / CPF do Credor *" half error={tentouSalvar && !form.cnpj_cpf_credor_sec1 ? 'Informe o CNPJ/CPF' : ''}>
         <Input value={form.cnpj_cpf_credor_sec1} onChange={inp('cnpj_cpf_credor_sec1')}
-          placeholder="Ex: 00.000.000/0001-00" disabled={locked} />
+          placeholder="Ex: 00.000.000/0001-00" disabled={locked || ordemVinculada} />
       </Field>
 
       <Field label={<span>Contrato <span className="font-normal text-gray-400 dark:text-slate-500">(opcional — pré-preenche dados)</span></span>} half>
@@ -740,7 +778,7 @@ export default function DidVariaveisSecaoI({
               <span className="font-mono font-bold text-blue-700 dark:text-blue-400 shrink-0">{contratoSel.numero_contrato}</span>
               <span className="text-gray-500 text-xs truncate">{contratoSel.objeto?.slice(0, 30)}</span>
             </div>
-            {!locked && (
+            {!locked && !ordemVinculada && (
               <button type="button" onClick={limparContrato}
                 className="p-1.5 rounded border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 shrink-0">
                 <X className="w-3.5 h-3.5" />
@@ -791,17 +829,17 @@ export default function DidVariaveisSecaoI({
       </Field>
 
       {/* ── Linha 3: Secretaria | Secretário ── */}
-      <Field label="Secretaria" half>
+      <Field label="Secretaria" half error={tentouSalvar && !form.secretaria_sec1 ? 'Campo obrigatório' : ''}>
         <div className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600
           bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
           {secDidObj?.nome || form.secretaria_sec1 || secretariaNome || '—'}
         </div>
       </Field>
-      <Field label="Secretário Responsável" half>
+      <Field label="Secretário Responsável" half error={tentouSalvar && !form.secretario_nome ? 'Selecione o responsável' : ''}>
         {responsaveisDid.length > 0 ? (
           <div className="space-y-1">
-            <select value={form.secretario_nome} onChange={inp('secretario_nome')} disabled={locked}
-              className={`input-field text-sm${locked ? ' opacity-60 cursor-not-allowed' : ''}`}>
+            <select value={form.secretario_nome} onChange={inp('secretario_nome')} disabled={locked || ordemVinculada}
+              className={`input-field text-sm${(locked || ordemVinculada) ? ' opacity-60 cursor-not-allowed' : ''}`}>
               <option value="">Selecione o responsável...</option>
               {responsaveisDid.map((r, i) => (
                 <option key={i} value={r.nome} disabled={!r.vigente}>
@@ -823,7 +861,7 @@ export default function DidVariaveisSecaoI({
       </Field>
 
       {/* Data | Fonte de Recurso */}
-      <Field label="Data *" half>
+      <Field label="Data *" half error={tentouSalvar && !form.data_did ? 'Informe a data' : ''}>
         <Input type="date" value={form.data_did} onChange={inp('data_did')} disabled={locked} />
       </Field>
       <Field label="Fonte de Recurso" half>
@@ -843,17 +881,17 @@ export default function DidVariaveisSecaoI({
       </Field>
 
       {/* Objeto */}
-      <Field label="Objeto *">
-        <Textarea value={form.objeto} onChange={inp('objeto')} placeholder="Descreva o objeto do DID..." />
+      <Field label="Objeto *" error={tentouSalvar && !form.objeto ? 'Descreva o objeto' : ''}>
+        <Textarea value={form.objeto} onChange={inp('objeto')} placeholder="Descreva o objeto do DID..." disabled={locked} />
       </Field>
 
       {/* Tabela de Itens — Quantidades Variáveis (inline editável) */}
       <div className="col-span-2">
         <div className="flex items-center justify-between mb-2">
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">
-            Itens do DID — Quantidades Variáveis
+          <label className={`text-xs font-medium ${tentouSalvar && !temItensPreenchidos ? 'text-red-500 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>
+            Itens do DID — Quantidades Variáveis{tentouSalvar && !temItensPreenchidos ? ' — Adicione ao menos um item com valor' : ''}
           </label>
-          {!locked && (
+          {!locked && !ordemVinculada && (
             <div className="flex items-center gap-2">
               {contratoSel?.itens?.filter(it => it.descricao).length > 0 && (
                 <button type="button" onClick={abrirModal}
@@ -885,25 +923,25 @@ export default function DidVariaveisSecaoI({
                 <tr key={it._id ?? idx} className="bg-white dark:bg-gray-800">
                   <td className="px-2 py-1.5">
                     <input value={it.descricao || ''} onChange={e => handleItemChange(idx, 'descricao', e.target.value)}
-                      disabled={locked} placeholder="Descrição do item..."
-                      className={`w-full px-2 py-1 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 outline-none focus:ring-1 focus:ring-blue-500${locked ? ' opacity-60 cursor-not-allowed' : ''}`} />
+                      disabled={locked || ordemVinculada} placeholder="Descrição do item..."
+                      className={`w-full px-2 py-1 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 outline-none focus:ring-1 focus:ring-blue-500${(locked || ordemVinculada) ? ' opacity-60 cursor-not-allowed' : ''}`} />
                   </td>
                   <td className="px-2 py-1.5">
                     <input value={it.unidade || ''} onChange={e => handleItemChange(idx, 'unidade', e.target.value)}
-                      disabled={locked} placeholder="Ex: UN"
-                      className={`w-full px-2 py-1 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 outline-none focus:ring-1 focus:ring-blue-500 text-center${locked ? ' opacity-60 cursor-not-allowed' : ''}`} />
+                      disabled={locked || ordemVinculada} placeholder="Ex: UN"
+                      className={`w-full px-2 py-1 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 outline-none focus:ring-1 focus:ring-blue-500 text-center${(locked || ordemVinculada) ? ' opacity-60 cursor-not-allowed' : ''}`} />
                   </td>
                   <td className="px-2 py-1.5">
                     <input type="number" min="0" step="any" value={it.quantidade || ''}
                       onChange={e => handleItemChange(idx, 'quantidade', e.target.value)}
-                      disabled={locked} placeholder="0"
-                      className={`w-full px-2 py-1 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 outline-none focus:ring-1 focus:ring-blue-500 text-right font-mono${locked ? ' opacity-60 cursor-not-allowed' : ''}`} />
+                      disabled={locked || ordemVinculada} placeholder="0"
+                      className={`w-full px-2 py-1 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 outline-none focus:ring-1 focus:ring-blue-500 text-right font-mono${(locked || ordemVinculada) ? ' opacity-60 cursor-not-allowed' : ''}`} />
                   </td>
                   <td className="px-2 py-1.5">
                     <input type="number" min="0" step="any" value={it.valor_unitario || ''}
                       onChange={e => handleItemChange(idx, 'valor_unitario', e.target.value)}
-                      disabled={locked} placeholder="0,00"
-                      className={`w-full px-2 py-1 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 outline-none focus:ring-1 focus:ring-blue-500 text-right font-mono${locked ? ' opacity-60 cursor-not-allowed' : ''}`} />
+                      disabled={locked || ordemVinculada} placeholder="0,00"
+                      className={`w-full px-2 py-1 text-xs rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 outline-none focus:ring-1 focus:ring-blue-500 text-right font-mono${(locked || ordemVinculada) ? ' opacity-60 cursor-not-allowed' : ''}`} />
                   </td>
                   <td className="px-3 py-2 text-right font-semibold font-mono text-gray-700 dark:text-gray-300">
                     {it.valor_total
@@ -911,7 +949,7 @@ export default function DidVariaveisSecaoI({
                       : <span className="text-gray-400">—</span>}
                   </td>
                   <td className="px-1 py-1.5 text-center">
-                    {!locked && itensDid.length > 1 && (
+                    {!locked && !ordemVinculada && itensDid.length > 1 && (
                       <button type="button" onClick={() => removeItemDid(idx)}
                         className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
                         <Trash2 className="w-3.5 h-3.5" />
@@ -952,28 +990,35 @@ export default function DidVariaveisSecaoI({
           )}
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Mês de Referência</label>
+          <label className={`block text-xs font-medium mb-1 ${tentouSalvar && !form.mes_referencia ? 'text-red-500 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>Mês de Referência *</label>
           <select value={form.mes_referencia || ''} onChange={inp('mes_referencia')} disabled={locked}
-            className={`input-field text-sm${locked ? ' opacity-60 cursor-not-allowed' : ''}`}>
+            className={`input-field text-sm${locked ? ' opacity-60 cursor-not-allowed' : ''}${tentouSalvar && !form.mes_referencia ? ' border-red-400 dark:border-red-500' : ''}`}>
             <option value="">Selecione...</option>
             {mesReferenciaOpcoes.map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
+          {tentouSalvar && !form.mes_referencia && <p className="mt-1 text-xs text-red-500 dark:text-red-400">Selecione o mês de referência</p>}
         </div>
       </div>
 
       {/* Botões */}
-      <div className="col-span-2 flex justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-700 mt-1">
+      <div className="col-span-2 flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700 mt-1">
+        {!readOnly && (
+          <button type="button" onClick={handleLimparSecaoI}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-700 rounded-lg text-sm font-semibold transition-colors">
+            <RotateCcw className="w-3.5 h-3.5" /> Limpar Seção
+          </button>
+        )}
         {!readOnly && (locked ? (
-            <button type="button" onClick={() => setLocked(false)}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
+          <button type="button" onClick={() => setLocked(false)}
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
             <Pencil className="w-3.5 h-3.5" /> Alterar
           </button>
         ) : (
           <button type="button" onClick={handleSalvarSecaoI}
-            disabled={!secaoICompleta || saving}
-            title={!secaoICompleta ? 'Preencha todos os campos obrigatórios para salvar' : 'Salvar e bloquear Seção I'}
+            disabled={saving}
+            title="Salvar e bloquear Seção I"
             className="flex items-center gap-1.5 px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} Salvar Seção I
           </button>

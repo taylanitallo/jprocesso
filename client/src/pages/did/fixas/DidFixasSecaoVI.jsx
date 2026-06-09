@@ -48,7 +48,7 @@ function BancoSelect({ value, onChange, disabled }) {
   )
 }
 
-export default function DidFixasSecaoVI({ form, inp, chk, vliq, saving, didId, onSave }) {
+export default function DidFixasSecaoVI({ form, inp, chk, vliq, saving, didId, onSave, onLimpar }) {
   const [locked, setLocked] = useState(false)
   useEffect(() => { if (didId) setLocked(true) }, [didId])
 
@@ -56,6 +56,8 @@ export default function DidFixasSecaoVI({ form, inp, chk, vliq, saving, didId, o
     const ok = await onSave?.()
     if (ok !== false) setLocked(true)
   }
+
+  const limpar = () => { setLocked(false); onLimpar?.() }
 
   return (
     <SectionCard icon={Banknote} title="Seção VI - Tesouraria"
@@ -185,7 +187,7 @@ export default function DidFixasSecaoVI({ form, inp, chk, vliq, saving, didId, o
         )}
       </div>
 
-      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção VI" />
+      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção VI" onLimpar={limpar} />
     </SectionCard>
   )
 }

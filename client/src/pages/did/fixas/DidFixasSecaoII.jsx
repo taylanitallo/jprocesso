@@ -2,7 +2,7 @@ import { Shield } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Field, Input, Textarea, SectionCard, SecaoBotoes } from '../didShared'
 
-export default function DidFixasSecaoII({ form, inp, saving, didId, onSave }) {
+export default function DidFixasSecaoII({ form, inp, saving, didId, onSave, onLimpar }) {
   const [locked, setLocked] = useState(false)
   useEffect(() => { if (didId) setLocked(true) }, [didId])
 
@@ -10,6 +10,8 @@ export default function DidFixasSecaoII({ form, inp, saving, didId, onSave }) {
     const ok = await onSave?.()
     if (ok !== false) setLocked(true)
   }
+
+  const limpar = () => { setLocked(false); onLimpar?.() }
 
   return (
     <SectionCard icon={Shield} title="Seção II - Controle Interno"
@@ -23,7 +25,7 @@ export default function DidFixasSecaoII({ form, inp, saving, didId, onSave }) {
       <Field label="Despacho via C.I.">
         <Textarea value={form.despacho_ci} onChange={inp('despacho_ci')} disabled={locked} />
       </Field>
-      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção II" />
+      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção II" onLimpar={limpar} />
     </SectionCard>
   )
 }

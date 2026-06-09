@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import { Pencil, Check, Loader2 } from 'lucide-react'
+import { Pencil, Check, Loader2, RotateCcw } from 'lucide-react'
 
 export const DidReadOnlyContext = createContext(false)
 
@@ -59,11 +59,12 @@ export const EMPTY = {
 }
 
 // ─── Componentes UI compartilhados ────────────────────────────────────────────
-export function Field({ label, children, half }) {
+export function Field({ label, children, half, error }) {
   return (
     <div className={half ? 'col-span-1' : 'col-span-2'}>
-      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{label}</label>
+      <label className={`block text-xs font-medium mb-1 ${error ? 'text-red-500 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>{label}</label>
       {children}
+      {error && <p className="mt-1 text-xs text-red-500 dark:text-red-400">{error}</p>}
     </div>
   )
 }
@@ -119,23 +120,37 @@ export function SectionCard({ icon: Icon, title, color, children }) {
   )
 }
 
-export function SecaoBotoes({ locked, onAlterar, onSalvar, saving, label }) {
+export function SecaoBotoes({ locked, onAlterar, onSalvar, saving, label, onLimpar }) {
   const readOnly = useContext(DidReadOnlyContext)
-  // Em modo somente leitura, nenhum botão de edição é exibido
   if (readOnly) return null
+
+  const handleLimpar = () => {
+    if (window.confirm('Limpar todos os campos desta seção? Os dados salvos serão apagados ao salvar o formulário.')) {
+      onLimpar?.()
+    }
+  }
+
   return (
-    <div className="col-span-2 flex justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-700 mt-1">
-      {locked ? (
-        <button type="button" onClick={onAlterar}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
-          <Pencil className="w-3.5 h-3.5" /> Alterar
+    <div className="col-span-2 flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700 mt-1">
+      {onLimpar ? (
+        <button type="button" onClick={handleLimpar}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-700 rounded-lg text-sm font-semibold transition-colors">
+          <RotateCcw className="w-3.5 h-3.5" /> Limpar Seção
         </button>
-      ) : (
-        <button type="button" onClick={onSalvar} disabled={saving}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-          {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} {label}
-        </button>
-      )}
+      ) : <div />}
+      <div className="flex gap-2">
+        {locked ? (
+          <button type="button" onClick={onAlterar}
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
+            <Pencil className="w-3.5 h-3.5" /> Alterar
+          </button>
+        ) : (
+          <button type="button" onClick={onSalvar} disabled={saving}
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} {label}
+          </button>
+        )}
+      </div>
     </div>
   )
 }

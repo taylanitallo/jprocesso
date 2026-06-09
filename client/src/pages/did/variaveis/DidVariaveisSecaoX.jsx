@@ -2,7 +2,7 @@ import { Landmark } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Field, Input, SectionCard, SecaoBotoes } from '../didShared'
 
-export default function DidVariaveisSecaoX({ form, inp, saving, didId, onSave }) {
+export default function DidVariaveisSecaoX({ form, inp, saving, didId, onSave, onLimpar }) {
   const [locked, setLocked] = useState(false)
   useEffect(() => { if (didId) setLocked(true) }, [didId])
 
@@ -10,6 +10,8 @@ export default function DidVariaveisSecaoX({ form, inp, saving, didId, onSave })
     const ok = await onSave?.()
     if (ok !== false) setLocked(true)
   }
+
+  const limpar = () => { setLocked(false); onLimpar?.() }
 
   return (
     <SectionCard icon={Landmark} title="Seção X - Secretaria de Finanças (Cronograma de Pagamento)"
@@ -23,7 +25,7 @@ export default function DidVariaveisSecaoX({ form, inp, saving, didId, onSave })
       <Field label="Enviado para Pagamento" half>
         <Input type="date" value={form.financas2_enviado_pagamento} onChange={inp('financas2_enviado_pagamento')} disabled={locked} />
       </Field>
-      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção V" />
+      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção V" onLimpar={limpar} />
     </SectionCard>
   )
 }
