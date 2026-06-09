@@ -259,6 +259,7 @@ export default function FormularioDid() {
   // Novo DID → começa em 1 (Seção I visível, tipo sempre tem default)
   // DID existente → definido em loadDid (todas as seções)
   const [maxSecaoVisivel, setMaxSecaoVisivel] = useState(1)
+  const [alterandoTipo, setAlterandoTipo] = useState(false)
 
   const addItemDid = () => setItensDid(p => [...p, { _id: Date.now(), descricao: '', quantidade: '', valor_unitario: '', valor_total: '' }])
   const removeItemDid = idx => setItensDid(p => p.filter((_, i) => i !== idx))
@@ -581,10 +582,35 @@ export default function FormularioDid() {
   const totalItensDid = itensDid.reduce((acc, it) => acc + (parseFloat(it.valor_total) || 0), 0)
   const temItensPreenchidos = itensDid.some(it => it.valor_total)
 
-  // Lock de tipo: bloqueado quando DID já salvo no banco
-  const tipoBloqueado = did !== null
+  // Lock de tipo: bloqueado quando DID já salvo (exceto em modo alteração)
+  const tipoBloqueado = did !== null && !alterandoTipo
   // Detecta preenchimento parcial (antes de salvar)
   const hasAnyData = !!(form.objeto?.trim() || form.contrato_ref || form.credor_sec1?.trim() || temItensPreenchidos)
+  const secaoILimpa = !hasAnyData
+
+  const handleAlterarTipo = () => {
+    if (!secaoILimpa) {
+      setMsg({ ok: false, text: 'Limpe a Seção I antes de alterar o tipo de DID.' })
+      return
+    }
+    setAlterandoTipo(true)
+  }
+
+  const handleTrocarTipo = async (novoTipo) => {
+    if (novoTipo === tipoDid) { setAlterandoTipo(false); return }
+    setTipoDid(novoTipo)
+    setMaxSecaoVisivel(1)
+    setAlterandoTipo(false)
+    if (did?.id) {
+      try {
+        await api.post(`/did/processo/${processoId}`, { tipo_did: novoTipo })
+        setMsg({ ok: true, text: `Tipo alterado para ${novoTipo === 'fixas' ? 'Contas Fixas' : 'Contas Variáveis'}.` })
+        setTimeout(() => setMsg(null), 3000)
+      } catch {
+        setMsg({ ok: false, text: 'Erro ao salvar tipo de DID.' })
+      }
+    }
+  }
 
   const handleLimparParaTrocar = () => {
     const novoTipo = tipoDid === 'fixas' ? 'variaveis' : 'fixas'
@@ -683,22 +709,42 @@ export default function FormularioDid() {
       <div className="card p-4">
         <div className="flex items-center justify-between mb-3">
           <p className="text-sm font-semibold text-gray-700 dark:text-slate-300">Tipo de DID</p>
-          {tipoBloqueado && (
-            <span className="text-xs text-gray-500 dark:text-slate-400 bg-gray-100 dark:bg-slate-700/30 px-2.5 py-1 rounded-full">
-              🔒 Bloqueado — DID salvo
-            </span>
-          )}
-          {!tipoBloqueado && hasAnyData && (
-            <button
-              type="button"
-              onClick={handleLimparParaTrocar}
-              className="text-xs text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300
-                flex items-center gap-1 px-2.5 py-1 rounded-lg border border-amber-200 dark:border-amber-700
-                hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
-            >
-              ↺ Limpar e trocar tipo
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {did !== null && !alterandoTipo && (
+              <>
+                <span className="text-xs text-gray-500 dark:text-slate-400 bg-gray-100 dark:bg-slate-700/30 px-2.5 py-1 rounded-full">
+                  🔒 Bloqueado — DID salvo
+                </span>
+                {!readOnly && (
+                  <button type="button" onClick={handleAlterarTipo}
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300
+                      flex items-center gap-1 px-2.5 py-1 rounded-lg border border-blue-200 dark:border-blue-700
+                      hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                    ↺ Alterar Tipo
+                  </button>
+                )}
+              </>
+            )}
+            {did !== null && alterandoTipo && (
+              <button type="button" onClick={() => setAlterandoTipo(false)}
+                className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700
+                  flex items-center gap-1 px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600
+                  hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                ✕ Cancelar
+              </button>
+            )}
+            {!tipoBloqueado && hasAnyData && (
+              <button
+                type="button"
+                onClick={handleLimparParaTrocar}
+                className="text-xs text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300
+                  flex items-center gap-1 px-2.5 py-1 rounded-lg border border-amber-200 dark:border-amber-700
+                  hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+              >
+                ↺ Limpar e trocar tipo
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="flex gap-8">
@@ -711,7 +757,7 @@ export default function FormularioDid() {
             <input
               type="radio" name="tipo_did" value="fixas"
               checked={tipoDid === 'fixas'}
-              onChange={() => setTipoDid('fixas')}
+              onChange={() => alterandoTipo ? handleTrocarTipo('fixas') : setTipoDid('fixas')}
               disabled={tipoBloqueado || (hasAnyData && tipoDid !== 'fixas')}
               className="w-4 h-4 accent-blue-600"
             />
@@ -730,7 +776,7 @@ export default function FormularioDid() {
             <input
               type="radio" name="tipo_did" value="variaveis"
               checked={tipoDid === 'variaveis'}
-              onChange={() => setTipoDid('variaveis')}
+              onChange={() => alterandoTipo ? handleTrocarTipo('variaveis') : setTipoDid('variaveis')}
               disabled={tipoBloqueado || (hasAnyData && tipoDid !== 'variaveis')}
               className="w-4 h-4 accent-blue-600"
             />
@@ -741,6 +787,11 @@ export default function FormularioDid() {
           </label>
         </div>
 
+        {alterandoTipo && (
+          <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+            Selecione o novo tipo de DID acima. A alteração será salva imediatamente.
+          </p>
+        )}
         {!tipoBloqueado && hasAnyData && (
           <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
             ⚠ Preenchimento em curso. Para trocar o tipo use &ldquo;Limpar e trocar tipo&rdquo; acima.
