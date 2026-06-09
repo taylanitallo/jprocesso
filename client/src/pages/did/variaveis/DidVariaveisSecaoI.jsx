@@ -645,10 +645,37 @@ export default function DidVariaveisSecaoI({
   }
 
   const handleLimparSecaoI = async () => {
-    if (!window.confirm('Limpar todos os campos da Seção I? Os dados salvos serão apagados ao salvar.')) return
-    await limparOrdem()
+    if (!window.confirm('Limpar todos os campos da Seção I? Os dados serão apagados imediatamente do banco.')) return
+    // Limpa estado local do autocomplete e ordem
+    setOrdemSel(null)
+    setCredorSel(null); setBuscaCredor('')
+    setContratoSel(null); setBuscaContrato('')
+    // Limpa todos os campos do formulário
+    const patch = {
+      ordem_compra_id: '', ordem_ref: '',
+      credor_sec1: '', cnpj_cpf_credor_sec1: '', contrato_ref: '',
+      nro_licitacao_sec1: '', tipo_licitacao_sec1: '',
+      objeto: '', secretaria_sec1: '', secretario_nome: '',
+      data_did: '', mes_referencia: '', fonte_recurso: 'PRÓPRIO',
+      nf_sec1: '', valor_did: '',
+      cert_sec1_municipal: false, cert_sec1_trabalhista: false,
+      cert_sec1_fgts: false, cert_sec1_estadual: false,
+      cert_sec1_federal: false, cert_sec1_simples_nac: false,
+    }
+    Object.entries(patch).forEach(([k, v]) => set(k, v))
+    setItensDid([{ _id: Date.now(), descricao: '', unidade: '', quantidade: '', valor_unitario: '', valor_total: '' }])
     setLocked(false)
     setTentouSalvar(false)
+    // Persiste imediatamente no banco
+    if (didId && processoId && processoId !== 'novo') {
+      try {
+        await api.post(`/did/processo/${processoId}`, {
+          ...patch,
+          ordem_compra_id: null,
+          itens_did: []
+        })
+      } catch {}
+    }
   }
 
   return (

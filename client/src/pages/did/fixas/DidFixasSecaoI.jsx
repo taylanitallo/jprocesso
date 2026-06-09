@@ -200,6 +200,7 @@ export default function DidFixasSecaoI({
   secDidObj, responsaveisDid, dataRefDid,
   secretariaNome,
   didId,
+  processoId,
   onSaveSecaoI,
   saving,
 }) {
@@ -436,20 +437,30 @@ export default function DidFixasSecaoI({
     if (ok !== false) setLocked(true)
   }
 
-  const handleLimparSecaoI = () => {
-    if (!window.confirm('Limpar todos os campos da Seção I? Os dados salvos serão apagados ao salvar.')) return
-    // Limpa campos do formulário
-    const camposI = ['credor_sec1','cnpj_cpf_credor_sec1','contrato_ref','nro_licitacao_sec1','tipo_licitacao_sec1',
-      'secretaria_sec1','secretario_nome','data_did','mes_referencia','objeto','fonte_recurso','valor_did']
-    camposI.forEach(c => set(c, ''))
+  const handleLimparSecaoI = async () => {
+    if (!window.confirm('Limpar todos os campos da Seção I? Os dados serão apagados imediatamente do banco.')) return
+    // Limpa estado local do autocomplete
+    setCredorSel(null); setBuscaCredor('')
+    setContratoSel(null); setBuscaContrato('')
+    // Limpa todos os campos do formulário
+    const patch = {
+      credor_sec1: '', cnpj_cpf_credor_sec1: '', contrato_ref: '',
+      nro_licitacao_sec1: '', tipo_licitacao_sec1: '',
+      secretaria_sec1: '', secretario_nome: '',
+      data_did: '', mes_referencia: '', objeto: '',
+      fonte_recurso: 'PRÓPRIO', valor_did: '', nf_sec1: '',
+      cert_sec1_municipal: false, cert_sec1_trabalhista: false,
+      cert_sec1_fgts: false, cert_sec1_estadual: false,
+      cert_sec1_federal: false, cert_sec1_simples_nac: false,
+    }
+    Object.entries(patch).forEach(([k, v]) => set(k, v))
     setItensDid([{ _id: Date.now(), descricao: '', unidade: '', quantidade: '', valor_unitario: '', valor_total: '' }])
-    // Limpa estado local
-    setCredorSel(null)
-    setBuscaCredor('')
-    setContratoSel(null)
-    setBuscaContrato('')
     setLocked(false)
     setTentouSalvar(false)
+    // Persiste imediatamente no banco
+    if (didId && processoId && processoId !== 'novo') {
+      try { await api.post(`/did/processo/${processoId}`, { ...patch, itens_did: [] }) } catch {}
+    }
   }
 
   return (

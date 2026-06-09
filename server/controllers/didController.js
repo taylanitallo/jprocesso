@@ -19,6 +19,15 @@ const getByProcesso = async (req, res) => {
     });
 
     if (!did) return res.status(404).json({ error: 'DID não encontrado' });
+
+    // Retroativamente atribui numero_did para registros antigos com o campo nulo
+    if (!did.numero_did) {
+      const pos = await Did.count({ where: { createdAt: { [Op.lt]: did.createdAt } } });
+      const numero = String(pos + 1);
+      await did.update({ numero_did: numero });
+      did.dataValues.numero_did = numero;
+    }
+
     res.json({ did });
   } catch (err) {
     console.error('Erro getByProcesso DID:', err);
