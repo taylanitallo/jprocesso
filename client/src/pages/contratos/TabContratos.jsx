@@ -22,95 +22,138 @@ import {
 function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
   const [busca, setBusca] = useState('')
   const [catFiltro, setCatFiltro] = useState('')
+  const [unidFiltro, setUnidFiltro] = useState('')
   const [expId, setExpId] = useState(null)
 
   const todos = catalogoItens.filter(i => i.status === 'ATIVO')
   const categorias = [...new Set(todos.map(i => (i.categoria || '').toUpperCase()).filter(Boolean))].sort()
+  const unidades = [...new Set(todos.map(i => (i.unidade_medida || '').toUpperCase()).filter(Boolean))].sort()
 
   const filtrados = todos.filter(i => {
     const q = busca.trim().toLowerCase()
     const matchBusca = !q ||
       (i.descricao     || '').toLowerCase().includes(q) ||
       (i.codigo        || '').toLowerCase().includes(q) ||
-      (i.especificacao || '').toLowerCase().includes(q)
-    const matchCat = !catFiltro || (i.categoria || '').toUpperCase() === catFiltro
-    return matchBusca && matchCat
+      (i.especificacao || '').toLowerCase().includes(q) ||
+      (i.palavra1      || '').toLowerCase().includes(q) ||
+      (i.palavra2      || '').toLowerCase().includes(q) ||
+      (i.palavra3      || '').toLowerCase().includes(q) ||
+      (i.palavra4      || '').toLowerCase().includes(q) ||
+      (i.catalogo      || '').toLowerCase().includes(q) ||
+      (i.catmat_serv   || '').toLowerCase().includes(q)
+    const matchCat  = !catFiltro  || (i.categoria     || '').toUpperCase() === catFiltro
+    const matchUnid = !unidFiltro || (i.unidade_medida || '').toUpperCase() === unidFiltro
+    return matchBusca && matchCat && matchUnid
   })
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col" style={{ maxHeight: '86vh' }}>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full flex flex-col" style={{ maxWidth: '1100px', maxHeight: '90vh' }}>
 
         {/* Cabeçalho */}
-        <div className="flex items-center justify-between bg-slate-900 dark:bg-slate-900 px-5 py-3 rounded-t-2xl shrink-0">
-          <div className="flex items-center gap-2">
-            <Search className="w-4 h-4 text-white/80" />
-            <span className="text-sm font-semibold text-white">Selecionar Item do Catálogo</span>
+        <div className="flex items-center justify-between bg-slate-900 px-5 py-3.5 rounded-t-2xl shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+              <Search className="w-4 h-4 text-indigo-300" />
+            </div>
+            <div>
+              <span className="text-sm font-semibold text-white">Selecionar Item do Catálogo</span>
+              <p className="text-xs text-slate-400 mt-0.5">Pesquise e selecione o item para adicionar ao contrato</p>
+            </div>
           </div>
-          <button onClick={onClose} className="p-0.5 rounded hover:bg-indigo-600 text-white/80 hover:text-white">
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Filtros + Busca */}
-        <div className="px-5 pt-3 pb-2.5 border-b border-gray-200 dark:border-slate-700/50 shrink-0 space-y-2">
-          {/* Campo de busca */}
+        {/* Filtros */}
+        <div className="px-5 pt-4 pb-3.5 border-b border-gray-200 dark:border-slate-700/50 shrink-0 space-y-3 bg-gray-50 dark:bg-slate-800/50">
+          {/* Busca principal */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               autoFocus
               value={busca}
               onChange={e => setBusca(e.target.value)}
-              placeholder="Buscar por código, descrição ou especificação..."
-              className="input-field pl-9 text-sm w-full"
+              placeholder="Buscar por código, descrição, especificação, palavras-chave ou código CNBS..."
+              className="w-full h-11 pl-10 pr-9 text-sm rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900 dark:text-white shadow-sm"
             />
             {busca && (
-              <button onClick={() => setBusca('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <button onClick={() => setBusca('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-slate-300">
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
-          {/* Filtros de categoria */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {['', ...categorias].map(cat => (
-              <button key={cat} onClick={() => setCatFiltro(cat)}
-                className={`px-3 py-0.5 text-xs font-semibold rounded-full border transition-colors ${
-                  catFiltro === cat
-                    ? 'bg-indigo-600 border-indigo-600 text-white'
-                    : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400'
-                }`}>
-                {cat || 'Todos'}
-              </button>
-            ))}
-            <span className="text-xs text-gray-400 ml-auto">{filtrados.length} item(ns) encontrado(s)</span>
+
+          {/* Filtros secundários */}
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Categoria */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Categoria:</span>
+              <div className="flex items-center gap-1 flex-wrap">
+                {['', ...categorias].map(cat => (
+                  <button key={cat} type="button" onClick={() => setCatFiltro(cat)}
+                    className={`px-2.5 py-1 text-xs font-semibold rounded-full border transition-all ${
+                      catFiltro === cat
+                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                        : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 bg-white dark:bg-slate-700'
+                    }`}>
+                    {cat || 'Todas'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Unidade */}
+            {unidades.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Unidade:</span>
+                <select value={unidFiltro} onChange={e => setUnidFiltro(e.target.value)}
+                  className="text-xs border border-gray-300 dark:border-slate-600 rounded-lg px-2.5 py-1.5 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 outline-none">
+                  <option value="">Todas</option>
+                  {unidades.map(u => <option key={u} value={u}>{u}</option>)}
+                </select>
+              </div>
+            )}
+
+            {/* Contador */}
+            <span className="text-xs text-gray-400 dark:text-slate-500 ml-auto font-medium">
+              {filtrados.length} item(ns) encontrado(s)
+            </span>
           </div>
         </div>
 
         {/* Lista */}
         <div className="flex-1 overflow-y-auto">
           {filtrados.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-              <PackageOpen className="w-10 h-10 mb-2 opacity-40" />
-              <p className="text-sm">{busca ? 'Nenhum item encontrado para a busca.' : 'Nenhum item cadastrado no sistema.'}</p>
+            <div className="flex flex-col items-center justify-center py-16 text-gray-400 dark:text-slate-500">
+              <PackageOpen className="w-12 h-12 mb-3 opacity-30" />
+              <p className="font-medium text-sm">{busca || catFiltro || unidFiltro ? 'Nenhum item encontrado para os filtros aplicados.' : 'Nenhum item cadastrado no sistema.'}</p>
+              {(busca || catFiltro || unidFiltro) && (
+                <button type="button" onClick={() => { setBusca(''); setCatFiltro(''); setUnidFiltro('') }}
+                  className="mt-3 text-xs text-indigo-500 hover:text-indigo-700 font-medium">
+                  Limpar filtros
+                </button>
+              )}
             </div>
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-slate-100 dark:bg-slate-800 sticky top-0 z-10">
+              <thead className="bg-slate-100 dark:bg-slate-800/80 sticky top-0 z-10 border-b border-slate-200 dark:border-slate-700">
                 <tr>
-                  <th className="text-left px-4 py-2.5 font-semibold text-slate-500 dark:text-slate-300 text-xs w-24 uppercase tracking-wider">Código</th>
-                  <th className="text-left px-4 py-2.5 font-semibold text-slate-500 dark:text-slate-300 text-xs uppercase tracking-wider">Descrição / Especificação</th>
-                  <th className="text-left px-4 py-2.5 font-semibold text-slate-500 dark:text-slate-300 text-xs w-28 uppercase tracking-wider">Unidade</th>
-                  <th className="text-left px-4 py-2.5 font-semibold text-slate-500 dark:text-slate-300 text-xs w-28 uppercase tracking-wider">Categoria</th>
-                  <th className="w-24"></th>
+                  <th className="text-left px-4 py-3 font-semibold text-slate-500 dark:text-slate-400 text-xs w-24 uppercase tracking-wider">Código</th>
+                  <th className="text-left px-4 py-3 font-semibold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Descrição / Especificação</th>
+                  <th className="text-left px-4 py-3 font-semibold text-slate-500 dark:text-slate-400 text-xs w-32 uppercase tracking-wider">Unidade</th>
+                  <th className="text-left px-4 py-3 font-semibold text-slate-500 dark:text-slate-400 text-xs w-32 uppercase tracking-wider">Categoria</th>
+                  <th className="w-28 px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
                 {filtrados.map(item => (
                   <tr key={item.id}
-                    className="hover:bg-indigo-50 dark:hover:bg-indigo-900/20 cursor-pointer group"
-                    onClick={() => { onSelect(item); onClose() }}>
-                    <td className="px-4 py-2.5 font-mono text-xs text-indigo-600 dark:text-indigo-400 font-bold align-top">{item.codigo}</td>
-                    <td className="px-4 py-2.5 align-top max-w-xs">
+                    className="hover:bg-indigo-50 dark:hover:bg-indigo-900/20 cursor-pointer group transition-colors"
+                    onClick={() => onSelect(item)}>
+                    <td className="px-4 py-3 font-mono text-xs text-indigo-600 dark:text-indigo-400 font-bold align-top">{item.codigo || '—'}</td>
+                    <td className="px-4 py-3 align-top">
                       <p className="text-gray-800 dark:text-slate-200 font-medium leading-snug">{item.descricao}</p>
                       {item.especificacao && (
                         <>
@@ -126,20 +169,30 @@ function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
                           )}
                         </>
                       )}
+                      {(item.palavra1 || item.palavra2 || item.palavra3 || item.palavra4) && (
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {[item.palavra1, item.palavra2, item.palavra3, item.palavra4].filter(Boolean).map((p, i) => (
+                            <span key={i} className="text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 rounded border border-gray-200 dark:border-slate-600">{p}</span>
+                          ))}
+                        </div>
+                      )}
+                      {item.catalogo && (
+                        <p className="text-[10px] text-gray-400 mt-0.5 font-mono">CNBS: {item.catalogo}</p>
+                      )}
                     </td>
-                    <td className="px-4 py-2.5 text-gray-500 text-xs align-top whitespace-nowrap">{item.unidade_medida || '—'}</td>
-                    <td className="px-4 py-2.5 align-top">
-                      <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${
+                    <td className="px-4 py-3 text-gray-600 dark:text-slate-300 text-xs align-top whitespace-nowrap font-semibold">{item.unidade_medida || '—'}</td>
+                    <td className="px-4 py-3 align-top">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
                         (item.categoria || '').toUpperCase() === 'COMPRAS'
                           ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
                           : (item.categoria || '').toUpperCase() === 'SERVIÇOS'
                           ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                          : 'bg-gray-100 dark:bg-slate-700 text-gray-500'
+                          : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400'
                       }`}>{item.categoria || '—'}</span>
                     </td>
-                    <td className="px-4 py-2.5 text-right align-top">
-                      <span className="text-xs px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                        Selecionar
+                    <td className="px-4 py-3 text-right align-top">
+                      <span className="inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-lg font-semibold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-sm">
+                        <Check className="w-3 h-3" /> Selecionar
                       </span>
                     </td>
                   </tr>
@@ -150,10 +203,10 @@ function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
         </div>
 
         {/* Rodapé */}
-        <div className="border-t border-gray-200 dark:border-slate-700/50 px-5 py-2.5 shrink-0 flex items-center justify-between">
-          <p className="text-xs text-gray-400">Clique em um item para selecioná-lo</p>
-          <button onClick={onClose}
-            className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 rounded text-sm font-medium transition-colors">
+        <div className="border-t border-gray-200 dark:border-slate-700/50 px-5 py-3 shrink-0 flex items-center justify-between bg-gray-50 dark:bg-slate-800/50">
+          <p className="text-xs text-gray-400 dark:text-slate-500">Clique em um item para selecioná-lo e preencher os detalhes do contrato</p>
+          <button type="button" onClick={onClose}
+            className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors">
             Fechar
           </button>
         </div>
@@ -523,13 +576,20 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
   const adicionarItem = () => setShowAddPicker(true)
 
   const selecionarItemParaAdicionar = (item) => {
-    setItensContrato(p => [...p, {
-      ...novoItemRow(),
-      item_id:   item.id,
-      descricao: item.descricao,
-      unidade:   item.unidade_medida || '',
-    }])
     setShowAddPicker(false)
+    setItemContratoModal({
+      idx: null,
+      data: {
+        item_id:        item.id,
+        descricao:      item.descricao,
+        unidade:        item.unidade_medida || '',
+        lote:           '',
+        codigo_item:    '',
+        quantidade:     '',
+        valor_unitario: '',
+        valor_total:    '',
+      }
+    })
   }
 
   const removerItem = (idx) => {
@@ -879,7 +939,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                     <ShoppingBag className="w-8 h-8 mx-auto mb-2 opacity-40" />
                     <p className="text-sm">Nenhum item adicionado</p>
                     {!readonly && (
-                      <button type="button" onClick={() => setItemContratoModal({ idx: null, data: {} })}
+                      <button type="button" onClick={() => setShowAddPicker(true)}
                         className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors">
                         <Plus className="w-4 h-4" /> Adicionar Item
                       </button>
@@ -957,7 +1017,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                       </table>
                     </div>
                     {!readonly && (
-                      <button type="button" onClick={() => setItemContratoModal({ idx: null, data: {} })}
+                      <button type="button" onClick={() => setShowAddPicker(true)}
                         className="mt-3 flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors">
                         <Plus className="w-4 h-4" /> Adicionar Item
                       </button>

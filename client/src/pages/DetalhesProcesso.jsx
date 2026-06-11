@@ -1,26 +1,28 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery } from 'react-query'
+import { useQuery, useQueryClient } from 'react-query'
 import { useState, useRef, useEffect } from 'react'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import ModalTramitacao from '../components/ModalTramitacao'
 import ModalDevolver from '../components/ModalDevolver'
 import ModalConcluir from '../components/ModalConcluir'
-import { gerarDespachoPDF, gerarPautaPDF, gerarRequisicaoPDF } from '../utils/gerarDocumentoPDF'
+import ModalDespacho from '../components/ModalDespacho'
+import { gerarPautaPDF, gerarRequisicaoPDF } from '../utils/gerarDocumentoPDF'
 import {
   ArrowLeft, Send, ArrowLeftCircle, CheckCircle, Paperclip,
   FileText, Calendar, User, Clock, MapPin, AlertCircle, Download,
   ClipboardList, FileDown, Trash2, QrCode, Shield, Zap, ChevronRight,
-  Plus, X, Upload, ExternalLink, Archive, FilePlus2, GripVertical,
+  Plus, X, Upload, ExternalLink, Archive, FilePlus2, GripVertical, Inbox,
 } from 'lucide-react'
 import { PageHeader, SectionTitle, EmptyState } from '../components/ui'
 
 /* ── helpers de cor por tipo de tramitação ──────────────────────────────── */
 const TIPO_CONFIG = {
-  abertura:  { label: 'Abertura',    icon: FileText,        dot: 'bg-blue-500',   badge: 'bg-blue-100   dark:bg-blue-900/40   text-blue-700   dark:text-blue-300'  },
-  tramite:   { label: 'Tramitação',  icon: Send,            dot: 'bg-indigo-500', badge: 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300' },
-  devolucao: { label: 'Devolução',   icon: ArrowLeftCircle, dot: 'bg-red-500',    badge: 'bg-red-100    dark:bg-red-900/40    text-red-700    dark:text-red-300'    },
-  conclusao: { label: 'Conclusão',   icon: CheckCircle,     dot: 'bg-green-500',  badge: 'bg-green-100  dark:bg-green-900/40  text-green-700  dark:text-green-300'  },
+  abertura:    { label: 'Abertura',    icon: FileText,        dot: 'bg-blue-500',    badge: 'bg-blue-100   dark:bg-blue-900/40   text-blue-700   dark:text-blue-300'   },
+  tramite:     { label: 'Tramitação',  icon: Send,            dot: 'bg-indigo-500',  badge: 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300'  },
+  devolucao:   { label: 'Devolução',   icon: ArrowLeftCircle, dot: 'bg-red-500',     badge: 'bg-red-100    dark:bg-red-900/40    text-red-700    dark:text-red-300'     },
+  conclusao:   { label: 'Conclusão',   icon: CheckCircle,     dot: 'bg-green-500',   badge: 'bg-green-100  dark:bg-green-900/40  text-green-700  dark:text-green-300'   },
+  recebimento: { label: 'Recebimento', icon: Inbox,           dot: 'bg-emerald-500', badge: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' },
 }
 
 const MAX_UPLOAD_BYTES = 20 * 1024 * 1024 // 20 MB
@@ -43,14 +45,20 @@ export default function DetalhesProcesso() {
   const { id, subdomain } = useParams()
   const navigate           = useNavigate()
   const fileInputRef       = useRef(null)
+  const queryClient        = useQueryClient()
 
   /* ── estado dos modais ── */
   const [showTramitar,      setShowTramitar]      = useState(false)
   const [showDevolver,      setShowDevolver]       = useState(false)
   const [showConcluir,      setShowConcluir]       = useState(false)
+  const [showDespacho,      setShowDespacho]       = useState(false)
   const [showConfirmDelete, setShowConfirmDelete]  = useState(false)
   const [deletando,         setDeletando]          = useState(false)
   const [successMessage,    setSuccessMessage]     = useState('')
+  const [recebendo,         setRecebendo]          = useState(false)
+
+  /* ── despacho doc local (atualiza imediatamente ao salvar sem esperar refetch) ── */
+  const [localDespachoDoc, setLocalDespachoDoc] = useState(null)
 
   /* ── estado modal Anexar ── */
   const [showAnexar,  setShowAnexar]  = useState(false)
@@ -69,6 +77,13 @@ export default function DetalhesProcesso() {
     return data.processo
   })
 
+  const despachoDocAtual = localDespachoDoc ?? processo?.despacho_doc
+  useEffect(() => {
+    if (processo?.despacho_doc?.tipo_despacho && !localDespachoDoc) {
+      setLocalDespachoDoc(processo.despacho_doc)
+    }
+  }, [processo?.despacho_doc])
+
   useEffect(() => {
     if (processo?.documentos) setLocalDocs(processo.documentos)
   }, [processo?.documentos])
@@ -82,7 +97,40 @@ export default function DetalhesProcesso() {
     (currentUser.tipo === 'gestor' && processo.setorAtual?.secretariaId === currentUser.secretariaId)
   ))
 
-  const podeDevolver = isResponsavel && processo?.status !== 'aberto'
+  // Última tramitação (mais recente)
+  const ultimaTramitacao = processo?.tramitacoes
+    ?.slice()
+    .sort((a, b) => new Date(b.data_hora || b.dataHora) - new Date(a.data_hora || a.dataHora))[0]
+
+  // Usuário é o destinatário real (não admin/gestor por permissão global)
+  const isDestinatarioReal = !!(currentUser && processo && (
+    processo.usuario_atual_id === currentUser.id ||
+    (processo.usuario_atual_id === null && processo.setor_atual_id === currentUser.setor?.id)
+  ))
+
+  // Precisa clicar "Receber" antes de poder agir (apenas destinatário real, não admin/gestor)
+  const precisaReceber = isDestinatarioReal &&
+    currentUser?.tipo !== 'admin' &&
+    currentUser?.tipo !== 'gestor' &&
+    processo?.status !== 'concluido' &&
+    ['tramite', 'devolucao'].includes(ultimaTramitacao?.tipo_acao || ultimaTramitacao?.tipo)
+
+  const podeAgir      = isResponsavel && !precisaReceber
+  const podeDevolver  = podeAgir && processo?.status !== 'aberto'
+
+  const handleReceber = async () => {
+    setRecebendo(true)
+    try {
+      await api.post(`/processos/${id}/receber`)
+      setSuccessMessage('Processo recebido com sucesso! Agora você pode tramitar ou concluir.')
+      setTimeout(() => setSuccessMessage(''), 6000)
+      refetch()
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao receber processo.')
+    } finally {
+      setRecebendo(false)
+    }
+  }
 
   const ultimaTramitacaoValida = processo?.tramitacoes
     ?.filter(t => t.tipo_acao === 'tramite' || t.tipo_acao === 'devolucao')
@@ -715,8 +763,22 @@ export default function DetalhesProcesso() {
             <SectionTitle icon={Zap} title="Ações Rápidas" />
             <div className="space-y-2">
 
-              {/* Ações de tramitação — somente se não concluído */}
-              {processo.status !== 'concluido' && isResponsavel && (
+              {/* Botão Receber — aparece quando o processo foi tramitado e ainda não foi recebido */}
+              {precisaReceber && (
+                <button
+                  onClick={handleReceber}
+                  disabled={recebendo}
+                  className="w-full inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
+                             bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm hover:shadow-md
+                             active:scale-95 justify-start disabled:opacity-60"
+                >
+                  <Inbox className="h-4 w-4" />
+                  {recebendo ? 'Recebendo...' : 'Receber processo'}
+                </button>
+              )}
+
+              {/* Ações de tramitação — somente após receber */}
+              {processo.status !== 'concluido' && podeAgir && (
                 <>
                   <button
                     onClick={() => setShowTramitar(true)}
@@ -762,13 +824,13 @@ export default function DetalhesProcesso() {
               {/* PDF por tipo */}
               {processo.tipo_processo === 'Despacho' && (
                 <button
-                  onClick={() => gerarDespachoPDF(processo)}
+                  onClick={() => setShowDespacho(true)}
                   className="w-full inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
                              bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm hover:shadow-md
                              active:scale-95 justify-start"
                 >
                   <FileDown className="h-4 w-4" />
-                  Gerar Despacho (PDF)
+                  {despachoDocAtual?.tipo_despacho ? 'Ver Despacho' : 'Gerar Despacho (PDF)'}
                 </button>
               )}
               {processo.tipo_processo === 'Pauta' && (
@@ -806,6 +868,13 @@ export default function DetalhesProcesso() {
                     Excluir processo
                   </button>
                 </>
+              )}
+
+              {/* Aviso aguardando recebimento */}
+              {precisaReceber && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 leading-relaxed text-center py-1">
+                  Receba o processo para poder tramitar ou concluir.
+                </p>
               )}
 
               {/* Sem ações */}
@@ -957,6 +1026,20 @@ export default function DetalhesProcesso() {
           processoId={id}
           onClose={() => setShowConcluir(false)}
           onSuccess={handleConcluirSuccess}
+        />
+      )}
+
+      {showDespacho && processo && (
+        <ModalDespacho
+          processo={{ ...processo, despacho_doc: despachoDocAtual }}
+          onClose={() => setShowDespacho(false)}
+          onSaved={(doc) => {
+            setLocalDespachoDoc(doc)
+            queryClient.setQueryData(['processo', id], old =>
+              old ? { ...old, despacho_doc: doc } : old
+            )
+            refetch()
+          }}
         />
       )}
 

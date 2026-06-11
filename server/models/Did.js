@@ -41,6 +41,7 @@ const defineDidModel = (sequelize) => {
     cert_sec1_estadual: { type: DataTypes.BOOLEAN, defaultValue: false },
     cert_sec1_federal: { type: DataTypes.BOOLEAN, defaultValue: false },
     cert_sec1_simples_nac: { type: DataTypes.BOOLEAN, defaultValue: false },
+    cert_sec1_arquivos: { type: DataTypes.JSONB, defaultValue: {} },
     valor_did: { type: DataTypes.DECIMAL(15, 2) },
     itens_did: { type: DataTypes.JSON },
 

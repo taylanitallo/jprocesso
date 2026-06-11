@@ -7,6 +7,7 @@ import {
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import api from '../../services/api'
+import { salvarDocumentoGerado } from '../../utils/salvarDocumentoGerado'
 import {
   SectionCard, PremiumInput, PremiumTextarea,
 } from './ContratosShared'
@@ -1082,7 +1083,7 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
 }
 
 // ── Gerador de PDF da Ordem ────────────────────────────────────────────────────
-function gerarPdf(ordemRaw, contratos = []) {
+async function gerarPdf(ordemRaw, contratos = []) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const W = doc.internal.pageSize.getWidth()
   const M = 15
@@ -1304,7 +1305,9 @@ function gerarPdf(ordemRaw, contratos = []) {
   doc.text(`Gerado em ${agora}`, M, pageH - 5)
   doc.text('P\u00e1gina 1', W - M, pageH - 5, { align: 'right' })
 
-  doc.save(`ordem_${(ordem.numero || 'sem_numero').replace(/\//g, '-')}.pdf`)
+  const nomeArqOrdem = `ordem_${(ordem.numero || 'sem_numero').replace(/\//g, '-')}.pdf`
+  await salvarDocumentoGerado(doc, { nome: nomeArqOrdem, tipoOrigem: 'ordem' })
+  doc.save(nomeArqOrdem)
 }
 
 // ── Modal Confirmar Cancelamento ───────────────────────────────────────────────
@@ -1503,15 +1506,26 @@ function TabOrdens() {
                     <td className="px-3 py-2 max-w-[220px] truncate">{o.objeto}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{fmtData(o.data_emissao)}</td>
                     <td className="px-3 py-2 text-right font-semibold whitespace-nowrap">{fmtBRL(o.valor_total)}</td>
-                    <td className={`px-3 py-2 text-right whitespace-nowrap font-semibold ${
-                      saldoInfo?.sem_saldo ? 'text-red-600' : saldoInfo?.alerta_baixo ? 'text-amber-600' : 'text-emerald-600'
-                    }`}>
-                      {saldoInfo ? fmtBRL(saldoInfo.saldo) : '—'}
+                    <td className="px-3 py-2 text-right">
+                      {saldoInfo ? (
+                        <div className="text-right">
+                          <p className={`text-[10px] font-bold ${saldoInfo.sem_saldo ? 'text-red-600' : saldoInfo.alerta_baixo ? 'text-amber-600' : 'text-emerald-600'}`}>
+                            {fmtBRL(saldoInfo.saldo)}
+                          </p>
+                        </div>
+                      ) : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-3 py-2 text-center">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusCor(o.status)}`}>
-                        {o.status}
-                      </span>
+                      <div className="flex flex-col items-center gap-1">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusCor(o.status)}`}>
+                          {o.status}
+                        </span>
+                        {(o.dataValues?.did_vinculado || o.did_vinculado) && (
+                          <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 whitespace-nowrap">
+                            Vinculada DID
+                          </span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )
@@ -1537,12 +1551,12 @@ function TabOrdens() {
           <Plus className="w-3.5 h-3.5" /> Incluir
         </button>
         <button onClick={() => ordemSel && setModal('editar')}
-          disabled={!selecionada || ordemSel?.status === 'CANCELADA'}
+          disabled={!selecionada || ordemSel?.status === 'CANCELADA' || (ordemSel?.status === 'EMITIDA' && (ordemSel?.did_vinculado || ordemSel?.dataValues?.did_vinculado))}
           className="flex items-center gap-1.5 px-4 py-2 text-xs rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-sm transition-colors">
           <Pencil className="w-3.5 h-3.5" /> Alterar
         </button>
-        <button onClick={() => ordemSel && ordemSel.status !== 'CANCELADA' && setModal('cancelar')}
-          disabled={!selecionada || ordemSel?.status === 'CANCELADA'}
+        <button onClick={() => ordemSel && ordemSel.status !== 'CANCELADA' && !(ordemSel.status === 'EMITIDA' && (ordemSel.did_vinculado || ordemSel.dataValues?.did_vinculado)) && setModal('cancelar')}
+          disabled={!selecionada || ordemSel?.status === 'CANCELADA' || (ordemSel?.status === 'EMITIDA' && (ordemSel?.did_vinculado || ordemSel?.dataValues?.did_vinculado))}
           className="flex items-center gap-1.5 px-4 py-2 text-xs rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-sm transition-colors">
           <Trash2 className="w-3.5 h-3.5" /> Cancelar
         </button>

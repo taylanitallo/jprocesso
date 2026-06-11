@@ -1176,6 +1176,109 @@ const deleteProcesso = async (req, res) => {
   }
 };
 
+const salvarDespachoDoc = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { Processo } = req.models;
+    const {
+      tipo_despacho, numero, ementa, referencia, titulo_outro,
+      para, cargo_emissor, portaria_nomeacao, setor_emissor, secretaria_emissora,
+      data_despacho, assunto, texto, nome_assinante,
+    } = req.body;
+
+    const processo = await Processo.findByPk(id);
+    if (!processo) return res.status(404).json({ error: 'Processo não encontrado' });
+
+    const doc = {
+      tipo_despacho:      tipo_despacho      || '',
+      numero:             numero             || '',
+      ementa:             ementa             || '',
+      referencia:         referencia         || '',
+      titulo_outro:       titulo_outro       || '',
+      para:               para               || '',
+      cargo_emissor:      cargo_emissor      || '',
+      portaria_nomeacao:  portaria_nomeacao  || '',
+      setor_emissor:      setor_emissor      || '',
+      secretaria_emissora:secretaria_emissora|| '',
+      data_despacho:      data_despacho      || null,
+      assunto:            assunto            || '',
+      texto:              texto              || '',
+      nome_assinante:     nome_assinante     || '',
+    };
+    processo.despacho_doc = doc;
+    processo.changed('despacho_doc', true);
+    await processo.save();
+
+    res.json({ despacho_doc: doc });
+  } catch (err) {
+    console.error('Erro ao salvar despacho doc:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const receberProcesso = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { Processo, Tramitacao, User } = req.models;
+    const usuarioId = req.user.id;
+
+    const processo = await Processo.findByPk(id);
+    if (!processo) return res.status(404).json({ error: 'Processo não encontrado' });
+    if (processo.status === 'concluido') return res.status(400).json({ error: 'Processo já concluído.' });
+
+    const user = await User.findByPk(usuarioId);
+
+    // Verifica se o usuário é o destinatário (está no setor atual ou é o usuário atual)
+    const isDestinatario =
+      processo.usuario_atual_id === usuarioId ||
+      (processo.usuario_atual_id === null && processo.setor_atual_id === user?.setor_id);
+
+    if (!isDestinatario) {
+      return res.status(403).json({ error: 'Você não é o destinatário deste processo.' });
+    }
+
+    // Verifica se a última ação requer recebimento
+    const ultimaTramitacao = await Tramitacao.findOne({
+      where: { processo_id: id },
+      order: [['data_hora', 'DESC']],
+    });
+
+    if (!ultimaTramitacao || !['tramite', 'devolucao'].includes(ultimaTramitacao.tipo_acao)) {
+      return res.status(400).json({ error: 'Este processo não requer recebimento no momento.' });
+    }
+
+    const crypto = require('crypto');
+    const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
+    const assinatura = crypto.createHash('sha256')
+      .update(`${processo.numero}-recebimento-${usuarioId}-${Date.now()}`)
+      .digest('hex');
+
+    await Tramitacao.create({
+      processo_id: id,
+      tipo_acao: 'recebimento',
+      origem_usuario_id: usuarioId,
+      origem_setor_id: processo.setor_atual_id,
+      destino_setor_id: processo.setor_atual_id,
+      destino_usuario_id: usuarioId,
+      despacho: `Processo recebido por ${user?.nome || 'usuário'}`,
+      data_hora: new Date(),
+      ip_origem: ip,
+      assinatura_digital: assinatura,
+    });
+
+    // Se o processo estava apenas no setor (sem usuário), atribui ao receptor
+    if (!processo.usuario_atual_id) {
+      processo.usuario_atual_id = usuarioId;
+      await processo.save();
+    }
+
+    res.json({ message: 'Processo recebido com sucesso!' });
+  } catch (err) {
+    console.error('Erro ao receber processo:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 module.exports = {
   createProcesso,
   listProcessos,
@@ -1184,10 +1287,12 @@ module.exports = {
   tramitarProcesso,
   devolverProcesso,
   concluirProcesso,
+  receberProcesso,
   listProcessosEnviados,
   getArquivoProcessos,
   moverProcessoTipo,
   buscarProcessosPublico,
   consultarProcessoPublico,
   deleteProcesso,
+  salvarDespachoDoc,
 };

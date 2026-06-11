@@ -1,4 +1,6 @@
 const { Op } = require('sequelize');
+const path = require('path');
+const storage = require('../services/storageService');
 
 const getByProcesso = async (req, res) => {
   try {
@@ -125,7 +127,7 @@ const createOrUpdate = async (req, res) => {
   }
 };
 
-module.exports = { getByProcesso, createOrUpdate, getProximoNumero, getEstoque, getAlmEstoque };
+module.exports = { getByProcesso, createOrUpdate, getProximoNumero, getEstoque, getAlmEstoque, uploadCertidao, downloadCertidaoUrl, deleteCertidao };
 
 // ─── Sincronização automática DID → Almoxarifado ────────────────────────────
 // Ao salvar um DID com itens, registra SAÍDA no almoxarifado para cada item
@@ -262,6 +264,78 @@ async function getProximoNumero(req, res) {
     const { Did } = req.models;
     const count = await Did.count();
     res.json({ proximo: count + 1 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+const CERT_KEYS = ['municipal', 'trabalhista', 'fgts', 'estadual', 'federal', 'simples_nac'];
+
+async function uploadCertidao(req, res) {
+  try {
+    const { processoId, certKey } = req.params;
+    if (!CERT_KEYS.includes(certKey)) return res.status(400).json({ error: 'Chave de certidão inválida.' });
+    if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado.' });
+
+    const { Did } = req.models;
+    const did = await Did.findOne({ where: { processo_id: processoId } });
+    if (!did) return res.status(404).json({ error: 'DID não encontrado.' });
+
+    const ext = path.extname(req.file.originalname);
+    const storagePath = `${req.tenant.schema}/dids/${did.id}/cert_${certKey}${ext}`;
+
+    // upsert: true para permitir re-upload da mesma certidão
+    await storage.uploadArquivo({
+      buffer: req.file.buffer,
+      path: storagePath,
+      contentType: req.file.mimetype,
+    });
+
+    const arquivos = { ...(did.cert_sec1_arquivos || {}), [certKey]: { nome: req.file.originalname, path: storagePath } };
+    // Forçar detecção da mudança no campo JSONB pelo Sequelize
+    did.cert_sec1_arquivos = arquivos;
+    did.changed('cert_sec1_arquivos', true);
+    await did.save();
+
+    res.json({ cert_sec1_arquivos: arquivos });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function downloadCertidaoUrl(req, res) {
+  try {
+    const { processoId, certKey } = req.params;
+    const { Did } = req.models;
+    const did = await Did.findOne({ where: { processo_id: processoId } });
+    if (!did) return res.status(404).json({ error: 'DID não encontrado.' });
+
+    const arq = (did.cert_sec1_arquivos || {})[certKey];
+    if (!arq?.path) return res.status(404).json({ error: 'Arquivo não encontrado.' });
+
+    const url = await storage.createSignedUrl(arq.path, 120);
+    res.json({ url, nome: arq.nome });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function deleteCertidao(req, res) {
+  try {
+    const { processoId, certKey } = req.params;
+    const { Did } = req.models;
+    const did = await Did.findOne({ where: { processo_id: processoId } });
+    if (!did) return res.status(404).json({ error: 'DID não encontrado.' });
+
+    const arquivos = { ...(did.cert_sec1_arquivos || {}) };
+    const arq = arquivos[certKey];
+    if (arq?.path) {
+      try { await storage.deleteDocumento(arq.path); } catch (_) {}
+    }
+    delete arquivos[certKey];
+    await did.update({ cert_sec1_arquivos: arquivos });
+
+    res.json({ cert_sec1_arquivos: arquivos });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

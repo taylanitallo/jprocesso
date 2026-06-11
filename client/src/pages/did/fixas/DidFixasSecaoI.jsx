@@ -1,5 +1,5 @@
-import { useState, useEffect, useContext } from 'react'
-import { FileText, Plus, Trash2, Search, X, Check, CheckCircle, Pencil, Loader2, Lock, RotateCcw } from 'lucide-react'
+import { useState, useEffect, useContext, useMemo, useRef } from 'react'
+import { FileText, Plus, Trash2, Search, X, Check, CheckCircle, Pencil, Loader2, Lock, RotateCcw, ClipboardList, Paperclip, ExternalLink } from 'lucide-react'
 import { Field, Input, Textarea, SectionCard, DidReadOnlyContext } from '../didShared'
 import api from '../../../services/api'
 
@@ -191,6 +191,129 @@ function ModalItensContrato({ contrato, itensDid, onConfirm, onClose, stockData 
   )
 }
 
+// ─── Modal de seleção de Ordem de Serviço disponível para DID ────────────────
+function ModalOrdemServico({ onConfirm, onClose }) {
+  const [ordens, setOrdens] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [busca, setBusca] = useState('')
+
+  useEffect(() => {
+    setLoading(true)
+    api.get('/contratos/ordens/disponiveis-did')
+      .then(r => setOrdens(Array.isArray(r.data) ? r.data.filter(o => o.tipo === 'SERVICO') : []))
+      .catch(() => setOrdens([]))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const ordensFiltradas = useMemo(() => {
+    const q = busca.trim().toLowerCase()
+    if (!q) return ordens
+    return ordens.filter(o =>
+      (o.numero || '').toLowerCase().includes(q) ||
+      (o.objeto || '').toLowerCase().includes(q) ||
+      (o.contrato?.numero_contrato || '').toLowerCase().includes(q) ||
+      (o.contrato?.credor?.razao_social || '').toLowerCase().includes(q)
+    )
+  }, [ordens, busca])
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl flex flex-col" style={{ maxHeight: '85vh' }}>
+        <div className="flex items-center justify-between bg-gray-800 dark:bg-gray-900 px-4 py-3 rounded-t-xl shrink-0">
+          <div className="flex items-center gap-2">
+            <ClipboardList className="w-4 h-4 text-blue-400" />
+            <span className="text-sm font-semibold text-white">Ordens de Serviço Disponíveis</span>
+            <span className="text-xs text-gray-400 ml-1">· somente EMITIDAS e não vinculadas</span>
+          </div>
+          <button onClick={onClose} className="p-0.5 rounded hover:bg-gray-700 text-white/80 hover:text-white">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 shrink-0">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+            <input
+              autoFocus
+              value={busca}
+              onChange={e => setBusca(e.target.value)}
+              placeholder="Buscar por número, objeto, contrato ou credor..."
+              className="w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600
+                bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                outline-none focus:ring-2 focus:ring-blue-400"
+            />
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="flex items-center justify-center h-32 gap-2 text-gray-400">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span className="text-sm">Carregando ordens...</span>
+            </div>
+          ) : ordensFiltradas.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-32 text-gray-400 px-6 text-center">
+              <ClipboardList className="w-8 h-8 mb-2 opacity-40" />
+              <p className="text-sm font-medium">
+                {busca ? 'Nenhuma ordem encontrada para a busca.' : 'Nenhuma ordem de serviço disponível.'}
+              </p>
+              <p className="text-xs mt-1 text-gray-400">
+                Apenas ordens com status EMITIDA e ainda não vinculadas a um DID são exibidas.
+              </p>
+            </div>
+          ) : (
+            <table className="w-full text-xs">
+              <thead className="bg-gray-50 dark:bg-gray-700/50 sticky top-0">
+                <tr>
+                  <th className="px-3 py-2 text-left font-semibold text-gray-500 dark:text-gray-400 w-28">Nº Ordem</th>
+                  <th className="px-3 py-2 text-left font-semibold text-gray-500 dark:text-gray-400 w-32">Contrato</th>
+                  <th className="px-3 py-2 text-left font-semibold text-gray-500 dark:text-gray-400">Objeto / Credor</th>
+                  <th className="px-3 py-2 text-right font-semibold text-gray-500 dark:text-gray-400 w-32">Valor Total</th>
+                  <th className="px-3 py-2 text-right font-semibold text-gray-500 dark:text-gray-400 w-24">Emissão</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                {ordensFiltradas.map(o => (
+                  <tr key={o.id} onClick={() => onConfirm(o)}
+                    className="cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                    <td className="px-3 py-2.5 font-mono font-bold text-blue-700 dark:text-blue-400">{o.numero}</td>
+                    <td className="px-3 py-2.5 font-mono text-gray-700 dark:text-gray-300">
+                      {o.contrato?.numero_contrato || <span className="text-gray-400">—</span>}
+                    </td>
+                    <td className="px-3 py-2.5 max-w-xs">
+                      <p className="truncate text-gray-700 dark:text-gray-200 font-medium">{o.objeto || '—'}</p>
+                      {o.contrato?.credor?.razao_social && (
+                        <p className="truncate text-gray-400 text-xs">{o.contrato.credor.razao_social}</p>
+                      )}
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-mono font-semibold text-gray-800 dark:text-gray-200">
+                      {parseFloat(o.valor_total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </td>
+                    <td className="px-3 py-2.5 text-right text-gray-500">
+                      {o.data_emissao ? new Date(o.data_emissao + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-3 shrink-0">
+          <span className="text-xs text-gray-400">
+            {loading ? '…' : `${ordensFiltradas.length} ordem(ns) disponível(is)`}
+          </span>
+          <button onClick={onClose}
+            className="ml-auto px-4 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600
+              text-gray-700 dark:text-gray-200 rounded text-sm font-semibold transition-colors">
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Seção I — Contas Fixas ───────────────────────────────────────────────────
 export default function DidFixasSecaoI({
   form, set, inp,
@@ -299,12 +422,49 @@ export default function DidFixasSecaoI({
   const [buscaContrato, setBuscaContrato] = useState('')
   const [dropdownContrato, setDropdownContrato] = useState(false)
   const [modalItens, setModalItens] = useState(false)
+  const [modalOrdemServico, setModalOrdemServico] = useState(false)
+  const [ordemServicoSel, setOrdemServicoSel] = useState(null)
   const [stockData, setStockData] = useState({})
   const [almStockData, setAlmStockData] = useState({})
   const [loadingStock, setLoadingStock] = useState(false)
   const [locked, setLocked] = useState(false)
   const [tentouSalvar, setTentouSalvar] = useState(false)
+  const [certUploading, setCertUploading] = useState({})
+  const certFileRefs = useRef({})
   useEffect(() => { if (didId) setLocked(true) }, [didId])
+
+  const certArquivos = form.cert_sec1_arquivos || {}
+
+  const uploadCertidao = async (certKey, file) => {
+    if (!processoId || processoId === 'novo') { alert('Salve o DID antes de anexar arquivos.'); return }
+    setCertUploading(p => ({ ...p, [certKey]: true }))
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const { data } = await api.post(
+        `/did/processo/${processoId}/certidao/${certKey}`,
+        fd,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      )
+      set('cert_sec1_arquivos', data.cert_sec1_arquivos)
+    } catch { alert('Erro ao fazer upload do arquivo.') }
+    finally { setCertUploading(p => ({ ...p, [certKey]: false })) }
+  }
+
+  const verCertidao = async (certKey) => {
+    try {
+      const { data } = await api.get(`/did/processo/${processoId}/certidao/${certKey}/url`)
+      window.open(data.url, '_blank')
+    } catch { alert('Erro ao abrir arquivo.') }
+  }
+
+  const removerCertidao = async (certKey) => {
+    if (!window.confirm('Remover o arquivo desta certidão?')) return
+    try {
+      const { data } = await api.delete(`/did/processo/${processoId}/certidao/${certKey}`)
+      set('cert_sec1_arquivos', data.cert_sec1_arquivos)
+    } catch { alert('Erro ao remover arquivo.') }
+  }
   const readOnly = useContext(DidReadOnlyContext)
 
   useEffect(() => {
@@ -371,6 +531,57 @@ export default function DidFixasSecaoI({
     set('nro_licitacao_sec1', '')
     set('tipo_licitacao_sec1', '')
     set('objeto', '')
+  }
+
+  const selecionarOrdemServico = (ordem) => {
+    setOrdemServicoSel(ordem)
+    setModalOrdemServico(false)
+    set('ordem_compra_id', ordem.id)
+    set('ordem_ref', ordem.numero || '')
+
+    const credor = ordem.contrato?.credor
+    const contrato = ordem.contrato
+    if (credor) {
+      setCredorSel(credor)
+      setBuscaCredor(credor.razao_social)
+      set('credor_sec1', credor.razao_social)
+      set('cnpj_cpf_credor_sec1', credor.cnpj_cpf || '')
+    }
+    if (contrato) {
+      setContratoSel(contrato)
+      setBuscaContrato(contrato.numero_contrato)
+      set('contrato_ref', contrato.numero_contrato || '')
+      set('nro_licitacao_sec1', contrato.numero_licitacao || '')
+      set('tipo_licitacao_sec1', contrato.modalidade || '')
+    }
+    if (ordem.objeto) set('objeto', ordem.objeto)
+    if (ordem.secretaria) {
+      set('secretaria_sec1', ordem.secretaria)
+      const dataRef = form.data_did || new Date().toISOString().slice(0, 10)
+      const gestor = getResponsavelVigente(ordem.secretaria, dataRef)
+      if (gestor) set('secretario_nome', gestor)
+    }
+    if (ordem.itens?.length) {
+      const novosItens = ordem.itens.map((it, i) => {
+        const q = parseFloat(it.quantidade) || 0
+        const u = parseFloat(it.valor_unitario) || 0
+        return {
+          _id: Date.now() + i,
+          descricao: it.descricao || '',
+          unidade: it.unidade || '',
+          quantidade: String(it.quantidade || ''),
+          valor_unitario: String(it.valor_unitario || ''),
+          valor_total: q && u ? (q * u).toFixed(2) : '',
+        }
+      })
+      setItensDid(novosItens)
+    }
+  }
+
+  const limparOrdemServico = () => {
+    setOrdemServicoSel(null)
+    set('ordem_compra_id', '')
+    set('ordem_ref', '')
   }
 
   const totalItensDid = itensDid.reduce((acc, it) => acc + (parseFloat(it.valor_total) || 0), 0)
@@ -443,6 +654,7 @@ export default function DidFixasSecaoI({
     setCredorSel(null); setBuscaCredor('')
     setContratoSel(null); setBuscaContrato('')
     // Limpa todos os campos do formulário
+    setOrdemServicoSel(null)
     const patch = {
       credor_sec1: '', cnpj_cpf_credor_sec1: '', contrato_ref: '',
       nro_licitacao_sec1: '', tipo_licitacao_sec1: '',
@@ -452,6 +664,7 @@ export default function DidFixasSecaoI({
       cert_sec1_municipal: false, cert_sec1_trabalhista: false,
       cert_sec1_fgts: false, cert_sec1_estadual: false,
       cert_sec1_federal: false, cert_sec1_simples_nac: false,
+      ordem_compra_id: '', ordem_ref: '',
     }
     Object.entries(patch).forEach(([k, v]) => set(k, v))
     setItensDid([{ _id: Date.now(), descricao: '', unidade: '', quantidade: '', valor_unitario: '', valor_total: '' }])
@@ -467,6 +680,48 @@ export default function DidFixasSecaoI({
     <>
       <SectionCard icon={FileText} title="Seção I - Secretaria Geral · Contas Fixas"
         color="bg-gray-800 text-white dark:bg-gray-900">
+
+        {/* ── Ordem de Serviço (seletor principal — pré-preenche toda a seção) ── */}
+        <div className="col-span-2">
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+            Ordem de Serviço <span className="font-normal text-gray-400 dark:text-slate-500">(opcional — pré-preenche credor, contrato, objeto e itens)</span>
+          </label>
+          {ordemServicoSel || form.ordem_ref ? (
+            <div className="flex items-center gap-2">
+              <div className="flex-1 px-3 py-2 text-sm rounded-lg border border-indigo-300 dark:border-indigo-700
+                bg-indigo-50 dark:bg-indigo-900/20 flex items-center gap-2 min-w-0">
+                <ClipboardList className="w-4 h-4 text-indigo-500 shrink-0" />
+                <span className="font-mono font-bold text-indigo-700 dark:text-indigo-400 shrink-0">
+                  {ordemServicoSel?.numero || form.ordem_ref}
+                </span>
+                {ordemServicoSel?.objeto && (
+                  <span className="text-gray-500 text-xs truncate">{ordemServicoSel.objeto.slice(0, 60)}</span>
+                )}
+                {ordemServicoSel?.valor_total && (
+                  <span className="ml-auto text-xs font-semibold text-gray-600 dark:text-gray-300 shrink-0">
+                    {parseFloat(ordemServicoSel.valor_total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </span>
+                )}
+              </div>
+              {!locked && (
+                <button type="button" onClick={limparOrdemServico} title="Desvincular ordem"
+                  className="p-1.5 rounded border border-gray-200 dark:border-gray-600 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 shrink-0">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          ) : (
+            <button type="button" onClick={() => !locked && setModalOrdemServico(true)} disabled={locked}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-colors
+                ${locked
+                  ? 'border-gray-200 dark:border-gray-700 text-gray-400 cursor-not-allowed opacity-60'
+                  : 'border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/30'
+                }`}>
+              <ClipboardList className="w-4 h-4" />
+              Selecionar Ordem de Serviço
+            </button>
+          )}
+        </div>
 
         {/* ── Linha 1: N° DID | Credor (autocomplete) ── */}
         <Field label="N° do DID" half>
@@ -792,27 +1047,82 @@ export default function DidFixasSecaoI({
         </div>
 
         {/* Certidões */}
-        <Field label="Certidões">
-          <div className="flex flex-wrap gap-5 pt-1">
+        <div className="col-span-2">
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Certidões</label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {[
-              { key: 'cert_sec1_municipal',        label: 'Municipal' },
-              { key: 'cert_sec1_trabalhista',    label: 'Trabalhista' },
-              { key: 'cert_sec1_fgts',           label: 'FGTS' },
-              { key: 'cert_sec1_estadual',       label: 'Estadual' },
-              { key: 'cert_sec1_federal',        label: 'Federal' },
-              { key: 'cert_sec1_simples_nac',    label: 'Simples Nacional' },
-            ].map(({ key, label }) => (
-              <label key={key} className={`flex items-center gap-2 text-sm select-none
-                ${locked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
-                ${form[key] ? 'text-green-700 dark:text-green-400 font-semibold' : 'text-gray-700 dark:text-gray-300'}`}>
-                <input type="checkbox" checked={!!form[key]}
-                  onChange={e => set(key, e.target.checked)} disabled={locked}
-                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-60" />
-                {label}
-              </label>
-            ))}
+              { key: 'cert_sec1_municipal',    certKey: 'municipal',    label: 'Municipal' },
+              { key: 'cert_sec1_trabalhista',  certKey: 'trabalhista',  label: 'Trabalhista' },
+              { key: 'cert_sec1_fgts',         certKey: 'fgts',         label: 'FGTS' },
+              { key: 'cert_sec1_estadual',     certKey: 'estadual',     label: 'Estadual' },
+              { key: 'cert_sec1_federal',      certKey: 'federal',      label: 'Federal' },
+              { key: 'cert_sec1_simples_nac',  certKey: 'simples_nac',  label: 'Simples Nacional' },
+            ].map(({ key, certKey, label }) => {
+              const arq = certArquivos[certKey]
+              const uploading = certUploading[certKey]
+              return (
+                <div key={key} className={`rounded-lg border p-2.5 transition-colors ${
+                  form[key]
+                    ? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/15'
+                    : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800/50'
+                }`}>
+                  {/* Linha do checkbox */}
+                  <label className={`flex items-center gap-2 text-sm select-none mb-2
+                    ${locked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
+                    ${form[key] ? 'text-green-700 dark:text-green-400 font-semibold' : 'text-gray-700 dark:text-gray-300'}`}>
+                    <input type="checkbox" checked={!!form[key]}
+                      onChange={e => set(key, e.target.checked)} disabled={locked}
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-60" />
+                    {label}
+                  </label>
+
+                  {/* Área de arquivo */}
+                  {arq ? (
+                    <div className="flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                      <span className="text-xs text-gray-600 dark:text-gray-300 truncate flex-1 min-w-0" title={arq.nome}>
+                        {arq.nome}
+                      </span>
+                      <button type="button" onClick={() => verCertidao(certKey)} title="Ver arquivo"
+                        className="p-1 rounded text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 shrink-0">
+                        <ExternalLink className="w-3 h-3" />
+                      </button>
+                      {!locked && (
+                        <button type="button" onClick={() => removerCertidao(certKey)} title="Remover arquivo"
+                          className="p-1 rounded text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 shrink-0">
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      <input
+                        ref={el => { certFileRefs.current[certKey] = el }}
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        className="hidden"
+                        onChange={e => {
+                          const file = e.target.files?.[0]
+                          if (file) { uploadCertidao(certKey, file); e.target.value = '' }
+                        }}
+                      />
+                      <button type="button"
+                        disabled={locked || uploading}
+                        onClick={() => certFileRefs.current[certKey]?.click()}
+                        className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                        {uploading
+                          ? <Loader2 className="w-3 h-3 animate-spin" />
+                          : <Paperclip className="w-3 h-3" />
+                        }
+                        {uploading ? 'Enviando...' : 'Anexar arquivo'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
-        </Field>
+        </div>
 
         {/* Botões */}
         <div className="col-span-2 flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700 mt-1">
@@ -848,6 +1158,12 @@ export default function DidFixasSecaoI({
           loadingStock={loadingStock}
           onConfirm={novosItens => { setItensDid(novosItens); setModalItens(false) }}
           onClose={() => setModalItens(false)}
+        />
+      )}
+      {modalOrdemServico && (
+        <ModalOrdemServico
+          onConfirm={selecionarOrdemServico}
+          onClose={() => setModalOrdemServico(false)}
         />
       )}
     </>

@@ -617,6 +617,49 @@ async function migrarSchemaUsuarios(schema, pool) {
     );
   `);
 
+  // dids: coluna de arquivos das certidões da Seção I
+  await pool.query(`
+    ALTER TABLE IF EXISTS ${schema}.dids
+      ADD COLUMN IF NOT EXISTS cert_sec1_arquivos JSONB DEFAULT '{}';
+  `);
+
+  // processos: coluna para documento de despacho
+  await pool.query(`
+    ALTER TABLE IF EXISTS ${schema}.processos
+      ADD COLUMN IF NOT EXISTS despacho_doc JSONB DEFAULT NULL;
+  `);
+
+  // anexos: tornar processo_id opcional + adicionar tipo_origem
+  await pool.query(`
+    ALTER TABLE IF EXISTS ${schema}.anexos
+      ALTER COLUMN processo_id DROP NOT NULL;
+    ALTER TABLE IF EXISTS ${schema}.anexos
+      ADD COLUMN IF NOT EXISTS tipo_origem VARCHAR(30) DEFAULT 'anexo';
+  `);
+
+  // tramitacoes: adicionar valor 'recebimento' ao ENUM tipo_acao
+  await pool.query(`
+    DO $$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_enum e
+        JOIN pg_type t ON e.enumtypid = t.oid
+        JOIN pg_namespace n ON t.typnamespace = n.oid
+        WHERE n.nspname = '${schema}'
+          AND t.typname = 'enum_tramitacoes_tipo_acao'
+          AND e.enumlabel = 'recebimento'
+      ) THEN
+        ALTER TYPE ${schema}.enum_tramitacoes_tipo_acao ADD VALUE 'recebimento';
+      END IF;
+    END $$;
+  `);
+
+  // usuarios: cargo e portaria de nomeação
+  await pool.query(`
+    ALTER TABLE IF EXISTS ${schema}.usuarios
+      ADD COLUMN IF NOT EXISTS cargo VARCHAR(120) DEFAULT NULL,
+      ADD COLUMN IF NOT EXISTS portaria_nomeacao VARCHAR(60) DEFAULT NULL;
+  `);
+
   // Itens do inventário patrimonial
   await pool.query(`
     CREATE TABLE IF NOT EXISTS ${schema}.pat_inventario_itens (

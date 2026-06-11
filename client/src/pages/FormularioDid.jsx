@@ -240,7 +240,7 @@ export default function FormularioDid() {
   const handleGerarPDF = async () => {
     setGerandoPDF(true)
     try {
-      await gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid })
+      await gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, processoId })
     } finally {
       setGerandoPDF(false)
     }

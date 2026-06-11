@@ -100,6 +100,11 @@ const defineProcessoModel = (sequelize) => {
     observacoes: {
       type: DataTypes.TEXT,
       comment: 'Observações gerais sobre o processo'
+    },
+    despacho_doc: {
+      type: DataTypes.JSONB,
+      defaultValue: null,
+      comment: 'Dados do documento de despacho (para, cargo_emissor, data_despacho, texto)'
     }
   }, {
     tableName: 'processos',

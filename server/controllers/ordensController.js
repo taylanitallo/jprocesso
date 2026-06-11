@@ -83,6 +83,22 @@ const listOrdens = async (req, res) => {
       o.dataValues.saldo_info = contratosVistos.get(cid);
     }
 
+    // Marcar ordens vinculadas a DIDs
+    try {
+      const { Did } = req.models;
+      const idsOrdens = ordens.map(o => o.id);
+      if (idsOrdens.length > 0) {
+        const didsVinculados = await Did.findAll({
+          attributes: ['ordem_compra_id'],
+          where: { ordem_compra_id: { [Op.in]: idsOrdens } },
+        });
+        const vinculadosSet = new Set(didsVinculados.map(d => d.ordem_compra_id));
+        ordens.forEach(o => { o.dataValues.did_vinculado = vinculadosSet.has(o.id); });
+      }
+    } catch (_) {
+      // Silencia se coluna ainda não existe
+    }
+
     res.json(ordens);
   } catch (err) {
     console.error('listOrdens:', err);

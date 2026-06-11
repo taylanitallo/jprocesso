@@ -30,7 +30,14 @@ export default function NovoProcesso() {
       const res = await api.post('/processos', { ...data, tipo_processo: tipoSelecionado })
       const processoId = res.data?.processo?.id || res.data?.id
       if (processoId) {
-        navigate(`/${subdomain}/processos/${processoId}`)
+        if (tipoSelecionado === 'Did') {
+          // Vai direto ao formulário DID, passando o número digitado para pré-preencher
+          navigate(`/${subdomain}/processos/${processoId}/did`, {
+            state: { did_numero: data.did_numero }
+          })
+        } else {
+          navigate(`/${subdomain}/processos/${processoId}`)
+        }
       } else {
         navigate(`/${subdomain}/processos`)
       }

@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf'
+import { salvarDocumentoGerado } from './salvarDocumentoGerado'
 
 // ─── Utilitários ──────────────────────────────────────────────────────────────
 const fmt = v => (v && String(v).trim()) ? String(v).trim() : '—'
@@ -71,11 +72,87 @@ function secao(doc, y, titulo) {
 }
 
 // ─── DESPACHO ─────────────────────────────────────────────────────────────────
-export function gerarDespachoPDF(processo) {
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-  let y = cabecalho(doc, 'DESPACHO', processo.numero, processo.secretaria?.sigla || processo.secretariaSigla)
+const TIPO_LABELS = {
+  oficio: 'Ofício', determinacao_institucional: 'Determinação Institucional',
+  comunicado: 'Comunicado', portaria: 'Portaria', decreto: 'Decreto',
+  encaminhamento: 'Encaminhamento', outros: 'Outros',
+}
 
-  // Fundo verde-claro suave para destaque do assunto
+export async function gerarDespachoPDF(processo, imprimir = false) {
+  // Suporta tanto o formato antigo (_despacho_*) quanto o novo (_despacho_doc_form)
+  const f = processo._despacho_doc_form || processo.despacho_doc || {}
+  const despachoPara    = f.para           || ''
+  const despachoCargo   = f.cargo_emissor  || ''
+  const despachoData    = f.data_despacho  || ''
+  const despachoTexto   = f.texto          || processo.descricao || ''
+  const despachoTipo    = f.tipo_despacho  || ''
+  const despachoNumero  = f.numero         || ''
+  const despachoEmenta  = f.ementa         || ''
+  const despachoRef     = f.referencia     || ''
+  const despachoTitulo  = f.titulo_outro   || ''
+  const tipoLabel       = TIPO_LABELS[despachoTipo] || 'Despacho'
+  const tituloDoc       = despachoNumero ? `${tipoLabel} Nº ${despachoNumero}` : tipoLabel
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  let y = cabecalho(doc, tituloDoc.toUpperCase(), processo.numero, processo.secretaria?.sigla || processo.secretariaSigla)
+
+  // ─ Cabeçalho formal: Para / Data
+  const temCabecalho = despachoPara || despachoData
+  if (temCabecalho) {
+    doc.setFillColor(240, 248, 255)
+    doc.setDrawColor(186, 220, 254)
+    doc.roundedRect(M, y, UW, 14, 2, 2, 'FD')
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(30, 64, 175)
+    if (despachoPara) doc.text(`Para: ${despachoPara}`, M + 3, y + 5.5)
+    if (despachoData) {
+      const dtFmt = new Date(despachoData + 'T12:00:00').toLocaleDateString('pt-BR')
+      doc.text(`Data: ${dtFmt}`, 210 - M - 3, y + 5.5, { align: 'right' })
+    }
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(22, 28, 36)
+    y += 18
+  }
+
+  // Ementa (Portaria / Decreto)
+  if (despachoEmenta) {
+    doc.setFillColor(255, 251, 235)
+    doc.setDrawColor(253, 211, 77)
+    doc.roundedRect(M, y, UW, 16, 2, 2, 'FD')
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'italic')
+    doc.setTextColor(92, 60, 0)
+    const ementaLines = doc.splitTextToSize(fmt(despachoEmenta), UW - 6)
+    doc.text(ementaLines, M + 3, y + 6)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(22, 28, 36)
+    y += 20
+  }
+
+  // Referência (Encaminhamento)
+  if (despachoRef) {
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(75, 85, 99)
+    doc.text(`Referência: ${despachoRef}`, M, y + 5)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(22, 28, 36)
+    y += 10
+  }
+
+  // Título livre (Outros)
+  if (despachoTitulo) {
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(75, 85, 99)
+    doc.text(`Tipo: ${despachoTitulo}`, M, y + 5)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(22, 28, 36)
+    y += 10
+  }
+
+  // Fundo verde-claro para assunto
   doc.setFillColor(240, 253, 244)
   doc.setDrawColor(187, 247, 208)
   doc.roundedRect(M, y, UW, 18, 2, 2, 'FD')
@@ -90,7 +167,7 @@ export function gerarDespachoPDF(processo) {
   y = secao(doc, y, 'Identificação do Processo')
   const col = UW / 2 - 2
   y = campo(doc, y, 'Número do Processo', processo.numero, 0, col)
-  y = campo(doc, y - (5.5 * 1 + 4.5 + 5.5) + 0, 'Tipo', processo.tipo_processo, col + 4, col)
+  y = campo(doc, y - (5.5 * 1 + 4.5 + 5.5) + 0, 'Tipo do Despacho', tipoLabel, col + 4, col)
 
   y = checkPage(doc, y)
   y = campo(doc, y + 2, 'Data de Abertura', fmtData(processo.data_abertura || processo.created_at))
@@ -106,11 +183,14 @@ export function gerarDespachoPDF(processo) {
   if (processo.interessado_telefone || processo.interessadoTelefone)
     y = campo(doc, y + 2, 'Telefone', processo.interessado_telefone || processo.interessadoTelefone)
 
-  // ─ Descrição / Despacho
-  y = secao(doc, y + 4, 'Memorando / Descrição')
+  // ─ Texto do Despacho
+  const secaoTextoLabel = (despachoTipo === 'portaria' || despachoTipo === 'decreto')
+    ? 'Considerandos e Dispositivo'
+    : 'Texto do Despacho'
+  y = secao(doc, y + 4, secaoTextoLabel)
   doc.setFillColor(249, 250, 252)
   doc.setDrawColor(220, 225, 233)
-  const linhasDesc = doc.splitTextToSize(fmt(processo.descricao), UW - 6)
+  const linhasDesc = doc.splitTextToSize(fmt(despachoTexto), UW - 6)
   const boxH = Math.max(20, linhasDesc.length * 5.5 + 8)
   y = checkPage(doc, y, boxH + 4)
   doc.roundedRect(M, y, UW, boxH, 2, 2, 'FD')
@@ -146,35 +226,254 @@ export function gerarDespachoPDF(processo) {
   }
 
   // ─ Assinaturas
-  y = checkPage(doc, y + 10, 40)
+  y = checkPage(doc, y + 10, 45)
   doc.setFillColor(220, 225, 233)
   doc.rect(M, y, UW, 0.4, 'F')
   y += 8
   const cw = UW / 2
   // Bloco 1
   doc.setFillColor(243, 245, 248)
-  doc.roundedRect(M, y, cw - 4, 28, 2, 2, 'F')
+  doc.roundedRect(M, y, cw - 4, 30, 2, 2, 'F')
   doc.setFontSize(8)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(90, 100, 115)
-  doc.text('Responsável pela emissão', M + 3, y + 10)
+  doc.text('Responsável pela emissão', M + 3, y + 7)
+  if (despachoCargo) {
+    doc.setFontSize(7.5)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(22, 28, 36)
+    const cargoLines = doc.splitTextToSize(despachoCargo, cw - 10)
+    doc.text(cargoLines, M + 3, y + 12)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(90, 100, 115)
+  }
   doc.setFillColor(100, 110, 125)
-  doc.rect(M + 6, y + 20, cw - 18, 0.3, 'F')
+  doc.rect(M + 6, y + 22, cw - 18, 0.3, 'F')
   doc.setFontSize(7.5)
-  doc.text('Assinatura / Carimbo', M + cw / 2 - 8, y + 24)
+  doc.text('Assinatura / Carimbo', M + cw / 2 - 8, y + 27)
   // Bloco 2
   doc.setFillColor(243, 245, 248)
-  doc.roundedRect(M + cw + 2, y, cw - 4, 28, 2, 2, 'F')
-  doc.text('Visto / Autorização', M + cw + 5, y + 10)
+  doc.roundedRect(M + cw + 2, y, cw - 4, 30, 2, 2, 'F')
+  doc.setFontSize(8)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(90, 100, 115)
+  doc.text('Visto / Autorização', M + cw + 5, y + 7)
   doc.setFillColor(100, 110, 125)
-  doc.rect(M + cw + 8, y + 20, cw - 18, 0.3, 'F')
-  doc.text('Assinatura / Carimbo', M + cw + cw / 2 - 6, y + 24)
+  doc.rect(M + cw + 8, y + 22, cw - 18, 0.3, 'F')
+  doc.text('Assinatura / Carimbo', M + cw + cw / 2 - 6, y + 27)
 
-  doc.save(`Despacho_${processo.numero || 'processo'}.pdf`)
+  const nomeArq = `Despacho_${processo.numero || 'processo'}.pdf`
+  await salvarDocumentoGerado(doc, { nome: nomeArq, processoId: processo.id, tipoOrigem: 'despacho' })
+  if (imprimir) {
+    const blob = doc.output('blob')
+    const url  = URL.createObjectURL(blob)
+    const win  = window.open(url, '_blank')
+    if (win) win.addEventListener('load', () => { win.print(); URL.revokeObjectURL(url) })
+  } else {
+    doc.save(nomeArq)
+  }
+}
+
+// ─── OFÍCIO ───────────────────────────────────────────────────────────────────
+export async function gerarOficioPDF({ processo, form, tenant, imprimir = false }) {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const PG  = 210   // largura da página
+  const MO  = 20    // margem do ofício (um pouco maior para visual formal)
+  const UWO = PG - MO * 2
+
+  const f   = form || {}
+  const dtFmt = f.data_despacho
+    ? new Date(f.data_despacho + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+    : new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+
+  // ── Cabeçalho institucional ──────────────────────────────────────────────────
+  const nomePrefeitura = tenant?.nome
+    ? `Prefeitura Municipal — ${tenant.nome}`
+    : 'Prefeitura Municipal'
+  const siglaSecretaria  = processo?.secretaria?.sigla  || tenant?.sigla  || ''
+  const nomeSecretaria   = f.secretaria_emissora || processo?.secretaria?.nome || ''
+
+  // Linha superior colorida
+  doc.setFillColor(18, 26, 48)
+  doc.rect(0, 0, PG, 4, 'F')
+
+  // Nome da prefeitura
+  doc.setFontSize(11)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(18, 26, 48)
+  doc.text(nomePrefeitura.toUpperCase(), PG / 2, 14, { align: 'center' })
+
+  // Secretaria
+  if (nomeSecretaria) {
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(60, 70, 90)
+    doc.text(nomeSecretaria, PG / 2, 20, { align: 'center' })
+  }
+
+  // Setor
+  if (f.setor_emissor) {
+    doc.setFontSize(8.5)
+    doc.setTextColor(90, 100, 115)
+    doc.text(f.setor_emissor, PG / 2, nomeSecretaria ? 26 : 20, { align: 'center' })
+  }
+
+  // Linha separadora
+  const yLinha = nomeSecretaria ? (f.setor_emissor ? 30 : 26) : 22
+  doc.setFillColor(18, 26, 48)
+  doc.rect(MO, yLinha, UWO, 0.5, 'F')
+
+  let y = yLinha + 8
+
+  // ── Identificação do Ofício ──────────────────────────────────────────────────
+  // Número à esquerda / Data à direita
+  doc.setFontSize(10)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(18, 26, 48)
+  const numOficio = f.numero ? `OFÍCIO Nº ${f.numero}` : 'OFÍCIO'
+  doc.text(numOficio, MO, y)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+  doc.setTextColor(60, 70, 90)
+  doc.text(dtFmt, PG - MO, y, { align: 'right' })
+  y += 8
+
+  // Processo de referência (pequeno)
+  doc.setFontSize(7.5)
+  doc.setTextColor(120, 130, 145)
+  doc.text(`Ref.: Processo nº ${processo?.numero || ''}`, MO, y)
+  y += 8
+
+  // ── Destinatário ─────────────────────────────────────────────────────────────
+  if (f.para) {
+    doc.setFillColor(243, 245, 248)
+    doc.roundedRect(MO, y, UWO, 14, 2, 2, 'F')
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(41, 82, 196)
+    doc.text('A(O):', MO + 3, y + 5.5)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(22, 28, 36)
+    doc.setFontSize(10)
+    doc.text(fmt(f.para), MO + 16, y + 5.5)
+    y += 18
+  }
+
+  // ── Assunto ──────────────────────────────────────────────────────────────────
+  if (f.assunto) {
+    doc.setFontSize(8.5)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(60, 70, 90)
+    doc.text('ASSUNTO:', MO, y + 4)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(22, 28, 36)
+    doc.setFontSize(9.5)
+    const assuntoLines = doc.splitTextToSize(fmt(f.assunto), UWO - 30)
+    doc.text(assuntoLines, MO + 28, y + 4)
+    y += assuntoLines.length * 5 + 8
+  }
+
+  // ── Linha separadora fina ────────────────────────────────────────────────────
+  doc.setFillColor(210, 215, 225)
+  doc.rect(MO, y, UWO, 0.3, 'F')
+  y += 8
+
+  // ── Corpo / Texto do Ofício ───────────────────────────────────────────────────
+  doc.setFontSize(10.5)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(22, 28, 36)
+
+  const texto = fmt(f.texto)
+  const linhasTexto = doc.splitTextToSize(texto, UWO)
+  for (let i = 0; i < linhasTexto.length; i++) {
+    if (y + 7 > 255) {
+      doc.addPage()
+      y = MO + 6
+    }
+    doc.text(linhasTexto[i], MO, y)
+    y += 6.5
+  }
+
+  // ── Assinatura ───────────────────────────────────────────────────────────────
+  y += 12
+  if (y + 35 > 277) { doc.addPage(); y = MO + 6 }
+
+  // Bloco de assinatura centralizado
+  const bw = 90
+  const bx = (PG - bw) / 2
+
+  // Linha de assinatura
+  doc.setFillColor(60, 70, 90)
+  doc.rect(bx, y, bw, 0.4, 'F')
+  y += 5
+
+  doc.setFontSize(10)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(22, 28, 36)
+  if (f.nome_assinante) {
+    const nomeLines = doc.splitTextToSize(fmt(f.nome_assinante), bw)
+    doc.text(nomeLines, PG / 2, y, { align: 'center' })
+    y += nomeLines.length * 5.5
+  }
+
+  if (f.cargo_emissor) {
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(60, 70, 90)
+    const cargoLines = doc.splitTextToSize(fmt(f.cargo_emissor), bw)
+    doc.text(cargoLines, PG / 2, y, { align: 'center' })
+    y += cargoLines.length * 5 + 2
+  }
+
+  if (f.portaria_nomeacao) {
+    doc.setFontSize(8)
+    doc.setTextColor(100, 110, 125)
+    doc.text(fmt(f.portaria_nomeacao), PG / 2, y, { align: 'center' })
+    y += 5
+  }
+
+  if (f.setor_emissor) {
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'italic')
+    doc.setTextColor(100, 110, 125)
+    doc.text(fmt(f.setor_emissor), PG / 2, y, { align: 'center' })
+    y += 5
+  }
+
+  if (f.secretaria_emissora) {
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'italic')
+    doc.setTextColor(100, 110, 125)
+    doc.text(fmt(f.secretaria_emissora), PG / 2, y, { align: 'center' })
+  }
+
+  // ── Rodapé ───────────────────────────────────────────────────────────────────
+  const totalPages = doc.getNumberOfPages()
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p)
+    doc.setFillColor(18, 26, 48)
+    doc.rect(0, 291, PG, 6, 'F')
+    doc.setFontSize(7)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(150, 160, 175)
+    doc.text(nomePrefeitura, MO, 295)
+    doc.text(`Pág. ${p}/${totalPages}`, PG - MO, 295, { align: 'right' })
+  }
+
+  const nomeArq = `Oficio_${f.numero || processo?.numero || 'doc'}.pdf`
+  await salvarDocumentoGerado(doc, { nome: nomeArq, processoId: processo?.id, tipoOrigem: 'oficio' })
+  if (imprimir) {
+    const blob = doc.output('blob')
+    const url  = URL.createObjectURL(blob)
+    const win  = window.open(url, '_blank')
+    if (win) win.addEventListener('load', () => { win.print(); URL.revokeObjectURL(url) })
+  } else {
+    doc.save(nomeArq)
+  }
 }
 
 // ─── PAUTA ────────────────────────────────────────────────────────────────────
-export function gerarPautaPDF(processo) {
+export async function gerarPautaPDF(processo) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   let y = cabecalho(doc, 'PAUTA DE PROCESSO', processo.numero, processo.secretaria?.sigla || processo.secretariaSigla)
 
@@ -267,11 +566,13 @@ export function gerarPautaPDF(processo) {
     doc.text('Assinatura', bx + cw / 2 - 6, y + 24)
   })
 
-  doc.save(`Pauta_${processo.numero || 'processo'}.pdf`)
+  const nomeArqPauta = `Pauta_${processo.numero || 'processo'}.pdf`
+  await salvarDocumentoGerado(doc, { nome: nomeArqPauta, processoId: processo.id, tipoOrigem: 'pauta' })
+  doc.save(nomeArqPauta)
 }
 
 // ─── REQUISIÇÃO ───────────────────────────────────────────────────────────────
-export function gerarRequisicaoPDF(processo) {
+export async function gerarRequisicaoPDF(processo) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   let y = cabecalho(doc, 'REQUISIÇÃO DE MATERIAL', processo.numero, processo.secretaria?.sigla || processo.secretariaSigla)
 
@@ -385,5 +686,7 @@ export function gerarRequisicaoPDF(processo) {
     doc.text(sub, bx + (cw - 4) / 2 - 10, y + 24)
   })
 
-  doc.save(`Requisicao_${processo.numero || 'processo'}.pdf`)
+  const nomeArqReq = `Requisicao_${processo.numero || 'processo'}.pdf`
+  await salvarDocumentoGerado(doc, { nome: nomeArqReq, processoId: processo.id, tipoOrigem: 'requisicao' })
+  doc.save(nomeArqReq)
 }

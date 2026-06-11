@@ -59,6 +59,16 @@ const defineUserModel = (sequelize) => {
       allowNull: true,
       comment: 'FK: Setor específico do usuário'
     },
+    cargo: {
+      type: DataTypes.STRING(120),
+      allowNull: true,
+      comment: 'Cargo/função do usuário (ex: Prefeito Municipal, Secretário de Finanças)'
+    },
+    portaria_nomeacao: {
+      type: DataTypes.STRING(60),
+      allowNull: true,
+      comment: 'Número da portaria de nomeação (ex: Portaria nº 001/2026)'
+    },
     permissoes: {
       type: DataTypes.JSONB,
       defaultValue: {

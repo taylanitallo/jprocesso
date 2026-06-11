@@ -373,6 +373,77 @@ const reorderDocumentos = async (req, res) => {
   }
 };
 
+// Salva PDF gerado automaticamente (DID, despacho, ofício, pauta, requisição, ordem)
+const salvarDocumentoGerado = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo foi enviado' });
+
+    const { processoId, tipoOrigem = 'gerado', nomeExibicao } = req.body;
+    const { Processo, Documento } = req.models;
+
+    // Valida processo somente se informado
+    if (processoId) {
+      const processo = await Processo.findByPk(processoId);
+      if (!processo) return res.status(404).json({ error: 'Processo não encontrado' });
+    }
+
+    const buffer     = req.file.buffer;
+    const hash_sha256 = crypto.createHash('sha256').update(buffer).digest('hex');
+    const hash_md5    = crypto.createHash('md5').update(buffer).digest('hex');
+
+    const ext         = path.extname(req.file.originalname) || '.pdf';
+    const nomeSistema = `${crypto.randomBytes(16).toString('hex')}${ext}`;
+    const pasta       = processoId
+      ? `${req.tenant.schema}/${processoId}/${nomeSistema}`
+      : `${req.tenant.schema}/gerados/${tipoOrigem}/${nomeSistema}`;
+
+    await storage.uploadDocumento({ buffer, path: pasta, contentType: 'application/pdf' });
+
+    const countExistentes = processoId
+      ? await Documento.count({ where: { processo_id: processoId } })
+      : 0;
+
+    const documento = await Documento.create({
+      processo_id:   processoId || null,
+      nome_sistema:  nomeSistema,
+      nome_arquivo:  nomeExibicao || req.file.originalname,
+      tipo_mime:     'application/pdf',
+      tamanho_bytes: req.file.size,
+      url_arquivo:   pasta,
+      hash_md5,
+      hash_sha256,
+      upload_por_id: req.user.id,
+      tipo_origem:   tipoOrigem,
+      ordem:         countExistentes,
+    });
+
+    res.status(201).json({ message: 'Documento salvo com sucesso', documentoId: documento.id });
+  } catch (error) {
+    console.error('Erro ao salvar documento gerado:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+// Lista documentos gerados (sem processo ou com tipo_origem != 'anexo')
+const listarDocumentosGerados = async (req, res) => {
+  try {
+    const { Documento, User } = req.models;
+    const { Op } = require('sequelize');
+
+    const docs = await Documento.findAll({
+      where: { tipo_origem: { [Op.ne]: 'anexo' } },
+      include: [{ model: User, as: 'uploadPor', attributes: ['id', 'nome'] }],
+      order: [['created_at', 'DESC']],
+      limit: 200,
+    });
+
+    res.json({ documentos: docs });
+  } catch (error) {
+    console.error('Erro ao listar documentos gerados:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
 module.exports = {
   uploadDocumento,
   downloadDocumento,
@@ -383,4 +454,6 @@ module.exports = {
   listDocumentos,
   deleteDocumento,
   reorderDocumentos,
+  salvarDocumentoGerado,
+  listarDocumentosGerados,
 };

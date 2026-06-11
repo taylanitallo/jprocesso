@@ -3,9 +3,19 @@ import { useQuery, useQueryClient } from 'react-query'
 import api from '../services/api'
 import {
   Archive, Folder, FolderOpen, FileText, ExternalLink,
-  ChevronRight, ChevronDown, Download, FolderInput, X,
+  ChevronRight, ChevronDown, Download, FolderInput, X, Zap,
 } from 'lucide-react'
 import { PageHeader } from '../components/ui'
+
+const TIPO_LABEL = {
+  did:        { label: 'DID',           cor: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300' },
+  despacho:   { label: 'Despacho',      cor: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' },
+  oficio:     { label: 'Ofício',        cor: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
+  pauta:      { label: 'Pauta',         cor: 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300' },
+  requisicao: { label: 'Requisição',    cor: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300' },
+  ordem:      { label: 'Ordem',         cor: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
+  gerado:     { label: 'Gerado',        cor: 'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-300' },
+}
 
 const TIPOS = ['Did', 'Despacho', 'Pauta', 'Requisição', 'Geral']
 
@@ -428,6 +438,7 @@ export default function Arquivo() {
   const [moveModal,   setMoveModal]   = useState(null)
   const [moveLoading, setMoveLoading] = useState(false)
   const [feedback,    setFeedback]    = useState('')
+  const [aba,         setAba]         = useState('processos') // 'processos' | 'gerados'
 
   const { data, isLoading } = useQuery(
     'arquivo-processos',
@@ -438,7 +449,17 @@ export default function Arquivo() {
     { staleTime: 2 * 60 * 1000 }
   )
 
-  const processos = data || []
+  const { data: dataGerados, isLoading: loadingGerados } = useQuery(
+    'documentos-gerados',
+    async () => {
+      const { data } = await api.get('/documentos/gerados')
+      return data.documentos || []
+    },
+    { staleTime: 60 * 1000 }
+  )
+
+  const processos      = data || []
+  const docsGerados    = dataGerados || []
   const tree      = buildTree(processos)
   const anos      = Object.keys(tree).sort((a, b) => b - a)
   const totalDocs = processos.reduce((s, p) => s + (p.documentos?.length || 0), 0)
@@ -499,7 +520,7 @@ export default function Arquivo() {
       <PageHeader
         icon={Archive}
         title="Gerenciador de Arquivos"
-        subtitle={`${processos.length} processos concluídos · ${totalDocs} documentos`}
+        subtitle={`${processos.length} processos concluídos · ${totalDocs} documentos · ${docsGerados.length} gerados`}
       />
 
       {/* Toast */}
@@ -510,7 +531,88 @@ export default function Arquivo() {
         </div>
       )}
 
-      {anos.length === 0 ? (
+      {/* Abas */}
+      <div className="flex gap-1 bg-gray-100 dark:bg-slate-800/50 p-1 rounded-xl w-fit">
+        {[
+          { id: 'processos', label: 'Processos Concluídos', icon: Archive },
+          { id: 'gerados',   label: 'Documentos Gerados',  icon: Zap     },
+        ].map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => setAba(id)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              aba === id
+                ? 'bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 shadow-sm'
+                : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'
+            }`}
+          >
+            <Icon className="h-4 w-4" />
+            {label}
+            <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+              aba === id ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'bg-gray-200 dark:bg-slate-600 text-gray-500 dark:text-slate-400'
+            }`}>
+              {id === 'processos' ? processos.length : docsGerados.length}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* ── ABA: Documentos Gerados ── */}
+      {aba === 'gerados' && (
+        <div className="card p-4">
+          {loadingGerados ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : docsGerados.length === 0 ? (
+            <div className="text-center py-14 space-y-3">
+              <Zap className="h-10 w-10 text-gray-200 dark:text-slate-700 mx-auto" />
+              <p className="text-sm text-gray-500 dark:text-slate-400">Nenhum documento gerado ainda</p>
+              <p className="text-xs text-gray-400 dark:text-slate-500">
+                Documentos são salvos automaticamente ao gerar PDFs de DID, despacho, ofício e outros.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100 dark:divide-slate-700/50">
+              {docsGerados.map(doc => {
+                const meta = TIPO_LABEL[doc.tipo_origem] || TIPO_LABEL.gerado
+                const data = doc.created_at || doc.data_upload
+                return (
+                  <div key={doc.id} className="flex items-center gap-3 py-2.5 group">
+                    <div className="shrink-0 flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/30">
+                      <FileText className="h-4 w-4 text-red-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <button
+                        onClick={() => handleViewDoc(doc)}
+                        className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline truncate block text-left max-w-full"
+                        title="Abrir em nova aba"
+                      >
+                        {doc.nome_arquivo}
+                      </button>
+                      <p className="text-xs text-gray-400 dark:text-slate-500">
+                        {data ? new Date(data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
+                        {doc.uploadPor?.nome && ` · ${doc.uploadPor.nome}`}
+                        {' · '}{(doc.tamanho_bytes / 1024).toFixed(0)} KB
+                      </p>
+                    </div>
+                    <span className={`shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full ${meta.cor}`}>
+                      {meta.label}
+                    </span>
+                    <ExternalLink
+                      className="h-3.5 w-3.5 text-gray-300 dark:text-slate-600 group-hover:text-blue-400 transition-colors cursor-pointer shrink-0"
+                      onClick={() => handleViewDoc(doc)}
+                    />
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── ABA: Processos Concluídos ── */}
+      {aba === 'processos' && (anos.length === 0 ? (
         <div className="card p-16 text-center space-y-3">
           <Archive className="h-14 w-14 text-gray-200 dark:text-slate-700 mx-auto" />
           <p className="text-gray-500 dark:text-slate-400 font-medium">Nenhum processo concluído encontrado</p>
@@ -563,7 +665,7 @@ export default function Arquivo() {
             })}
           </div>
         </div>
-      )}
+      ))}
 
       {moveModal && (
         <MoveModal

@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { salvarDocumentoGerado } from '../../utils/salvarDocumentoGerado'
 
 // ─── Utilitários ──────────────────────────────────────────────────────────────
 const fmt     = v => (v && String(v).trim()) ? String(v).trim() : '—'
@@ -162,7 +163,7 @@ async function carregarImagem(url) {
 }
 
 // ─── Geração Principal ────────────────────────────────────────────────────────
-export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid }) {
+export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, processoId }) {
   const doc   = new jsPDF({ unit: 'mm', format: 'a4' })
   const pageW = 210
   const pageH = 297
@@ -649,6 +650,9 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid }) {
 
   // ── Salvar ────────────────────────────────────────────────────────────────
   const nomeArq = `DID_${form.numero_did || 'rascunho'}_${(form.contrato_ref || 'sem-contrato').replace(/[\/\\]/g, '-')}.pdf`
+  if (processoId && processoId !== 'novo') {
+    await salvarDocumentoGerado(doc, { nome: nomeArq, processoId, tipoOrigem: 'did' })
+  }
   doc.save(nomeArq)
 }
 
