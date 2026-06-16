@@ -1365,21 +1365,105 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
             const exportPDF = async () => {
               const timbradoUrl = tenant.configuracoes?.timbrado_url || '';
 
-              // Pré-carrega o timbrado como base64 para evitar CORS no about:blank
+              // Margens padrão (sem timbrado)
               let timbradoSrc = '';
+              let mg = { top: 20, bottom: 20, left: 20, right: 20 };
+
               if (timbradoUrl) {
-                timbradoSrc = await new Promise((resolve) => {
+                const result = await new Promise((resolve) => {
                   const img = new window.Image();
                   img.crossOrigin = 'anonymous';
                   img.onload = () => {
-                    const c = document.createElement('canvas');
-                    c.width = img.naturalWidth; c.height = img.naturalHeight;
-                    c.getContext('2d').drawImage(img, 0, 0);
-                    resolve(c.toDataURL('image/png'));
+                    // ── base64 em resolução original (qualidade de impressão) ──
+                    const full = document.createElement('canvas');
+                    full.width  = img.naturalWidth;
+                    full.height = img.naturalHeight;
+                    full.getContext('2d').drawImage(img, 0, 0);
+                    const src = full.toDataURL('image/png');
+
+                    // ── canvas reduzido para detecção de margens (performance) ──
+                    const DW   = 420;
+                    const DH   = Math.round(img.naturalHeight * (DW / img.naturalWidth));
+                    const dc   = document.createElement('canvas');
+                    dc.width = DW; dc.height = DH;
+                    dc.getContext('2d').drawImage(img, 0, 0, DW, DH);
+                    const pd   = dc.getContext('2d').getImageData(0, 0, DW, DH).data;
+
+                    // pixel claro = transparente OU luminância > 228
+                    const isLight = (i) =>
+                      pd[i + 3] < 30 ||
+                      (0.299 * pd[i] + 0.587 * pd[i + 1] + 0.114 * pd[i + 2]) > 228;
+
+                    const rowLight = (y) => {
+                      let n = 0;
+                      for (let x = 0; x < DW; x++) if (isLight((y * DW + x) * 4)) n++;
+                      return n / DW;
+                    };
+                    const colLight = (x) => {
+                      let n = 0;
+                      for (let y = 0; y < DH; y++) if (isLight((y * DW + x) * 4)) n++;
+                      return n / DH;
+                    };
+
+                    const T = 0.90; // limiar: linha/coluna "branca" se >90% claros
+
+                    // ─── topo: última linha colorida nos 60% superiores ───────
+                    let topPx = 0;
+                    for (let y = 0; y < DH * 0.6; y++) {
+                      if (rowLight(y) < T) topPx = y + 1;
+                    }
+
+                    // ─── rodapé: varrer de baixo; localizar início do bloco ───
+                    let footStart = DH;
+                    for (let y = DH - 1; y > DH * 0.4; y--) {
+                      if (rowLight(y) < T) footStart = y;
+                      else {
+                        let wc = 0;
+                        for (let yy = y - 1; yy >= Math.max(0, y - 8); yy--)
+                          if (rowLight(yy) >= T) wc++;
+                        if (wc >= 6) break;
+                      }
+                    }
+
+                    // ─── esquerda: última coluna colorida no terço esquerdo ───
+                    let leftPx = 0;
+                    for (let x = 0; x < DW * 0.4; x++) {
+                      if (colLight(x) < T) leftPx = x + 1;
+                    }
+
+                    // ─── direita: início do bloco colorido no terço direito ───
+                    let rightStart = DW;
+                    for (let x = DW - 1; x > DW * 0.6; x--) {
+                      if (colLight(x) < T) rightStart = x;
+                      else {
+                        let wc = 0;
+                        for (let xx = x - 1; xx >= Math.max(0, x - 8); xx--)
+                          if (colLight(xx) >= T) wc++;
+                        if (wc >= 6) break;
+                      }
+                    }
+
+                    // pixels → mm (A4 = 297mm altura, 210mm largura)
+                    const mmH = (px) => (px / DH) * 297;
+                    const mmW = (px) => (px / DW) * 210;
+                    const PAD = 6; // folga interna dentro da área branca (mm)
+
+                    resolve({
+                      src,
+                      mg: {
+                        top:    Math.max(Math.ceil(mmH(topPx))            + PAD, 14),
+                        bottom: Math.max(Math.ceil(mmH(DH - footStart))   + PAD, 14),
+                        left:   Math.max(Math.ceil(mmW(leftPx))           + PAD, 14),
+                        right:  Math.max(Math.ceil(mmW(DW - rightStart))  + PAD, 14),
+                      },
+                    });
                   };
-                  img.onerror = () => resolve('');
+                  img.onerror = () => resolve({ src: '', mg: { top: 50, bottom: 35, left: 20, right: 20 } });
                   img.src = timbradoUrl;
                 });
+
+                timbradoSrc = result.src;
+                mg = result.mg;
               }
 
               const rows = relLogs.map(l => `
@@ -1410,12 +1494,16 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
   .btn-imprimir{padding:7px 18px;border-radius:6px;background:#2563eb;border:none;
     color:#fff;cursor:pointer;font-size:13px;font-weight:700;letter-spacing:.3px}
   .btn-imprimir:hover{background:#1d4ed8}
-  .wrapper{padding-top:68px;padding-bottom:32px;display:flex;justify-content:center}
+  /* preview */
+  .wrapper{padding-top:68px;padding-bottom:32px;display:flex;flex-direction:column;
+    align-items:center;gap:16px}
   .page{width:210mm;min-height:297mm;background:#fff;position:relative;
-    box-shadow:0 4px 24px rgba(0,0,0,.2);margin:0 auto}
-  .timbrado-img{position:absolute;top:0;left:0;width:100%;height:100%;
+    box-shadow:0 4px 24px rgba(0,0,0,.18)}
+  .timbrado-bg{position:absolute;inset:0;width:100%;height:100%;
     object-fit:fill;display:block;pointer-events:none}
-  .content{position:relative;z-index:1;padding:46mm 14mm 20mm}
+  /* área de conteúdo: margens detectadas automaticamente do timbrado */
+  .content{position:relative;z-index:1;
+    padding:${mg.top}mm ${mg.right}mm ${mg.bottom}mm ${mg.left}mm}
   .report-title{text-align:center;color:#1e40af;font-size:13px;font-weight:700;margin-bottom:4px}
   .report-sub{text-align:center;color:#374151;font-size:11px;margin-bottom:3px}
   .report-meta{text-align:center;color:#6b7280;font-size:9px;margin-bottom:16px}
@@ -1424,13 +1512,26 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
   thead th{color:#fff;padding:7px 8px;text-align:left;font-weight:700;font-size:9px}
   tbody tr:nth-child(even){background:#f5f7fa}
   tbody td{padding:6px 8px;color:#374151;border-bottom:1px solid #e5e7eb}
+  tbody tr{page-break-inside:avoid}
   .ev-login{color:#16a34a;font-weight:600}
   .ev-logout{color:#dc2626;font-weight:600}
+  /* impressão: timbrado como background repetido em cada folha A4 */
   @media print{
-    body{background:#fff}
-    .toolbar{display:none}
-    .wrapper{padding-top:0;padding-bottom:0}
-    .page{box-shadow:none;margin:0}
+    body{
+      background:white;
+      ${timbradoSrc
+        ? `background-image:url('${timbradoSrc}');
+           background-size:210mm 297mm;
+           background-repeat:repeat;
+           print-color-adjust:exact;
+           -webkit-print-color-adjust:exact;`
+        : ''}
+    }
+    .toolbar{display:none!important}
+    .wrapper{padding:0;gap:0}
+    .page{box-shadow:none;background:transparent;break-after:page}
+    .page:last-child{break-after:auto}
+    .timbrado-bg{display:none}
     @page{size:A4 portrait;margin:0}
   }
 </style>
@@ -1440,12 +1541,12 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
   <span class="toolbar-title">📄 Visualização de Impressão</span>
   <div class="toolbar-btns">
     <button class="btn-fechar" onclick="window.close()">Fechar</button>
-    <button class="btn-imprimir" onclick="window.print()">🖨️ IMPRIMIR</button>
+    <button class="btn-imprimir" onclick="window.print()">🖨️ IMPRIMIR / SALVAR PDF</button>
   </div>
 </div>
 <div class="wrapper">
   <div class="page">
-    ${timbradoSrc ? `<img src="${timbradoSrc}" class="timbrado-img"/>` : ''}
+    ${timbradoSrc ? `<img src="${timbradoSrc}" class="timbrado-bg" alt=""/>` : ''}
     <div class="content">
       <div class="report-title">jProcesso - Sistema de Tramitação Digital</div>
       <div class="report-sub">Relatório de Acessos — ${tenant.nome_municipio}</div>
