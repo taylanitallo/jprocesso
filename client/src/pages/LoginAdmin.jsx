@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield } from 'lucide-react';
-import api from '../services/api';
+import api, { setAccessToken } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginAdmin() {
@@ -27,13 +27,17 @@ export default function LoginAdmin() {
         subdomain: 'admin' // Identificador especial para superadmin
       });
 
-      // Salvar apenas token + flags de sessão (sem dados volumosos)
+      // Limpar qualquer sessão de tenant anterior antes de setar admin
+      localStorage.removeItem('subdomain');
+      delete api.defaults.headers.common['x-tenant-subdomain'];
+
+      // Salvar flags de sessão admin
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('isAdmin', 'true');
       localStorage.setItem('subdomain', 'admin');
-      
-      // Configurar header de autenticação
-      api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+
+      // M-3: access token em memória + default header para SPA navigation
+      setAccessToken(response.data.token);
       api.defaults.headers.common['x-tenant-subdomain'] = 'admin';
 
       // Redirecionar para área de gestão

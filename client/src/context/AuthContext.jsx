@@ -72,6 +72,9 @@ export default function AuthProvider({ children }) {
     // M-3: access token em memória — nunca no localStorage
     setAccessToken(data.token)
     localStorage.setItem('subdomain', data.tenant.subdominio)
+    // Limpar estado admin residual de sessão anterior
+    localStorage.removeItem('isAdmin')
+    localStorage.removeItem('token')
 
     setUser(data.user)
     setTenant(data.tenant)
@@ -93,6 +96,8 @@ export default function AuthProvider({ children }) {
 
     clearAccessToken()
     localStorage.removeItem('subdomain')
+    localStorage.removeItem('isAdmin')
+    localStorage.removeItem('token')
 
     setUser(null)
     setTenant(null)
