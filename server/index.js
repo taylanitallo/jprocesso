@@ -137,9 +137,24 @@ const fs = require('fs');
 const distPath = path.join(__dirname, '..', 'client', 'dist');
 
 if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath));
+  // Assets com hash no nome podem ser cacheados por 1 ano
+  // index.html nunca deve ser cacheado para sempre buscar os hashes novos
+  app.use(express.static(distPath, {
+    setHeaders(res, filePath) {
+      if (filePath.endsWith('index.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+        res.setHeader('Pragma', 'no-cache')
+        res.setHeader('Expires', '0')
+      } else {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+      }
+    }
+  }));
   // Catch-all: devolve index.html para rotas do React Router
   app.get('*', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+    res.setHeader('Pragma', 'no-cache')
+    res.setHeader('Expires', '0')
     res.sendFile(path.join(distPath, 'index.html'));
   });
 } else {
