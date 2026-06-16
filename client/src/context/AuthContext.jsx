@@ -23,7 +23,11 @@ export default function AuthProvider({ children }) {
   useEffect(() => {
     const subdomain = localStorage.getItem('subdomain')
 
+    // Segurança: forçar loading=false em até 5s independente do que acontecer
+    const safetyTimer = setTimeout(() => setLoading(false), 5000)
+
     if (!subdomain) {
+      clearTimeout(safetyTimer)
       setLoading(false)
       return
     }
@@ -34,7 +38,7 @@ export default function AuthProvider({ children }) {
     // M-3: ao recarregar a página, access token não existe em memória.
     // Restaurar sessão via refresh token (httpOnly cookie) — sem tocar localStorage.
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 8000)
+    const timeout = setTimeout(() => controller.abort(), 4000)
     api.post('/auth/refresh', {}, { signal: controller.signal })
       .then(({ data }) => {
         setAccessToken(data.token)
@@ -55,8 +59,11 @@ export default function AuthProvider({ children }) {
       })
       .finally(() => {
         clearTimeout(timeout)
+        clearTimeout(safetyTimer)
         setLoading(false)
       })
+
+    return () => { clearTimeout(safetyTimer); clearTimeout(timeout) }
   }, [])
 
   const login = async (cpf, senha, subdomain) => {
