@@ -49,7 +49,7 @@ function PrivateRoute({ children, requireAdmin = false }) {
   const token = localStorage.getItem('token')
   const subdomain = window.location.pathname.split('/')[1]
 
-  if (loading) return null
+  if (loading) return <PageLoader />
 
   if (requireAdmin) {
     if (!token || !isAdmin) return <Navigate to="/" replace />
@@ -75,7 +75,7 @@ function LoginRoute() {
   const location = useLocation()
   const subdomain = location.pathname.split('/')[1]
 
-  if (loading) return null
+  if (loading) return <PageLoader />
   if (user) return <Navigate to={`/${subdomain}`} replace />
   return <Login />
 }

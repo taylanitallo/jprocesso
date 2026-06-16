@@ -33,7 +33,9 @@ export default function AuthProvider({ children }) {
 
     // M-3: ao recarregar a página, access token não existe em memória.
     // Restaurar sessão via refresh token (httpOnly cookie) — sem tocar localStorage.
-    api.post('/auth/refresh')
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 8000)
+    api.post('/auth/refresh', {}, { signal: controller.signal })
       .then(({ data }) => {
         setAccessToken(data.token)
         // Buscar usuário e tenant em paralelo com o novo token em memória
@@ -47,12 +49,14 @@ export default function AuthProvider({ children }) {
         if (tenantInfoData?.tenant) setTenant(tenantInfoData.tenant)
       })
       .catch(() => {
-        // Refresh falhou (cookie expirado/ausente) — limpa sessão local
         clearAccessToken()
         localStorage.removeItem('subdomain')
         delete api.defaults.headers.common['x-tenant-subdomain']
       })
-      .finally(() => setLoading(false))
+      .finally(() => {
+        clearTimeout(timeout)
+        setLoading(false)
+      })
   }, [])
 
   const login = async (cpf, senha, subdomain) => {
