@@ -180,6 +180,9 @@ const defineDidModel = (sequelize) => {
     // ── Vínculo com Ordem de Compra ───────────────────────────────────────
     ordem_compra_id: { type: DataTypes.INTEGER, allowNull: true },
     ordem_ref:       { type: DataTypes.STRING(100), allowNull: true },
+
+    // ── Tesouraria ────────────────────────────────────────────────────────
+    conta_pagamento_id: { type: DataTypes.UUID, allowNull: true, comment: 'FK: ContaBancaria de onde saiu o pagamento' },
   }, {
     tableName: 'dids',
     timestamps: true,

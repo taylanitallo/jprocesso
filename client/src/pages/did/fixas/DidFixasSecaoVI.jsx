@@ -1,7 +1,8 @@
 import { Banknote } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { Field, Input, Checkbox, SectionCard, SecaoBotoes } from '../didShared'
+import { Field, Input, UserSelect, Checkbox, SectionCard, SecaoBotoes } from '../didShared'
 import { BANCOS } from '../bancosBrasil'
+import api from '../../../services/api'
 
 function BancoSelect({ value, onChange, disabled }) {
   const [query, setQuery] = useState('')
@@ -48,6 +49,35 @@ function BancoSelect({ value, onChange, disabled }) {
   )
 }
 
+function ContaSelect({ value, onChange, disabled, onSelect }) {
+  const [contas, setContas] = useState([])
+  useEffect(() => {
+    api.get('/organizacao/contas-bancarias?ativo=true')
+      .then(({ data }) => setContas(data.contas || []))
+      .catch(() => {})
+  }, [])
+
+  const handleChange = (e) => {
+    onChange(e)
+    if (onSelect) {
+      const conta = contas.find(c => c.id === e.target.value) || null
+      onSelect(conta)
+    }
+  }
+
+  const cls = `input-field text-sm${disabled ? ' opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800' : ''}`
+  return (
+    <select value={value ?? ''} onChange={handleChange} disabled={disabled} className={cls}>
+      <option value="">— Selecione a conta —</option>
+      {contas.map(c => (
+        <option key={c.id} value={c.id}>
+          {c.nome}{c.secretaria ? ` (${c.secretaria.sigla})` : ''} — {c.banco_nome || ''} Ag.{c.agencia} C/C {c.conta}{c.conta_digito ? `-${c.conta_digito}` : ''}
+        </option>
+      ))}
+    </select>
+  )
+}
+
 export default function DidFixasSecaoVI({ form, inp, chk, vliq, saving, didId, onSave, onLimpar }) {
   const [locked, setLocked] = useState(false)
   useEffect(() => { if (didId) setLocked(true) }, [didId])
@@ -67,7 +97,19 @@ export default function DidFixasSecaoVI({ form, inp, chk, vliq, saving, didId, o
         <Input type="date" value={form.tesouraria_recebido_em} onChange={inp('tesouraria_recebido_em')} disabled={locked} />
       </Field>
       <Field label="Responsável" half>
-        <Input value={form.tesouraria_responsavel} onChange={inp('tesouraria_responsavel')} disabled={locked} />
+        <UserSelect value={form.tesouraria_responsavel} onChange={inp('tesouraria_responsavel')} disabled={locked} secretaria="tesouraria" />
+      </Field>
+      <Field label="Conta de Pagamento">
+        <ContaSelect
+          value={form.conta_pagamento_id}
+          onChange={inp('conta_pagamento_id')}
+          disabled={locked}
+          onSelect={(c) => {
+            inp('banco_pagador')({ target: { value: c?.banco_nome ? `${c.banco_nome}${c.banco_codigo ? ` - ${c.banco_codigo}` : ''}` : '' } })
+            inp('ag_pagador')({ target: { value: c?.agencia ? `${c.agencia}${c.agencia_digito ? `-${c.agencia_digito}` : ''}` : '' } })
+            inp('cc_pagador')({ target: { value: c?.conta ? `${c.conta}${c.conta_digito ? `-${c.conta_digito}` : ''}` : '' } })
+          }}
+        />
       </Field>
 
       {/* Dados do pagamento */}
@@ -78,15 +120,15 @@ export default function DidFixasSecaoVI({ form, inp, chk, vliq, saving, didId, o
         <div className="grid grid-cols-3 gap-3">
           <div>
             <label className="block text-xs text-gray-500 mb-1">Banco</label>
-            <BancoSelect value={form.banco_pagador} onChange={inp('banco_pagador')} disabled={locked} />
+            <Input value={form.banco_pagador} onChange={inp('banco_pagador')} disabled />
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">Ag.</label>
-            <Input value={form.ag_pagador} onChange={inp('ag_pagador')} disabled={locked} />
+            <Input value={form.ag_pagador} onChange={inp('ag_pagador')} disabled />
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">C/C</label>
-            <Input value={form.cc_pagador} onChange={inp('cc_pagador')} disabled={locked} />
+            <Input value={form.cc_pagador} onChange={inp('cc_pagador')} disabled />
           </div>
         </div>
       </div>

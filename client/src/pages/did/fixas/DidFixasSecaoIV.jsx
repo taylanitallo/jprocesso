@@ -1,6 +1,6 @@
 import { Calculator } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { Field, Input, SectionCard, SecaoBotoes } from '../didShared'
+import { Field, Input, UserSelect, SectionCard, SecaoBotoes } from '../didShared'
 
 export default function DidFixasSecaoIV({ form, inp, saving, didId, onSave, onLimpar }) {
   const [locked, setLocked] = useState(false)
@@ -20,7 +20,7 @@ export default function DidFixasSecaoIV({ form, inp, saving, didId, onSave, onLi
         <Input type="date" value={form.contabil_recebido_em} onChange={inp('contabil_recebido_em')} disabled={locked} />
       </Field>
       <Field label="Responsável" half>
-        <Input value={form.contabil_responsavel} onChange={inp('contabil_responsavel')} disabled={locked} />
+        <UserSelect value={form.contabil_responsavel} onChange={inp('contabil_responsavel')} disabled={locked} secretaria="contabil" />
       </Field>
       <Field label="Auditor">
         <Input value={form.contabil_auditor} onChange={inp('contabil_auditor')} disabled={locked} />

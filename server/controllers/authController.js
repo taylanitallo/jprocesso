@@ -356,6 +356,36 @@ const getProfile = async (req, res) => {
   }
 };
 
+const getUsersBySecretaria = async (req, res) => {
+  try {
+    const { User, Secretaria } = req.models;
+    const { nome } = req.query;
+    const { Op } = require('sequelize');
+
+    const where = { ativo: true };
+
+    if (nome) {
+      const secretarias = await Secretaria.findAll({
+        attributes: ['id'],
+        where: { nome: { [Op.iLike]: `%${nome}%` } },
+      });
+      const ids = secretarias.map(s => s.id);
+      // Filtra pela secretaria se encontrou, senão retorna todos (fallback)
+      if (ids.length) where.secretariaId = { [Op.in]: ids };
+    }
+
+    const users = await User.findAll({
+      attributes: ['id', 'nome'],
+      where,
+      order: [['nome', 'ASC']],
+    });
+    res.json({ users });
+  } catch (error) {
+    console.error('getUsersBySecretaria:', error);
+    res.status(500).json({ error: 'Erro ao buscar usuários' });
+  }
+};
+
 const listUsers = async (req, res) => {
   try {
     const { User, Secretaria, Setor } = req.models;
@@ -565,6 +595,7 @@ module.exports = {
   register,
   login,
   getProfile,
+  getUsersBySecretaria,
   listUsers,
   updateUser,
   deleteUser,

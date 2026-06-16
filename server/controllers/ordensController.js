@@ -83,17 +83,23 @@ const listOrdens = async (req, res) => {
       o.dataValues.saldo_info = contratosVistos.get(cid);
     }
 
-    // Marcar ordens vinculadas a DIDs
+    // Marcar ordens vinculadas a DIDs e incluir número do processo
     try {
-      const { Did } = req.models;
+      const { Did, Processo } = req.models;
       const idsOrdens = ordens.map(o => o.id);
       if (idsOrdens.length > 0) {
         const didsVinculados = await Did.findAll({
-          attributes: ['ordem_compra_id'],
+          attributes: ['ordem_compra_id', 'processo_id'],
           where: { ordem_compra_id: { [Op.in]: idsOrdens } },
+          include: [{ model: Processo, as: 'processo', attributes: ['id', 'numero'] }],
         });
-        const vinculadosSet = new Set(didsVinculados.map(d => d.ordem_compra_id));
-        ordens.forEach(o => { o.dataValues.did_vinculado = vinculadosSet.has(o.id); });
+        const vinculadosMap = new Map(
+          didsVinculados.map(d => [d.ordem_compra_id, d.processo?.numero || null])
+        );
+        ordens.forEach(o => {
+          o.dataValues.did_vinculado = vinculadosMap.has(o.id);
+          o.dataValues.numero_processo_vinculado = vinculadosMap.get(o.id) || null;
+        });
       }
     } catch (_) {
       // Silencia se coluna ainda não existe

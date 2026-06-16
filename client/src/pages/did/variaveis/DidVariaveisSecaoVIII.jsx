@@ -1,6 +1,6 @@
 import { ShoppingCart } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { Field, Input, SectionCard, SecaoBotoes } from '../didShared'
+import { Field, Input, UserSelect, SectionCard, SecaoBotoes } from '../didShared'
 
 export default function DidVariaveisSecaoVIII({ form, inp, set, saving, didId, onSave, onLimpar }) {
   const [locked, setLocked] = useState(false)
@@ -20,7 +20,7 @@ export default function DidVariaveisSecaoVIII({ form, inp, set, saving, didId, o
         <Input type="date" value={form.compras3_recebido_em} onChange={inp('compras3_recebido_em')} disabled={locked} />
       </Field>
       <Field label="Responsável" half>
-        <Input value={form.compras3_responsavel} onChange={inp('compras3_responsavel')} disabled={locked} />
+        <UserSelect value={form.compras3_responsavel} onChange={inp('compras3_responsavel')} disabled={locked} secretaria="compras" />
       </Field>
 
       <Field label="Data de envio para liquidação" half>

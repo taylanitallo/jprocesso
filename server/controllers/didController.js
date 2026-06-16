@@ -2,8 +2,20 @@ const { Op } = require('sequelize');
 const path = require('path');
 const storage = require('../services/storageService');
 
+const migratedSchemas = new Set();
+async function ensureDidColumns(req) {
+  const schema = req.tenant?.schema;
+  if (!schema || migratedSchemas.has(schema)) return;
+  const { Did } = req.models;
+  await Did.sequelize.query(
+    `ALTER TABLE IF EXISTS "${schema}"."dids" ADD COLUMN IF NOT EXISTS "conta_pagamento_id" UUID;`
+  );
+  migratedSchemas.add(schema);
+}
+
 const getByProcesso = async (req, res) => {
   try {
+    await ensureDidColumns(req);
     const { processoId } = req.params;
     const { Did, Processo, Setor, Secretaria } = req.models;
 
@@ -21,6 +33,17 @@ const getByProcesso = async (req, res) => {
     });
 
     if (!did) return res.status(404).json({ error: 'DID não encontrado' });
+
+    // Inclui valor_total da ordem de compra vinculada para preencher valor_bruto na Tesouraria
+    if (did.ordem_compra_id) {
+      try {
+        const { ContratoOrdem } = req.models;
+        const ordem = await ContratoOrdem.findByPk(did.ordem_compra_id, {
+          attributes: ['id', 'numero', 'valor_total'],
+        });
+        if (ordem) did.dataValues.ordem_valor_total = parseFloat(ordem.valor_total) || 0;
+      } catch (_) {}
+    }
 
     // Retroativamente atribui numero_did para registros antigos com o campo nulo
     if (!did.numero_did) {
@@ -41,7 +64,7 @@ const NUMERIC_FIELDS = [
   'valor_did', 'nf_valor', 'valor_bruto',
   'desconto_inss', 'desconto_iss', 'desconto_irrf', 'desconto_sindicato',
   'desconto_bb', 'desconto_caixa', 'desconto_pensao', 'desconto_outros',
-  'ordem_compra_id'
+  'ordem_compra_id', 'conta_pagamento_id'
 ];
 
 const ENUM_FIELDS = ['tipo_did', 'tipo_empenho', 'status'];
@@ -81,6 +104,7 @@ const sanitizeBody = (body) => {
 
 const createOrUpdate = async (req, res) => {
   try {
+    await ensureDidColumns(req);
     const { processoId } = req.params;
     const { Did, Processo, Setor, Secretaria } = req.models;
     const body = sanitizeBody(req.body);

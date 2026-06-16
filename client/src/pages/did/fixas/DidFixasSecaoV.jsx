@@ -1,6 +1,6 @@
 import { Landmark } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { Field, Input, SectionCard, SecaoBotoes } from '../didShared'
+import { Field, Input, UserSelect, SectionCard, SecaoBotoes } from '../didShared'
 
 export default function DidFixasSecaoV({ form, inp, saving, didId, onSave, onLimpar }) {
   const [locked, setLocked] = useState(false)
@@ -20,7 +20,7 @@ export default function DidFixasSecaoV({ form, inp, saving, didId, onSave, onLim
         <Input type="date" value={form.financas2_recebido_em} onChange={inp('financas2_recebido_em')} disabled={locked} />
       </Field>
       <Field label="Responsável" half>
-        <Input value={form.financas2_responsavel} onChange={inp('financas2_responsavel')} disabled={locked} />
+        <UserSelect value={form.financas2_responsavel} onChange={inp('financas2_responsavel')} disabled={locked} secretaria="finan" />
       </Field>
       <Field label="Enviado para Pagamento" half>
         <Input type="date" value={form.financas2_enviado_pagamento} onChange={inp('financas2_enviado_pagamento')} disabled={locked} />

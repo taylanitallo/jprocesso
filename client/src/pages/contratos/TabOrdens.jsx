@@ -1525,6 +1525,11 @@ function TabOrdens() {
                             Vinculada DID
                           </span>
                         )}
+                        {(o.dataValues?.numero_processo_vinculado || o.numero_processo_vinculado) && (
+                          <span className="text-[9px] text-slate-500 dark:text-slate-400 whitespace-nowrap font-medium">
+                            Proc. {o.dataValues?.numero_processo_vinculado || o.numero_processo_vinculado}
+                          </span>
+                        )}
                       </div>
                     </td>
                   </tr>

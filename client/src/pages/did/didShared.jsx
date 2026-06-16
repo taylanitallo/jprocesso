@@ -1,5 +1,6 @@
-import { createContext, useContext } from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
 import { Pencil, Check, Loader2, RotateCcw } from 'lucide-react'
+import api from '../../services/api'
 
 export const DidReadOnlyContext = createContext(false)
 
@@ -48,6 +49,8 @@ export const EMPTY = {
   // Seção de Recebimento (DID Contas Variáveis)
   receb_data: '', receb_nf_data: '', receb_nf_enviado_compras: '', receb_responsavel: '', receb_cargo: '',
   receb_nf_conferida: false, receb_qtd_conferida: false, receb_esp_conforme: false, receb_obs: '',
+  // Tesouraria
+  conta_pagamento_id: '',
   // Seção VII
   contab_fech_finalizado: '', contab_fech_tce: '',
   cnpj_fornecedor: '', banco_fornecedor: '', ag_fornecedor: '', cc_fornecedor: '',
@@ -80,6 +83,37 @@ export function Input({ value, onChange, type = 'text', placeholder, disabled, .
       className={`input-field text-sm${disabled ? ' opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800' : ''}`}
       {...rest}
     />
+  )
+}
+
+const _userCache = {}
+
+export function UserSelect({ value, onChange, disabled, secretaria }) {
+  const [users, setUsers] = useState(null)
+
+  useEffect(() => {
+    if (!secretaria) return
+    if (_userCache[secretaria]) { setUsers(_userCache[secretaria]); return }
+    api.get(`/auth/users/por-secretaria?nome=${encodeURIComponent(secretaria)}`)
+      .then(({ data }) => { _userCache[secretaria] = data.users || []; setUsers(data.users || []) })
+      .catch(() => { _userCache[secretaria] = []; setUsers([]) })
+  }, [secretaria])
+
+  const cls = `input-field text-sm${disabled ? ' opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800' : ''}`
+
+  if (users === null) return <Input value={value} onChange={onChange} disabled placeholder="Carregando..." />
+  if (!users.length)  return <Input value={value} onChange={onChange} disabled={disabled} />
+
+  return (
+    <select value={value ?? ''} onChange={onChange} disabled={disabled} className={cls}>
+      <option value="">— Selecione —</option>
+      {value && !users.some(u => u.nome === value) && (
+        <option value={value}>{value}</option>
+      )}
+      {users.map(u => (
+        <option key={u.id} value={u.nome}>{u.nome}</option>
+      ))}
+    </select>
   )
 }
 

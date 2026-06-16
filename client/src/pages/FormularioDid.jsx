@@ -381,23 +381,23 @@ export default function FormularioDid() {
     // Seção I: campos obrigatórios principais
     if (!(f.credor_sec1 && f.data_did && f.objeto && temItens)) return 1
     if (tipo === 'fixas') {
-      if (!(f.ci_recebido_em || f.ci_responsavel || f.despacho_ci))                    return 2
-      if (!(f.financas_recebido_em || f.financas_responsavel))                          return 3
-      if (!(f.contabil_recebido_em || f.contabil_responsavel || f.empenho_numero))      return 4
-      if (!f.financas)                                                                   return 5
-      if (!(f.tesouraria_recebido_em || f.tesouraria_responsavel || f.pago))            return 6
+      if (!(f.ci_recebido_em || f.ci_responsavel || f.despacho_ci))                           return 2
+      if (!(f.financas_recebido_em || f.financas_responsavel))                                 return 3
+      if (!(f.contabil_recebido_em || f.contabil_responsavel || f.empenho_numero))             return 4
+      if (!(f.financas2_recebido_em || f.financas2_responsavel || f.financas2_enviado_pagamento)) return 5
+      if (!(f.tesouraria_recebido_em || f.tesouraria_responsavel || f.pago))                   return 6
       return 7
     } else { // variaveis
-      if (!(f.ci_recebido_em || f.ci_responsavel || f.despacho_ci))                            return 2
-      if (!(f.financas_recebido_em || f.financas_responsavel))                                  return 3
-      if (!(f.compras2_recebido_em || f.compras2_responsavel || f.compras2_nro_empenho_solicitacao)) return 4
-      if (!(f.contabil_recebido_em || f.contabil_responsavel || f.empenho_numero))              return 5
-      if (!(f.compras_recebido_em || f.compras_responsavel))                                    return 6
-      if (!(f.receb_responsavel || f.receb_data))                                               return 7
-      if (!f.compras)                                                                            return 8
+      if (!(f.ci_recebido_em || f.ci_responsavel || f.despacho_ci))                                    return 2
+      if (!(f.financas_recebido_em || f.financas_responsavel))                                          return 3
+      if (!(f.compras2_recebido_em || f.compras2_responsavel || f.compras2_nro_empenho_solicitacao))    return 4
+      if (!(f.contabil_recebido_em || f.contabil_responsavel || f.empenho_numero))                      return 5
+      if (!(f.compras_recebido_em || f.compras_responsavel))                                            return 6
+      if (!(f.receb_responsavel || f.receb_data))                                                       return 7
+      if (!(f.compras3_recebido_em || f.compras3_responsavel))                                          return 8
       if (!(f.contabil_pc_recebido_em || f.contabil_pc_responsavel || f.contabil_pc_liquidacao_numero)) return 9
-      if (!f.financas)                                                                           return 10
-      if (!(f.tesouraria_recebido_em || f.tesouraria_responsavel || f.pago))                    return 11
+      if (!(f.financas2_recebido_em || f.financas2_responsavel || f.financas2_enviado_pagamento))       return 10
+      if (!(f.tesouraria_recebido_em || f.tesouraria_responsavel || f.pago))                            return 11
       return 12
     }
   }
@@ -424,6 +424,10 @@ export default function FormularioDid() {
       Object.keys(EMPTY).forEach(k => {
         mergedForm[k] = data.did[k] !== undefined && data.did[k] !== null ? data.did[k] : EMPTY[k]
       })
+      // Se há ordem vinculada e valor_bruto ainda zerado, usa o valor total da ordem
+      if (data.did.ordem_valor_total && (!mergedForm.valor_bruto || parseFloat(mergedForm.valor_bruto) === 0)) {
+        mergedForm.valor_bruto = parseFloat(data.did.ordem_valor_total).toFixed(2)
+      }
       setForm(mergedForm)
       // Determina seções visíveis a partir dos dados reais do banco
       setMaxSecaoVisivel(calcMaxSecaoVisivel(mergedForm, tipo, itens))
@@ -623,12 +627,14 @@ export default function FormularioDid() {
     setMaxSecaoVisivel(1)
   }
 
-  // Sincroniza valor_bruto com o total dos itens da Seção I
+  // Sincroniza valor_bruto: prefere total da ordem vinculada, senão usa itens DID
   useEffect(() => {
-    if (totalItensDid > 0) {
+    if (did?.ordem_valor_total && parseFloat(did.ordem_valor_total) > 0) {
+      set('valor_bruto', parseFloat(did.ordem_valor_total).toFixed(2))
+    } else if (totalItensDid > 0) {
       set('valor_bruto', totalItensDid.toFixed(2))
     }
-  }, [totalItensDid])
+  }, [totalItensDid, did?.ordem_valor_total])
 
   const vliq = (parseFloat(form.valor_bruto) || 0)
     - ['desconto_inss','desconto_iss','desconto_irrf','desconto_sindicato',
@@ -819,7 +825,7 @@ export default function FormularioDid() {
           {maxSecaoVisivel >= 3 && <DidFixasSecaoIII form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(3)} onLimpar={makeLimparSecao(['financas_recebido_em','financas_responsavel'])} />}
           {maxSecaoVisivel >= 4 && <DidFixasSecaoIV form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(4)} onLimpar={makeLimparSecao(['contabil_recebido_em','contabil_responsavel','contabil_auditor','empenho_numero','tipo_empenho','data_empenho','liquidacao_numero','data_liquidacao','doc_caixa'])} />}
           {maxSecaoVisivel >= 5 && <DidFixasSecaoV form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(5)} onLimpar={makeLimparSecao(['financas2_recebido_em','financas2_responsavel','financas2_enviado_pagamento'])} />}
-          {maxSecaoVisivel >= 6 && <DidFixasSecaoVI form={form} inp={inp} chk={chk} vliq={vliq} saving={saving} didId={did?.id} onSave={makeOnSave(6)} onLimpar={makeLimparSecao(['tesouraria_recebido_em','tesouraria_responsavel','banco_pagador','ag_pagador','cc_pagador','cert_teso_municipal','cert_teso_trabalhista','cert_teso_fgts','cert_teso_estadual','cert_teso_federal','cert_teso_simples_nac','desconto_inss','desconto_iss','desconto_irrf','desconto_outros','pago','doc_caixa'])} />}
+          {maxSecaoVisivel >= 6 && <DidFixasSecaoVI form={form} inp={inp} chk={chk} vliq={vliq} saving={saving} didId={did?.id} onSave={makeOnSave(6)} onLimpar={makeLimparSecao(['tesouraria_recebido_em','tesouraria_responsavel','conta_pagamento_id','banco_pagador','ag_pagador','cc_pagador','cert_teso_municipal','cert_teso_trabalhista','cert_teso_fgts','cert_teso_estadual','cert_teso_federal','cert_teso_simples_nac','desconto_inss','desconto_iss','desconto_irrf','desconto_outros','pago','doc_caixa'])} />}
           {maxSecaoVisivel >= 7 && <DidFixasSecaoVII form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(7)} onLimpar={makeLimparSecao(['contab_fech_finalizado','contab_fech_tce'])} />}
         </>
       ) : (
@@ -848,7 +854,7 @@ export default function FormularioDid() {
           {maxSecaoVisivel >= 8  && <DidVariaveisSecaoVIII form={form} inp={inp} set={set} saving={saving} didId={did?.id} onSave={makeOnSave(8)} onLimpar={makeLimparSecao(['compras3_recebido_em','compras3_responsavel','compras3_local_entrega'])} />}
           {maxSecaoVisivel >= 9  && <DidVariaveisSecaoIX form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(9)} onLimpar={makeLimparSecao(['contabil_pc_recebido_em','contabil_pc_responsavel','contabil_pc_auditor','contabil_pc_liquidacao_numero','contabil_pc_data_liquidacao'])} />}
           {maxSecaoVisivel >= 10 && <DidVariaveisSecaoX form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(10)} onLimpar={makeLimparSecao(['financas2_recebido_em','financas2_responsavel','financas2_enviado_pagamento'])} />}
-          {maxSecaoVisivel >= 11 && <DidVariaveisSecaoXI form={form} inp={inp} chk={chk} vliq={vliq} saving={saving} didId={did?.id} onSave={makeOnSave(11)} onLimpar={makeLimparSecao(['tesouraria_recebido_em','tesouraria_responsavel','banco_pagador','ag_pagador','cc_pagador','cert_teso_cnd','cert_teso_fgts','cert_teso_estadual','cert_teso_trabalhista','cert_teso_municipal','desconto_inss','desconto_iss','desconto_irrf','desconto_outros','pago','doc_caixa'])} />}
+          {maxSecaoVisivel >= 11 && <DidVariaveisSecaoXI form={form} inp={inp} chk={chk} vliq={vliq} saving={saving} didId={did?.id} onSave={makeOnSave(11)} onLimpar={makeLimparSecao(['tesouraria_recebido_em','tesouraria_responsavel','conta_pagamento_id','banco_pagador','ag_pagador','cc_pagador','cert_teso_cnd','cert_teso_fgts','cert_teso_estadual','cert_teso_trabalhista','cert_teso_municipal','desconto_inss','desconto_iss','desconto_irrf','desconto_outros','pago','doc_caixa'])} />}
           {maxSecaoVisivel >= 12 && <DidVariaveisSecaoXII form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(12)} onLimpar={makeLimparSecao(['contab_fech_finalizado','contab_fech_tce'])} />}
         </>
       )}

@@ -1,6 +1,6 @@
 import { Banknote } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { Field, Input, Checkbox, SectionCard, SecaoBotoes } from './didShared'
+import { Field, Input, UserSelect, Checkbox, SectionCard, SecaoBotoes } from './didShared'
 import { BANCOS } from './bancosBrasil'
 
 function BancoSelect({ value, onChange, disabled }) {
@@ -65,7 +65,7 @@ export default function DidSecaoVI({ form, inp, chk, vliq, saving, didId, onSave
         <Input type="date" value={form.tesouraria_recebido_em} onChange={inp('tesouraria_recebido_em')} disabled={locked} />
       </Field>
       <Field label="Responsável" half>
-        <Input value={form.tesouraria_responsavel} onChange={inp('tesouraria_responsavel')} disabled={locked} />
+        <UserSelect value={form.tesouraria_responsavel} onChange={inp('tesouraria_responsavel')} disabled={locked} secretaria="tesouraria" />
       </Field>
 
       {/* Dados do pagamento */}

@@ -1,6 +1,6 @@
 import { Shield } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { Field, Input, Textarea, SectionCard, SecaoBotoes } from '../didShared'
+import { Field, Input, Textarea, UserSelect, SectionCard, SecaoBotoes } from '../didShared'
 
 export default function DidFixasSecaoII({ form, inp, saving, didId, onSave, onLimpar }) {
   const [locked, setLocked] = useState(false)
@@ -20,7 +20,7 @@ export default function DidFixasSecaoII({ form, inp, saving, didId, onSave, onLi
         <Input type="date" value={form.ci_recebido_em} onChange={inp('ci_recebido_em')} disabled={locked} />
       </Field>
       <Field label="Responsável" half>
-        <Input value={form.ci_responsavel} onChange={inp('ci_responsavel')} disabled={locked} />
+        <UserSelect value={form.ci_responsavel} onChange={inp('ci_responsavel')} disabled={locked} secretaria="controladoria" />
       </Field>
       <Field label="Despacho via C.I.">
         <Textarea value={form.despacho_ci} onChange={inp('despacho_ci')} disabled={locked} />
