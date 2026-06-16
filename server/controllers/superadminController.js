@@ -801,7 +801,7 @@ const updateLogos = async (req, res) => {
     res.json({ success: true, url: logoUrl, campo });
   } catch (error) {
     console.error('Erro ao fazer upload do logo:', error);
-    res.status(500).json({ error: 'Erro ao enviar logo' });
+    res.status(500).json({ error: error.message || 'Erro ao enviar logo' });
   }
 };
 

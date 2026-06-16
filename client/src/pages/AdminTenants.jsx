@@ -21,6 +21,7 @@ const SYSTEM_MODULES = [
   { id: 'patrimonio',   label: 'Patrimônio',   Icon: Landmark },
   { id: 'financeiro',   label: 'Financeiro',   Icon: DollarSign },
   { id: 'contratos',    label: 'Contratos',    Icon: ScrollText },
+  { id: 'tesouraria',   label: 'Tesouraria',   Icon: Landmark },
 ];
 
 const TABS = [
