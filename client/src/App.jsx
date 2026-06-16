@@ -30,6 +30,7 @@ const Configuracoes      = lazy(() => import('./pages/Configuracoes'))
 const Registros          = lazy(() => import('./pages/Registros'))
 const AdminTenants       = lazy(() => import('./pages/AdminTenants'))
 const Arquivo            = lazy(() => import('./pages/Arquivo'))
+const Tesouraria         = lazy(() => import('./pages/Tesouraria'))
 
 // ── PageLoader — fallback enquanto chunk carrega ──────────────────────────────
 function PageLoader() {
@@ -142,6 +143,10 @@ function App() {
                 <Route path="organizacao"      element={<PermissionRoute permissao="gerenciar_secretarias"><Secretarias /></PermissionRoute>} />
                 <Route path="organizacao/:tab" element={<PermissionRoute permissao="gerenciar_secretarias"><Secretarias /></PermissionRoute>} />
                 <Route path="secretarias"      element={<OrganizacaoRedirect />} />
+
+                {/* Tesouraria */}
+                <Route path="tesouraria"      element={<Tesouraria />} />
+                <Route path="tesouraria/:tab" element={<Tesouraria />} />
 
                 {/* Usuários */}
                 <Route path="usuarios" element={<PermissionRoute permissao="gerenciar_usuarios"><Usuarios /></PermissionRoute>} />

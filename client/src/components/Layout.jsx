@@ -79,6 +79,7 @@ export default function Layout() {
     { path: `/${subdomain}/patrimonio`,   icon: Landmark,    label: 'Patrimônio',   modulo: 'patrimonio',   permissao: 'acessar_almoxarifado' },
     { path: `/${subdomain}/financeiro`,   icon: DollarSign,  label: 'Financeiro',   modulo: 'financeiro',   permissao: 'acessar_financeiro' },
     { path: `/${subdomain}/contratos`,    icon: ScrollText,  label: 'Contratos',    modulo: 'contratos',    permissao: 'acessar_contratos' },
+    { path: `/${subdomain}/tesouraria`,   icon: Landmark,    label: 'Tesouraria',   modulo: 'tesouraria' },
   ]
 
   const adminMenuItems = [
