@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "nodemon server/index.js",
     "start": "node server/index.js",
+    "build": "cd client && npm install && npm run build",
     "client": "cd client && npm run dev",
     "dev:full": "concurrently \"npm run dev\" \"npm run client\"",
     "create-admin": "node server/scripts/createAdmin.js"

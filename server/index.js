@@ -131,13 +131,26 @@ app.get('/health', (req, res) => {
 // Endpoint leve de keepalive — usado pelo auto-ping abaixo
 app.get('/ping', (req, res) => res.send('pong'));
 
-// ── 404 — rota não encontrada ────────────────────────────────────────────────
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Rota não encontrada — ${req.method} ${req.originalUrl}`,
+// ── Arquivos estáticos do React (produção) ───────────────────────────────────
+const path = require('path');
+const fs = require('fs');
+const distPath = path.join(__dirname, '..', 'client', 'dist');
+
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  // Catch-all: devolve index.html para rotas do React Router
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
   });
-});
+} else {
+  // ── 404 — rota não encontrada (sem build do frontend) ───────────────────────
+  app.use((req, res) => {
+    res.status(404).json({
+      success: false,
+      message: `Rota não encontrada — ${req.method} ${req.originalUrl}`,
+    });
+  });
+}
 
 // ── Error handler global ─────────────────────────────────────────────────────
 // Deve ser o ÚLTIMO middleware (4 parâmetros obrigatórios no Express)
