@@ -60,7 +60,7 @@ function ModalOrdemCompra({ onConfirm, onClose }) {
         </div>
 
         {/* List */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto overflow-x-auto">
           {loading ? (
             <div className="flex items-center justify-center h-32 gap-2 text-gray-400">
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -216,7 +216,7 @@ function ModalItensContrato({ contrato, itensDid, onConfirm, onClose, stockData 
               <span><strong>Saldo DID</strong> = disponível no contrato · <strong>Estoque Alm.</strong> = estoque físico no almoxarifado</span>
               {loadingStock && <span className="ml-auto text-blue-500 animate-pulse">Consultando...</span>}
             </div>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto overflow-x-auto">
               <table className="w-full text-xs">
                 <thead className="bg-gray-50 dark:bg-gray-700/50 sticky top-0">
                   <tr>
@@ -933,7 +933,7 @@ export default function DidVariaveisSecaoI({
             </div>
           )}
         </div>
-        <div className="rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden">
+        <div className="rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-700/60">

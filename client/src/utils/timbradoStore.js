@@ -11,7 +11,7 @@ export function getTimbrado() {
 export function applyTimbradoToPage(doc) {
   if (!_timbrado) return
   try {
-    const gs = doc.GState({ opacity: 0.12, 'stroke-opacity': 0.12 })
+    const gs = doc.GState({ opacity: 0.75, 'stroke-opacity': 0.75 })
     doc.setGState(gs)
     doc.addImage(_timbrado, 'PNG', 0, 0, 210, 297)
     doc.setGState(doc.GState({ opacity: 1, 'stroke-opacity': 1 }))
@@ -30,7 +30,7 @@ export function timbradoPrintCSS() {
       background-image: url("${_timbrado}");
       background-size: 100% 100%;
       background-repeat: no-repeat;
-      opacity: 0.12;
+      opacity: 0.75;
       z-index: -1;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;

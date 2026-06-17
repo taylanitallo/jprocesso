@@ -175,6 +175,7 @@ export default function AlmoxPainel() {
       {dados.predicaoConsumoMensal && Object.keys(dados.predicaoConsumoMensal).length > 0 && (
         <div className="bg-white dark:bg-slate-800/70 rounded-2xl border border-gray-200 dark:border-slate-700/50 p-5">
           <SectionTitle icon={TrendingUp} title="Predição de Demanda" subtitle="Média mensal dos últimos 3 meses" />
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-xs text-gray-500 dark:text-slate-400 border-b border-gray-100 dark:border-slate-700/50">
@@ -205,6 +206,7 @@ export default function AlmoxPainel() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

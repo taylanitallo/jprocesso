@@ -88,6 +88,7 @@ export default function PatGrupos() {
         <div className="px-4 pt-4">
           <SectionTitle icon={Layers} title="Lista de Grupos" subtitle={`${grupos.length} grupo(s) cadastrado(s)`} />
         </div>
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
             <tr>
@@ -138,6 +139,7 @@ export default function PatGrupos() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Modal formulário */}

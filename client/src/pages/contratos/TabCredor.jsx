@@ -446,7 +446,7 @@ function CredorContratosModal({ credor, onClose }) {
         </div>
 
         {/* Tabela de contratos */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto overflow-x-auto">
           {vinculados.length === 0 ? (
             <div className="text-center py-16 text-gray-400 dark:text-slate-500">
               <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />

@@ -312,6 +312,56 @@ async function migrarAgentes(schema, pool) {
   `);
 }
 
+async function migrarTesouraria(schema, pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ${schema}.contas_bancarias (
+      id             UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+      nome           VARCHAR(120)  NOT NULL,
+      secretaria_id  UUID          REFERENCES ${schema}.secretarias(id) ON DELETE SET NULL,
+      banco_nome     VARCHAR(150),
+      banco_codigo   VARCHAR(10),
+      agencia        VARCHAR(20),
+      agencia_digito VARCHAR(2),
+      conta          VARCHAR(30),
+      conta_digito   VARCHAR(2),
+      tipo           VARCHAR(20)   NOT NULL DEFAULT 'corrente'
+        CHECK (tipo IN ('corrente','poupanca','pagamento','investimento','especial')),
+      natureza       VARCHAR(20)   NOT NULL DEFAULT 'custeio'
+        CHECK (natureza IN ('custeio','pessoal','investimento','transferencia','receita','convenio','outras')),
+      titular        VARCHAR(200),
+      cnpj_titular   VARCHAR(14),
+      observacao     TEXT,
+      ativo          BOOLEAN       NOT NULL DEFAULT TRUE,
+      created_at     TIMESTAMP     NOT NULL DEFAULT NOW(),
+      updated_at     TIMESTAMP     NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS ${schema}.tes_receitas (
+      id          UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+      conta_id    UUID          NOT NULL REFERENCES ${schema}.contas_bancarias(id) ON DELETE RESTRICT,
+      data        DATE          NOT NULL,
+      descricao   VARCHAR(300)  NOT NULL,
+      valor       DECIMAL(15,2) NOT NULL,
+      observacao  TEXT,
+      created_at  TIMESTAMP     NOT NULL DEFAULT NOW(),
+      updated_at  TIMESTAMP     NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS ${schema}.tes_despesas (
+      id              UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+      ordem_id        INTEGER       NOT NULL,
+      conta_id        UUID          NOT NULL REFERENCES ${schema}.contas_bancarias(id) ON DELETE RESTRICT,
+      data_pagamento  DATE          NOT NULL,
+      valor_bruto     DECIMAL(15,2) NOT NULL,
+      valor_liquido   DECIMAL(15,2) NOT NULL,
+      observacao      TEXT,
+      created_at      TIMESTAMP     NOT NULL DEFAULT NOW(),
+      updated_at      TIMESTAMP     NOT NULL DEFAULT NOW(),
+      UNIQUE (ordem_id)
+    );
+  `);
+}
+
 // Migração automática: adiciona colunas ausentes em schemas já existentes
 async function migrarSchemaUsuarios(schema, pool) {
   // usuarios
@@ -696,6 +746,7 @@ const migrarTodosOsSchemas = async () => {
         try {
           await migrarSchemaUsuarios(tenant.schema, pool);
           await migrarAgentes(tenant.schema, pool);
+          await migrarTesouraria(tenant.schema, pool);
         } catch (_) {
           // schema pode não ter sido criado ainda
         }
@@ -846,6 +897,9 @@ async function criarEstruturaIsolada(schema, tenant, usuarioAdmin) {
     `;
 
     await pool.query(createTables);
+
+    // Tabelas do módulo Tesouraria
+    await migrarTesouraria(schema, pool);
 
     // Inserir secretaria padrão
     const secretariaResult = await pool.query(`

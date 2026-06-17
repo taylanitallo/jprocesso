@@ -535,6 +535,7 @@ export default function AlmoxRequisicoes() {
           <div className="px-4 pt-4">
             <SectionTitle icon={ClipboardList} title="Lista de Requisições" subtitle={`${total} requisição(ões)`} />
           </div>
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
               <tr>
@@ -569,6 +570,7 @@ export default function AlmoxRequisicoes() {
               ))}
             </tbody>
           </table>
+          </div>
 
           {totalPages > 1 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700">
@@ -648,6 +650,7 @@ function AtenderRequisicaoModal({ requisicao, itens, onClose, onSave, saving, er
           <strong>Status:</strong> {STATUS_REQ[requisicao.status]?.label}
         </div>
 
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 dark:border-gray-700">
@@ -689,6 +692,7 @@ function AtenderRequisicaoModal({ requisicao, itens, onClose, onSave, saving, er
             })}
           </tbody>
         </table>
+        </div>
 
         <div className="flex justify-end gap-3 pt-2">
           <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>

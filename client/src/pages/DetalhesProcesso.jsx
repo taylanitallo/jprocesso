@@ -584,7 +584,7 @@ export default function DetalhesProcesso() {
                         {doc.uploadPor?.nome && ` · ${doc.uploadPor.nome}`}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                    <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all">
                       <button
                         onClick={() => handleDownloadDocumento(doc)}
                         className="p-1.5 rounded-lg text-gray-400 dark:text-slate-500

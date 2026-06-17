@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { applyTimbradoToPage } from '../../utils/timbradoStore'
 
 // ─── Constantes de layout ─────────────────────────────────────────────────────
 const M  = 12          // margem esquerda/direita
@@ -69,6 +70,7 @@ const norm = (doc, size, color) => {
 const checkPage = (doc, y, pageH, needed = 25) => {
   if (y + needed > pageH - 14) {
     doc.addPage()
+    applyTimbradoToPage(doc)
     return 16
   }
   return y
@@ -372,6 +374,7 @@ function drawTable(doc, { head, body, colStyles, headColor, altColor, y, pageH }
     },
     columnStyles: colStyles || {},
     tableLineWidth: 0,
+    didDrawPage: () => applyTimbradoToPage(doc),
   })
   return doc.lastAutoTable.finalY + 8
 }
@@ -383,6 +386,7 @@ export function gerarPainelPDF({ painel, filtros, ano, orgNome }) {
   const doc   = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const pageW = doc.internal.pageSize.getWidth()
   const pageH = doc.internal.pageSize.getHeight()
+  applyTimbradoToPage(doc)
 
   // ── Descricao dos filtros ativos ─────────────────────────────────────────
   const descFiltros = []
@@ -598,6 +602,7 @@ export function gerarPainelPDF({ painel, filtros, ano, orgNome }) {
         }
       },
       tableLineWidth: 0,
+      didDrawPage: () => applyTimbradoToPage(doc),
     })
     y = doc.lastAutoTable.finalY + 8
   }

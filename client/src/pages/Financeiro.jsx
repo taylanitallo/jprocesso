@@ -1989,6 +1989,7 @@ export default function Financeiro() {
                             td{padding:5px 8px;border-bottom:1px solid #e5e7eb;font-size:10px}
                             tr:nth-child(even) td{background:#f8fafc}
                             .pago{color:#16a34a;font-weight:600}.pend{color:#d97706;font-weight:600}
+                            ${tenant?.configuracoes?.timbrado ? `body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background-image:url("${tenant.configuracoes.timbrado}");background-size:100% 100%;background-repeat:no-repeat;opacity:.75;z-index:-1;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}` : ''}
                           </style></head><body>
                             <h2>Tabela Analítica de DIDs${periodo}</h2>
                             <p>${relDidsOrdenados.length} DID${relDidsOrdenados.length !== 1 ? 's' : ''} — gerado em ${new Date().toLocaleString('pt-BR')}</p>

@@ -275,6 +275,7 @@ function RelatorioModal({ item, onClose }) {
               <p className="text-sm mt-1">Este item ainda não foi utilizado em nenhum contrato ou processo.</p>
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">
@@ -297,6 +298,7 @@ function RelatorioModal({ item, onClose }) {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
 
@@ -350,6 +352,7 @@ function ListagemModal({ item, onClose }) {
               <p className="text-sm mt-1">Este item não está presente em nenhum contrato ou secretaria.</p>
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">
@@ -372,6 +375,7 @@ function ListagemModal({ item, onClose }) {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
 

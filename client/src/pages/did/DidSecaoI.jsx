@@ -75,7 +75,7 @@ function ModalItensContrato({ contrato, itensDid, onConfirm, onClose, stockData 
                 <span>Marque os itens e informe a quantidade desejada para este DID. A coluna <strong>Saldo</strong> mostra o disponível considerando todos os DIDs do contrato.</span>
                 {loadingStock && <span className="ml-auto text-blue-500 animate-pulse">Consultando estoque…</span>}
               </div>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto overflow-x-auto">
               <table className="w-full text-xs">
                 <thead className="bg-gray-50 dark:bg-gray-700/50 sticky top-0">
                   <tr>
@@ -613,7 +613,7 @@ export default function DidSecaoI({
           ) : (
             /* ── Fixas: tabela read-only (itens do modal) ─────────── */
             temItensPreenchidos ? (
-              <div className="rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden">
+              <div className="rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="bg-gray-50 dark:bg-gray-700/60">

@@ -152,7 +152,7 @@ function ModalItensContrato({ contrato, itensDid, onConfirm, onClose }) {
             <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-300 shrink-0">
               Marque os itens e informe a quantidade desejada para este DID (função de ordem de compra).
             </div>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto overflow-x-auto">
               <table className="w-full text-xs">
                 <thead className="bg-gray-50 dark:bg-slate-700/30 sticky top-0">
                   <tr>

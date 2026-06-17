@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import PageHeader from '../components/ui/PageHeader';
 import SectionTitle from '../components/ui/SectionTitle';
@@ -45,6 +46,7 @@ const EMPTY_CONTA = {
 export default function Tesouraria() {
   const { tab, subdomain } = useParams();
   const navigate = useNavigate();
+  const { tenant } = useAuth();
   const [activeTab, setActiveTab] = useState(tab || 'contas');
   const [secretarias, setSecretarias] = useState([]);
 
@@ -683,6 +685,7 @@ tfoot .val{font-size:15px;color:#15803d}
   thead tr{background:#166534 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .ghdr td{background:#dcfce7 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   tfoot tr{background:#f0fdf4 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  ${tenant?.configuracoes?.timbrado ? `body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background-image:url("${tenant.configuracoes.timbrado}");background-size:100% 100%;background-repeat:no-repeat;opacity:.75;z-index:-1;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}` : ''}
 }
 </style></head><body>
 <div class="hdr">
@@ -1348,6 +1351,7 @@ function TabDespesas() {
 
 // ─── Tab: Relatórios ─────────────────────────────────────────────────────────────
 function TabRelatorios() {
+  const { tenant } = useAuth();
   const [tipo, setTipo] = useState('saldo');
   const [contas, setContas] = useState([]);
   const [filtros, setFiltros] = useState({ conta_id: '', ano: new Date().getFullYear(), data_de: '', data_ate: '' });
@@ -1423,6 +1427,7 @@ function TabRelatorios() {
     .row-r{background:#f0fdf4!important}
     .v-pos{color:#16a34a;font-weight:700}.v-neg{color:#dc2626;font-weight:700}
     .v-g{color:#16a34a}.v-r{color:#dc2626}
+    ${tenant?.configuracoes?.timbrado ? `body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background-image:url("${tenant.configuracoes.timbrado}");background-size:100% 100%;background-repeat:no-repeat;opacity:.12;z-index:-1}` : ''}
     @media print{
       .th-blue{background:#1e40af!important;color:#fff!important}
       .th-green{background:#166534!important;color:#fff!important}

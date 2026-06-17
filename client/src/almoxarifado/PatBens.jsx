@@ -146,6 +146,7 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
         <div className="px-4 pt-4">
           <SectionTitle icon={Landmark} title="Lista de Bens" subtitle={`${total} bem(ns) encontrado(s)`} />
         </div>
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
             <tr>
@@ -224,6 +225,7 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Paginação */}

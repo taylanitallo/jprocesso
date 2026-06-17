@@ -124,7 +124,7 @@ function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
         </div>
 
         {/* Lista */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto overflow-x-auto">
           {filtrados.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-gray-400 dark:text-slate-500">
               <PackageOpen className="w-12 h-12 mb-3 opacity-30" />

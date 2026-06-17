@@ -168,6 +168,7 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
   const doc   = new jsPDF({ unit: 'mm', format: 'a4' })
   const pageW = 210
   const pageH = 297
+  applyTimbradoToPage(doc)
 
   const nomeMunicipio = tenant?.nome_municipio || 'Prefeitura Municipal'
   const cnpjPref      = fmtCNPJ(tenant?.cnpj || '')

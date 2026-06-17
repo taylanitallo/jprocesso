@@ -435,7 +435,7 @@ export default function Configuracoes() {
                           <img
                             src={geraisData.timbrado}
                             alt="timbrado"
-                            style={{ width: '100%', height: '100%', objectFit: 'fill', opacity: 0.15 }}
+                            style={{ width: '100%', height: '100%', objectFit: 'fill', opacity: 0.75 }}
                           />
                         </div>
                       </div>
