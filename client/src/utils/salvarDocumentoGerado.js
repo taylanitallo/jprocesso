@@ -10,7 +10,7 @@ import api from '../services/api'
  * @param {string}               [opts.processoId] UUID do processo (opcional)
  * @param {string}               [opts.tipoOrigem] Categoria: did | despacho | oficio | pauta | requisicao | ordem
  */
-export async function salvarDocumentoGerado(doc, { nome, processoId, tipoOrigem = 'gerado' }) {
+export function salvarDocumentoGerado(doc, { nome, processoId, tipoOrigem = 'gerado' }) {
   try {
     const blob = doc.output('blob')
     const file = new File([blob], nome, { type: 'application/pdf' })
@@ -20,10 +20,13 @@ export async function salvarDocumentoGerado(doc, { nome, processoId, tipoOrigem 
     form.append('tipoOrigem', tipoOrigem)
     if (processoId) form.append('processoId', processoId)
 
-    await api.post('/documentos/salvar-gerado', form, {
+    // Upload em background — não bloqueia download/impressão
+    api.post('/documentos/salvar-gerado', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
+    }).catch(err => {
+      console.warn('[salvarDocumentoGerado] Falha ao salvar no servidor:', err?.response?.data?.error || err?.message)
     })
   } catch (err) {
-    console.warn('[salvarDocumentoGerado] Falha ao salvar no servidor:', err?.response?.data?.error || err?.message)
+    console.warn('[salvarDocumentoGerado] Erro ao preparar upload:', err?.message)
   }
 }

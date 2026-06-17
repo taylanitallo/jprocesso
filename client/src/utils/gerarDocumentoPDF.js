@@ -35,26 +35,27 @@ function checkPage(doc, y, needed = 20) {
 // Cabeçalho padrão — retorna y após o cabeçalho
 function cabecalho(doc, titulo, numero, secretaria) {
   applyTimbradoToPage(doc)
-  // Fundo cinza escuro
-  doc.setFillColor(18, 26, 48)
-  doc.rect(0, 0, 210, 24, 'F')
   doc.setFontSize(15)
   doc.setFont('helvetica', 'bold')
-  doc.setTextColor(255, 255, 255)
-  doc.text(titulo, M, 10)
+  doc.setTextColor(18, 26, 48)
+  doc.text(titulo, M, mTop)
   doc.setFontSize(9)
   doc.setFont('helvetica', 'normal')
-  doc.setTextColor(180, 190, 210)
-  doc.text(`Nº ${fmt(numero)}${secretaria ? '  |  ' + secretaria : ''}`, M, 17)
+  doc.setTextColor(60, 70, 90)
+  doc.text(`Nº ${fmt(numero)}${secretaria ? '  |  ' + secretaria : ''}`, M, mTop + 7)
 
   // Data de geração
   doc.setFontSize(8)
   doc.setTextColor(130, 140, 155)
   const dataGer = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-  doc.text(`Gerado em: ${dataGer}`, 210 - M, 17, { align: 'right' })
+  doc.text(`Gerado em: ${dataGer}`, 210 - M, mTop + 7, { align: 'right' })
+
+  // Linha separadora
+  doc.setFillColor(220, 225, 233)
+  doc.rect(M, mTop + 11, UW, 0.4, 'F')
 
   doc.setTextColor(22, 28, 36)
-  return Math.max(32, mTop + 8)
+  return Math.max(32, mTop + 16)
 }
 
 // Linha de campo: rótulo + valor

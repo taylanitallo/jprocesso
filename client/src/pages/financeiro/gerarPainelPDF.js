@@ -89,47 +89,33 @@ const checkPage = (doc, y, pageH, needed = 25) => {
 
 // ─── Cabecalho principal ──────────────────────────────────────────────────────
 function drawHeader(doc, ano, orgNome, descFiltros, pageW, pageH) {
-  const H = 36
-
-  // Bloco principal escuro
-  doc.setFillColor(...C.headerBg)
-  doc.rect(0, 0, pageW, H, 'F')
-
-  // Faixa esquerda colorida
-  doc.setFillColor(...C.blue)
-  doc.rect(0, 0, 4, H, 'F')
-
-  // Linha decorativa inferior
-  doc.setFillColor(...C.teal)
-  doc.rect(4, H - 1.5, pageW - 4, 1.5, 'F')
-
   // Titulo principal
-  bold(doc, 15, C.white)
-  doc.text('PAINEL FINANCEIRO', M + 3, 11)
+  bold(doc, 15, C.ink)
+  doc.text('PAINEL FINANCEIRO', M + 3, mTop)
 
   // Subtitulo
-  norm(doc, 8.5, [170, 185, 220])
-  doc.text('Resumo de Documentos de Instrucao de Despesas (DID)', M + 3, 18)
+  norm(doc, 8.5, C.sub)
+  doc.text('Resumo de Documentos de Instrucao de Despesas (DID)', M + 3, mTop + 7)
 
   // Linha de metadados
-  norm(doc, 7, [130, 148, 185])
+  norm(doc, 7, C.muted)
   const metaLeft = `Ano de referencia: ${ano}` + (orgNome ? '  |  ' + safe(orgNome) : '')
-  doc.text(metaLeft, M + 3, 25)
+  doc.text(metaLeft, M + 3, mTop + 14)
 
   // Data/hora geracao (direita)
   const agora = new Date().toLocaleString('pt-BR')
-  norm(doc, 6.5, [110, 128, 168])
-  doc.text(`Gerado em: ${agora}`, pageW - M, 25, { align: 'right' })
+  norm(doc, 6.5, C.muted)
+  doc.text(`Gerado em: ${agora}`, pageW - M, mTop + 14, { align: 'right' })
 
   // Filtros ativos
   const filtrosTxt = descFiltros.length > 0
     ? safe('Filtros: ' + descFiltros.join('  |  '))
     : 'Filtros: Todos os registros do periodo'
   const filtroLines = doc.splitTextToSize(filtrosTxt, pageW - M * 2 - 6)
-  norm(doc, 6, [100, 118, 162])
-  doc.text(filtroLines[0], M + 3, 32)
+  norm(doc, 6, C.muted)
+  doc.text(filtroLines[0], M + 3, mTop + 21)
 
-  return H + 8
+  return mTop + 28
 }
 
 // ─── Rodape em todas as paginas ───────────────────────────────────────────────
@@ -137,11 +123,7 @@ function drawFooters(doc, ano, orgNome, pageH, pageW) {
   const total = doc.internal.getNumberOfPages()
   for (let p = 1; p <= total; p++) {
     doc.setPage(p)
-    doc.setFillColor(...C.headerBg)
-    doc.rect(0, pageH - 10, pageW, 10, 'F')
-    doc.setFillColor(...C.blue)
-    doc.rect(0, pageH - 10, 3, 10, 'F')
-    norm(doc, 6.5, [140, 158, 200])
+    norm(doc, 6.5, C.muted)
     doc.text(
       safe((orgNome || 'Modulo Financeiro') + '  -  Painel DIDs ' + ano),
       M + 2,

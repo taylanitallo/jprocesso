@@ -159,14 +159,16 @@ function checkRow(doc, y, label, itens, pageH) {
   return y + 6
 }
 
-// ─── Carrega imagem base64 ────────────────────────────────────────────────────
+// ─── Carrega imagem base64 com cache em memória ───────────────────────────────
+const _imgCache = new Map()
 async function carregarImagem(url) {
+  if (_imgCache.has(url)) return _imgCache.get(url)
   try {
     const res  = await fetch(url)
     const blob = await res.blob()
     return new Promise(resolve => {
       const reader = new FileReader()
-      reader.onload  = () => resolve(reader.result)
+      reader.onload  = () => { _imgCache.set(url, reader.result); resolve(reader.result) }
       reader.onerror = () => resolve(null)
       reader.readAsDataURL(blob)
     })
@@ -190,39 +192,33 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
   // ══════════════════════════════════════════════════════════════════════════
   //  CABEÇALHO COMPACTO — 22mm de altura
   // ══════════════════════════════════════════════════════════════════════════
-  doc.setFillColor(...C.headerBg)
-  doc.rect(0, 0, pageW, 22, 'F')
-  // Linha de acento no rodapé do header
-  doc.setFillColor(...C.blue)
-  doc.rect(0, 21.2, pageW, 0.8, 'F')
-
   const textX = logoBase64 ? 38 : M
   if (logoBase64) {
-    try { doc.addImage(logoBase64, 'PNG', M, 2, 18, 18) } catch {}
+    try { doc.addImage(logoBase64, 'PNG', M, mTop, 18, 18) } catch {}
   }
 
   const tipoLabel    = tipoDid === 'variaveis' ? 'CONTAS VARIÁVEIS' : 'CONTAS FIXAS'
   const tipoAcent    = tipoDid === 'variaveis' ? C.teal : C.blue
 
-  bold(doc, 10.5, C.white)
-  doc.text(nomeMunicipio.toUpperCase(), textX, 9.5)
-  norm(doc, 6, [170,182,205])
-  doc.text(`CNPJ: ${cnpjPref}  ·  DOCUMENTO DE INSTRUÇÃO DE DESPESAS`, textX, 15)
+  bold(doc, 10.5, C.ink)
+  doc.text(nomeMunicipio.toUpperCase(), textX, mTop + 6)
+  norm(doc, 6, C.sub)
+  doc.text(`CNPJ: ${cnpjPref}  ·  DOCUMENTO DE INSTRUÇÃO DE DESPESAS`, textX, mTop + 12)
 
-  bold(doc, 13, C.white)
-  doc.text(`DID Nº ${fmt(form.numero_did)}`, pageW - M, 11, { align: 'right' })
-  norm(doc, 5.5, [150,163,185])
-  doc.text(fmt(form.secretaria_sec1), pageW - M, 16.5, { align: 'right' })
+  bold(doc, 13, C.ink)
+  doc.text(`DID Nº ${fmt(form.numero_did)}`, pageW - M, mTop + 8, { align: 'right' })
+  norm(doc, 5.5, C.muted)
+  doc.text(fmt(form.secretaria_sec1), pageW - M, mTop + 14, { align: 'right' })
 
   // Badge tipo — pill colorida no header (canto esquerdo inferior)
   const tpw = doc.getTextWidth(tipoLabel) + 8
   doc.setFontSize(6); doc.setFont('helvetica', 'bold')
   doc.setFillColor(...tipoAcent)
-  doc.roundedRect(textX, 17.5, tpw, 3.5, 1, 1, 'F')
+  doc.roundedRect(textX, mTop + 16, tpw, 3.5, 1, 1, 'F')
   doc.setTextColor(...C.white)
-  doc.text(tipoLabel, textX + 4, 20.2)
+  doc.text(tipoLabel, textX + 4, mTop + 18.7)
 
-  let y = 26
+  let y = mTop + 24
 
   // ══════════════════════════════════════════════════════════════════════════
   //  FAIXA META (credor + valor + badge) — 20mm — linha única compacta
@@ -656,9 +652,7 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
   const emissao = new Date().toLocaleString('pt-BR')
   for (let i = 1; i <= total; i++) {
     doc.setPage(i)
-    doc.setFillColor(...C.headerBg)
-    doc.rect(0, pageH - 7, pageW, 7, 'F')
-    norm(doc, 6, [165,175,195])
+    norm(doc, 6, C.muted)
     doc.text(nomeMunicipio, M, pageH - 2.5)
     doc.text(`Emissão: ${emissao}`, pageW / 2, pageH - 2.5, { align: 'center' })
     doc.text(`Pág. ${i} / ${total}`, pageW - M, pageH - 2.5, { align: 'right' })
