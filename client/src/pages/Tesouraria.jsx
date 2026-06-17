@@ -513,6 +513,7 @@ function TabContas({ secretarias }) {
 
 // ─── Tab: Receitas ──────────────────────────────────────────────────────────────
 function TabReceitas() {
+  const { tenant } = useAuth();
   const [contas, setContas] = useState([]);
   const [receitas, setReceitas] = useState([]);
   const [total, setTotal] = useState(0);
