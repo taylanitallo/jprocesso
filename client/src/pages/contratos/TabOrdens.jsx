@@ -8,6 +8,7 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import api from '../../services/api'
 import { salvarDocumentoGerado } from '../../utils/salvarDocumentoGerado'
+import { setPDFLoading } from '../../utils/pdfLoadingStore'
 import {
   SectionCard, PremiumInput, PremiumTextarea,
 } from './ContratosShared'
@@ -1084,6 +1085,7 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
 
 // ── Gerador de PDF da Ordem ────────────────────────────────────────────────────
 async function gerarPdf(ordemRaw, contratos = []) {
+  setPDFLoading(true)
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const W = doc.internal.pageSize.getWidth()
   const M = 15
@@ -1306,8 +1308,13 @@ async function gerarPdf(ordemRaw, contratos = []) {
   doc.text('P\u00e1gina 1', W - M, pageH - 5, { align: 'right' })
 
   const nomeArqOrdem = `ordem_${(ordem.numero || 'sem_numero').replace(/\//g, '-')}.pdf`
-  await salvarDocumentoGerado(doc, { nome: nomeArqOrdem, tipoOrigem: 'ordem' })
-  doc.save(nomeArqOrdem)
+  const blobOrdem = doc.output('blob')
+  salvarDocumentoGerado(blobOrdem, { nome: nomeArqOrdem, tipoOrigem: 'ordem' })
+  const urlOrdem = URL.createObjectURL(blobOrdem)
+  const aOrdem = document.createElement('a')
+  aOrdem.href = urlOrdem; aOrdem.download = nomeArqOrdem; aOrdem.click()
+  setTimeout(() => URL.revokeObjectURL(urlOrdem), 10000)
+  setPDFLoading(false)
 }
 
 // ── Modal Confirmar Cancelamento ───────────────────────────────────────────────

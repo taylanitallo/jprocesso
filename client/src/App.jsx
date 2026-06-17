@@ -1,10 +1,11 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import AuthProvider from './context/AuthContext'
 import ThemeProvider from './context/ThemeContext'
 import { setTimbrado } from './utils/timbradoStore'
 import { setMargens } from './utils/margensStore'
+import { subscribePDFLoading } from './utils/pdfLoadingStore'
 
 // ── Imports estáticos — shell crítico (sempre carregado) ──────────────────────
 import Layout from './components/Layout'
@@ -59,6 +60,20 @@ function MargensSync() {
     setMargens(mg ?? null)
   }, [mg])
   return null
+}
+
+function PDFLoadingOverlay() {
+  const [loading, setLoading] = useState(false)
+  useEffect(() => subscribePDFLoading(setLoading), [])
+  if (!loading) return null
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl px-10 py-7 flex flex-col items-center gap-4">
+        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">Gerando documento...</span>
+      </div>
+    </div>
+  )
 }
 
 // ── Guards de rota ────────────────────────────────────────────────────────────
@@ -129,6 +144,7 @@ function App() {
       <AuthProvider>
         <TimbradoSync />
         <MargensSync />
+        <PDFLoadingOverlay />
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<MunicipioSelector />} />

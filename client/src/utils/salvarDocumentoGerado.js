@@ -10,9 +10,10 @@ import api from '../services/api'
  * @param {string}               [opts.processoId] UUID do processo (opcional)
  * @param {string}               [opts.tipoOrigem] Categoria: did | despacho | oficio | pauta | requisicao | ordem
  */
-export function salvarDocumentoGerado(doc, { nome, processoId, tipoOrigem = 'gerado' }) {
+// Aceita Blob pré-gerado ou instância jsPDF (evita double-render quando o caller já tem o blob)
+export function salvarDocumentoGerado(docOrBlob, { nome, processoId, tipoOrigem = 'gerado' }) {
   try {
-    const blob = doc.output('blob')
+    const blob = docOrBlob instanceof Blob ? docOrBlob : docOrBlob.output('blob')
     const file = new File([blob], nome, { type: 'application/pdf' })
     const form = new FormData()
     form.append('file', file)

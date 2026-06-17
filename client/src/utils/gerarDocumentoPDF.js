@@ -2,6 +2,14 @@ import { jsPDF } from 'jspdf'
 import { salvarDocumentoGerado } from './salvarDocumentoGerado'
 import { applyTimbradoToPage } from './timbradoStore'
 import { getMargens } from './margensStore'
+import { setPDFLoading } from './pdfLoadingStore'
+
+function _download(blob, nome) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = nome; a.click()
+  setTimeout(() => URL.revokeObjectURL(url), 10000)
+}
 
 // ─── Margens dinâmicas (atualizado antes de cada geração) ─────────────────────
 let M       = 14
@@ -94,6 +102,8 @@ const TIPO_LABELS = {
 }
 
 export async function gerarDespachoPDF(processo, imprimir = false) {
+  setPDFLoading(true)
+  try {
   refreshM()
   // Suporta tanto o formato antigo (_despacho_*) quanto o novo (_despacho_doc_form)
   const f = processo._despacho_doc_form || processo.despacho_doc || {}
@@ -279,19 +289,22 @@ export async function gerarDespachoPDF(processo, imprimir = false) {
   doc.text('Assinatura / Carimbo', M + cw + cw / 2 - 6, y + 27)
 
   const nomeArq = `Despacho_${processo.numero || 'processo'}.pdf`
-  await salvarDocumentoGerado(doc, { nome: nomeArq, processoId: processo.id, tipoOrigem: 'despacho' })
+  const blob = doc.output('blob')
+  salvarDocumentoGerado(blob, { nome: nomeArq, processoId: processo.id, tipoOrigem: 'despacho' })
   if (imprimir) {
-    const blob = doc.output('blob')
-    const url  = URL.createObjectURL(blob)
-    const win  = window.open(url, '_blank')
+    const url = URL.createObjectURL(blob)
+    const win = window.open(url, '_blank')
     if (win) win.addEventListener('load', () => { win.print(); URL.revokeObjectURL(url) })
   } else {
-    doc.save(nomeArq)
+    _download(blob, nomeArq)
   }
+  } finally { setPDFLoading(false) }
 }
 
 // ─── OFÍCIO ───────────────────────────────────────────────────────────────────
 export async function gerarOficioPDF({ processo, form, tenant, imprimir = false }) {
+  setPDFLoading(true)
+  try {
   refreshM()
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   applyTimbradoToPage(doc)
@@ -475,19 +488,22 @@ export async function gerarOficioPDF({ processo, form, tenant, imprimir = false 
   }
 
   const nomeArq = `Oficio_${f.numero || processo?.numero || 'doc'}.pdf`
-  await salvarDocumentoGerado(doc, { nome: nomeArq, processoId: processo?.id, tipoOrigem: 'oficio' })
+  const blob = doc.output('blob')
+  salvarDocumentoGerado(blob, { nome: nomeArq, processoId: processo?.id, tipoOrigem: 'oficio' })
   if (imprimir) {
-    const blob = doc.output('blob')
-    const url  = URL.createObjectURL(blob)
-    const win  = window.open(url, '_blank')
+    const url = URL.createObjectURL(blob)
+    const win = window.open(url, '_blank')
     if (win) win.addEventListener('load', () => { win.print(); URL.revokeObjectURL(url) })
   } else {
-    doc.save(nomeArq)
+    _download(blob, nomeArq)
   }
+  } finally { setPDFLoading(false) }
 }
 
 // ─── PAUTA ────────────────────────────────────────────────────────────────────
 export async function gerarPautaPDF(processo) {
+  setPDFLoading(true)
+  try {
   refreshM()
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   let y = cabecalho(doc, 'PAUTA DE PROCESSO', processo.numero, processo.secretaria?.sigla || processo.secretariaSigla)
@@ -582,12 +598,16 @@ export async function gerarPautaPDF(processo) {
   })
 
   const nomeArqPauta = `Pauta_${processo.numero || 'processo'}.pdf`
-  await salvarDocumentoGerado(doc, { nome: nomeArqPauta, processoId: processo.id, tipoOrigem: 'pauta' })
-  doc.save(nomeArqPauta)
+  const blobPauta = doc.output('blob')
+  salvarDocumentoGerado(blobPauta, { nome: nomeArqPauta, processoId: processo.id, tipoOrigem: 'pauta' })
+  _download(blobPauta, nomeArqPauta)
+  } finally { setPDFLoading(false) }
 }
 
 // ─── REQUISIÇÃO ───────────────────────────────────────────────────────────────
 export async function gerarRequisicaoPDF(processo) {
+  setPDFLoading(true)
+  try {
   refreshM()
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   let y = cabecalho(doc, 'REQUISIÇÃO DE MATERIAL', processo.numero, processo.secretaria?.sigla || processo.secretariaSigla)
@@ -703,6 +723,8 @@ export async function gerarRequisicaoPDF(processo) {
   })
 
   const nomeArqReq = `Requisicao_${processo.numero || 'processo'}.pdf`
-  await salvarDocumentoGerado(doc, { nome: nomeArqReq, processoId: processo.id, tipoOrigem: 'requisicao' })
-  doc.save(nomeArqReq)
+  const blobReq = doc.output('blob')
+  salvarDocumentoGerado(blobReq, { nome: nomeArqReq, processoId: processo.id, tipoOrigem: 'requisicao' })
+  _download(blobReq, nomeArqReq)
+  } finally { setPDFLoading(false) }
 }

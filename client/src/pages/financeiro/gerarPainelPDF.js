@@ -2,6 +2,7 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { applyTimbradoToPage } from '../../utils/timbradoStore'
 import { getMargens } from '../../utils/margensStore'
+import { setPDFLoading } from '../../utils/pdfLoadingStore'
 
 // ─── Margens dinâmicas (atualizadas antes de cada geração) ────────────────────
 let M       = 12
@@ -375,6 +376,8 @@ function drawTable(doc, { head, body, colStyles, headColor, altColor, y, pageH }
 // ─── Funcao principal exportada ───────────────────────────────────────────────
 export function gerarPainelPDF({ painel, filtros, ano, orgNome }) {
   if (!painel) return
+  setPDFLoading(true)
+  try {
   refreshM()
 
   const doc   = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
@@ -605,5 +608,10 @@ export function gerarPainelPDF({ painel, filtros, ano, orgNome }) {
   drawFooters(doc, ano, orgNome, pageH, pageW)
 
   // ── Download ─────────────────────────────────────────────────────────────
-  doc.save(`painel-financeiro-${ano}.pdf`)
+  const blobPainel = doc.output('blob')
+  const urlPainel = URL.createObjectURL(blobPainel)
+  const aPainel = document.createElement('a')
+  aPainel.href = urlPainel; aPainel.download = `painel-financeiro-${ano}.pdf`; aPainel.click()
+  setTimeout(() => URL.revokeObjectURL(urlPainel), 10000)
+  } finally { setPDFLoading(false) }
 }

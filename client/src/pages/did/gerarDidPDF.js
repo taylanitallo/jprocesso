@@ -3,6 +3,7 @@ import autoTable from 'jspdf-autotable'
 import { salvarDocumentoGerado } from '../../utils/salvarDocumentoGerado'
 import { applyTimbradoToPage } from '../../utils/timbradoStore'
 import { getMargens } from '../../utils/margensStore'
+import { setPDFLoading } from '../../utils/pdfLoadingStore'
 
 // ─── Utilitários ──────────────────────────────────────────────────────────────
 const fmt     = v => (v && String(v).trim()) ? String(v).trim() : '—'
@@ -177,6 +178,8 @@ async function carregarImagem(url) {
 
 // ─── Geração Principal ────────────────────────────────────────────────────────
 export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, processoId }) {
+  setPDFLoading(true)
+  try {
   refreshM()
   const doc   = new jsPDF({ unit: 'mm', format: 'a4' })
   const pageW = 210
@@ -310,7 +313,7 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
   // ── Tabela de Itens — ultra-compacta ─────────────────────────────────────
   const itensFiltrados = (itensDid || []).filter(it => it.descricao)
   if (itensFiltrados.length > 0) {
-    if (y > pageH - 28) { doc.addPage(); applyTimbradoToPage(doc); y = 16 }
+    if (y > pageH - 28) { doc.addPage(); applyTimbradoToPage(doc); y = mTop + 4 }
     norm(doc, 5.5, C.muted)
     doc.text('ITENS / SERVIÇOS', M + 1, y)
     y += 2
@@ -343,7 +346,7 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
         4: { cellWidth: 38, halign: 'right', fontStyle: 'bold' },
       },
       margin: { left: M, right: M },
-      didDrawPage: () => applyTimbradoToPage(doc),
+      willDrawPage: (data) => { if (data.pageNumber > 1) applyTimbradoToPage(doc) },
     })
     y = doc.lastAutoTable.finalY + 4
   }
@@ -472,7 +475,7 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
     y += 3
 
     // Demonstrativo de descontos
-    if (y > pageH - 50) { doc.addPage(); applyTimbradoToPage(doc); y = 16 }
+    if (y > pageH - 50) { doc.addPage(); applyTimbradoToPage(doc); y = mTop + 4 }
     norm(doc, 5.5, C.muted)
     doc.text('DEMONSTRATIVO DE DESCONTOS', M + 1, y)
     y += 2
@@ -505,7 +508,7 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
         1: { cellWidth: 56, halign: 'right' },
       },
       margin: { left: M, right: M },
-      didDrawPage: () => applyTimbradoToPage(doc),
+      willDrawPage: (data) => { if (data.pageNumber > 1) applyTimbradoToPage(doc) },
     })
     y = doc.lastAutoTable.finalY + 1.5
 
@@ -591,7 +594,7 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
     y += 3
 
     // Demonstrativo de descontos
-    if (y > pageH - 50) { doc.addPage(); applyTimbradoToPage(doc); y = 16 }
+    if (y > pageH - 50) { doc.addPage(); applyTimbradoToPage(doc); y = mTop + 4 }
     norm(doc, 5.5, C.muted)
     doc.text('DEMONSTRATIVO DE DESCONTOS', M + 1, y)
     y += 2
@@ -624,7 +627,7 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
         1: { cellWidth: 56, halign: 'right' },
       },
       margin: { left: M, right: M },
-      didDrawPage: () => applyTimbradoToPage(doc),
+      willDrawPage: (data) => { if (data.pageNumber > 1) applyTimbradoToPage(doc) },
     })
     y = doc.lastAutoTable.finalY + 1.5
 
@@ -660,9 +663,14 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
 
   // ── Salvar ────────────────────────────────────────────────────────────────
   const nomeArq = `DID_${form.numero_did || 'rascunho'}_${(form.contrato_ref || 'sem-contrato').replace(/[\/\\]/g, '-')}.pdf`
+  const blobDid = doc.output('blob')
   if (processoId && processoId !== 'novo') {
-    await salvarDocumentoGerado(doc, { nome: nomeArq, processoId, tipoOrigem: 'did' })
+    salvarDocumentoGerado(blobDid, { nome: nomeArq, processoId, tipoOrigem: 'did' })
   }
-  doc.save(nomeArq)
+  const urlDid = URL.createObjectURL(blobDid)
+  const aDid = document.createElement('a')
+  aDid.href = urlDid; aDid.download = nomeArq; aDid.click()
+  setTimeout(() => URL.revokeObjectURL(urlDid), 10000)
+  } finally { setPDFLoading(false) }
 }
 
