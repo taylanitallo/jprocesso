@@ -4,6 +4,7 @@ import { useAuth } from './context/AuthContext'
 import AuthProvider from './context/AuthContext'
 import ThemeProvider from './context/ThemeContext'
 import { setTimbrado } from './utils/timbradoStore'
+import { setMargens } from './utils/margensStore'
 
 // ── Imports estáticos — shell crítico (sempre carregado) ──────────────────────
 import Layout from './components/Layout'
@@ -48,6 +49,15 @@ function TimbradoSync() {
   useEffect(() => {
     setTimbrado(tenant?.configuracoes?.timbrado ?? null)
   }, [tenant?.configuracoes?.timbrado])
+  return null
+}
+
+function MargensSync() {
+  const { tenant } = useAuth()
+  const mg = tenant?.configuracoes?.margens
+  useEffect(() => {
+    setMargens(mg ?? null)
+  }, [mg])
   return null
 }
 
@@ -118,6 +128,7 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <TimbradoSync />
+        <MargensSync />
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<MunicipioSelector />} />

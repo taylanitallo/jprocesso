@@ -1,6 +1,21 @@
 import { jsPDF } from 'jspdf'
 import { salvarDocumentoGerado } from './salvarDocumentoGerado'
 import { applyTimbradoToPage } from './timbradoStore'
+import { getMargens } from './margensStore'
+
+// ─── Margens dinâmicas (atualizado antes de cada geração) ─────────────────────
+let M       = 14
+let UW      = 182
+let mTop    = 20
+let mBottom = 20
+
+function refreshM() {
+  const mg = getMargens()
+  M       = mg.left
+  UW      = 210 - mg.left - mg.right
+  mTop    = mg.top
+  mBottom = mg.bottom
+}
 
 // ─── Utilitários ──────────────────────────────────────────────────────────────
 const fmt = v => (v && String(v).trim()) ? String(v).trim() : '—'
@@ -11,12 +26,9 @@ const fmtData = v => {
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
-const M = 14        // margem
-const UW = 182      // largura útil (210 - 2*14)
-
 // Paginação automática
 function checkPage(doc, y, needed = 20) {
-  if (y + needed > 277) { doc.addPage(); applyTimbradoToPage(doc); return M + 6 }
+  if (y + needed > 297 - mBottom) { doc.addPage(); applyTimbradoToPage(doc); return mTop + 6 }
   return y
 }
 
@@ -81,6 +93,7 @@ const TIPO_LABELS = {
 }
 
 export async function gerarDespachoPDF(processo, imprimir = false) {
+  refreshM()
   // Suporta tanto o formato antigo (_despacho_*) quanto o novo (_despacho_doc_form)
   const f = processo._despacho_doc_form || processo.despacho_doc || {}
   const despachoPara    = f.para           || ''
@@ -278,10 +291,11 @@ export async function gerarDespachoPDF(processo, imprimir = false) {
 
 // ─── OFÍCIO ───────────────────────────────────────────────────────────────────
 export async function gerarOficioPDF({ processo, form, tenant, imprimir = false }) {
+  refreshM()
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   applyTimbradoToPage(doc)
   const PG  = 210   // largura da página
-  const MO  = 20    // margem do ofício (um pouco maior para visual formal)
+  const MO  = M     // margem do ofício usa a margem configurada
   const UWO = PG - MO * 2
 
   const f   = form || {}

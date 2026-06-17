@@ -1,10 +1,21 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { applyTimbradoToPage } from '../../utils/timbradoStore'
+import { getMargens } from '../../utils/margensStore'
 
-// ─── Constantes de layout ─────────────────────────────────────────────────────
-const M  = 12          // margem esquerda/direita
-const UW = 186         // largura util: 210 - 2*12
+// ─── Margens dinâmicas (atualizadas antes de cada geração) ────────────────────
+let M       = 12
+let UW      = 186
+let mTop    = 20
+let mBottom = 20
+
+function refreshM() {
+  const mg = getMargens()
+  M       = mg.left
+  UW      = 210 - mg.left - mg.right
+  mTop    = mg.top
+  mBottom = mg.bottom
+}
 
 // ─── Helpers de formatação ────────────────────────────────────────────────────
 const safe = v => {
@@ -68,10 +79,10 @@ const norm = (doc, size, color) => {
 
 // ─── Verificacao de quebra de pagina ─────────────────────────────────────────
 const checkPage = (doc, y, pageH, needed = 25) => {
-  if (y + needed > pageH - 14) {
+  if (y + needed > pageH - mBottom) {
     doc.addPage()
     applyTimbradoToPage(doc)
-    return 16
+    return mTop + 4
   }
   return y
 }
@@ -382,6 +393,7 @@ function drawTable(doc, { head, body, colStyles, headColor, altColor, y, pageH }
 // ─── Funcao principal exportada ───────────────────────────────────────────────
 export function gerarPainelPDF({ painel, filtros, ano, orgNome }) {
   if (!painel) return
+  refreshM()
 
   const doc   = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const pageW = doc.internal.pageSize.getWidth()

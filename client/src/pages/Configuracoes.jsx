@@ -92,6 +92,12 @@ export default function Configuracoes() {
     cor_relatorio_primaria:   conf.cor_relatorio_primaria   || '#1e40af',
     cor_relatorio_secundaria: conf.cor_relatorio_secundaria || '#1e3a5f',
     cor_relatorio_texto:      conf.cor_relatorio_texto      || '#111827',
+    margens: {
+      top:    conf.margens?.top    ?? 20,
+      bottom: conf.margens?.bottom ?? 20,
+      left:   conf.margens?.left   ?? 14,
+      right:  conf.margens?.right  ?? 14,
+    },
   });
 
   // Logo da secretaria do usuário — armazenada na tabela secretarias (por secretaria)
@@ -115,6 +121,12 @@ export default function Configuracoes() {
           cor_relatorio_primaria:   c.cor_relatorio_primaria   || '#1e40af',
           cor_relatorio_secundaria: c.cor_relatorio_secundaria || '#1e3a5f',
           cor_relatorio_texto:      c.cor_relatorio_texto      || '#111827',
+          margens: {
+            top:    c.margens?.top    ?? 20,
+            bottom: c.margens?.bottom ?? 20,
+            left:   c.margens?.left   ?? 14,
+            right:  c.margens?.right  ?? 14,
+          },
         });
       })
       .catch(() => {});
@@ -482,6 +494,109 @@ export default function Configuracoes() {
                     <p className="text-[11px] mt-1" style={{ color: geraisData.cor_relatorio_texto, opacity: 0.7 }}>Processo nº 001/2026 · Secretaria de Administração</p>
                   </div>
                   <div className="h-1" style={{ backgroundColor: geraisData.cor_relatorio_secundaria }} />
+                </div>
+              </div>
+
+              {/* Margens dos Documentos */}
+              <div>
+                <SectionTitle title="Margens dos Documentos" />
+                <p className="text-xs text-gray-400 dark:text-slate-500 mb-5">
+                  Define o espaço (em mm) entre o conteúdo e as bordas da folha em todos os documentos gerados — PDFs, relatórios, DIDs, ofícios e ordens.
+                </p>
+
+                {/* Presets */}
+                <div className="flex flex-wrap gap-2 mb-5">
+                  {[
+                    { label: 'Normal',   mg: { top: 20, bottom: 20, left: 14, right: 14 } },
+                    { label: 'Estreito', mg: { top: 12, bottom: 12, left: 12, right: 12 } },
+                    { label: 'ABNT',     mg: { top: 30, bottom: 20, left: 30, right: 20 } },
+                    { label: 'Largo',    mg: { top: 25, bottom: 25, left: 25, right: 25 } },
+                  ].map(({ label, mg }) => (
+                    <button
+                      key={label}
+                      type="button"
+                      disabled={!editandoGerais}
+                      onClick={() => setGeraisData(p => ({ ...p, margens: mg }))}
+                      className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 dark:border-slate-600
+                                 bg-gray-50 dark:bg-slate-700 text-gray-700 dark:text-slate-300
+                                 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:border-blue-400
+                                 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-8 items-start">
+                  {/* Inputs */}
+                  <div className="grid grid-cols-2 gap-4 w-full max-w-xs">
+                    {[
+                      { key: 'top',    label: 'Superior' },
+                      { key: 'bottom', label: 'Inferior' },
+                      { key: 'left',   label: 'Esquerda' },
+                      { key: 'right',  label: 'Direita'  },
+                    ].map(({ key, label }) => (
+                      <div key={key}>
+                        <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">{label}</label>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            min="5"
+                            max="50"
+                            step="1"
+                            value={geraisData.margens[key]}
+                            disabled={!editandoGerais}
+                            onChange={e => {
+                              const v = Math.min(50, Math.max(5, Number(e.target.value) || 5))
+                              setGeraisData(p => ({ ...p, margens: { ...p.margens, [key]: v } }))
+                            }}
+                            className="w-20 px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600
+                                       bg-white dark:bg-slate-700/50 text-gray-900 dark:text-slate-100
+                                       focus:ring-2 focus:ring-blue-500 outline-none
+                                       disabled:opacity-60 disabled:cursor-not-allowed"
+                          />
+                          <span className="text-xs text-gray-500 dark:text-slate-400">mm</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Prévia A4 */}
+                  <div className="shrink-0">
+                    <p className="text-xs text-gray-400 dark:text-slate-500 mb-2">Pré-visualização</p>
+                    <div className="relative bg-white dark:bg-slate-200 shadow border border-gray-300"
+                         style={{ width: 90, height: 127 }}>
+                      {/* área de conteúdo */}
+                      <div className="absolute border-2 border-dashed border-blue-400"
+                           style={{
+                             top:    `${(geraisData.margens.top    / 297) * 127}px`,
+                             bottom: `${(geraisData.margens.bottom / 297) * 127}px`,
+                             left:   `${(geraisData.margens.left   / 210) * 90}px`,
+                             right:  `${(geraisData.margens.right  / 210) * 90}px`,
+                           }}>
+                        <div className="w-full h-1.5 bg-gray-300 rounded mt-1.5 mx-auto" style={{ width: '80%' }} />
+                        <div className="w-full h-1 bg-gray-200 rounded mt-1 mx-auto" style={{ width: '90%' }} />
+                        <div className="w-full h-1 bg-gray-200 rounded mt-1 mx-auto" style={{ width: '70%' }} />
+                      </div>
+                      {/* rótulos de medida */}
+                      <span className="absolute text-[7px] text-blue-500 font-bold"
+                            style={{ top: 2, left: '50%', transform: 'translateX(-50%)' }}>
+                        {geraisData.margens.top}
+                      </span>
+                      <span className="absolute text-[7px] text-blue-500 font-bold"
+                            style={{ bottom: 2, left: '50%', transform: 'translateX(-50%)' }}>
+                        {geraisData.margens.bottom}
+                      </span>
+                      <span className="absolute text-[7px] text-blue-500 font-bold"
+                            style={{ left: 2, top: '50%', transform: 'translateY(-50%)' }}>
+                        {geraisData.margens.left}
+                      </span>
+                      <span className="absolute text-[7px] text-blue-500 font-bold"
+                            style={{ right: 2, top: '50%', transform: 'translateY(-50%)' }}>
+                        {geraisData.margens.right}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 

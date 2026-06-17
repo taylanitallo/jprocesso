@@ -2,6 +2,7 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { salvarDocumentoGerado } from '../../utils/salvarDocumentoGerado'
 import { applyTimbradoToPage } from '../../utils/timbradoStore'
+import { getMargens } from '../../utils/margensStore'
 
 // ─── Utilitários ──────────────────────────────────────────────────────────────
 const fmt     = v => (v && String(v).trim()) ? String(v).trim() : '—'
@@ -51,15 +52,24 @@ const C = {
   pendente:  [175, 82,   8],
 }
 
-// Margem padrão
-const M  = 12
-// Largura útil
-const UW = 186   // 210 - 2*12
+// Margens dinâmicas (atualizadas antes de cada geração)
+let M       = 12
+let UW      = 186
+let mTop    = 20
+let mBottom = 20
+
+function refreshM() {
+  const mg = getMargens()
+  M       = mg.left
+  UW      = 210 - mg.left - mg.right
+  mTop    = mg.top
+  mBottom = mg.bottom
+}
 
 // ─── Divisor de Seção — barra fina + rótulo inline ───────────────────────────
 // Retorna y após o divisor (compacto: só 6mm de altura total)
 function divSecao(doc, y, numero, titulo, acent, pageH) {
-  if (y > pageH - 20) { doc.addPage(); applyTimbradoToPage(doc); y = 16 }
+  if (y > pageH - 20) { doc.addPage(); applyTimbradoToPage(doc); y = mTop + 4 }
   // Linha tênue acima (separa do bloco anterior)
   doc.setDrawColor(...C.rule)
   doc.setLineWidth(0.15)
@@ -84,7 +94,7 @@ function divSecao(doc, y, numero, titulo, acent, pageH) {
 // cols: array de { label, value, width? } onde width é fração de UW
 // Retorna novo y
 function gridRow(doc, y, cols, pageH) {
-  if (y > pageH - 14) { doc.addPage(); applyTimbradoToPage(doc); y = 16 }
+  if (y > pageH - 14) { doc.addPage(); applyTimbradoToPage(doc); y = mTop + 4 }
   let x = M
   // Calcula larguras
   const total = cols.reduce((s, c) => s + (c.w || 1), 0)
@@ -110,7 +120,7 @@ function gridRow(doc, y, cols, pageH) {
 
 // ─── Campo objeto — texto completo com wrap ───────────────────────────────────
 function campoObjeto(doc, y, valor, pageH) {
-  if (y > pageH - 16) { doc.addPage(); applyTimbradoToPage(doc); y = 16 }
+  if (y > pageH - 16) { doc.addPage(); applyTimbradoToPage(doc); y = mTop + 4 }
   norm(doc, 5.5, C.muted)
   doc.text('OBJETO', M + 1, y + 1.5)
   bold(doc, 7.5, C.ink)
@@ -125,7 +135,7 @@ function campoObjeto(doc, y, valor, pageH) {
 
 // ─── Linha de Checkboxes compacta ─────────────────────────────────────────────
 function checkRow(doc, y, label, itens, pageH) {
-  if (y > pageH - 10) { doc.addPage(); applyTimbradoToPage(doc); y = 16 }
+  if (y > pageH - 10) { doc.addPage(); applyTimbradoToPage(doc); y = mTop + 4 }
   norm(doc, 5.5, C.muted)
   doc.text(label.toUpperCase() + ':', M + 1, y + 3.5)
   let x = M + doc.getTextWidth(label.toUpperCase() + ':') + 4
@@ -165,9 +175,10 @@ async function carregarImagem(url) {
 
 // ─── Geração Principal ────────────────────────────────────────────────────────
 export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, processoId }) {
+  refreshM()
   const doc   = new jsPDF({ unit: 'mm', format: 'a4' })
   const pageW = 210
-  const pageH = 297
+  const pageH = 297 - mBottom
   applyTimbradoToPage(doc)
 
   const nomeMunicipio = tenant?.nome_municipio || 'Prefeitura Municipal'
