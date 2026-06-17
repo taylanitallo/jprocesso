@@ -13,6 +13,7 @@ const patrimonioRoutes   = require('./patrimonio');
 const logRoutes          = require('./log');
 const aylaRoutes         = require('./ayla');
 const superadminRoutes   = require('./superadmin');
+const tesourariaRoutes   = require('./tesouraria');
 
 module.exports = (app) => {
   app.use('/api/auth', authRoutes);
@@ -31,4 +32,5 @@ module.exports = (app) => {
   app.use('/api/logs',       logRoutes);
   app.use('/api/ayla',       aylaRoutes);
   app.use('/api/superadmin', superadminRoutes);
+  app.use('/api/tesouraria', tesourariaRoutes);
 };

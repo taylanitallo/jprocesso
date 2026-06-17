@@ -1,4 +1,32 @@
+const axios = require('axios');
 const initializedSchemas = new Set();
+
+// Cache em memória — lista de bancos muda raramente
+let _bancosCache = null;
+let _bancosCacheAt = 0;
+const BANCOS_TTL = 24 * 60 * 60 * 1000; // 24h
+
+const listBancos = async (req, res) => {
+  try {
+    const now = Date.now();
+    if (!_bancosCache || now - _bancosCacheAt > BANCOS_TTL) {
+      const { data } = await axios.get('https://brasilapi.com.br/api/banks/v1', { timeout: 10000 });
+      _bancosCache = data
+        .filter(b => b.code != null && b.name)
+        .map(b => ({
+          code: String(b.code).padStart(3, '0'),
+          name: b.name,
+          fullName: b.fullName || b.name,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+      _bancosCacheAt = now;
+    }
+    res.json({ bancos: _bancosCache });
+  } catch (err) {
+    console.error('listBancos:', err.message);
+    res.status(502).json({ error: 'Não foi possível obter a lista de bancos' });
+  }
+};
 
 async function ensureTable(req) {
   const schema = req.tenant?.schema;
@@ -85,4 +113,4 @@ const deleteConta = async (req, res) => {
   }
 };
 
-module.exports = { listContas, createConta, updateConta, deleteConta };
+module.exports = { listBancos, listContas, createConta, updateConta, deleteConta };
