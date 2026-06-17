@@ -678,9 +678,9 @@ tfoot tr{background:#f0fdf4 !important}
 tfoot td{font-weight:700;font-size:13px;border-top:2px solid #16a34a;padding:10px}
 tfoot .val{font-size:15px;color:#15803d}
 .foot{margin-top:16px;text-align:right;color:#9ca3af;font-size:9.5px;border-top:1px solid #e5e7eb;padding-top:8px}
+@page{margin:0}
 @media print{
-  @page{margin:12mm 15mm}
-  body{padding:0}
+  body{padding:${tenant?.configuracoes?.margens?.top??20}mm ${tenant?.configuracoes?.margens?.right??14}mm ${tenant?.configuracoes?.margens?.bottom??20}mm ${tenant?.configuracoes?.margens?.left??14}mm}
   .meta{background:#f0fdf4 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   thead tr{background:#166534 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .ghdr td{background:#dcfce7 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -1414,9 +1414,11 @@ function TabRelatorios() {
     }
   };
 
+  const _mg = tenant?.configuracoes?.margens;
   const PRINT_CSS = `
+    @page{margin:0}
     *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}
-    body{font-family:Arial,sans-serif;padding:20px;color:#111;margin:0}
+    body{font-family:Arial,sans-serif;padding:${_mg?.top??20}mm ${_mg?.right??14}mm ${_mg?.bottom??20}mm ${_mg?.left??14}mm;color:#111;margin:0}
     h2{margin:0 0 2px;font-size:17px}p{margin:2px 0;font-size:12px;color:#555}
     table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px}
     th,td{padding:7px 10px;border:1px solid #d1d5db}
@@ -1427,7 +1429,7 @@ function TabRelatorios() {
     .row-r{background:#f0fdf4!important}
     .v-pos{color:#16a34a;font-weight:700}.v-neg{color:#dc2626;font-weight:700}
     .v-g{color:#16a34a}.v-r{color:#dc2626}
-    ${tenant?.configuracoes?.timbrado ? `body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background-image:url("${tenant.configuracoes.timbrado}");background-size:100% 100%;background-repeat:no-repeat;opacity:.12;z-index:-1}` : ''}
+    ${tenant?.configuracoes?.timbrado ? `body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background-image:url("${tenant.configuracoes.timbrado}");background-size:100% 100%;background-repeat:no-repeat;opacity:.75;z-index:-1;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}` : ''}
     @media print{
       .th-blue{background:#1e40af!important;color:#fff!important}
       .th-green{background:#166534!important;color:#fff!important}

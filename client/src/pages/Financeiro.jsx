@@ -1982,7 +1982,9 @@ export default function Financeiro() {
                             ? ` — ${relFiltros.data_inicio ? fmtData(relFiltros.data_inicio) : '...'} até ${relFiltros.data_fim ? fmtData(relFiltros.data_fim) : '...'}`
                             : ''
                           win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Relatório DIDs</title><style>
-                            body{font-family:Arial,sans-serif;font-size:11px;padding:20px;color:#222}
+                            @page{margin:0}
+                            *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+                            body{font-family:Arial,sans-serif;font-size:11px;padding:${tenant?.configuracoes?.margens?.top??20}mm ${tenant?.configuracoes?.margens?.right??14}mm ${tenant?.configuracoes?.margens?.bottom??20}mm ${tenant?.configuracoes?.margens?.left??14}mm;color:#222;margin:0}
                             h2{font-size:15px;margin-bottom:4px}p{color:#666;margin-bottom:12px;font-size:11px}
                             table{width:100%;border-collapse:collapse}
                             th{background:#1e40af;color:#fff;padding:6px 8px;text-align:left;font-size:10px;font-weight:600}
