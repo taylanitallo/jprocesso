@@ -1,0 +1,198 @@
+const { Op, fn, col } = require('sequelize');
+
+const saldoContas = async (req, res) => {
+  try {
+    const { ContaBancaria, TesReceita, TesDespesa } = req.models;
+    const { data_de, data_ate } = req.query;
+
+    const receitaWhere = {};
+    if (data_de || data_ate) {
+      receitaWhere.data = {};
+      if (data_de) receitaWhere.data[Op.gte] = data_de;
+      if (data_ate) receitaWhere.data[Op.lte] = data_ate;
+    }
+
+    const despesaWhere = {};
+    if (data_de || data_ate) {
+      despesaWhere.data_pagamento = {};
+      if (data_de) despesaWhere.data_pagamento[Op.gte] = data_de;
+      if (data_ate) despesaWhere.data_pagamento[Op.lte] = data_ate;
+    }
+
+    const [contas, receitas, despesas] = await Promise.all([
+      ContaBancaria.findAll({ where: { ativo: true }, order: [['nome', 'ASC']] }),
+      TesReceita.findAll({
+        attributes: ['conta_id', [fn('SUM', col('valor')), 'total']],
+        where: receitaWhere,
+        group: ['conta_id'],
+        raw: true,
+      }),
+      TesDespesa.findAll({
+        attributes: ['conta_id', [fn('SUM', col('valor_liquido')), 'total']],
+        where: despesaWhere,
+        group: ['conta_id'],
+        raw: true,
+      }),
+    ]);
+
+    const result = contas.map(c => {
+      const r = parseFloat(receitas.find(x => x.conta_id === c.id)?.total || 0);
+      const d = parseFloat(despesas.find(x => x.conta_id === c.id)?.total || 0);
+      return { ...c.toJSON(), total_receitas: r, total_despesas: d, saldo: r - d };
+    });
+
+    const totais = {
+      receitas: result.reduce((s, c) => s + c.total_receitas, 0),
+      despesas: result.reduce((s, c) => s + c.total_despesas, 0),
+      saldo:    result.reduce((s, c) => s + c.saldo, 0),
+    };
+
+    res.json({ contas: result, totais });
+  } catch (err) {
+    console.error('saldoContas:', err);
+    res.status(500).json({ error: 'Erro ao calcular saldo das contas' });
+  }
+};
+
+const fluxoMensal = async (req, res) => {
+  try {
+    const { TesReceita, TesDespesa } = req.models;
+    const { conta_id, ano } = req.query;
+    const anoNum = parseInt(ano) || new Date().getFullYear();
+    const sequelize = TesReceita.sequelize;
+
+    const receitaWhere = {
+      data: { [Op.between]: [`${anoNum}-01-01`, `${anoNum}-12-31`] },
+    };
+    if (conta_id) receitaWhere.conta_id = conta_id;
+
+    const despesaWhere = {
+      data_pagamento: { [Op.between]: [`${anoNum}-01-01`, `${anoNum}-12-31`] },
+    };
+    if (conta_id) despesaWhere.conta_id = conta_id;
+
+    const mesTrunc = (campo) => sequelize.fn('DATE_TRUNC', 'month', sequelize.col(campo));
+
+    const [receitas, despesas] = await Promise.all([
+      TesReceita.findAll({
+        attributes: [
+          [sequelize.fn('TO_CHAR', mesTrunc('data'), 'YYYY-MM'), 'mes'],
+          [fn('SUM', col('valor')), 'total'],
+        ],
+        where: receitaWhere,
+        group: [mesTrunc('data')],
+        order: [[mesTrunc('data'), 'ASC']],
+        raw: true,
+      }),
+      TesDespesa.findAll({
+        attributes: [
+          [sequelize.fn('TO_CHAR', mesTrunc('data_pagamento'), 'YYYY-MM'), 'mes'],
+          [fn('SUM', col('valor_liquido')), 'total'],
+        ],
+        where: despesaWhere,
+        group: [mesTrunc('data_pagamento')],
+        order: [[mesTrunc('data_pagamento'), 'ASC']],
+        raw: true,
+      }),
+    ]);
+
+    const mesesSet = new Set([...receitas.map(r => r.mes), ...despesas.map(d => d.mes)]);
+    const meses = [...mesesSet].sort().map(mes => {
+      const r = parseFloat(receitas.find(x => x.mes === mes)?.total || 0);
+      const d = parseFloat(despesas.find(x => x.mes === mes)?.total || 0);
+      return { mes, receitas: r, despesas: d, resultado: r - d };
+    });
+
+    const totais = {
+      receitas: meses.reduce((s, m) => s + m.receitas, 0),
+      despesas: meses.reduce((s, m) => s + m.despesas, 0),
+      resultado: meses.reduce((s, m) => s + m.resultado, 0),
+    };
+
+    res.json({ meses, totais, ano: anoNum });
+  } catch (err) {
+    console.error('fluxoMensal:', err);
+    res.status(500).json({ error: 'Erro ao calcular fluxo mensal' });
+  }
+};
+
+const extratoConta = async (req, res) => {
+  try {
+    const { ContaBancaria, TesReceita, TesDespesa, ContratoOrdem } = req.models;
+    const { conta_id, data_de, data_ate } = req.query;
+    if (!conta_id) return res.status(400).json({ error: 'Conta é obrigatória' });
+
+    const conta = await ContaBancaria.findByPk(conta_id);
+    if (!conta) return res.status(404).json({ error: 'Conta não encontrada' });
+
+    const receitaWhere = { conta_id };
+    if (data_de || data_ate) {
+      receitaWhere.data = {};
+      if (data_de) receitaWhere.data[Op.gte] = data_de;
+      if (data_ate) receitaWhere.data[Op.lte] = data_ate;
+    }
+
+    const despesaWhere = { conta_id };
+    if (data_de || data_ate) {
+      despesaWhere.data_pagamento = {};
+      if (data_de) despesaWhere.data_pagamento[Op.gte] = data_de;
+      if (data_ate) despesaWhere.data_pagamento[Op.lte] = data_ate;
+    }
+
+    const [receitas, despesas] = await Promise.all([
+      TesReceita.findAll({ where: receitaWhere, raw: true }),
+      TesDespesa.findAll({
+        where: despesaWhere,
+        include: [{
+          model: ContratoOrdem,
+          as: 'ordem',
+          attributes: ['id', 'numero', 'objeto', 'tipo'],
+          required: false,
+        }],
+      }),
+    ]);
+
+    const lancamentos = [
+      ...receitas.map(r => ({
+        tipo: 'R',
+        data: r.data,
+        descricao: r.descricao,
+        valor: parseFloat(r.valor),
+        observacao: r.observacao || null,
+      })),
+      ...despesas.map(d => ({
+        tipo: 'D',
+        data: d.data_pagamento,
+        descricao: d.ordem
+          ? `${d.ordem.tipo === 'COMPRA' ? 'OC' : 'OS'} ${d.ordem.numero} — ${d.ordem.objeto}`
+          : `Pagamento #${d.ordem_id}`,
+        valor: parseFloat(d.valor_liquido),
+        valor_bruto: parseFloat(d.valor_bruto),
+        observacao: d.observacao || null,
+      })),
+    ].sort((a, b) => {
+      const diff = String(a.data).localeCompare(String(b.data));
+      return diff !== 0 ? diff : (a.tipo === 'R' ? -1 : 1);
+    });
+
+    let saldo = 0;
+    lancamentos.forEach(l => {
+      saldo += l.tipo === 'R' ? l.valor : -l.valor;
+      l.saldo = saldo;
+    });
+
+    const totalReceitas  = receitas.reduce((s, r) => s + parseFloat(r.valor), 0);
+    const totalDespesas  = despesas.reduce((s, d) => s + parseFloat(d.valor_liquido), 0);
+
+    res.json({
+      conta: conta.toJSON(),
+      lancamentos,
+      totais: { receitas: totalReceitas, despesas: totalDespesas, saldo: totalReceitas - totalDespesas },
+    });
+  } catch (err) {
+    console.error('extratoConta:', err);
+    res.status(500).json({ error: 'Erro ao gerar extrato' });
+  }
+};
+
+module.exports = { saldoContas, fluxoMensal, extratoConta };

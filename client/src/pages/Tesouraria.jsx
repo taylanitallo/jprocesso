@@ -5,13 +5,17 @@ import PageHeader from '../components/ui/PageHeader';
 import SectionTitle from '../components/ui/SectionTitle';
 import FilterBar from '../components/ui/FilterBar';
 import {
-  Landmark, Plus, Edit2, Trash2, Save, X, TrendingUp, Printer, Search,
+  Landmark, Plus, Edit2, Trash2, Save, X,
+  TrendingUp, TrendingDown, BarChart2,
+  Printer, Search, CheckCircle2, Clock, RotateCcw, CreditCard, ShoppingCart,
 } from 'lucide-react';
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 const TABS = [
-  { key: 'contas',   label: 'Contas Bancárias', Icon: Landmark },
-  { key: 'receitas', label: 'Receitas',          Icon: TrendingUp },
+  { key: 'contas',    label: 'Contas Bancárias', Icon: Landmark },
+  { key: 'receitas',  label: 'Receitas',          Icon: TrendingUp },
+  { key: 'despesas',  label: 'Despesas',           Icon: TrendingDown },
+  { key: 'relatorios', label: 'Relatórios',        Icon: BarChart2 },
 ];
 
 const TIPOS_CONTA = [
@@ -85,8 +89,10 @@ export default function Tesouraria() {
         </div>
 
         {/* Conteúdo das abas */}
-        {activeTab === 'contas'   && <TabContas secretarias={secretarias} />}
-        {activeTab === 'receitas' && <TabReceitas />}
+        {activeTab === 'contas'     && <TabContas secretarias={secretarias} />}
+        {activeTab === 'receitas'   && <TabReceitas />}
+        {activeTab === 'despesas'   && <TabDespesas />}
+        {activeTab === 'relatorios' && <TabRelatorios />}
       </div>
     </div>
   );
@@ -959,6 +965,754 @@ tfoot .val{font-size:15px;color:#15803d}
               </button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Tab: Despesas ──────────────────────────────────────────────────────────────
+function TabDespesas() {
+  const [contas, setContas] = useState([]);
+  const [ordens, setOrdens] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [ordemSel, setOrdemSel] = useState(null);
+  const [editingPag, setEditingPag] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [filtros, setFiltros] = useState({ tipo: 'TODOS', status: 'TODOS', pago: 'TODOS', data_de: '', data_ate: '', busca: '' });
+  const [form, setForm] = useState({ conta_id: '', data_pagamento: '', valor_bruto: '', valor_liquido: '', observacao: '' });
+
+  const maskValorD = (raw) => {
+    const digits = String(raw).replace(/\D/g, '');
+    if (!digits) return '';
+    return (parseInt(digits, 10) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+  const unmask = v => parseFloat(String(v).replace(/\./g, '').replace(',', '.')) || 0;
+  const inp = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
+  const inpF = k => e => setFiltros(p => ({ ...p, [k]: e.target.value }));
+  const fmtDate = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
+  const fmtVal = v => v != null ? parseFloat(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—';
+
+  const load = (f = filtros) => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (f.tipo && f.tipo !== 'TODOS') params.append('tipo', f.tipo);
+    if (f.status && f.status !== 'TODOS') params.append('status', f.status);
+    if (f.pago && f.pago !== 'TODOS') params.append('pago', f.pago);
+    if (f.data_de) params.append('data_de', f.data_de);
+    if (f.data_ate) params.append('data_ate', f.data_ate);
+    if (f.busca) params.append('busca', f.busca);
+    api.get(`/tesouraria/despesas?${params}`)
+      .then(r => setOrdens(r.data.ordens || []))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    load();
+    api.get('/organizacao/contas-bancarias').then(r => setContas(r.data.contas || [])).catch(() => {});
+  }, []);
+
+  const openPagar = (ordem) => {
+    setOrdemSel(ordem);
+    setEditingPag(null);
+    const valorTotal = ordem.valor_total
+      ? (parseFloat(ordem.valor_total)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : '';
+    setForm({ conta_id: '', data_pagamento: new Date().toISOString().slice(0, 10), valor_bruto: valorTotal, valor_liquido: valorTotal, observacao: '' });
+    setShowModal(true);
+  };
+
+  const openEditar = (ordem) => {
+    const pag = ordem.pagamento;
+    setOrdemSel(ordem);
+    setEditingPag(pag);
+    setForm({
+      conta_id: pag.conta_id || '',
+      data_pagamento: pag.data_pagamento || '',
+      valor_bruto: parseFloat(pag.valor_bruto).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      valor_liquido: parseFloat(pag.valor_liquido).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      observacao: pag.observacao || '',
+    });
+    setShowModal(true);
+  };
+
+  const salvar = async () => {
+    if (!form.conta_id) return alert('Selecione a conta bancária');
+    if (!form.data_pagamento) return alert('Informe a data do pagamento');
+    if (!form.valor_bruto) return alert('Informe o valor bruto');
+    setSaving(true);
+    try {
+      const body = {
+        conta_id: form.conta_id,
+        data_pagamento: form.data_pagamento,
+        valor_bruto: unmask(form.valor_bruto),
+        valor_liquido: unmask(form.valor_liquido) || unmask(form.valor_bruto),
+        observacao: form.observacao || null,
+      };
+      if (editingPag) {
+        await api.put(`/tesouraria/despesas/pagamento/${editingPag.id}`, body);
+      } else {
+        await api.post(`/tesouraria/despesas/${ordemSel.id}`, body);
+      }
+      setShowModal(false);
+      load();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao salvar pagamento');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const estornar = async (pag) => {
+    if (!window.confirm('Estornar este pagamento? Esta ação não pode ser desfeita.')) return;
+    try {
+      await api.delete(`/tesouraria/despesas/pagamento/${pag.id}`);
+      load();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao estornar pagamento');
+    }
+  };
+
+  const pendentes = ordens.filter(o => !o.pagamento).length;
+  const pagos = ordens.filter(o => o.pagamento).length;
+  const totalPago = ordens.filter(o => o.pagamento).reduce((s, o) => s + parseFloat(o.pagamento.valor_liquido || 0), 0);
+
+  return (
+    <div className="space-y-4">
+      {/* Filtros */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Tipo</label>
+            <select value={filtros.tipo} onChange={inpF('tipo')} className="input-field text-sm">
+              <option value="TODOS">Todos</option>
+              <option value="COMPRA">Ordem de Compra</option>
+              <option value="SERVICO">Ordem de Serviço</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Status</label>
+            <select value={filtros.status} onChange={inpF('status')} className="input-field text-sm">
+              <option value="TODOS">Todos</option>
+              <option value="APROVADO">Aprovado</option>
+              <option value="PENDENTE">Pendente</option>
+              <option value="CANCELADO">Cancelado</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Pagamento</label>
+            <select value={filtros.pago} onChange={inpF('pago')} className="input-field text-sm">
+              <option value="TODOS">Todos</option>
+              <option value="pago">Pago</option>
+              <option value="pendente">Pendente</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">De</label>
+            <input type="date" value={filtros.data_de} onChange={inpF('data_de')} className="input-field text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Até</label>
+            <input type="date" value={filtros.data_ate} onChange={inpF('data_ate')} className="input-field text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Busca</label>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+              <input value={filtros.busca} onChange={inpF('busca')} className="input-field text-sm pl-8" placeholder="Nº ou objeto..." />
+            </div>
+          </div>
+        </div>
+        <div className="mt-3 flex justify-end">
+          <button onClick={() => load()} className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5">
+            <Search className="h-4 w-4" /> Filtrar
+          </button>
+        </div>
+      </div>
+
+      {/* Cards resumo */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-center gap-3">
+          <Clock className="h-8 w-8 text-amber-500 flex-shrink-0" />
+          <div>
+            <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">Pendentes</p>
+            <p className="text-2xl font-bold text-amber-800 dark:text-amber-300">{pendentes}</p>
+          </div>
+        </div>
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4 flex items-center gap-3">
+          <CheckCircle2 className="h-8 w-8 text-green-500 flex-shrink-0" />
+          <div>
+            <p className="text-xs text-green-700 dark:text-green-400 font-medium">Pagos</p>
+            <p className="text-2xl font-bold text-green-800 dark:text-green-300">{pagos}</p>
+          </div>
+        </div>
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 flex items-center gap-3">
+          <CreditCard className="h-8 w-8 text-blue-500 flex-shrink-0" />
+          <div>
+            <p className="text-xs text-blue-700 dark:text-blue-400 font-medium">Total Pago (Líquido)</p>
+            <p className="text-lg font-bold text-blue-800 dark:text-blue-300">{fmtVal(totalPago)}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabela */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center py-12 text-gray-400">Carregando...</div>
+        ) : ordens.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-gray-400 gap-2">
+            <ShoppingCart className="h-8 w-8 opacity-40" />
+            <p className="text-sm">Nenhuma ordem encontrada</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 dark:bg-slate-700">
+                <tr>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 dark:text-slate-300">Nº / Tipo</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 dark:text-slate-300">Objeto / Contrato</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 dark:text-slate-300">Emissão</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-600 dark:text-slate-300">Valor Total</th>
+                  <th className="text-center px-4 py-3 text-xs font-semibold text-gray-600 dark:text-slate-300">Status</th>
+                  <th className="text-center px-4 py-3 text-xs font-semibold text-gray-600 dark:text-slate-300">Pagamento</th>
+                  <th className="text-center px-4 py-3 text-xs font-semibold text-gray-600 dark:text-slate-300">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
+                {ordens.map(o => (
+                  <tr key={o.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50 group">
+                    <td className="px-4 py-3">
+                      <div className="font-mono text-xs text-gray-800 dark:text-slate-200">{o.numero}</div>
+                      <span className={`inline-block mt-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded ${o.tipo === 'COMPRA' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'}`}>
+                        {o.tipo === 'COMPRA' ? 'OC' : 'OS'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 max-w-xs">
+                      <div className="text-xs text-gray-800 dark:text-slate-200 truncate">{o.objeto}</div>
+                      {o.contrato && (
+                        <div className="text-[10px] text-gray-500 dark:text-slate-400 truncate">
+                          {o.contrato.credor?.nome || ''}{o.contrato.credor?.nome && ' — '}Contrato {o.contrato.numero_contrato}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-slate-400 whitespace-nowrap">{fmtDate(o.data_emissao)}</td>
+                    <td className="px-4 py-3 text-right text-xs font-medium text-gray-800 dark:text-slate-200 whitespace-nowrap tabular-nums">{fmtVal(o.valor_total)}</td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`text-[10px] font-semibold px-2 py-1 rounded-full ${
+                        o.status === 'APROVADO' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                        : o.status === 'CANCELADO' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                        : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                      }`}>{o.status || 'PENDENTE'}</span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {o.pagamento ? (
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="flex items-center gap-1 text-[10px] font-semibold text-green-700 dark:text-green-400">
+                            <CheckCircle2 className="h-3 w-3" /> PAGO
+                          </span>
+                          <span className="text-[10px] text-gray-500 dark:text-slate-400">{fmtDate(o.pagamento.data_pagamento)}</span>
+                          <span className="text-[10px] font-medium text-gray-700 dark:text-slate-300 tabular-nums">{fmtVal(o.pagamento.valor_liquido)}</span>
+                        </div>
+                      ) : (
+                        <span className="flex items-center justify-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                          <Clock className="h-3 w-3" /> PENDENTE
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {o.pagamento ? (
+                          <>
+                            <button onClick={() => openEditar(o)} title="Editar pagamento" className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg">
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </button>
+                            <button onClick={() => estornar(o.pagamento)} title="Estornar pagamento" className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg">
+                              <RotateCcw className="h-3.5 w-3.5" />
+                            </button>
+                          </>
+                        ) : (
+                          <button onClick={() => openPagar(o)} title="Registrar pagamento" className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg flex items-center gap-1 text-xs font-medium">
+                            <CreditCard className="h-3.5 w-3.5" /> Pagar
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Modal de Pagamento */}
+      {showModal && ordemSel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-slate-700">
+              <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+                {editingPag ? 'Editar Pagamento' : 'Registrar Pagamento'}
+              </h2>
+              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-300">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-xs space-y-1">
+                <div className="flex items-center gap-2 font-semibold text-blue-800 dark:text-blue-300">
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${ordemSel.tipo === 'COMPRA' ? 'bg-blue-200 dark:bg-blue-900' : 'bg-purple-200 dark:bg-purple-900'}`}>
+                    {ordemSel.tipo === 'COMPRA' ? 'OC' : 'OS'}
+                  </span>
+                  {ordemSel.numero}
+                </div>
+                <div className="text-blue-700 dark:text-blue-400 truncate">{ordemSel.objeto}</div>
+                <div className="text-blue-600 dark:text-blue-500">Valor Total: {fmtVal(ordemSel.valor_total)}</div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Conta Bancária *</label>
+                <ContaSelectInput value={form.conta_id} contas={contas} onChange={id => setForm(p => ({ ...p, conta_id: id }))} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Data do Pagamento *</label>
+                <input type="date" value={form.data_pagamento} onChange={inp('data_pagamento')} className="input-field text-sm" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Valor Bruto (R$) *</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={form.valor_bruto}
+                    onChange={e => setForm(p => ({ ...p, valor_bruto: maskValorD(e.target.value) }))}
+                    className="input-field text-sm text-right tabular-nums"
+                    placeholder="0,00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Valor Líquido (R$)</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={form.valor_liquido}
+                    onChange={e => setForm(p => ({ ...p, valor_liquido: maskValorD(e.target.value) }))}
+                    className="input-field text-sm text-right tabular-nums"
+                    placeholder="0,00"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Observação</label>
+                <textarea
+                  value={form.observacao}
+                  onChange={inp('observacao')}
+                  rows={2}
+                  className="input-field text-sm resize-none"
+                  placeholder="Informações adicionais..."
+                />
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-2">
+              <button onClick={() => setShowModal(false)} className="btn-secondary text-sm px-4 py-2">Cancelar</button>
+              <button
+                onClick={salvar}
+                disabled={saving}
+                className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5 disabled:opacity-40"
+              >
+                <Save className="h-4 w-4" /> {saving ? 'Salvando...' : 'Salvar Pagamento'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Tab: Relatórios ─────────────────────────────────────────────────────────────
+function TabRelatorios() {
+  const [tipo, setTipo] = useState('saldo');
+  const [contas, setContas] = useState([]);
+  const [filtros, setFiltros] = useState({ conta_id: '', ano: new Date().getFullYear(), data_de: '', data_ate: '' });
+  const [resultado, setResultado] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const loadSaldo = async (f = {}) => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (f.data_de) params.append('data_de', f.data_de);
+      if (f.data_ate) params.append('data_ate', f.data_ate);
+      const r = await api.get(`/tesouraria/relatorios/saldo-contas?${params}`);
+      setResultado({ tipo: 'saldo', ...r.data });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    api.get('/organizacao/contas-bancarias').then(r => setContas(r.data.contas || [])).catch(() => {});
+    loadSaldo();
+  }, []);
+
+  const inpF = k => e => setFiltros(p => ({ ...p, [k]: e.target.value }));
+  const fmtVal = v => v != null ? parseFloat(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—';
+  const fmtDate = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
+  const fmtMes = m => {
+    if (!m) return '—';
+    const [y, mo] = m.split('-');
+    const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    return `${meses[parseInt(mo) - 1]}/${y}`;
+  };
+
+  const gerar = async () => {
+    if (tipo === 'saldo') { loadSaldo(filtros); return; }
+    setLoading(true);
+    setResultado(null);
+    try {
+      if (tipo === 'fluxo') {
+        const params = new URLSearchParams();
+        if (filtros.ano) params.append('ano', filtros.ano);
+        if (filtros.conta_id) params.append('conta_id', filtros.conta_id);
+        const r = await api.get(`/tesouraria/relatorios/fluxo-mensal?${params}`);
+        setResultado({ tipo: 'fluxo', ...r.data });
+      } else if (tipo === 'extrato') {
+        if (!filtros.conta_id) { setLoading(false); return alert('Selecione a conta para o extrato'); }
+        const params = new URLSearchParams({ conta_id: filtros.conta_id });
+        if (filtros.data_de) params.append('data_de', filtros.data_de);
+        if (filtros.data_ate) params.append('data_ate', filtros.data_ate);
+        const r = await api.get(`/tesouraria/relatorios/extrato?${params}`);
+        setResultado({ tipo: 'extrato', ...r.data });
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao gerar relatório');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const PRINT_CSS = `
+    *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}
+    body{font-family:Arial,sans-serif;padding:20px;color:#111;margin:0}
+    h2{margin:0 0 2px;font-size:17px}p{margin:2px 0;font-size:12px;color:#555}
+    table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px}
+    th,td{padding:7px 10px;border:1px solid #d1d5db}
+    .th-blue{background:#1e40af!important;color:#fff!important}
+    .th-green{background:#166534!important;color:#fff!important}
+    .tf-blue{background:#dbeafe!important;font-weight:700}
+    .tf-green{background:#dcfce7!important;font-weight:700}
+    .row-r{background:#f0fdf4!important}
+    .v-pos{color:#16a34a;font-weight:700}.v-neg{color:#dc2626;font-weight:700}
+    .v-g{color:#16a34a}.v-r{color:#dc2626}
+    @media print{
+      .th-blue{background:#1e40af!important;color:#fff!important}
+      .th-green{background:#166534!important;color:#fff!important}
+      .tf-blue{background:#dbeafe!important}
+      .tf-green{background:#dcfce7!important}
+      .row-r{background:#f0fdf4!important}
+    }`;
+
+  const imprimir = () => {
+    if (!resultado) return;
+    const now = new Date().toLocaleDateString('pt-BR');
+    let title = '', body = '';
+
+    if (resultado.tipo === 'saldo') {
+      title = 'Saldo por Conta Bancária';
+      body = `<h2>${title}</h2><p>Gerado em ${now}</p>
+        <table>
+          <thead><tr>
+            <th class="th-blue" align="left">Conta</th>
+            <th class="th-blue" align="left">Banco</th>
+            <th class="th-blue" align="right">Receitas</th>
+            <th class="th-blue" align="right">Despesas</th>
+            <th class="th-blue" align="right">Saldo</th>
+          </tr></thead>
+          <tbody>${resultado.contas.map(c => `<tr>
+            <td>${c.nome}</td><td>${c.banco_nome || '—'}</td>
+            <td align="right" class="v-g">${fmtVal(c.total_receitas)}</td>
+            <td align="right" class="v-r">${fmtVal(c.total_despesas)}</td>
+            <td align="right" class="${c.saldo >= 0 ? 'v-pos' : 'v-neg'}">${fmtVal(c.saldo)}</td>
+          </tr>`).join('')}</tbody>
+          <tfoot><tr>
+            <td class="tf-blue" colspan="2">TOTAL GERAL</td>
+            <td class="tf-blue v-g" align="right">${fmtVal(resultado.totais.receitas)}</td>
+            <td class="tf-blue v-r" align="right">${fmtVal(resultado.totais.despesas)}</td>
+            <td class="tf-blue ${resultado.totais.saldo >= 0 ? 'v-pos' : 'v-neg'}" align="right">${fmtVal(resultado.totais.saldo)}</td>
+          </tr></tfoot>
+        </table>`;
+    } else if (resultado.tipo === 'fluxo') {
+      title = `Fluxo de Caixa Mensal — ${resultado.ano}`;
+      body = `<h2>${title}</h2><p>Gerado em ${now}</p>
+        <table>
+          <thead><tr>
+            <th class="th-blue" align="left">Mês</th>
+            <th class="th-blue" align="right">Receitas</th>
+            <th class="th-blue" align="right">Despesas</th>
+            <th class="th-blue" align="right">Resultado</th>
+          </tr></thead>
+          <tbody>${resultado.meses.map(m => `<tr>
+            <td>${fmtMes(m.mes)}</td>
+            <td align="right" class="v-g">${fmtVal(m.receitas)}</td>
+            <td align="right" class="v-r">${fmtVal(m.despesas)}</td>
+            <td align="right" class="${m.resultado >= 0 ? 'v-pos' : 'v-neg'}">${fmtVal(m.resultado)}</td>
+          </tr>`).join('')}</tbody>
+          <tfoot><tr>
+            <td class="tf-blue">TOTAL ${resultado.ano}</td>
+            <td class="tf-blue v-g" align="right">${fmtVal(resultado.totais.receitas)}</td>
+            <td class="tf-blue v-r" align="right">${fmtVal(resultado.totais.despesas)}</td>
+            <td class="tf-blue ${resultado.totais.resultado >= 0 ? 'v-pos' : 'v-neg'}" align="right">${fmtVal(resultado.totais.resultado)}</td>
+          </tr></tfoot>
+        </table>`;
+    } else if (resultado.tipo === 'extrato') {
+      const c = resultado.conta;
+      title = `Extrato — ${c.nome}`;
+      body = `<h2>${title}</h2>
+        <p>${c.banco_nome || ''}${c.conta ? ` | Conta: ${c.conta}${c.conta_digito ? '-' + c.conta_digito : ''}` : ''}</p>
+        <p>Gerado em ${now}</p>
+        <table>
+          <thead><tr>
+            <th class="th-green" align="left">Data</th>
+            <th class="th-green" align="left">Descrição</th>
+            <th class="th-green" align="right">Crédito</th>
+            <th class="th-green" align="right">Débito</th>
+            <th class="th-green" align="right">Saldo</th>
+          </tr></thead>
+          <tbody>${resultado.lancamentos.map(l => `<tr${l.tipo === 'R' ? ' class="row-r"' : ''}>
+            <td style="white-space:nowrap">${fmtDate(l.data)}</td>
+            <td>${l.descricao}</td>
+            <td align="right" class="v-g">${l.tipo === 'R' ? fmtVal(l.valor) : ''}</td>
+            <td align="right" class="v-r">${l.tipo === 'D' ? fmtVal(l.valor) : ''}</td>
+            <td align="right" class="${l.saldo >= 0 ? 'v-pos' : 'v-neg'}">${fmtVal(l.saldo)}</td>
+          </tr>`).join('')}</tbody>
+          <tfoot><tr>
+            <td class="tf-green" colspan="2">TOTAIS DO PERÍODO</td>
+            <td class="tf-green v-g" align="right">${fmtVal(resultado.totais.receitas)}</td>
+            <td class="tf-green v-r" align="right">${fmtVal(resultado.totais.despesas)}</td>
+            <td class="tf-green ${resultado.totais.saldo >= 0 ? 'v-pos' : 'v-neg'}" align="right">${fmtVal(resultado.totais.saldo)}</td>
+          </tr></tfoot>
+        </table>`;
+    }
+
+    const win = window.open('', '_blank', 'width=940,height=720');
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title>
+      <style>${PRINT_CSS}</style></head><body>${body}</body></html>`);
+    win.document.close();
+    setTimeout(() => win.print(), 500);
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Seletor de tipo e filtros */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 space-y-4">
+        <div className="flex flex-wrap gap-2">
+          {[
+            { key: 'saldo',   label: 'Saldo por Conta' },
+            { key: 'fluxo',   label: 'Fluxo Mensal' },
+            { key: 'extrato', label: 'Extrato por Conta' },
+          ].map(t => (
+            <button
+              key={t.key}
+              onClick={() => { setTipo(t.key); if (t.key !== 'saldo') setResultado(null); else loadSaldo(); }}
+              className={`text-sm px-4 py-2 rounded-lg font-medium transition-colors ${tipo === t.key ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600'}`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-end gap-3">
+          {tipo === 'saldo' && (
+            <>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">De</label>
+                <input type="date" value={filtros.data_de} onChange={inpF('data_de')} className="input-field text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Até</label>
+                <input type="date" value={filtros.data_ate} onChange={inpF('data_ate')} className="input-field text-sm" />
+              </div>
+            </>
+          )}
+          {tipo === 'fluxo' && (
+            <>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Ano</label>
+                <input type="number" value={filtros.ano} onChange={inpF('ano')} min="2000" max="2099" className="input-field text-sm" style={{ width: '7rem' }} />
+              </div>
+              <div style={{ minWidth: '14rem' }}>
+                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Conta (opcional)</label>
+                <ContaSelectInput value={filtros.conta_id} contas={contas} onChange={id => setFiltros(p => ({ ...p, conta_id: id }))} />
+              </div>
+            </>
+          )}
+          {tipo === 'extrato' && (
+            <>
+              <div style={{ minWidth: '14rem' }}>
+                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Conta *</label>
+                <ContaSelectInput value={filtros.conta_id} contas={contas} onChange={id => setFiltros(p => ({ ...p, conta_id: id }))} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">De</label>
+                <input type="date" value={filtros.data_de} onChange={inpF('data_de')} className="input-field text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Até</label>
+                <input type="date" value={filtros.data_ate} onChange={inpF('data_ate')} className="input-field text-sm" />
+              </div>
+            </>
+          )}
+          <div className="flex gap-2 ml-auto pt-5">
+            {resultado && (
+              <button onClick={imprimir} className="btn-secondary text-sm px-4 py-2 flex items-center gap-1.5">
+                <Printer className="h-4 w-4" /> Imprimir / PDF
+              </button>
+            )}
+            <button onClick={gerar} disabled={loading} className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5 disabled:opacity-40">
+              <BarChart2 className="h-4 w-4" /> {loading ? 'Carregando...' : tipo === 'saldo' ? 'Atualizar' : 'Gerar Relatório'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Estado de carregamento inicial */}
+      {loading && !resultado && (
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 flex items-center justify-center py-16 text-gray-400 gap-2">
+          <BarChart2 className="h-5 w-5 animate-pulse" />
+          <span className="text-sm">Carregando...</span>
+        </div>
+      )}
+
+      {/* Resultado */}
+      {resultado && (
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+          {resultado.tipo === 'saldo' && (
+            <>
+              <div className="px-4 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700">
+                <h3 className="text-sm font-semibold text-gray-800 dark:text-slate-200">Saldo por Conta Bancária</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-blue-800 text-white">
+                    <tr>
+                      <th className="text-left px-4 py-3 text-xs font-semibold">Conta</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold">Banco</th>
+                      <th className="text-right px-4 py-3 text-xs font-semibold">Receitas</th>
+                      <th className="text-right px-4 py-3 text-xs font-semibold">Despesas</th>
+                      <th className="text-right px-4 py-3 text-xs font-semibold">Saldo</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
+                    {resultado.contas.map(c => (
+                      <tr key={c.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50">
+                        <td className="px-4 py-3 text-xs font-medium text-gray-800 dark:text-slate-200">{c.nome}</td>
+                        <td className="px-4 py-3 text-xs text-gray-600 dark:text-slate-400">{c.banco_nome || '—'}</td>
+                        <td className="px-4 py-3 text-right text-xs font-medium text-green-700 dark:text-green-400 tabular-nums">{fmtVal(c.total_receitas)}</td>
+                        <td className="px-4 py-3 text-right text-xs font-medium text-red-600 dark:text-red-400 tabular-nums">{fmtVal(c.total_despesas)}</td>
+                        <td className={`px-4 py-3 text-right text-xs font-bold tabular-nums ${c.saldo >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{fmtVal(c.saldo)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-blue-50 dark:bg-blue-900/20">
+                    <tr>
+                      <td colSpan={2} className="px-4 py-3 text-xs font-bold text-gray-800 dark:text-slate-200">TOTAL GERAL</td>
+                      <td className="px-4 py-3 text-right text-xs font-bold text-green-700 dark:text-green-400 tabular-nums">{fmtVal(resultado.totais.receitas)}</td>
+                      <td className="px-4 py-3 text-right text-xs font-bold text-red-600 dark:text-red-400 tabular-nums">{fmtVal(resultado.totais.despesas)}</td>
+                      <td className={`px-4 py-3 text-right text-xs font-bold tabular-nums ${resultado.totais.saldo >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{fmtVal(resultado.totais.saldo)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </>
+          )}
+
+          {resultado.tipo === 'fluxo' && (
+            <>
+              <div className="px-4 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700">
+                <h3 className="text-sm font-semibold text-gray-800 dark:text-slate-200">Fluxo de Caixa Mensal — {resultado.ano}</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-blue-800 text-white">
+                    <tr>
+                      <th className="text-left px-4 py-3 text-xs font-semibold">Mês</th>
+                      <th className="text-right px-4 py-3 text-xs font-semibold">Receitas</th>
+                      <th className="text-right px-4 py-3 text-xs font-semibold">Despesas</th>
+                      <th className="text-right px-4 py-3 text-xs font-semibold">Resultado</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
+                    {resultado.meses.map(m => (
+                      <tr key={m.mes} className="hover:bg-gray-50 dark:hover:bg-slate-700/50">
+                        <td className="px-4 py-3 text-xs font-medium text-gray-800 dark:text-slate-200">{fmtMes(m.mes)}</td>
+                        <td className="px-4 py-3 text-right text-xs font-medium text-green-700 dark:text-green-400 tabular-nums">{fmtVal(m.receitas)}</td>
+                        <td className="px-4 py-3 text-right text-xs font-medium text-red-600 dark:text-red-400 tabular-nums">{fmtVal(m.despesas)}</td>
+                        <td className={`px-4 py-3 text-right text-xs font-bold tabular-nums ${m.resultado >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{fmtVal(m.resultado)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-blue-50 dark:bg-blue-900/20">
+                    <tr>
+                      <td className="px-4 py-3 text-xs font-bold text-gray-800 dark:text-slate-200">TOTAL {resultado.ano}</td>
+                      <td className="px-4 py-3 text-right text-xs font-bold text-green-700 dark:text-green-400 tabular-nums">{fmtVal(resultado.totais.receitas)}</td>
+                      <td className="px-4 py-3 text-right text-xs font-bold text-red-600 dark:text-red-400 tabular-nums">{fmtVal(resultado.totais.despesas)}</td>
+                      <td className={`px-4 py-3 text-right text-xs font-bold tabular-nums ${resultado.totais.resultado >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{fmtVal(resultado.totais.resultado)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </>
+          )}
+
+          {resultado.tipo === 'extrato' && (
+            <>
+              <div className="px-4 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700">
+                <h3 className="text-sm font-semibold text-gray-800 dark:text-slate-200">Extrato — {resultado.conta.nome}</h3>
+                <p className="text-xs text-gray-500 dark:text-slate-400">{resultado.conta.banco_nome}</p>
+              </div>
+              {resultado.lancamentos.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-gray-400 gap-2">
+                  <BarChart2 className="h-8 w-8 opacity-40" />
+                  <p className="text-sm">Nenhum lançamento no período</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-green-800 text-white">
+                      <tr>
+                        <th className="text-left px-4 py-3 text-xs font-semibold">Data</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold">Descrição</th>
+                        <th className="text-right px-4 py-3 text-xs font-semibold">Crédito</th>
+                        <th className="text-right px-4 py-3 text-xs font-semibold">Débito</th>
+                        <th className="text-right px-4 py-3 text-xs font-semibold">Saldo</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
+                      {resultado.lancamentos.map((l, i) => (
+                        <tr key={i} className={l.tipo === 'R' ? 'bg-green-50/60 dark:bg-green-900/10' : 'hover:bg-gray-50 dark:hover:bg-slate-700/30'}>
+                          <td className="px-4 py-2.5 text-xs text-gray-600 dark:text-slate-400 whitespace-nowrap">{fmtDate(l.data)}</td>
+                          <td className="px-4 py-2.5 text-xs text-gray-800 dark:text-slate-200">{l.descricao}</td>
+                          <td className="px-4 py-2.5 text-right text-xs font-medium text-green-700 dark:text-green-400 tabular-nums">{l.tipo === 'R' ? fmtVal(l.valor) : ''}</td>
+                          <td className="px-4 py-2.5 text-right text-xs font-medium text-red-600 dark:text-red-400 tabular-nums">{l.tipo === 'D' ? fmtVal(l.valor) : ''}</td>
+                          <td className={`px-4 py-2.5 text-right text-xs font-bold tabular-nums ${l.saldo >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{fmtVal(l.saldo)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-green-50 dark:bg-green-900/20">
+                      <tr>
+                        <td colSpan={2} className="px-4 py-3 text-xs font-bold text-gray-800 dark:text-slate-200">TOTAIS DO PERÍODO</td>
+                        <td className="px-4 py-3 text-right text-xs font-bold text-green-700 dark:text-green-400 tabular-nums">{fmtVal(resultado.totais.receitas)}</td>
+                        <td className="px-4 py-3 text-right text-xs font-bold text-red-600 dark:text-red-400 tabular-nums">{fmtVal(resultado.totais.despesas)}</td>
+                        <td className={`px-4 py-3 text-right text-xs font-bold tabular-nums ${resultado.totais.saldo >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{fmtVal(resultado.totais.saldo)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
     </div>
