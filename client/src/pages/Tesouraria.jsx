@@ -646,35 +646,42 @@ function TabReceitas() {
     const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
 <title>Extrato de Receitas</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#1a1a1a;padding:24px}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#1a1a1a;padding:24px;background:#fff}
 .hdr{border-bottom:3px solid #16a34a;padding-bottom:12px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-end}
-.hdr h1{font-size:20px;font-weight:700;color:#166534;letter-spacing:-.3px}
+.hdr h1{font-size:22px;font-weight:700;color:#166534;letter-spacing:-.3px}
 .hdr .sub{font-size:11px;color:#6b7280;margin-top:3px}
-.meta{display:flex;flex-wrap:wrap;gap:16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:10px 14px;margin-bottom:16px}
-.mi .lbl{font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.4px}
+.hdr .gen{font-size:10px;color:#6b7280;text-align:right}
+.meta{display:flex;flex-wrap:wrap;gap:20px;background:#f0fdf4 !important;border:1px solid #bbf7d0;border-radius:6px;padding:10px 16px;margin-bottom:16px}
+.mi .lbl{font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px}
 .mi .v{font-size:12px;font-weight:600;color:#15803d;margin-top:2px}
 table{width:100%;border-collapse:collapse}
-thead tr{background:#166534;color:#fff}
-th{padding:8px 10px;font-size:11px;font-weight:600;text-align:left}
+thead tr{background:#166534 !important;color:#fff !important}
+th{padding:9px 10px;font-size:11px;font-weight:600;text-align:left;color:#fff !important}
 th.r{text-align:right}
-td{padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:11.5px;vertical-align:top}
-.ghdr td{background:#dcfce7;color:#166534;font-weight:700;font-size:11px;padding:5px 10px;border-bottom:1px solid #86efac}
+td{padding:8px 10px;border-bottom:1px solid #e5e7eb;font-size:11.5px;vertical-align:top}
+.ghdr td{background:#dcfce7 !important;color:#166534 !important;font-weight:700;font-size:11px;padding:5px 10px;border-bottom:1px solid #86efac}
 .desc{max-width:280px;word-break:break-word}
 .obs{color:#9ca3af;font-size:10px;font-style:italic;margin-top:2px}
 .conta{color:#6b7280;font-size:11px;min-width:140px}
 .banco{color:#9ca3af;font-size:10px}
 .val{text-align:right;font-weight:700;color:#16a34a;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:120px}
-tfoot td{background:#f0fdf4;font-weight:700;font-size:13px;border-top:2px solid #16a34a;padding:10px}
+tfoot tr{background:#f0fdf4 !important}
+tfoot td{font-weight:700;font-size:13px;border-top:2px solid #16a34a;padding:10px}
 tfoot .val{font-size:15px;color:#15803d}
 .foot{margin-top:16px;text-align:right;color:#9ca3af;font-size:9.5px;border-top:1px solid #e5e7eb;padding-top:8px}
-@media print{@page{margin:15mm}body{padding:0}}
+@media print{
+  @page{margin:12mm 15mm}
+  body{padding:0}
+  .meta{background:#f0fdf4 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  thead tr{background:#166534 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .ghdr td{background:#dcfce7 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  tfoot tr{background:#f0fdf4 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
 </style></head><body>
 <div class="hdr">
   <div><h1>Extrato de Receitas</h1><div class="sub">Tesouraria Municipal</div></div>
-  <div style="font-size:10px;color:#6b7280;text-align:right">
-    Gerado em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-  </div>
+  <div class="gen">Gerado em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>
 </div>
 <div class="meta">
   <div class="mi"><div class="lbl">Período</div><div class="v">${periodoStr}</div></div>
