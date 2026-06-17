@@ -6,8 +6,9 @@ const initializedSchemas = new Set();
 async function ensureTables(req) {
   const schema = req.tenant.schema;
   if (initializedSchemas.has(schema)) return;
-  const { FinanceiroLancamento } = req.models;
+  const { FinanceiroLancamento, TesDespesa } = req.models;
   await FinanceiroLancamento.sync({ force: false });
+  if (TesDespesa) await TesDespesa.sync({ force: false });
   initializedSchemas.add(schema);
 }
 
@@ -17,7 +18,7 @@ async function ensureTables(req) {
 const getDashboard = async (req, res) => {
   try {
     await ensureTables(req);
-    const { FinanceiroLancamento, Processo, User, Did } = req.models;
+    const { FinanceiroLancamento, Processo, User, Did, TesDespesa } = req.models;
     const {
       ano = new Date().getFullYear(),
       // novos filtros DID — valores podem vir como string separada por vírgula ou array
@@ -208,6 +209,17 @@ const getDashboard = async (req, res) => {
     ]);
     const vencimentosProximos = [];
 
+    // ── Totais da Tesouraria (ordens pagas via TesDespesa) ────────────────
+    let tesoValorPago = 0;
+    let tesoQuantidade = 0;
+    if (TesDespesa) {
+      const whereTesoAno = { data_pagamento: { [Op.between]: [`${ano}-01-01`, `${ano}-12-31`] } };
+      [tesoValorPago, tesoQuantidade] = await Promise.all([
+        TesDespesa.sum('valor_liquido', { where: whereTesoAno }).then(v => parseFloat(v || 0)),
+        TesDespesa.count({ where: whereTesoAno }),
+      ]);
+    }
+
     res.json({
       totais: {
         lancamentos: totalLancamentos,
@@ -216,6 +228,10 @@ const getDashboard = async (req, res) => {
         valorPago: parseFloat(somaPago).toFixed(2),
         valorPendente: parseFloat(somaPendente).toFixed(2),
         valorVencido: parseFloat(somaVencido).toFixed(2)
+      },
+      tesouraria: {
+        valorPago: tesoValorPago.toFixed(2),
+        quantidade: tesoQuantidade,
       },
       dids: {
         totalFixas: totalDidsFixas || 0,

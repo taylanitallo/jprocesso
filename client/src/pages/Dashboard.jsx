@@ -1,5 +1,5 @@
-import { Suspense, lazy } from 'react'
-import { useQuery } from 'react-query'
+import { Suspense, lazy, useState, useEffect, useCallback } from 'react'
+import { useQuery, useQueryClient } from 'react-query'
 import { Link, useParams } from 'react-router-dom'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
@@ -10,6 +10,8 @@ import {
   Bell, BarChart3, CircleDot, MapPin,
 } from 'lucide-react'
 import { PageHeader, StatCard, SectionTitle, EmptyState } from '../components/ui'
+
+const REFRESH_INTERVAL = 60000 // 60s
 
 const DashboardCharts = lazy(() => import('./DashboardCharts'))
 
@@ -61,24 +63,48 @@ function AlertItem({ icon: Icon, title, desc, tone, link }) {
 export default function Dashboard() {
   const { user } = useAuth()
   const { subdomain } = useParams()
+  const queryClient = useQueryClient()
+  const [lastUpdated, setLastUpdated] = useState(null)
+  const [secondsAgo, setSecondsAgo] = useState(0)
 
-  const { data: procData, isLoading, isError, refetch } = useQuery(
+  const { data: procData, isLoading, isError, isFetching } = useQuery(
     'dashboard-stats',
     () => api.get('/processos/dashboard').then(r => r.data),
-    { refetchInterval: 60000, staleTime: 30000 }
+    { refetchInterval: REFRESH_INTERVAL, staleTime: 30000, onSuccess: () => setLastUpdated(Date.now()) }
   )
 
   const { data: almoxData, isLoading: almoxLoading } = useQuery(
     'dashboard-almox',
     () => api.get('/almoxarifado/dashboard').then(r => r.data),
-    { staleTime: 120000, retry: 1 }
+    { refetchInterval: REFRESH_INTERVAL, staleTime: 30000, retry: 1 }
   )
 
   const { data: finData, isLoading: finLoading } = useQuery(
     'dashboard-fin',
     () => api.get('/financeiro/dashboard').then(r => r.data),
-    { staleTime: 120000, retry: 1 }
+    { refetchInterval: REFRESH_INTERVAL, staleTime: 30000, retry: 1 }
   )
+
+  const refetchAll = useCallback(() => {
+    queryClient.invalidateQueries('dashboard-stats')
+    queryClient.invalidateQueries('dashboard-almox')
+    queryClient.invalidateQueries('dashboard-fin')
+    setLastUpdated(Date.now())
+  }, [queryClient])
+
+  // Contador de "atualizado há Xs"
+  useEffect(() => {
+    if (!lastUpdated) return
+    const id = setInterval(() => setSecondsAgo(Math.floor((Date.now() - lastUpdated) / 1000)), 5000)
+    setSecondsAgo(0)
+    return () => clearInterval(id)
+  }, [lastUpdated])
+
+  const lastUpdatedLabel = lastUpdated
+    ? secondsAgo < 10 ? 'agora mesmo'
+    : secondsAgo < 60 ? `há ${secondsAgo}s`
+    : `há ${Math.floor(secondsAgo / 60)}min`
+    : null
 
   const stats           = procData?.stats           || {}
   const minhaCaixaLista = procData?.minhaCaixaLista || []
@@ -87,7 +113,12 @@ export default function Dashboard() {
   const itensCriticos = almoxData?.itensCriticos       || []
   const reqPendentes  = almoxData?.requisicoesPendentes ?? null
 
-  const valorPago     = finData?.somaPago ?? null
+  const valorPagoTeso = finData?.tesouraria?.valorPago != null ? parseFloat(finData.tesouraria.valorPago) : null
+  const valorPagoLanc = finData?.totais?.valorPago    != null ? parseFloat(finData.totais.valorPago)    : null
+  // Prioriza Tesouraria se houver dados; combina ambos quando existem os dois
+  const valorPago = (valorPagoTeso != null || valorPagoLanc != null)
+    ? (valorPagoTeso || 0) + (valorPagoLanc || 0)
+    : null
 
   // ── Alertas executivos ────────────────────────────────────────────────────
   const alertas = [
@@ -142,13 +173,21 @@ export default function Dashboard() {
         }
         actions={
           <>
-            <button
-              onClick={() => refetch()}
-              className="inline-flex items-center justify-center p-2 rounded-lg border border-gray-200 dark:border-slate-700/50 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
-              title="Atualizar dashboard"
-            >
-              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            </button>
+            <div className="flex items-center gap-2">
+              {lastUpdatedLabel && (
+                <span className="text-xs text-gray-400 dark:text-slate-500 hidden sm:inline">
+                  Atualizado {lastUpdatedLabel}
+                </span>
+              )}
+              <button
+                onClick={refetchAll}
+                disabled={isFetching}
+                className="inline-flex items-center justify-center p-2 rounded-lg border border-gray-200 dark:border-slate-700/50 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors disabled:opacity-50"
+                title="Atualizar dashboard"
+              >
+                <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
             <Link to={`/${subdomain}/processos/novo`} className="btn-primary">
               <Plus className="h-4 w-4" />
               Novo Processo
