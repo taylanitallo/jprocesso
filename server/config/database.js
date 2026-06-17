@@ -669,6 +669,12 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
       ADD COLUMN IF NOT EXISTS ordem_ref                     VARCHAR(100)
   `);
 
+  // DID — conta de pagamento e vínculo com ordem
+  await run(`
+    ALTER TABLE dids
+      ADD COLUMN IF NOT EXISTS conta_pagamento_id UUID
+  `);
+
   // Contratos — coluna tipo_objeto
   await run(`ALTER TABLE contratos ADD COLUMN IF NOT EXISTS tipo_objeto VARCHAR(100)`);
 
@@ -719,6 +725,57 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
   await run(`CREATE INDEX IF NOT EXISTS idx_contratos_ordens_itens_ordem ON contratos_ordens_itens(ordem_id)`);
   await run(`ALTER TABLE contratos_ordens_itens ADD COLUMN IF NOT EXISTS lote VARCHAR(50)`);
   await run(`ALTER TABLE contratos_ordens_itens ADD COLUMN IF NOT EXISTS codigo_item VARCHAR(100)`);
+
+  // ── Módulo Tesouraria ────────────────────────────────────────────────────────
+  await run(`
+    CREATE TABLE IF NOT EXISTS contas_bancarias (
+      id            UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+      nome          VARCHAR(200)  NOT NULL,
+      banco_codigo  VARCHAR(10),
+      banco_nome    VARCHAR(200),
+      agencia       VARCHAR(20),
+      agencia_digito VARCHAR(5),
+      conta         VARCHAR(30),
+      conta_digito  VARCHAR(5),
+      tipo          VARCHAR(30)   NOT NULL DEFAULT 'Conta Corrente',
+      secretaria_id UUID,
+      ativo         BOOLEAN       NOT NULL DEFAULT TRUE,
+      observacao    TEXT,
+      created_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      updated_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await run(`
+    CREATE TABLE IF NOT EXISTS tes_receitas (
+      id          UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+      conta_id    UUID          NOT NULL,
+      data        DATE          NOT NULL,
+      descricao   VARCHAR(300)  NOT NULL,
+      valor       NUMERIC(15,2) NOT NULL,
+      observacao  TEXT,
+      created_at  TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      updated_at  TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run(`CREATE INDEX IF NOT EXISTS idx_tes_receitas_conta ON tes_receitas(conta_id)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_tes_receitas_data  ON tes_receitas(data)`);
+
+  await run(`
+    CREATE TABLE IF NOT EXISTS tes_despesas (
+      id              UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+      ordem_id        INTEGER       NOT NULL,
+      conta_id        UUID          NOT NULL,
+      data_pagamento  DATE          NOT NULL,
+      valor_bruto     NUMERIC(15,2) NOT NULL,
+      valor_liquido   NUMERIC(15,2) NOT NULL,
+      observacao      TEXT,
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run(`CREATE INDEX IF NOT EXISTS idx_tes_despesas_ordem ON tes_despesas(ordem_id)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_tes_despesas_conta ON tes_despesas(conta_id)`);
 };
 
 const getTenantConnection = async (tenantSchema) => {

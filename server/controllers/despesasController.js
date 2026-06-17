@@ -11,13 +11,12 @@ async function ensureTable(req) {
 
 const listDespesas = async (req, res) => {
   try {
-    await ensureTable(req);
-    const { ContratoOrdem, TesDespesa, Contrato, Credor, ContaBancaria } = req.models;
-    const { tipo, status, pago, data_de, data_ate, busca } = req.query;
+    const { ContratoOrdem, TesDespesa, Contrato, Credor, ContaBancaria, Did, Processo, Secretaria } = req.models;
+    const { tipo, pago, data_de, data_ate, busca, secretaria, processo } = req.query;
 
     const where = {};
-    if (tipo   && tipo   !== 'TODOS') where.tipo   = tipo;
-    if (status && status !== 'TODOS') where.status = status;
+    if (tipo && tipo !== 'TODOS') where.tipo = tipo;
+    if (secretaria) where.secretaria = { [Op.iLike]: `%${secretaria}%` };
     if (data_de || data_ate) {
       where.data_emissao = {};
       if (data_de) where.data_emissao[Op.gte] = data_de;
@@ -30,7 +29,8 @@ const listDespesas = async (req, res) => {
       ];
     }
 
-    const ordens = await ContratoOrdem.findAll({
+    const [ordens, secretarias] = await Promise.all([
+      ContratoOrdem.findAll({
       where,
       include: [
         {
@@ -38,12 +38,12 @@ const listDespesas = async (req, res) => {
           as: 'contrato',
           attributes: ['id', 'numero_contrato', 'objeto'],
           required: false,
-          include: [{ model: Credor, as: 'credor', attributes: ['id', 'nome'], required: false }],
+          include: [{ model: Credor, as: 'credor', attributes: ['id', 'razao_social'], required: false }],
         },
         {
           model: TesDespesa,
           as: 'pagamento',
-          required: pago === 'pago',
+          required: false,
           include: [{
             model: ContaBancaria,
             as: 'conta',
@@ -51,15 +51,43 @@ const listDespesas = async (req, res) => {
             required: false,
           }],
         },
+        {
+          model: Did,
+          as: 'did',
+          attributes: ['id', 'pago', 'valor_bruto', 'desconto_inss', 'desconto_iss', 'desconto_irrf', 'desconto_sindicato', 'desconto_bb', 'desconto_caixa', 'desconto_pensao', 'desconto_outros', 'doc_caixa', 'tesouraria_recebido_em', 'conta_pagamento_id', 'processo_id'],
+          required: false,
+          include: [{
+            model: Processo,
+            as: 'processo',
+            attributes: ['id', 'numero'],
+            required: false,
+          }],
+        },
       ],
-      order: [['data_emissao', 'DESC'], ['id', 'DESC']],
+        order: [['data_emissao', 'DESC'], ['id', 'DESC']],
+      }),
+      Secretaria.findAll({ attributes: ['nome', 'sigla'], raw: true }),
+    ]);
+
+    const siglaMap = Object.fromEntries(secretarias.map(s => [s.nome?.toLowerCase(), s.sigla]));
+
+    // filtro por número de processo (pós-query, via DID)
+    const filtroProcesso = processo?.trim();
+
+
+    const isPago = o => o.pagamento || o.did?.pago === 'sim';
+    let result = ordens;
+    if (pago === 'pago')     result = result.filter(o => isPago(o));
+    if (pago === 'pendente') result = result.filter(o => !isPago(o));
+    if (filtroProcesso)      result = result.filter(o => o.did?.processo?.numero?.toLowerCase().includes(filtroProcesso.toLowerCase()));
+
+    const ordens_final = result.map(o => {
+      const j = o.toJSON();
+      j.secretaria_sigla = siglaMap[j.secretaria?.toLowerCase()] || j.secretaria || null;
+      return j;
     });
 
-    let result = pago === 'pendente'
-      ? ordens.filter(o => !o.pagamento)
-      : ordens;
-
-    res.json({ ordens: result });
+    res.json({ ordens: ordens_final });
   } catch (err) {
     console.error('listDespesas:', err.message);
     res.status(500).json({ error: 'Erro ao listar despesas', detalhe: err.message });

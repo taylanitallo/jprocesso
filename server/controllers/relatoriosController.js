@@ -2,7 +2,7 @@ const { Op, fn, col } = require('sequelize');
 
 const saldoContas = async (req, res) => {
   try {
-    const { ContaBancaria, TesReceita, TesDespesa } = req.models;
+    const { ContaBancaria, TesReceita, TesDespesa, Did } = req.models;
     const { data_de, data_ate } = req.query;
 
     const receitaWhere = {};
@@ -19,7 +19,14 @@ const saldoContas = async (req, res) => {
       if (data_ate) despesaWhere.data_pagamento[Op.lte] = data_ate;
     }
 
-    const [contas, receitas, despesas] = await Promise.all([
+    const didWhere = { pago: 'sim', conta_pagamento_id: { [Op.not]: null } };
+    if (data_de || data_ate) {
+      didWhere.tesouraria_recebido_em = {};
+      if (data_de) didWhere.tesouraria_recebido_em[Op.gte] = data_de;
+      if (data_ate) didWhere.tesouraria_recebido_em[Op.lte] = data_ate;
+    }
+
+    const [contas, receitas, despesas, didDespesas] = await Promise.all([
       ContaBancaria.findAll({ where: { ativo: true }, order: [['nome', 'ASC']] }),
       TesReceita.findAll({
         attributes: ['conta_id', [fn('SUM', col('valor')), 'total']],
@@ -28,16 +35,24 @@ const saldoContas = async (req, res) => {
         raw: true,
       }),
       TesDespesa.findAll({
-        attributes: ['conta_id', [fn('SUM', col('valor_liquido')), 'total']],
+        attributes: ['conta_id', [fn('SUM', col('valor_bruto')), 'total']],
         where: despesaWhere,
         group: ['conta_id'],
+        raw: true,
+      }),
+      Did.findAll({
+        attributes: ['conta_pagamento_id', [fn('SUM', col('valor_bruto')), 'total']],
+        where: didWhere,
+        group: ['conta_pagamento_id'],
         raw: true,
       }),
     ]);
 
     const result = contas.map(c => {
-      const r = parseFloat(receitas.find(x => x.conta_id === c.id)?.total || 0);
-      const d = parseFloat(despesas.find(x => x.conta_id === c.id)?.total || 0);
+      const r  = parseFloat(receitas.find(x => x.conta_id === c.id)?.total || 0);
+      const d1 = parseFloat(despesas.find(x => x.conta_id === c.id)?.total || 0);
+      const d2 = parseFloat(didDespesas.find(x => x.conta_pagamento_id === c.id)?.total || 0);
+      const d  = d1 + d2;
       return { ...c.toJSON(), total_receitas: r, total_despesas: d, saldo: r - d };
     });
 
@@ -56,7 +71,7 @@ const saldoContas = async (req, res) => {
 
 const fluxoMensal = async (req, res) => {
   try {
-    const { TesReceita, TesDespesa } = req.models;
+    const { TesReceita, TesDespesa, Did } = req.models;
     const { conta_id, ano } = req.query;
     const anoNum = parseInt(ano) || new Date().getFullYear();
     const sequelize = TesReceita.sequelize;
@@ -71,9 +86,16 @@ const fluxoMensal = async (req, res) => {
     };
     if (conta_id) despesaWhere.conta_id = conta_id;
 
+    const didWhere = {
+      pago: 'sim',
+      conta_pagamento_id: { [Op.not]: null },
+      tesouraria_recebido_em: { [Op.between]: [`${anoNum}-01-01`, `${anoNum}-12-31`] },
+    };
+    if (conta_id) didWhere.conta_pagamento_id = conta_id;
+
     const mesTrunc = (campo) => sequelize.fn('DATE_TRUNC', 'month', sequelize.col(campo));
 
-    const [receitas, despesas] = await Promise.all([
+    const [receitas, despesas, didDespesas] = await Promise.all([
       TesReceita.findAll({
         attributes: [
           [sequelize.fn('TO_CHAR', mesTrunc('data'), 'YYYY-MM'), 'mes'],
@@ -87,25 +109,41 @@ const fluxoMensal = async (req, res) => {
       TesDespesa.findAll({
         attributes: [
           [sequelize.fn('TO_CHAR', mesTrunc('data_pagamento'), 'YYYY-MM'), 'mes'],
-          [fn('SUM', col('valor_liquido')), 'total'],
+          [fn('SUM', col('valor_bruto')), 'total'],
         ],
         where: despesaWhere,
         group: [mesTrunc('data_pagamento')],
         order: [[mesTrunc('data_pagamento'), 'ASC']],
         raw: true,
       }),
+      Did.findAll({
+        attributes: [
+          [sequelize.fn('TO_CHAR', mesTrunc('tesouraria_recebido_em'), 'YYYY-MM'), 'mes'],
+          [fn('SUM', col('valor_bruto')), 'total'],
+        ],
+        where: didWhere,
+        group: [mesTrunc('tesouraria_recebido_em')],
+        order: [[mesTrunc('tesouraria_recebido_em'), 'ASC']],
+        raw: true,
+      }),
     ]);
 
-    const mesesSet = new Set([...receitas.map(r => r.mes), ...despesas.map(d => d.mes)]);
+    const mesesSet = new Set([
+      ...receitas.map(r => r.mes),
+      ...despesas.map(d => d.mes),
+      ...didDespesas.map(d => d.mes),
+    ]);
     const meses = [...mesesSet].sort().map(mes => {
-      const r = parseFloat(receitas.find(x => x.mes === mes)?.total || 0);
-      const d = parseFloat(despesas.find(x => x.mes === mes)?.total || 0);
+      const r  = parseFloat(receitas.find(x => x.mes === mes)?.total || 0);
+      const d1 = parseFloat(despesas.find(x => x.mes === mes)?.total || 0);
+      const d2 = parseFloat(didDespesas.find(x => x.mes === mes)?.total || 0);
+      const d  = d1 + d2;
       return { mes, receitas: r, despesas: d, resultado: r - d };
     });
 
     const totais = {
-      receitas: meses.reduce((s, m) => s + m.receitas, 0),
-      despesas: meses.reduce((s, m) => s + m.despesas, 0),
+      receitas:  meses.reduce((s, m) => s + m.receitas, 0),
+      despesas:  meses.reduce((s, m) => s + m.despesas, 0),
       resultado: meses.reduce((s, m) => s + m.resultado, 0),
     };
 
@@ -118,7 +156,7 @@ const fluxoMensal = async (req, res) => {
 
 const extratoConta = async (req, res) => {
   try {
-    const { ContaBancaria, TesReceita, TesDespesa, ContratoOrdem } = req.models;
+    const { ContaBancaria, TesReceita, TesDespesa, ContratoOrdem, Did } = req.models;
     const { conta_id, data_de, data_ate } = req.query;
     if (!conta_id) return res.status(400).json({ error: 'Conta é obrigatória' });
 
@@ -139,13 +177,29 @@ const extratoConta = async (req, res) => {
       if (data_ate) despesaWhere.data_pagamento[Op.lte] = data_ate;
     }
 
-    const [receitas, despesas] = await Promise.all([
+    const didWhere = { pago: 'sim', conta_pagamento_id: conta_id };
+    if (data_de || data_ate) {
+      didWhere.tesouraria_recebido_em = {};
+      if (data_de) didWhere.tesouraria_recebido_em[Op.gte] = data_de;
+      if (data_ate) didWhere.tesouraria_recebido_em[Op.lte] = data_ate;
+    }
+
+    const [receitas, despesas, dids] = await Promise.all([
       TesReceita.findAll({ where: receitaWhere, raw: true }),
       TesDespesa.findAll({
         where: despesaWhere,
         include: [{
           model: ContratoOrdem,
           as: 'ordem',
+          attributes: ['id', 'numero', 'objeto', 'tipo'],
+          required: false,
+        }],
+      }),
+      Did.findAll({
+        where: didWhere,
+        include: [{
+          model: ContratoOrdem,
+          as: 'ordemCompra',
           attributes: ['id', 'numero', 'objeto', 'tipo'],
           required: false,
         }],
@@ -166,9 +220,20 @@ const extratoConta = async (req, res) => {
         descricao: d.ordem
           ? `${d.ordem.tipo === 'COMPRA' ? 'OC' : 'OS'} ${d.ordem.numero} — ${d.ordem.objeto}`
           : `Pagamento #${d.ordem_id}`,
-        valor: parseFloat(d.valor_liquido),
-        valor_bruto: parseFloat(d.valor_bruto),
+        valor: parseFloat(d.valor_bruto),
+        valor_liquido: parseFloat(d.valor_liquido),
         observacao: d.observacao || null,
+      })),
+      ...dids.map(d => ({
+        tipo: 'D',
+        data: d.tesouraria_recebido_em,
+        descricao: d.ordemCompra
+          ? `${d.ordemCompra.tipo === 'COMPRA' ? 'OC' : 'OS'} ${d.ordemCompra.numero} — ${d.ordemCompra.objeto}`
+          : `DID ${d.numero_did || d.id}`,
+        valor: parseFloat(d.valor_bruto || 0),
+        valor_liquido: parseFloat(d.valor_bruto || 0) - ['desconto_inss','desconto_iss','desconto_irrf','desconto_sindicato','desconto_bb','desconto_caixa','desconto_pensao','desconto_outros'].reduce((s, k) => s + parseFloat(d[k] || 0), 0),
+        doc_caixa: d.doc_caixa || null,
+        observacao: null,
       })),
     ].sort((a, b) => {
       const diff = String(a.data).localeCompare(String(b.data));
@@ -181,8 +246,10 @@ const extratoConta = async (req, res) => {
       l.saldo = saldo;
     });
 
-    const totalReceitas  = receitas.reduce((s, r) => s + parseFloat(r.valor), 0);
-    const totalDespesas  = despesas.reduce((s, d) => s + parseFloat(d.valor_liquido), 0);
+    const totalReceitas = receitas.reduce((s, r) => s + parseFloat(r.valor), 0);
+    const totalDespesas =
+      despesas.reduce((s, d) => s + parseFloat(d.valor_bruto || 0), 0) +
+      dids.reduce((s, d) => s + parseFloat(d.valor_bruto || 0), 0);
 
     res.json({
       conta: conta.toJSON(),

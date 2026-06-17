@@ -980,8 +980,9 @@ function TabDespesas() {
   const [ordemSel, setOrdemSel] = useState(null);
   const [editingPag, setEditingPag] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [filtros, setFiltros] = useState({ tipo: 'TODOS', status: 'TODOS', pago: 'TODOS', data_de: '', data_ate: '', busca: '' });
+  const [filtros, setFiltros] = useState({ tipo: 'TODOS', pago: 'TODOS', data_de: '', data_ate: '', busca: '', secretaria: '', processo: '' });
   const [form, setForm] = useState({ conta_id: '', data_pagamento: '', valor_bruto: '', valor_liquido: '', observacao: '' });
+  const [erro, setErro] = useState('');
 
   const maskValorD = (raw) => {
     const digits = String(raw).replace(/\D/g, '');
@@ -989,6 +990,13 @@ function TabDespesas() {
     return (parseInt(digits, 10) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
   const unmask = v => parseFloat(String(v).replace(/\./g, '').replace(',', '.')) || 0;
+  const didValorLiquido = (did) => {
+    if (!did) return 0;
+    const vb = parseFloat(did.valor_bruto || 0);
+    const descs = ['desconto_inss','desconto_iss','desconto_irrf','desconto_sindicato','desconto_bb','desconto_caixa','desconto_pensao','desconto_outros']
+      .reduce((s, k) => s + parseFloat(did[k] || 0), 0);
+    return Math.max(0, vb - descs);
+  };
   const inp = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
   const inpF = k => e => setFiltros(p => ({ ...p, [k]: e.target.value }));
   const fmtDate = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
@@ -998,14 +1006,15 @@ function TabDespesas() {
     setLoading(true);
     const params = new URLSearchParams();
     if (f.tipo && f.tipo !== 'TODOS') params.append('tipo', f.tipo);
-    if (f.status && f.status !== 'TODOS') params.append('status', f.status);
     if (f.pago && f.pago !== 'TODOS') params.append('pago', f.pago);
     if (f.data_de) params.append('data_de', f.data_de);
     if (f.data_ate) params.append('data_ate', f.data_ate);
     if (f.busca) params.append('busca', f.busca);
+    if (f.secretaria) params.append('secretaria', f.secretaria);
+    if (f.processo) params.append('processo', f.processo);
     api.get(`/tesouraria/despesas?${params}`)
-      .then(r => setOrdens(r.data.ordens || []))
-      .catch(console.error)
+      .then(r => { setErro(''); setOrdens(r.data.ordens || []); })
+      .catch(e => setErro(e.response?.data?.detalhe || e.message || 'Erro ao carregar'))
       .finally(() => setLoading(false));
   };
 
@@ -1017,10 +1026,21 @@ function TabDespesas() {
   const openPagar = (ordem) => {
     setOrdemSel(ordem);
     setEditingPag(null);
-    const valorTotal = ordem.valor_total
-      ? (parseFloat(ordem.valor_total)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-      : '';
-    setForm({ conta_id: '', data_pagamento: new Date().toISOString().slice(0, 10), valor_bruto: valorTotal, valor_liquido: valorTotal, observacao: '' });
+    const did = ordem.did;
+    const toMasked = n => n > 0 ? n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '';
+    let vb = toMasked(parseFloat(ordem.valor_total || 0));
+    let vl = vb;
+    let data_pag = new Date().toISOString().slice(0, 10);
+    let conta_id = '';
+    let obs = '';
+    if (did?.pago === 'sim') {
+      vb = toMasked(parseFloat(did.valor_bruto || 0));
+      vl = toMasked(didValorLiquido(did));
+      if (did.tesouraria_recebido_em) data_pag = did.tesouraria_recebido_em;
+      if (did.conta_pagamento_id) conta_id = did.conta_pagamento_id;
+      if (did.doc_caixa) obs = `Doc. Caixa: ${did.doc_caixa}`;
+    }
+    setForm({ conta_id, data_pagamento: data_pag, valor_bruto: vb, valor_liquido: vl, observacao: obs });
     setShowModal(true);
   };
 
@@ -1075,30 +1095,25 @@ function TabDespesas() {
     }
   };
 
-  const pendentes = ordens.filter(o => !o.pagamento).length;
-  const pagos = ordens.filter(o => o.pagamento).length;
-  const totalPago = ordens.filter(o => o.pagamento).reduce((s, o) => s + parseFloat(o.pagamento.valor_liquido || 0), 0);
+  const isPago = o => o.pagamento || o.did?.pago === 'sim';
+  const pendentes = ordens.filter(o => !isPago(o)).length;
+  const pagos = ordens.filter(o => isPago(o)).length;
+  const totalPago = ordens.filter(o => isPago(o)).reduce((s, o) => {
+    if (o.pagamento) return s + parseFloat(o.pagamento.valor_bruto || 0);
+    return s + parseFloat(o.did?.valor_bruto || 0);
+  }, 0);
 
   return (
     <div className="space-y-4">
       {/* Filtros */}
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
           <div>
             <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Tipo</label>
             <select value={filtros.tipo} onChange={inpF('tipo')} className="input-field text-sm">
               <option value="TODOS">Todos</option>
               <option value="COMPRA">Ordem de Compra</option>
               <option value="SERVICO">Ordem de Serviço</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Status</label>
-            <select value={filtros.status} onChange={inpF('status')} className="input-field text-sm">
-              <option value="TODOS">Todos</option>
-              <option value="APROVADO">Aprovado</option>
-              <option value="PENDENTE">Pendente</option>
-              <option value="CANCELADO">Cancelado</option>
             </select>
           </div>
           <div>
@@ -1123,6 +1138,14 @@ function TabDespesas() {
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
               <input value={filtros.busca} onChange={inpF('busca')} className="input-field text-sm pl-8" placeholder="Nº ou objeto..." />
             </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Secretaria</label>
+            <input value={filtros.secretaria} onChange={inpF('secretaria')} className="input-field text-sm" placeholder="Nome da secretaria..." />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Processo</label>
+            <input value={filtros.processo} onChange={inpF('processo')} className="input-field text-sm" placeholder="Nº do processo..." />
           </div>
         </div>
         <div className="mt-3 flex justify-end">
@@ -1151,11 +1174,18 @@ function TabDespesas() {
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 flex items-center gap-3">
           <CreditCard className="h-8 w-8 text-blue-500 flex-shrink-0" />
           <div>
-            <p className="text-xs text-blue-700 dark:text-blue-400 font-medium">Total Pago (Líquido)</p>
+            <p className="text-xs text-blue-700 dark:text-blue-400 font-medium">Total Pago (Bruto)</p>
             <p className="text-lg font-bold text-blue-800 dark:text-blue-300">{fmtVal(totalPago)}</p>
           </div>
         </div>
       </div>
+
+      {/* Erro */}
+      {erro && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3 text-sm text-red-700 dark:text-red-400">
+          Erro: {erro}
+        </div>
+      )}
 
       {/* Tabela */}
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
@@ -1173,11 +1203,11 @@ function TabDespesas() {
                 <tr>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 dark:text-slate-300">Nº / Tipo</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 dark:text-slate-300">Objeto / Contrato</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 dark:text-slate-300">Emissão</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 dark:text-slate-300">Secretaria</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 dark:text-slate-300">Processo</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 dark:text-slate-300">Data Pagamento</th>
                   <th className="text-right px-4 py-3 text-xs font-semibold text-gray-600 dark:text-slate-300">Valor Total</th>
-                  <th className="text-center px-4 py-3 text-xs font-semibold text-gray-600 dark:text-slate-300">Status</th>
                   <th className="text-center px-4 py-3 text-xs font-semibold text-gray-600 dark:text-slate-300">Pagamento</th>
-                  <th className="text-center px-4 py-3 text-xs font-semibold text-gray-600 dark:text-slate-300">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
@@ -1190,54 +1220,40 @@ function TabDespesas() {
                       </span>
                     </td>
                     <td className="px-4 py-3 max-w-xs">
-                      <div className="text-xs text-gray-800 dark:text-slate-200 truncate">{o.objeto}</div>
+                      <div className="text-xs text-gray-800 dark:text-slate-200 line-clamp-2">{o.objeto}</div>
                       {o.contrato && (
-                        <div className="text-[10px] text-gray-500 dark:text-slate-400 truncate">
-                          {o.contrato.credor?.nome || ''}{o.contrato.credor?.nome && ' — '}Contrato {o.contrato.numero_contrato}
+                        <div className="text-[10px] text-gray-500 dark:text-slate-400 line-clamp-2">
+                          {o.contrato.credor?.razao_social || ''}{o.contrato.credor?.razao_social && ' — '}Contrato {o.contrato.numero_contrato}
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-slate-400 whitespace-nowrap">{fmtDate(o.data_emissao)}</td>
+                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-slate-400 whitespace-nowrap">{o.secretaria_sigla || '—'}</td>
+                    <td className="px-4 py-3 text-xs font-mono text-gray-600 dark:text-slate-400 whitespace-nowrap">{o.did?.processo?.numero || '—'}</td>
+                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-slate-400 whitespace-nowrap">
+                      {o.pagamento?.data_pagamento
+                        ? fmtDate(o.pagamento.data_pagamento)
+                        : o.did?.pago === 'sim' && o.did.tesouraria_recebido_em
+                          ? fmtDate(o.did.tesouraria_recebido_em)
+                          : '—'}
+                    </td>
                     <td className="px-4 py-3 text-right text-xs font-medium text-gray-800 dark:text-slate-200 whitespace-nowrap tabular-nums">{fmtVal(o.valor_total)}</td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`text-[10px] font-semibold px-2 py-1 rounded-full ${
-                        o.status === 'APROVADO' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
-                        : o.status === 'CANCELADO' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
-                        : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-                      }`}>{o.status || 'PENDENTE'}</span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
                       {o.pagamento ? (
+                        <span className="flex items-center justify-center gap-1 text-[10px] font-semibold text-green-700 dark:text-green-400">
+                          <CheckCircle2 className="h-3 w-3" /> PAGO
+                        </span>
+                      ) : o.did?.pago === 'sim' ? (
                         <div className="flex flex-col items-center gap-0.5">
                           <span className="flex items-center gap-1 text-[10px] font-semibold text-green-700 dark:text-green-400">
                             <CheckCircle2 className="h-3 w-3" /> PAGO
                           </span>
-                          <span className="text-[10px] text-gray-500 dark:text-slate-400">{fmtDate(o.pagamento.data_pagamento)}</span>
-                          <span className="text-[10px] font-medium text-gray-700 dark:text-slate-300 tabular-nums">{fmtVal(o.pagamento.valor_liquido)}</span>
+                          {o.did.doc_caixa && <span className="text-[10px] text-gray-400 dark:text-slate-500">Doc: {o.did.doc_caixa}</span>}
                         </div>
                       ) : (
                         <span className="flex items-center justify-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
                           <Clock className="h-3 w-3" /> PENDENTE
                         </span>
                       )}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {o.pagamento ? (
-                          <>
-                            <button onClick={() => openEditar(o)} title="Editar pagamento" className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg">
-                              <Edit2 className="h-3.5 w-3.5" />
-                            </button>
-                            <button onClick={() => estornar(o.pagamento)} title="Estornar pagamento" className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg">
-                              <RotateCcw className="h-3.5 w-3.5" />
-                            </button>
-                          </>
-                        ) : (
-                          <button onClick={() => openPagar(o)} title="Registrar pagamento" className="p-1.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg flex items-center gap-1 text-xs font-medium">
-                            <CreditCard className="h-3.5 w-3.5" /> Pagar
-                          </button>
-                        )}
-                      </div>
                     </td>
                   </tr>
                 ))}

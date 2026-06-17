@@ -154,6 +154,8 @@ const initTenantModels = (sequelize) => {
   Did.belongsTo(Processo, { foreignKey: 'processo_id', as: 'processo' });
   Processo.hasOne(Did, { foreignKey: 'processo_id', as: 'did' });
   Did.belongsTo(User, { foreignKey: 'criado_por_id', as: 'criadoPor' });
+  Did.belongsTo(ContratoOrdem, { foreignKey: 'ordem_compra_id', as: 'ordemCompra', constraints: false });
+  ContratoOrdem.hasOne(Did, { foreignKey: 'ordem_compra_id', as: 'did', constraints: false });
 
   // Patrimônio associations
   PatBem.belongsTo(PatGrupo,    { foreignKey: 'grupo_id',      as: 'grupo' });
