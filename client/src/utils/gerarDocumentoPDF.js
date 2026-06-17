@@ -54,7 +54,7 @@ function cabecalho(doc, titulo, numero, secretaria) {
   doc.text(`Gerado em: ${dataGer}`, 210 - M, 17, { align: 'right' })
 
   doc.setTextColor(22, 28, 36)
-  return 32
+  return Math.max(32, mTop + 8)
 }
 
 // Linha de campo: rótulo + valor
@@ -295,8 +295,8 @@ export async function gerarOficioPDF({ processo, form, tenant, imprimir = false 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   applyTimbradoToPage(doc)
   const PG  = 210   // largura da página
-  const MO  = M     // margem do ofício usa a margem configurada
-  const UWO = PG - MO * 2
+  const MO  = M     // margem esquerda configurada
+  const UWO = UW    // largura útil já calculada em refreshM() com left+right corretos
 
   const f   = form || {}
   const dtFmt = f.data_despacho
@@ -310,33 +310,29 @@ export async function gerarOficioPDF({ processo, form, tenant, imprimir = false 
   const siglaSecretaria  = processo?.secretaria?.sigla  || tenant?.sigla  || ''
   const nomeSecretaria   = f.secretaria_emissora || processo?.secretaria?.nome || ''
 
-  // Linha superior colorida
-  doc.setFillColor(18, 26, 48)
-  doc.rect(0, 0, PG, 4, 'F')
-
-  // Nome da prefeitura
+  // Nome da prefeitura — começa em mTop
   doc.setFontSize(11)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(18, 26, 48)
-  doc.text(nomePrefeitura.toUpperCase(), PG / 2, 14, { align: 'center' })
+  doc.text(nomePrefeitura.toUpperCase(), PG / 2, mTop, { align: 'center' })
 
   // Secretaria
   if (nomeSecretaria) {
     doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(60, 70, 90)
-    doc.text(nomeSecretaria, PG / 2, 20, { align: 'center' })
+    doc.text(nomeSecretaria, PG / 2, mTop + 6, { align: 'center' })
   }
 
   // Setor
   if (f.setor_emissor) {
     doc.setFontSize(8.5)
     doc.setTextColor(90, 100, 115)
-    doc.text(f.setor_emissor, PG / 2, nomeSecretaria ? 26 : 20, { align: 'center' })
+    doc.text(f.setor_emissor, PG / 2, nomeSecretaria ? mTop + 12 : mTop + 6, { align: 'center' })
   }
 
   // Linha separadora
-  const yLinha = nomeSecretaria ? (f.setor_emissor ? 30 : 26) : 22
+  const yLinha = mTop + (nomeSecretaria ? (f.setor_emissor ? 16 : 12) : 8)
   doc.setFillColor(18, 26, 48)
   doc.rect(MO, yLinha, UWO, 0.5, 'F')
 
@@ -403,10 +399,10 @@ export async function gerarOficioPDF({ processo, form, tenant, imprimir = false 
   const texto = fmt(f.texto)
   const linhasTexto = doc.splitTextToSize(texto, UWO)
   for (let i = 0; i < linhasTexto.length; i++) {
-    if (y + 7 > 255) {
+    if (y + 7 > 297 - mBottom) {
       doc.addPage()
       applyTimbradoToPage(doc)
-      y = MO + 6
+      y = mTop + 6
     }
     doc.text(linhasTexto[i], MO, y)
     y += 6.5
@@ -414,7 +410,7 @@ export async function gerarOficioPDF({ processo, form, tenant, imprimir = false 
 
   // ── Assinatura ───────────────────────────────────────────────────────────────
   y += 12
-  if (y + 35 > 277) { doc.addPage(); applyTimbradoToPage(doc); y = MO + 6 }
+  if (y + 35 > 297 - mBottom) { doc.addPage(); applyTimbradoToPage(doc); y = mTop + 6 }
 
   // Bloco de assinatura centralizado
   const bw = 90
@@ -465,17 +461,16 @@ export async function gerarOficioPDF({ processo, form, tenant, imprimir = false 
     doc.text(fmt(f.secretaria_emissora), PG / 2, y, { align: 'center' })
   }
 
-  // ── Rodapé ───────────────────────────────────────────────────────────────────
+  // ── Rodapé — número de página discreto, sem barra colorida
   const totalPages = doc.getNumberOfPages()
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p)
-    doc.setFillColor(18, 26, 48)
-    doc.rect(0, 291, PG, 6, 'F')
     doc.setFontSize(7)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(150, 160, 175)
-    doc.text(nomePrefeitura, MO, 295)
-    doc.text(`Pág. ${p}/${totalPages}`, PG - MO, 295, { align: 'right' })
+    const yRodape = 297 - mBottom + 4
+    doc.text(nomePrefeitura, MO, yRodape)
+    doc.text(`Pág. ${p}/${totalPages}`, PG - MO, yRodape, { align: 'right' })
   }
 
   const nomeArq = `Oficio_${f.numero || processo?.numero || 'doc'}.pdf`
@@ -492,6 +487,7 @@ export async function gerarOficioPDF({ processo, form, tenant, imprimir = false 
 
 // ─── PAUTA ────────────────────────────────────────────────────────────────────
 export async function gerarPautaPDF(processo) {
+  refreshM()
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   let y = cabecalho(doc, 'PAUTA DE PROCESSO', processo.numero, processo.secretaria?.sigla || processo.secretariaSigla)
 
@@ -591,6 +587,7 @@ export async function gerarPautaPDF(processo) {
 
 // ─── REQUISIÇÃO ───────────────────────────────────────────────────────────────
 export async function gerarRequisicaoPDF(processo) {
+  refreshM()
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   let y = cabecalho(doc, 'REQUISIÇÃO DE MATERIAL', processo.numero, processo.secretaria?.sigla || processo.secretariaSigla)
 
