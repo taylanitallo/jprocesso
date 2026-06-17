@@ -1,8 +1,9 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import AuthProvider from './context/AuthContext'
 import ThemeProvider from './context/ThemeContext'
+import { setTimbrado } from './utils/timbradoStore'
 
 // ── Imports estáticos — shell crítico (sempre carregado) ──────────────────────
 import Layout from './components/Layout'
@@ -40,6 +41,14 @@ function PageLoader() {
       <p className="text-sm font-medium text-gray-500 dark:text-slate-400">Carregando módulo...</p>
     </div>
   )
+}
+
+function TimbradoSync() {
+  const { tenant } = useAuth()
+  useEffect(() => {
+    setTimbrado(tenant?.configuracoes?.timbrado ?? null)
+  }, [tenant?.configuracoes?.timbrado])
+  return null
 }
 
 // ── Guards de rota ────────────────────────────────────────────────────────────
@@ -108,6 +117,7 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <TimbradoSync />
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<MunicipioSelector />} />

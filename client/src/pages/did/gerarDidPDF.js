@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { salvarDocumentoGerado } from '../../utils/salvarDocumentoGerado'
+import { applyTimbradoToPage } from '../../utils/timbradoStore'
 
 // ─── Utilitários ──────────────────────────────────────────────────────────────
 const fmt     = v => (v && String(v).trim()) ? String(v).trim() : '—'
@@ -58,7 +59,7 @@ const UW = 186   // 210 - 2*12
 // ─── Divisor de Seção — barra fina + rótulo inline ───────────────────────────
 // Retorna y após o divisor (compacto: só 6mm de altura total)
 function divSecao(doc, y, numero, titulo, acent, pageH) {
-  if (y > pageH - 20) { doc.addPage(); y = 16 }
+  if (y > pageH - 20) { doc.addPage(); applyTimbradoToPage(doc); y = 16 }
   // Linha tênue acima (separa do bloco anterior)
   doc.setDrawColor(...C.rule)
   doc.setLineWidth(0.15)
@@ -83,7 +84,7 @@ function divSecao(doc, y, numero, titulo, acent, pageH) {
 // cols: array de { label, value, width? } onde width é fração de UW
 // Retorna novo y
 function gridRow(doc, y, cols, pageH) {
-  if (y > pageH - 14) { doc.addPage(); y = 16 }
+  if (y > pageH - 14) { doc.addPage(); applyTimbradoToPage(doc); y = 16 }
   let x = M
   // Calcula larguras
   const total = cols.reduce((s, c) => s + (c.w || 1), 0)
@@ -109,7 +110,7 @@ function gridRow(doc, y, cols, pageH) {
 
 // ─── Campo objeto — texto completo com wrap ───────────────────────────────────
 function campoObjeto(doc, y, valor, pageH) {
-  if (y > pageH - 16) { doc.addPage(); y = 16 }
+  if (y > pageH - 16) { doc.addPage(); applyTimbradoToPage(doc); y = 16 }
   norm(doc, 5.5, C.muted)
   doc.text('OBJETO', M + 1, y + 1.5)
   bold(doc, 7.5, C.ink)
@@ -124,7 +125,7 @@ function campoObjeto(doc, y, valor, pageH) {
 
 // ─── Linha de Checkboxes compacta ─────────────────────────────────────────────
 function checkRow(doc, y, label, itens, pageH) {
-  if (y > pageH - 10) { doc.addPage(); y = 16 }
+  if (y > pageH - 10) { doc.addPage(); applyTimbradoToPage(doc); y = 16 }
   norm(doc, 5.5, C.muted)
   doc.text(label.toUpperCase() + ':', M + 1, y + 3.5)
   let x = M + doc.getTextWidth(label.toUpperCase() + ':') + 4
@@ -301,7 +302,7 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
   // ── Tabela de Itens — ultra-compacta ─────────────────────────────────────
   const itensFiltrados = (itensDid || []).filter(it => it.descricao)
   if (itensFiltrados.length > 0) {
-    if (y > pageH - 28) { doc.addPage(); y = 16 }
+    if (y > pageH - 28) { doc.addPage(); applyTimbradoToPage(doc); y = 16 }
     norm(doc, 5.5, C.muted)
     doc.text('ITENS / SERVIÇOS', M + 1, y)
     y += 2
@@ -334,6 +335,7 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
         4: { cellWidth: 38, halign: 'right', fontStyle: 'bold' },
       },
       margin: { left: M, right: M },
+      didDrawPage: () => applyTimbradoToPage(doc),
     })
     y = doc.lastAutoTable.finalY + 4
   }
@@ -462,7 +464,7 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
     y += 3
 
     // Demonstrativo de descontos
-    if (y > pageH - 50) { doc.addPage(); y = 16 }
+    if (y > pageH - 50) { doc.addPage(); applyTimbradoToPage(doc); y = 16 }
     norm(doc, 5.5, C.muted)
     doc.text('DEMONSTRATIVO DE DESCONTOS', M + 1, y)
     y += 2
@@ -495,6 +497,7 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
         1: { cellWidth: 56, halign: 'right' },
       },
       margin: { left: M, right: M },
+      didDrawPage: () => applyTimbradoToPage(doc),
     })
     y = doc.lastAutoTable.finalY + 1.5
 
@@ -580,7 +583,7 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
     y += 3
 
     // Demonstrativo de descontos
-    if (y > pageH - 50) { doc.addPage(); y = 16 }
+    if (y > pageH - 50) { doc.addPage(); applyTimbradoToPage(doc); y = 16 }
     norm(doc, 5.5, C.muted)
     doc.text('DEMONSTRATIVO DE DESCONTOS', M + 1, y)
     y += 2
@@ -613,6 +616,7 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
         1: { cellWidth: 56, halign: 'right' },
       },
       margin: { left: M, right: M },
+      didDrawPage: () => applyTimbradoToPage(doc),
     })
     y = doc.lastAutoTable.finalY + 1.5
 

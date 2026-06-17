@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf'
 import { salvarDocumentoGerado } from './salvarDocumentoGerado'
+import { applyTimbradoToPage } from './timbradoStore'
 
 // ─── Utilitários ──────────────────────────────────────────────────────────────
 const fmt = v => (v && String(v).trim()) ? String(v).trim() : '—'
@@ -15,12 +16,13 @@ const UW = 182      // largura útil (210 - 2*14)
 
 // Paginação automática
 function checkPage(doc, y, needed = 20) {
-  if (y + needed > 277) { doc.addPage(); return M + 6 }
+  if (y + needed > 277) { doc.addPage(); applyTimbradoToPage(doc); return M + 6 }
   return y
 }
 
 // Cabeçalho padrão — retorna y após o cabeçalho
 function cabecalho(doc, titulo, numero, secretaria) {
+  applyTimbradoToPage(doc)
   // Fundo cinza escuro
   doc.setFillColor(18, 26, 48)
   doc.rect(0, 0, 210, 24, 'F')
@@ -277,6 +279,7 @@ export async function gerarDespachoPDF(processo, imprimir = false) {
 // ─── OFÍCIO ───────────────────────────────────────────────────────────────────
 export async function gerarOficioPDF({ processo, form, tenant, imprimir = false }) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  applyTimbradoToPage(doc)
   const PG  = 210   // largura da página
   const MO  = 20    // margem do ofício (um pouco maior para visual formal)
   const UWO = PG - MO * 2
@@ -388,6 +391,7 @@ export async function gerarOficioPDF({ processo, form, tenant, imprimir = false 
   for (let i = 0; i < linhasTexto.length; i++) {
     if (y + 7 > 255) {
       doc.addPage()
+      applyTimbradoToPage(doc)
       y = MO + 6
     }
     doc.text(linhasTexto[i], MO, y)
@@ -396,7 +400,7 @@ export async function gerarOficioPDF({ processo, form, tenant, imprimir = false 
 
   // ── Assinatura ───────────────────────────────────────────────────────────────
   y += 12
-  if (y + 35 > 277) { doc.addPage(); y = MO + 6 }
+  if (y + 35 > 277) { doc.addPage(); applyTimbradoToPage(doc); y = MO + 6 }
 
   // Bloco de assinatura centralizado
   const bw = 90

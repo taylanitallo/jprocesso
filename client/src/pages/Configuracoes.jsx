@@ -79,7 +79,7 @@ export default function Configuracoes() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
-  const [editandoGerais, setEditandoGerais] = useState(false);
+  const [editandoGerais, setEditandoGerais] = useState(true);
   const [geraisOriginal, setGeraisOriginal] = useState(null);
 
   // Estado da aba Gerais — configurações GLOBAIS do tenant (sem logo_secretaria)
@@ -88,6 +88,7 @@ export default function Configuracoes() {
     logo_prefeitura:   conf.logo_prefeitura   || null,
     logo_sidebar:      conf.logo_sidebar      || null,
     imagem_fundo_login: conf.imagem_fundo_login || null,
+    timbrado:          conf.timbrado          || null,
     cor_relatorio_primaria:   conf.cor_relatorio_primaria   || '#1e40af',
     cor_relatorio_secundaria: conf.cor_relatorio_secundaria || '#1e3a5f',
     cor_relatorio_texto:      conf.cor_relatorio_texto      || '#111827',
@@ -110,6 +111,7 @@ export default function Configuracoes() {
           logo_prefeitura:          c.logo_prefeitura          ?? null,
           logo_sidebar:             c.logo_sidebar             ?? null,
           imagem_fundo_login:       c.imagem_fundo_login       ?? null,
+          timbrado:                 c.timbrado                 ?? null,
           cor_relatorio_primaria:   c.cor_relatorio_primaria   || '#1e40af',
           cor_relatorio_secundaria: c.cor_relatorio_secundaria || '#1e3a5f',
           cor_relatorio_texto:      c.cor_relatorio_texto      || '#111827',
@@ -396,6 +398,49 @@ export default function Configuracoes() {
                     hint="Substitui o ícone padrão no canto inferior esquerdo do menu lateral."
                     disabled={!editandoGerais}
                   />
+                </div>
+              </div>
+
+              {/* Timbrado */}
+              <div>
+                <SectionTitle title="Timbrado" />
+                <p className="text-xs text-gray-400 dark:text-slate-500 mb-5">Imagem PNG usada como marca d'água de fundo nos relatórios gerados pelo sistema.</p>
+                <div className="flex flex-col gap-6 md:flex-row md:items-start">
+                  <ImageUpload
+                    label="Arquivo do Timbrado (PNG)"
+                    value={geraisData.timbrado}
+                    onChange={(v) => handleLogoChange('timbrado', v)}
+                    hint="Use PNG com fundo transparente para melhor resultado."
+                    disabled={!editandoGerais}
+                  />
+                  {geraisData.timbrado && (
+                    <div className="flex-1">
+                      <p className="text-xs font-medium text-gray-600 dark:text-slate-400 mb-2">Pré-visualização (proporção A4 · 210 × 297 mm)</p>
+                      {/* Proporção exata A4 portrait: 210/297 ≈ 0.7071 */}
+                      <div
+                        className="relative rounded border border-gray-300 dark:border-slate-600 overflow-hidden bg-white shadow-md"
+                        style={{ width: '100%', maxWidth: 360, aspectRatio: '210 / 297' }}
+                      >
+                        {/* Simulação de conteúdo */}
+                        <div className="absolute inset-0 p-[8%] space-y-[3%]">
+                          <div className="h-[3%] rounded bg-gray-200" style={{ width: '60%' }} />
+                          <div className="h-[2%] rounded bg-gray-100" style={{ width: '80%' }} />
+                          <div className="h-[2%] rounded bg-gray-100" style={{ width: '70%' }} />
+                          <div className="h-[2%] rounded bg-gray-100" style={{ width: '90%' }} />
+                          <div className="h-[2%] rounded bg-gray-100" style={{ width: '65%' }} />
+                          <div className="h-[2%] rounded bg-gray-100" style={{ width: '75%' }} />
+                        </div>
+                        {/* Timbrado preenchendo toda a folha */}
+                        <div className="absolute inset-0 pointer-events-none">
+                          <img
+                            src={geraisData.timbrado}
+                            alt="timbrado"
+                            style={{ width: '100%', height: '100%', objectFit: 'fill', opacity: 0.15 }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
