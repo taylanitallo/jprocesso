@@ -260,9 +260,10 @@ const login = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { 
-        id: user.id, 
-        email: user.email, 
+      {
+        id: user.id,
+        nome: user.nome,
+        email: user.email,
         tipo: user.tipo,
         tenantId: tenant.id,
         subdomain: tenant.subdominio,
@@ -277,6 +278,7 @@ const login = async (req, res) => {
     // Setar refresh token em cookie httpOnly (aditivo — não altera resposta existente)
     const { token: rtTenant, jti: jtiTenant, tokenHash: hashTenant } = _buildRefreshToken({
       id: user.id,
+      nome: user.nome,
       email: user.email,
       tipo: user.tipo,
       tenantId: tenant.id,
@@ -546,9 +548,10 @@ const refreshToken = async (req, res) => {
           const tenantDbForRefresh = await getTenantConnection(tenantForRefresh.schema);
           const modelsForRefresh   = initTenantModels(tenantDbForRefresh);
           const freshUser = await modelsForRefresh.User?.findByPk(decoded.id, {
-            attributes: ['tipo', 'email', 'secretariaId', 'setorId']
+            attributes: ['nome', 'tipo', 'email', 'secretariaId', 'setorId']
           });
           if (freshUser) {
+            freshPayload.nome        = freshUser.nome || cleanPayload.nome;
             freshPayload.tipo        = freshUser.tipo;
             freshPayload.email       = freshUser.email || cleanPayload.email;
             freshPayload.secretariaId = freshUser.secretariaId || null;

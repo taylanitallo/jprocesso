@@ -889,7 +889,7 @@ const createRequisicao = async (req, res) => {
 
     await audit(req.models, {
       tabela: 'almoxarifado_requisicoes', registro_id: requisicao.id,
-      acao: 'CRIOU', descricao: `Criou requisiÃ§Ã£o ${numero}`,
+      acao: 'CRIOU', descricao: `Criou requisicao ${numero}`,
       depois: requisicao.toJSON(), user: req.user, ip: req.ip
     });
 
@@ -1007,7 +1007,7 @@ const iniciarSeparacao = async (req, res) => {
 
     await audit(req.models, {
       tabela: 'almoxarifado_requisicoes', registro_id: requisicao.id,
-      acao: 'SEPAROU', descricao: `Iniciou separaÃ§Ã£o de ${requisicao.numero}`,
+      acao: 'SEPAROU', descricao: `Iniciou separacao de ${requisicao.numero}`,
       antes, depois: { status: 'EM_SEPARACAO' },
       user: req.user, ip: req.ip
     });
@@ -1206,7 +1206,7 @@ const cancelarRequisicao = async (req, res) => {
 
     await audit(req.models, {
       tabela: 'almoxarifado_requisicoes', registro_id: requisicao.id,
-      acao: 'CANCELOU', descricao: `Cancelou ${requisicao.numero}: ${justificativa || 'â€”'}`,
+      acao: 'CANCELOU', descricao: `Cancelou ${requisicao.numero}: ${justificativa || '-'}`,
       antes, depois: { status: 'CANCELADA' },
       user: req.user, ip: req.ip
     });
@@ -1258,14 +1258,20 @@ const relatorioConsumo = async (req, res) => {
 const listAuditLog = async (req, res) => {
   try {
     await ensureTables(req);
-    const { AlmoxAuditLog } = req.models;
-    const { tabela, acao, user_id, user_nome, page = 1, limit = 50 } = req.query;
+    const { AlmoxAuditLog, User } = req.models;
+    const { tabela, acao, user_id, user_nome, data_de, data_ate, page = 1, limit = 50 } = req.query;
 
     const where = {};
-    if (tabela)     where.tabela    = tabela;
-    if (acao)       where.acao      = acao;
-    if (user_id)    where.user_id   = user_id;
-    if (user_nome)  where.user_nome = { [Op.iLike]: `%${user_nome}%` };
+    if (tabela)    where.tabela    = tabela;
+    if (acao)      where.acao      = acao;
+    if (user_id)   where.user_id   = user_id;
+    if (user_nome) where.user_nome = { [Op.iLike]: `%${user_nome}%` };
+
+    if (data_de || data_ate) {
+      where.created_at = {};
+      if (data_de)  where.created_at[Op.gte] = new Date(data_de + 'T00:00:00');
+      if (data_ate) where.created_at[Op.lte]  = new Date(data_ate + 'T23:59:59');
+    }
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const { count, rows } = await AlmoxAuditLog.findAndCountAll({
@@ -1274,6 +1280,19 @@ const listAuditLog = async (req, res) => {
       limit: parseInt(limit),
       offset
     });
+
+    // Enriquece registros antigos: busca nome pelo user_id quando user_nome está vazio
+    const semNome = rows.filter(r => !r.user_nome && r.user_id);
+    if (semNome.length > 0 && User) {
+      const ids = [...new Set(semNome.map(r => r.user_id))];
+      const users = await User.findAll({ where: { id: ids }, attributes: ['id', 'nome'] });
+      const mapa  = Object.fromEntries(users.map(u => [u.id, u.nome]));
+      rows.forEach(r => {
+        if (!r.user_nome && r.user_id && mapa[r.user_id]) {
+          r.dataValues.user_nome = mapa[r.user_id];
+        }
+      });
+    }
 
     res.json({ total: count, pagina: parseInt(page), logs: rows });
   } catch (error) {
