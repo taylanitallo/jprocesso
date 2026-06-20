@@ -679,25 +679,40 @@ export async function gerarRequisicaoAlmoxPDF({ req, tenantNome, mode = 'downloa
   y += 4
 
   // ─ Assinaturas eletrônicas
-  y = checkPage(doc, y + 8, 44)
-  doc.setFillColor(220, 225, 233)
-  doc.rect(M, y, UW, 0.4, 'F')
-  y += 8
-
   const sigs = [
     { label: 'Solicitante', nome: req.solicitante?.nome, data: fmtDt(req.data_solicitacao),   hash: req.hash_solicitante },
     { label: 'Autorizador', nome: req.autorizador?.nome, data: fmtDtHr(req.data_autorizacao), hash: req.hash_assinatura  },
     { label: 'Entregador',  nome: req.atendente?.nome,   data: fmtDtHr(req.data_entrega),     hash: req.hash_entrega     },
   ]
   const sw = UW / 3 - 2
+
+  // Calcula altura máxima do bloco considerando o hash completo em múltiplas linhas
+  doc.setFontSize(6)
+  let maxBlockH = 30
+  sigs.forEach(s => {
+    const nomeLineCount = doc.splitTextToSize(s.nome || '—', sw - 6).length
+    const afterNomeOffset = 13 + nomeLineCount * 5
+    if (s.hash) {
+      const hashLineCount = doc.splitTextToSize(s.hash, sw - 6).length
+      maxBlockH = Math.max(maxBlockH, afterNomeOffset + 7 + hashLineCount * 4.5 + 4)
+    } else {
+      maxBlockH = Math.max(maxBlockH, afterNomeOffset + 10)
+    }
+  })
+
+  y = checkPage(doc, y + 8, maxBlockH + 12)
+  doc.setFillColor(220, 225, 233)
+  doc.rect(M, y, UW, 0.4, 'F')
+  y += 8
+
   sigs.forEach((s, i) => {
     const bx = M + i * (sw + 3)
     doc.setFillColor(243, 245, 248)
-    doc.roundedRect(bx, y, sw, 36, 2, 2, 'F')
+    doc.roundedRect(bx, y, sw, maxBlockH, 2, 2, 'F')
     // Rótulo
     doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(41, 82, 196)
     doc.text(s.label, bx + sw / 2, y + 6, { align: 'center' })
-    // Nome (pode ter duas linhas)
+    // Nome
     doc.setFontSize(8.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(22, 28, 36)
     const nomeLines = doc.splitTextToSize(s.nome || '—', sw - 6)
     doc.text(nomeLines, bx + sw / 2, y + 13, { align: 'center' })
@@ -705,14 +720,13 @@ export async function gerarRequisicaoAlmoxPDF({ req, tenantNome, mode = 'downloa
     // Data
     doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(90, 100, 115)
     doc.text(s.data, bx + sw / 2, afterNome + 1, { align: 'center' })
-    // Hash (truncado)
+    // Hash completo (sem truncar)
     if (s.hash) {
-      doc.setFontSize(6); doc.setTextColor(150, 160, 175)
-      doc.text(s.hash.slice(0, 28) + '…', bx + sw / 2, afterNome + 6, { align: 'center' })
+      doc.setFontSize(6); doc.setFont('helvetica', 'normal'); doc.setTextColor(120, 130, 145)
+      const hashLines = doc.splitTextToSize(s.hash, sw - 6)
+      doc.text(hashLines, bx + sw / 2, afterNome + 7, { align: 'center' })
     }
-    // Linha de assinatura
-    doc.setFillColor(100, 110, 125)
-    doc.rect(bx + 6, y + 32, sw - 12, 0.3, 'F')
+    // Sem linha de assinatura — assinatura é eletrônica
   })
 
   const nomeArq = `Requisicao_Almox_${req.numero || 'doc'}.pdf`

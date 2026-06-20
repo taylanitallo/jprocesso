@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   Plus, ChevronLeft, ChevronRight, RefreshCw, X,
   CheckCircle, Clock, AlertTriangle, XCircle, Package,
-  Send, Truck, ShieldCheck, Key, Zap, ClipboardList, Eye, Printer
+  Send, Truck, ShieldCheck, Key, Zap, ClipboardList, Eye, Printer, Lock
 } from 'lucide-react'
 import api from '../services/api'
 import { gerarRequisicaoAlmoxPDF } from '../utils/gerarDocumentoPDF'
@@ -67,9 +67,58 @@ function StatusStepper({ status }) {
   )
 }
 
+// ─── Passo de Assinatura Eletrônica (reutilizável) ───────────────────────────
+function AssinaturaStep({ resumo, onConfirm, onBack, saving, erro }) {
+  const [senha, setSenha] = useState('')
+  return (
+    <div className="space-y-4">
+      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 flex items-start gap-3">
+        <Lock className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+        <div>
+          <p className="text-sm font-semibold text-blue-900 dark:text-blue-300">Assinatura Eletrônica</p>
+          <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
+            Para garantir a autenticidade e rastreabilidade, confirme com sua senha.
+          </p>
+        </div>
+      </div>
+      {resumo && (
+        <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-sm space-y-1 text-gray-700 dark:text-gray-300">
+          {resumo}
+        </div>
+      )}
+      {erro && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg px-4 py-2 text-sm">{erro}</div>
+      )}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Digite sua senha para confirmar *
+        </label>
+        <input
+          type="password"
+          value={senha}
+          onChange={e => setSenha(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && senha && onConfirm(senha)}
+          placeholder="••••••••"
+          autoFocus
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+        />
+        <p className="text-xs text-gray-400 mt-1">Sua senha será verificada para gerar a assinatura digital.</p>
+      </div>
+      <div className="flex justify-between pt-2">
+        <button onClick={onBack} disabled={saving} className="btn-secondary text-sm">Voltar</button>
+        <button onClick={() => onConfirm(senha)} disabled={saving || !senha}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+          <Lock className="h-4 w-4" /> {saving ? 'Assinando...' : 'Assinar e Confirmar'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ─── Modal: Nova Requisição ───────────────────────────────────────────────────
 function NovaRequisicaoModal({ setores, secretarias, onClose, onSave, saving, erro }) {
   const today = () => new Date().toISOString().slice(0, 10)
+  const [step,            setStep]           = useState(1) // 1: form, 2: assinatura
   const [secretaria_id,   setSecretariaId]   = useState('')
   const [setor_id,        setSetorId]        = useState('')
   const [prioridade,      setPrioridade]     = useState('NORMAL')
@@ -133,13 +182,33 @@ function NovaRequisicaoModal({ setores, secretarias, onClose, onSave, saving, er
     return parseFloat(l.quantidade_solicitada) > parseFloat(it?.estoque_atual || 0)
   })
 
-  const handleSave = () => {
+  const handleSave = (senhaConfirmacao) => {
     if (temExcesso) return
     const itensValidos = linhas.filter(l => l.item_id && l.quantidade_solicitada)
-    onSave({ setor_id, secretaria_id: secretaria_id || null, prioridade, data_solicitacao, observacao, itens: itensValidos })
+    onSave({ setor_id, secretaria_id: secretaria_id || null, prioridade, data_solicitacao, observacao, itens: itensValidos, senhaConfirmacao })
   }
 
   const secretariaNome = secretarias.find(s => String(s.id) === String(secretaria_id))?.nome
+  const secNome = secretarias.find(s => String(s.id) === String(secretaria_id))?.nome
+  const setorNome = setores.find(s => String(s.id) === String(setor_id))?.nome
+
+  if (step === 2) {
+    return (
+      <AlmoxModal title="Assinatura Eletrônica — Requisição" onClose={onClose}>
+        <AssinaturaStep
+          resumo={<>
+            <p><strong>Secretaria:</strong> {secNome || '—'}</p>
+            <p><strong>Setor:</strong> {setorNome || '—'}</p>
+            <p><strong>Itens:</strong> {linhas.filter(l => l.quantidade_solicitada).length}</p>
+          </>}
+          onConfirm={handleSave}
+          onBack={() => setStep(1)}
+          saving={saving}
+          erro={erro}
+        />
+      </AlmoxModal>
+    )
+  }
 
   return (
     <AlmoxModal title="Nova Requisição de Material" onClose={onClose} fullscreen>
@@ -348,11 +417,11 @@ function NovaRequisicaoModal({ setores, secretarias, onClose, onSave, saving, er
               </p>
               <div className="flex gap-3">
                 <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
-                <button onClick={handleSave}
-                  disabled={saving || !setor_id || !secretaria_id || linhas.every(l => !l.quantidade_solicitada) || temExcesso}
+                <button onClick={() => setStep(2)}
+                  disabled={!setor_id || !secretaria_id || linhas.every(l => !l.quantidade_solicitada) || temExcesso}
                   title={temExcesso ? 'Corrija as quantidades que excedem o estoque' : ''}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
-                  <Send className="h-4 w-4" /> {saving ? 'Enviando...' : 'Enviar para Autorização'}
+                  <Send className="h-4 w-4" /> Avançar — Assinar
                 </button>
               </div>
             </div>
@@ -365,10 +434,11 @@ function NovaRequisicaoModal({ setores, secretarias, onClose, onSave, saving, er
 
 // ─── Modal: Autorizar ─────────────────────────────────────────────────────────
 function AutorizarModal({ req, onClose, onSave, saving, erro }) {
-  const [resultado, setResultado] = useState(null) // token após autorizar
+  const [step, setStep] = useState(1) // 1: revisão, 2: assinatura
+  const [resultado, setResultado] = useState(null)
 
-  const handleAutorizar = async () => {
-    const res = await onSave()
+  const handleAutorizar = async (senhaConfirmacao) => {
+    const res = await onSave(senhaConfirmacao)
     if (res) setResultado(res)
   }
 
@@ -401,12 +471,28 @@ function AutorizarModal({ req, onClose, onSave, saving, erro }) {
     )
   }
 
+  if (step === 2) {
+    return (
+      <AlmoxModal title={`Autorizar ${req.numero} — Assinatura`} onClose={onClose}>
+        <AssinaturaStep
+          resumo={<>
+            <p><strong>Requisição:</strong> {req.numero}</p>
+            <p><strong>Setor:</strong> {req.setor?.nome}</p>
+            <p><strong>Solicitante:</strong> {req.solicitante?.nome}</p>
+            <p><strong>Itens:</strong> {req.itens?.length}</p>
+          </>}
+          onConfirm={handleAutorizar}
+          onBack={() => setStep(1)}
+          saving={saving}
+          erro={erro}
+        />
+      </AlmoxModal>
+    )
+  }
+
   return (
     <AlmoxModal title={`Autorizar ${req.numero}`} onClose={onClose}>
       <div className="space-y-4">
-        {erro && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg px-4 py-2 text-sm">{erro}</div>
-        )}
         <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-sm space-y-1">
           <p><strong>Setor:</strong> {req.setor?.nome}</p>
           <p><strong>Solicitante:</strong> {req.solicitante?.nome}</p>
@@ -425,9 +511,9 @@ function AutorizarModal({ req, onClose, onSave, saving, erro }) {
         </p>
         <div className="flex justify-end gap-3 pt-2">
           <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
-          <button onClick={handleAutorizar} disabled={saving}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50">
-            <ShieldCheck className="h-4 w-4" /> {saving ? 'Autorizando...' : 'Confirmar Autorização'}
+          <button onClick={() => setStep(2)}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
+            <ShieldCheck className="h-4 w-4" /> Avançar — Assinar
           </button>
         </div>
       </div>
@@ -437,7 +523,25 @@ function AutorizarModal({ req, onClose, onSave, saving, erro }) {
 
 // ─── Modal: Entregar com Token ────────────────────────────────────────────────
 function EntregarModal({ req, onClose, onSave, saving, erro }) {
+  const [step, setStep] = useState(1) // 1: token, 2: assinatura
   const [token, setToken] = useState('')
+
+  if (step === 2) {
+    return (
+      <AlmoxModal title={`Entrega ${req.numero} — Assinatura`} onClose={onClose}>
+        <AssinaturaStep
+          resumo={<>
+            <p><strong>Requisição:</strong> {req.numero}</p>
+            <p><strong>Token OTP:</strong> <span className="font-mono font-bold">{token}</span></p>
+          </>}
+          onConfirm={(senha) => onSave(token, senha)}
+          onBack={() => setStep(1)}
+          saving={saving}
+          erro={erro}
+        />
+      </AlmoxModal>
+    )
+  }
 
   return (
     <AlmoxModal title={`Confirmar Entrega — ${req.numero}`} onClose={onClose}>
@@ -462,9 +566,9 @@ function EntregarModal({ req, onClose, onSave, saving, erro }) {
         </div>
         <div className="flex justify-end gap-3 pt-2">
           <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
-          <button onClick={() => onSave(token)} disabled={saving || token.length !== 6}
+          <button onClick={() => setStep(2)} disabled={token.length !== 6}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
-            <Truck className="h-4 w-4" /> {saving ? 'Processando...' : 'Confirmar Entrega'}
+            <Truck className="h-4 w-4" /> Avançar — Assinar
           </button>
         </div>
       </div>
@@ -638,10 +742,15 @@ function RequisicaoViewModal({ reqId, onClose }) {
                   <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">{nome || '—'}</p>
                   <p className="text-xs text-gray-500 mt-0.5">{papel}</p>
                   <p className="text-xs text-gray-400 mt-0.5">{data}</p>
-                  {hash && (
-                    <p className="text-xs font-mono text-gray-300 dark:text-gray-600 mt-1 break-all leading-tight" title="Assinatura eletrônica">
-                      {hash.slice(0, 16)}…
-                    </p>
+                  {hash ? (
+                    <div className="mt-2 bg-gray-50 dark:bg-gray-700/50 rounded px-2 py-1.5" title="Chave de autenticação">
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Chave de autenticação</p>
+                      <p className="text-xs font-mono text-blue-600 dark:text-blue-400 break-all leading-snug">{hash}</p>
+                    </div>
+                  ) : (
+                    <div className="mt-2 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1 text-xs text-amber-600 dark:text-amber-400">
+                      Aguardando assinatura
+                    </div>
                   )}
                 </div>
               </div>
@@ -802,13 +911,13 @@ export default function AlmoxRequisicoes() {
     } finally { setSaving(false) }
   }
 
-  const handleAutorizar = async () => {
+  const handleAutorizar = async (senhaConfirmacao) => {
     setSaving(true); setErro('')
     try {
-      const { data } = await api.put(`/almoxarifado/requisicoes/${autorizando.id}/autorizar`)
+      const { data } = await api.put(`/almoxarifado/requisicoes/${autorizando.id}/autorizar`, { senhaConfirmacao })
       load(page, statusFiltro)
       loadAux()
-      return data // retorna para mostrar token no modal
+      return data
     } catch (e) {
       const det = e.response?.data?.detalhes
       setErro((e.response?.data?.error || 'Erro ao autorizar') + (det ? ': ' + det.join('; ') : ''))
@@ -825,10 +934,10 @@ export default function AlmoxRequisicoes() {
     }
   }
 
-  const handleEntregar = async (token) => {
+  const handleEntregar = async (token, senhaConfirmacao) => {
     setSaving(true); setErro('')
     try {
-      await api.put(`/almoxarifado/requisicoes/${entregando.id}/entregar`, { token })
+      await api.put(`/almoxarifado/requisicoes/${entregando.id}/entregar`, { token, senhaConfirmacao })
       setEntregando(null)
       load(page, statusFiltro)
       loadAux()

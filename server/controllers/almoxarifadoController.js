@@ -840,11 +840,19 @@ const getRequisicao = async (req, res) => {
 const createRequisicao = async (req, res) => {
   try {
     await ensureTables(req);
-    const { AlmoxarifadoRequisicao, AlmoxarifadoRequisicaoItem, AlmoxarifadoItem } = req.models;
-    const { setor_id, secretaria_id, observacao, prioridade, data_solicitacao, itens } = req.body;
+    const bcrypt = require('bcryptjs');
+    const { AlmoxarifadoRequisicao, AlmoxarifadoRequisicaoItem, AlmoxarifadoItem, User } = req.models;
+    const { setor_id, secretaria_id, observacao, prioridade, data_solicitacao, itens, senhaConfirmacao } = req.body;
 
     if (!setor_id || !itens || itens.length === 0) {
-      return res.status(400).json({ error: 'Setor e pelo menos um item sÃ£o obrigatÃ³rios' });
+      return res.status(400).json({ error: 'Setor e pelo menos um item são obrigatórios' });
+    }
+    if (!senhaConfirmacao) {
+      return res.status(400).json({ error: 'Senha obrigatória para assinatura eletrônica' });
+    }
+    const userDb = await User.findByPk(req.user.id, { attributes: ['senha'] });
+    if (!userDb || !(await bcrypt.compare(senhaConfirmacao, userDb.senha))) {
+      return res.status(401).json({ error: 'Senha incorreta. Assinatura eletrônica não autorizada.' });
     }
 
     const ano = new Date().getFullYear();
@@ -901,14 +909,24 @@ const createRequisicao = async (req, res) => {
 const autorizarRequisicao = async (req, res) => {
   try {
     await ensureTables(req);
-    const { AlmoxarifadoRequisicao, AlmoxarifadoRequisicaoItem, AlmoxarifadoItem } = req.models;
+    const bcrypt = require('bcryptjs');
+    const { AlmoxarifadoRequisicao, AlmoxarifadoRequisicaoItem, AlmoxarifadoItem, User } = req.models;
+    const { senhaConfirmacao } = req.body;
+
+    if (!senhaConfirmacao) {
+      return res.status(400).json({ error: 'Senha obrigatória para assinatura eletrônica' });
+    }
+    const userDb = await User.findByPk(req.user.id, { attributes: ['senha'] });
+    if (!userDb || !(await bcrypt.compare(senhaConfirmacao, userDb.senha))) {
+      return res.status(401).json({ error: 'Senha incorreta. Assinatura eletrônica não autorizada.' });
+    }
 
     const requisicao = await AlmoxarifadoRequisicao.findByPk(req.params.id, {
       include: [{ model: AlmoxarifadoRequisicaoItem, as: 'itens' }]
     });
-    if (!requisicao) return res.status(404).json({ error: 'RequisiÃ§Ã£o nÃ£o encontrada' });
+    if (!requisicao) return res.status(404).json({ error: 'Requisição não encontrada' });
     if (!['PENDENTE', 'PENDENTE_AUTORIZACAO'].includes(requisicao.status)) {
-      return res.status(400).json({ error: `RequisiÃ§Ã£o nÃ£o pode ser autorizada no status ${requisicao.status}` });
+      return res.status(400).json({ error: `Requisição não pode ser autorizada no status ${requisicao.status}` });
     }
 
     // Valida estoque para todos os itens
@@ -1008,10 +1026,16 @@ const iniciarSeparacao = async (req, res) => {
 const entregarComToken = async (req, res) => {
   try {
     await ensureTables(req);
-    const { AlmoxarifadoRequisicao, AlmoxarifadoRequisicaoItem } = req.models;
-    const { token } = req.body;
+    const bcrypt = require('bcryptjs');
+    const { AlmoxarifadoRequisicao, AlmoxarifadoRequisicaoItem, User } = req.models;
+    const { token, senhaConfirmacao } = req.body;
 
-    if (!token) return res.status(400).json({ error: 'Token de entrega obrigatÃ³rio' });
+    if (!token) return res.status(400).json({ error: 'Token de entrega obrigatório' });
+    if (!senhaConfirmacao) return res.status(400).json({ error: 'Senha obrigatória para assinatura eletrônica' });
+    const userDb = await User.findByPk(req.user.id, { attributes: ['senha'] });
+    if (!userDb || !(await bcrypt.compare(senhaConfirmacao, userDb.senha))) {
+      return res.status(401).json({ error: 'Senha incorreta. Assinatura eletrônica não autorizada.' });
+    }
 
     const requisicao = await AlmoxarifadoRequisicao.findByPk(req.params.id, {
       include: [{ model: AlmoxarifadoRequisicaoItem, as: 'itens' }]

@@ -87,10 +87,20 @@ const defineAlmoxarifadoRequisicaoModel = (sequelize) => {
       allowNull: true,
       comment: 'Quem autorizou (gestor/admin/secretario)'
     },
+    hash_solicitante: {
+      type: DataTypes.STRING(128),
+      allowNull: true,
+      comment: 'SHA-256 gerado na criação — assinatura eletrônica do solicitante'
+    },
     hash_assinatura: {
       type: DataTypes.STRING(128),
       allowNull: true,
-      comment: 'SHA-256 de (numero+user_id+timestamp) gerado na autorização'
+      comment: 'SHA-256 gerado na autorização — assinatura eletrônica do autorizador'
+    },
+    hash_entrega: {
+      type: DataTypes.STRING(128),
+      allowNull: true,
+      comment: 'SHA-256 gerado na entrega — assinatura eletrônica do entregador'
     },
     // ── Entrega com token OTP ─────────────────────────────────────
     token_entrega: {
