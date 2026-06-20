@@ -95,6 +95,10 @@ export default function Layout() {
     return location.pathname.startsWith(path)
   }
 
+  const currentPage = [...menuItems, ...adminMenuItems].find(item =>
+    item.exact ? location.pathname === item.path : location.pathname.startsWith(item.path)
+  )?.label || ''
+
   const tipoLabel = {
     admin: 'Administrador',
     gestor: 'Gestor',
@@ -104,9 +108,9 @@ export default function Layout() {
   return (
     <div className="min-h-screen w-full bg-[#f8fafc] dark:bg-[#020617] transition-colors duration-200">
 
-      {/* â”€â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* â"€â"€â"€ Sidebar â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-[260px] bg-white dark:bg-slate-900
+        fixed top-0 bottom-8 left-0 z-50 w-[260px] bg-white dark:bg-slate-900
         border-r border-gray-200 dark:border-slate-700/50
         flex flex-col transform transition-transform duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -226,13 +230,13 @@ export default function Layout() {
         />
       )}
 
-      {/* â”€â”€â”€ Ãrea principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <div className="lg:pl-[260px] flex flex-col min-h-screen">
+      {/* â"€â"€â"€ Ãrea principal â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
+      <div className="lg:pl-[260px] flex flex-col min-h-screen pb-8">
 
         {/* Topbar */}
         <header className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700/50 sticky top-0 z-30 flex-shrink-0">
           <div className="px-4 sm:px-6">
-            <div className="flex items-center h-[72px] gap-4">
+            <div className="flex items-center h-[58px] gap-4">
 
               {/* Esquerda: hamburger + nome da entidade */}
               <div className="flex items-center gap-3 min-w-0">
@@ -333,25 +337,24 @@ export default function Layout() {
         {/* Assistente JAI */}
         {showJAI && <JAI />}
 
-        {/* Rodapé fixo â€” marca + data/hora */}
-        <footer className="flex-shrink-0 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700/50 px-4 py-1.5">
-          <div className="flex items-center justify-between text-[11px] text-gray-400 dark:text-slate-500">
-            <a
-              href="https://jeossistemas.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-            >
-              JEOS SISTEMAS E ASSESSORIAS LTDA
-            </a>
-            <span className="tabular-nums capitalize">
-              {fmtData(now)} · {fmtHora(now)}
-            </span>
-          </div>
-        </footer>
       </div>
 
-      {/* â”€â”€â”€ Modal: MÃ³dulo Bloqueado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* Rodapé fixo â€" largura total, sobre sidebar e conteúdo */}
+      <footer className="fixed bottom-0 left-0 right-0 z-40 h-8 flex items-center bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700/50 px-4">
+        <div className="w-full grid grid-cols-3 items-center text-[11px] text-gray-400 dark:text-slate-500">
+          <span className="flex items-center gap-1 truncate">
+            📍 {currentPage}
+          </span>
+          <span className="text-center font-medium text-gray-500 dark:text-slate-400 whitespace-nowrap">
+            JEOS Sistema de Governo &copy;
+          </span>
+          <span className="text-right tabular-nums capitalize">
+            {fmtData(now)} &middot; {fmtHora(now)}
+          </span>
+        </div>
+      </footer>
+
+      {/* â"€â"€â"€ Modal: MÃ³dulo Bloqueado â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
       {moduloBloqueado && (
         <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4"
