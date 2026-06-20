@@ -2,14 +2,12 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { readFileSync } from 'fs'
 
-const { version } = JSON.parse(readFileSync('./package.json', 'utf-8'))
-const [major, minor] = version.split('.')
-
-// Patch = dias desde 01/01/2020 — incrementa automaticamente a cada deploy,
-// sem precisar de commit ou script manual.
-const BASE = new Date('2020-01-01').getTime()
-const patch = Math.floor((Date.now() - BASE) / 86_400_000)
-const buildVersion = `${major}.${minor}.${patch}`
+const now = new Date()
+const ano = now.getFullYear()
+const mes = String(now.getMonth() + 1).padStart(2, '0')
+const dia = String(now.getDate()).padStart(2, '0')
+const hora = String(now.getHours()).padStart(2, '0')
+const buildVersion = `${ano}.${mes}.${dia}.${hora}`
 
 export default defineConfig({
   define: {
