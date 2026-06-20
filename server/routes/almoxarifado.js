@@ -3,7 +3,8 @@ const router = express.Router();
 const { authenticate, tenantMiddleware, requireTenant, authorize } = require('../middleware/auth');
 const {
   getDashboard,
-  listItens, createItem, updateItem, deleteItem, getCategorias,
+  listItens, createItem, updateItem, deleteItem, getCategorias, getEstoque,
+  listOrdensCompraDisponiveis, getOrdemByNumero,
   listMovimentacoes, registrarEntrada, registrarSaida,
   listLotes, registrarEntradaLote,
   importarNFe, consultarNFSe,
@@ -24,6 +25,13 @@ const midGestor = [tenantMiddleware, requireTenant, authenticate, authorize('adm
 
 // Dashboard
 router.get('/dashboard', mid, getDashboard);
+
+// Estoque (itens com saldo > 0)
+router.get('/estoque', mid, getEstoque);
+
+// Ordens de Compra — listagem de disponíveis e busca por número
+router.get('/ordens-compra-disponiveis', mid, listOrdensCompraDisponiveis);
+router.get('/ordem-compra/:numero',      mid, getOrdemByNumero);
 
 // Itens
 router.get('/itens',        mid, listItens);

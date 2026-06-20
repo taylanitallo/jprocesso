@@ -24,10 +24,27 @@ async function ensureTables(req) {
   await AlmoxarifadoRequisicaoItem.sync({ force: false });
   await AlmoxarifadoMovimentacao.sync({ force: false });
   await AlmoxLote.sync({ force: false });
+  if (req.models.ContratoOrdem)     await req.models.ContratoOrdem.sync({ force: false });
+  if (req.models.ContratoOrdemItem) await req.models.ContratoOrdemItem.sync({ force: false });
   await AlmoxAuditLog.sync({ force: false });
   if (AlmoxCota) await AlmoxCota.sync({ force: false });
   if (AlmoxInventario) await AlmoxInventario.sync({ force: false });
   if (AlmoxInventarioItem) await AlmoxInventarioItem.sync({ force: false });
+
+  // Adiciona colunas novas com segurança (IF NOT EXISTS — nunca derruba dados)
+  const seq = AlmoxarifadoItem.sequelize;
+  const addCol = async (sql) => { try { await seq.query(sql); } catch (_) {} };
+  const s = `"${schema}"`;
+  await addCol(`ALTER TABLE ${s}."almoxarifado_itens"  ADD COLUMN IF NOT EXISTS secretaria  VARCHAR(100)`);
+  await addCol(`ALTER TABLE ${s}."almoxarifado_lotes"  ADD COLUMN IF NOT EXISTS ordem_id     INTEGER`);
+  await addCol(`ALTER TABLE ${s}."almoxarifado_lotes"  ADD COLUMN IF NOT EXISTS ordem_item_id INTEGER`);
+  await addCol(`ALTER TABLE ${s}."almoxarifado_lotes"  ALTER COLUMN numero_empenho DROP NOT NULL`);
+  // unidade_medida é coluna legada (antes renomeada para unidade) — garante que não bloqueia INSERT
+  await addCol(`ALTER TABLE ${s}."almoxarifado_itens"        ALTER COLUMN unidade_medida        DROP NOT NULL`);
+  await addCol(`ALTER TABLE ${s}."almoxarifado_itens"        ALTER COLUMN unidade_medida        SET DEFAULT 'UN'`);
+  // usuario_id é coluna legada em requisicoes — modelo usa usuario_solicitante_id
+  await addCol(`ALTER TABLE ${s}."almoxarifado_requisicoes"  ALTER COLUMN usuario_id            DROP NOT NULL`);
+  await addCol(`ALTER TABLE ${s}."almoxarifado_requisicoes"  ADD COLUMN IF NOT EXISTS secretaria_id UUID`);
 
   initializedSchemas.add(schema);
 }
@@ -295,12 +312,22 @@ const updateItem = async (req, res) => {
     const item = await AlmoxarifadoItem.findByPk(req.params.id);
     if (!item) return res.status(404).json({ error: 'Item nÃ£o encontrado' });
 
-    const { codigo, nome, descricao, unidade, categoria, estoque_minimo, estoque_maximo, valor_unitario, localizacao, ativo } = req.body;
+    const {
+      codigo, nome, descricao, unidade, categoria,
+      estoque_minimo, estoque_maximo, valor_unitario,
+      localizacao, corredor, prateleira, gaveta, secretaria,
+      tipo_item, ponto_ressuprimento, ativo
+    } = req.body;
     if (codigo && codigo !== item.codigo) {
       const existe = await AlmoxarifadoItem.findOne({ where: { codigo } });
       if (existe) return res.status(400).json({ error: 'CÃ³digo jÃ¡ utilizado por outro item' });
     }
-    await item.update({ codigo, nome, descricao, unidade, categoria, estoque_minimo, estoque_maximo, valor_unitario, localizacao, ativo });
+    await item.update({
+      codigo, nome, descricao, unidade, categoria,
+      estoque_minimo, estoque_maximo, valor_unitario,
+      localizacao, corredor, prateleira, gaveta, secretaria,
+      tipo_item, ponto_ressuprimento, ativo
+    });
     res.json(item);
   } catch (error) {
     console.error('Erro updateItem:', error);
@@ -465,21 +492,192 @@ const listLotes = async (req, res) => {
   }
 };
 
+/** Helper: calcula itens com saldo de uma ordem */
+async function calcularItensComSaldo(ordem, AlmoxarifadoItem, AlmoxLote) {
+  const itensComSaldo = [];
+  for (const item of (ordem.itens || [])) {
+    const totalRecebido = await AlmoxLote.sum('quantidade_inicial', {
+      where: { ordem_item_id: item.id }
+    }) || 0;
+    const saldo = parseFloat(item.quantidade) - parseFloat(totalRecebido);
+    if (saldo <= 0.001) continue;
+    let almoxItem = null;
+    if (item.codigo_item) {
+      almoxItem = await AlmoxarifadoItem.findOne({ where: { codigo: item.codigo_item, ativo: true } });
+    }
+    itensComSaldo.push({
+      ...item.toJSON(),
+      quantidade_recebida: parseFloat(totalRecebido),
+      saldo: parseFloat(saldo.toFixed(4)),
+      almox_item_id: almoxItem?.id || null
+    });
+  }
+  return itensComSaldo;
+}
+
+/** Lista ordens de compra disponíveis para entrada no almoxarifado */
+const listOrdensCompraDisponiveis = async (req, res) => {
+  try {
+    await ensureTables(req);
+    const { ContratoOrdem, ContratoOrdemItem, Contrato, Credor, AlmoxarifadoItem, AlmoxLote } = req.models;
+    if (!ContratoOrdem) return res.status(503).json({ error: 'Módulo de contratos não disponível' });
+
+    const { q } = req.query;
+    const where = { tipo: 'COMPRA', status: 'EMITIDA' };
+    if (q) {
+      where[Op.or] = [
+        { numero: { [Op.iLike]: `%${q}%` } },
+        { objeto:  { [Op.iLike]: `%${q}%` } },
+      ];
+    }
+
+    const ordens = await ContratoOrdem.findAll({
+      where,
+      include: [
+        {
+          model: Contrato,
+          as: 'contrato',
+          attributes: ['id', 'numero_contrato', 'objeto'],
+          include: [{ model: Credor, as: 'credor', attributes: ['id', 'razao_social', 'cnpj_cpf'] }]
+        },
+        { model: ContratoOrdemItem, as: 'itens' }
+      ],
+      order: [['data_emissao', 'DESC']],
+      limit: 100
+    });
+
+    const result = [];
+    for (const ordem of ordens) {
+      const itensComSaldo = await calcularItensComSaldo(ordem, AlmoxarifadoItem, AlmoxLote);
+      if (itensComSaldo.length > 0) {
+        result.push({ ...ordem.toJSON(), itens: itensComSaldo });
+      }
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error('Erro listOrdensCompraDisponiveis:', error);
+    res.status(500).json({ error: 'Erro ao listar ordens de compra' });
+  }
+};
+
+/** Busca uma Ordem de Compra pelo número e retorna com saldo disponível por item */
+const getOrdemByNumero = async (req, res) => {
+  try {
+    await ensureTables(req);
+    const { ContratoOrdem, ContratoOrdemItem, Contrato, Credor, AlmoxarifadoItem, AlmoxLote } = req.models;
+    if (!ContratoOrdem) return res.status(503).json({ error: 'Módulo de contratos não disponível' });
+
+    const numero = decodeURIComponent(req.params.numero).trim();
+
+    const ordem = await ContratoOrdem.findOne({
+      where: { numero: { [Op.iLike]: numero }, tipo: 'COMPRA', status: 'EMITIDA' },
+      include: [
+        {
+          model: Contrato,
+          as: 'contrato',
+          attributes: ['id', 'numero_contrato', 'objeto'],
+          include: [{ model: Credor, as: 'credor', attributes: ['id', 'razao_social', 'cnpj_cpf'] }]
+        },
+        { model: ContratoOrdemItem, as: 'itens' }
+      ]
+    });
+
+    if (!ordem) {
+      return res.status(404).json({ error: `Ordem de compra "${numero}" não encontrada, cancelada ou já atendida` });
+    }
+
+    const itensComSaldo = await calcularItensComSaldo(ordem, AlmoxarifadoItem, AlmoxLote);
+    if (itensComSaldo.length === 0) {
+      return res.status(404).json({ error: 'Todos os itens desta ordem já foram totalmente recebidos' });
+    }
+
+    res.json({ ...ordem.toJSON(), itens: itensComSaldo });
+  } catch (error) {
+    console.error('Erro getOrdemByNumero:', error);
+    res.status(500).json({ error: 'Erro ao buscar ordem de compra' });
+  }
+};
+
+/** Retorna itens com estoque atual > 0 (visão de estoque real) */
+const getEstoque = async (req, res) => {
+  try {
+    await ensureTables(req);
+    const { AlmoxarifadoItem } = req.models;
+    const where = { estoque_atual: { [Op.gt]: 0 }, ativo: true };
+    if (req.query.secretaria) where.secretaria = req.query.secretaria;
+    const itens = await AlmoxarifadoItem.findAll({ where, order: [['nome', 'ASC']] });
+    res.json(itens);
+  } catch (error) {
+    console.error('Erro getEstoque:', error);
+    res.status(500).json({ error: 'Erro ao buscar estoque' });
+  }
+};
+
 /** Registra entrada com lote (empenho, NF, validade) â€” mÃ©todo preferencial */
 const registrarEntradaLote = async (req, res) => {
   try {
     await ensureTables(req);
     const { AlmoxarifadoItem, AlmoxarifadoMovimentacao, AlmoxLote } = req.models;
     const {
-      item_id, quantidade, valor_unitario, data_entrada,
-      numero_empenho, numero_nf, fornecedor_nome, data_validade, observacao
+      item_id: item_id_body, quantidade, valor_unitario, data_entrada,
+      numero_empenho, numero_nf, fornecedor_nome, data_validade, observacao,
+      corredor, prateleira, gaveta, secretaria,
+      chave_nfe, numero_contrato, fornecedor_cnpj, conferencia_cega_qtd,
+      ordem_id, ordem_item_id,
+      // campos para auto-criar AlmoxarifadoItem quando não existir
+      _codigo_item, _descricao_item, _unidade_item
     } = req.body;
 
-    if (!item_id || !quantidade || !data_entrada) {
-      return res.status(400).json({ error: 'Item, quantidade e data de entrada sÃ£o obrigatÃ³rios' });
+    const { ContratoOrdem, ContratoOrdemItem } = req.models;
+
+    if (!quantidade || !data_entrada) {
+      return res.status(400).json({ error: 'Quantidade e data de entrada são obrigatórios' });
+    }
+
+    // Se a entrada está vinculada a uma ordem, valida saldo disponível
+    let ordemItem = null;
+    if (ordem_item_id) {
+      if (!ContratoOrdemItem) return res.status(503).json({ error: 'Módulo de contratos indisponível' });
+      ordemItem = await ContratoOrdemItem.findByPk(ordem_item_id);
+      if (!ordemItem) return res.status(404).json({ error: 'Item da ordem de compra não encontrado' });
+
+      const totalRecebido = await AlmoxLote.sum('quantidade_inicial', {
+        where: { ordem_item_id }
+      }) || 0;
+      const saldo = parseFloat(ordemItem.quantidade) - parseFloat(totalRecebido);
+      if (parseFloat(quantidade) > saldo + 0.001) {
+        return res.status(400).json({
+          error: `Quantidade excede o saldo da ordem. Saldo disponível: ${saldo} ${ordemItem.unidade || ''}`.trim()
+        });
+      }
+    }
+
+    // Resolve o AlmoxarifadoItem: usa item_id fornecido ou busca/cria pelo código da ordem
+    let item_id = item_id_body;
+    if (!item_id && ordemItem) {
+      const codigo = ordemItem.codigo_item || _codigo_item;
+      if (codigo) {
+        let almoxItem = await AlmoxarifadoItem.findOne({ where: { codigo } });
+        if (!almoxItem) {
+          almoxItem = await AlmoxarifadoItem.create({
+            codigo,
+            nome: ordemItem.descricao || _descricao_item || codigo,
+            unidade: ordemItem.unidade || _unidade_item || 'UN',
+            estoque_atual: 0,
+            estoque_minimo: 0,
+            valor_unitario: parseFloat(ordemItem.valor_unitario) || 0,
+          });
+        }
+        item_id = almoxItem.id;
+      }
+    }
+
+    if (!item_id) {
+      return res.status(400).json({ error: 'Item obrigatório. Selecione um item ou vincule uma ordem de compra.' });
     }
     const item = await AlmoxarifadoItem.findByPk(item_id);
-    if (!item) return res.status(404).json({ error: 'Item nÃ£o encontrado' });
+    if (!item) return res.status(404).json({ error: 'Item não encontrado' });
 
     const qtd = parseFloat(quantidade);
     const vlrUnit = parseFloat(valor_unitario) || parseFloat(item.valor_unitario) || 0;
@@ -489,15 +687,38 @@ const registrarEntradaLote = async (req, res) => {
       item_id,
       numero_empenho: numero_empenho || null,
       numero_nf: numero_nf || null,
+      chave_nfe: chave_nfe || null,
+      numero_contrato: numero_contrato || null,
       fornecedor_nome: fornecedor_nome || null,
+      fornecedor_cnpj: fornecedor_cnpj || null,
       data_entrada,
       data_validade: data_validade || null,
       quantidade_inicial: qtd,
       quantidade_atual: qtd,
       valor_unitario: vlrUnit,
       observacao: observacao || null,
+      conferencia_cega_qtd: conferencia_cega_qtd ? parseFloat(conferencia_cega_qtd) : null,
+      conferencia_cega_ok: conferencia_cega_qtd ? parseFloat(conferencia_cega_qtd) === qtd : null,
+      ordem_id: ordem_id || null,
+      ordem_item_id: ordem_item_id || null,
       usuario_id: req.user.id
     });
+
+    // Se vinculado a ordem, verifica se todos os itens foram totalmente recebidos
+    if (ordem_id && ContratoOrdem) {
+      const todosItens = await ContratoOrdemItem.findAll({ where: { ordem_id } });
+      let totalmenteRecebida = true;
+      for (const oi of todosItens) {
+        const recebido = await AlmoxLote.sum('quantidade_inicial', { where: { ordem_item_id: oi.id } }) || 0;
+        if (parseFloat(recebido) < parseFloat(oi.quantidade) - 0.001) {
+          totalmenteRecebida = false;
+          break;
+        }
+      }
+      if (totalmenteRecebida) {
+        await ContratoOrdem.update({ status: 'ATENDIDA' }, { where: { id: ordem_id } });
+      }
+    }
 
     // Registra movimentaÃ§Ã£o de ENTRADA vinculada ao lote
     const mov = await AlmoxarifadoMovimentacao.create({
@@ -523,7 +744,12 @@ const registrarEntradaLote = async (req, res) => {
     if (novoEstoque > 0 && vlrUnit > 0) {
       novoVal = ((estoqueAntes * novoVal) + (qtd * vlrUnit)) / novoEstoque;
     }
-    await item.update({ estoque_atual: novoEstoque, valor_unitario: novoVal.toFixed(2) });
+    const locationUpdate = {};
+    if (corredor  !== undefined) locationUpdate.corredor  = corredor  || null;
+    if (prateleira !== undefined) locationUpdate.prateleira = prateleira || null;
+    if (gaveta    !== undefined) locationUpdate.gaveta    = gaveta    || null;
+    if (secretaria !== undefined) locationUpdate.secretaria = secretaria || null;
+    await item.update({ estoque_atual: novoEstoque, valor_unitario: novoVal.toFixed(2), ...locationUpdate });
 
     await audit(req.models, {
       tabela: 'almoxarifado_lotes',
@@ -539,7 +765,7 @@ const registrarEntradaLote = async (req, res) => {
     res.status(201).json({ lote, movimentacao: mov, estoque_atual: novoEstoque });
   } catch (error) {
     console.error('Erro registrarEntradaLote:', error);
-    res.status(500).json({ error: 'Erro ao registrar entrada' });
+    res.status(500).json({ error: 'Erro ao registrar entrada', detail: error.message, sql: error.sql });
   }
 };
 
@@ -587,7 +813,7 @@ const createRequisicao = async (req, res) => {
   try {
     await ensureTables(req);
     const { AlmoxarifadoRequisicao, AlmoxarifadoRequisicaoItem, AlmoxarifadoItem } = req.models;
-    const { setor_id, secretaria_id, observacao, prioridade, itens } = req.body;
+    const { setor_id, secretaria_id, observacao, prioridade, data_solicitacao, itens } = req.body;
 
     if (!setor_id || !itens || itens.length === 0) {
       return res.status(400).json({ error: 'Setor e pelo menos um item sÃ£o obrigatÃ³rios' });
@@ -604,7 +830,7 @@ const createRequisicao = async (req, res) => {
       usuario_solicitante_id: req.user.id,
       status: 'PENDENTE_AUTORIZACAO',
       prioridade: prioridade || 'NORMAL',
-      data_solicitacao: new Date().toISOString().split('T')[0],
+      data_solicitacao: data_solicitacao || new Date().toISOString().split('T')[0],
       observacao
     });
 
@@ -1460,7 +1686,8 @@ const consultarNFSe = async (req, res) => {
 
 module.exports = {
   getDashboard,
-  listItens, createItem, updateItem, deleteItem, getCategorias,
+  listItens, createItem, updateItem, deleteItem, getCategorias, getEstoque,
+  listOrdensCompraDisponiveis, getOrdemByNumero,
   listMovimentacoes, registrarEntrada, registrarSaida,
   listLotes, registrarEntradaLote,
   importarNFe, consultarNFSe,

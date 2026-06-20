@@ -29,7 +29,7 @@ import { PageHeader } from '../components/ui'
 
 const TABS = [
   { id: 'painel',      label: 'Painel',        icon: BarChart2       },
-  { id: 'itens',       label: 'Itens',          icon: List            },
+  { id: 'itens',       label: 'Estoque',        icon: List            },
   { id: 'lotes',       label: 'Entradas',       icon: ArrowDownCircle },
   { id: 'saidas',      label: 'Saídas',         icon: ArrowUpCircle   },
   { id: 'requisicoes', label: 'Requisições',    icon: ClipboardList   },

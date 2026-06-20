@@ -67,6 +67,11 @@ const defineAlmoxarifadoItemModel = (sequelize) => {
       allowNull: true,
       comment: 'Gaveta/posição (ex: G1, G2)'
     },
+    secretaria: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      comment: 'Secretaria ou departamento responsável pelo item'
+    },
     tipo_item: {
       type: DataTypes.ENUM('CONSUMO', 'CAPITAL'),
       defaultValue: 'CONSUMO',

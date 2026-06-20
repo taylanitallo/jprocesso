@@ -67,101 +67,295 @@ function StatusStepper({ status }) {
 }
 
 // ─── Modal: Nova Requisição ───────────────────────────────────────────────────
-function NovaRequisicaoModal({ itens, setores, secretarias, onClose, onSave, saving, erro }) {
-  const [setor_id,    setSetorId]    = useState('')
-  const [secretaria_id, setSecretariaId] = useState('')
-  const [prioridade,  setPrioridade] = useState('NORMAL')
-  const [observacao,  setObservacao] = useState('')
-  const [linhas, setLinhas] = useState([{ item_id: '', quantidade_solicitada: '', observacao: '' }])
+function NovaRequisicaoModal({ setores, secretarias, onClose, onSave, saving, erro }) {
+  const today = () => new Date().toISOString().slice(0, 10)
+  const [secretaria_id,   setSecretariaId]   = useState('')
+  const [setor_id,        setSetorId]        = useState('')
+  const [prioridade,      setPrioridade]     = useState('NORMAL')
+  const [data_solicitacao, setDataSolicitacao] = useState(today())
+  const [observacao,      setObservacao]     = useState('')
+  const [linhas,          setLinhas]         = useState([])
+  const [itensSecretaria, setItensSecretaria] = useState([])
+  const [loadingItens,    setLoadingItens]   = useState(false)
+  const [buscaItem,       setBuscaItem]      = useState('')
 
-  const addLinha    = () => setLinhas(l => [...l, { item_id: '', quantidade_solicitada: '', observacao: '' }])
-  const removeLinha = (i) => setLinhas(l => l.filter((_, idx) => idx !== i))
-  const setLinha    = (i, k, v) => setLinhas(l => l.map((r, idx) => idx === i ? { ...r, [k]: v } : r))
+  const setoresFiltrados = secretaria_id
+    ? setores.filter(s => s.secretaria_id === secretaria_id || s.secretariaId === secretaria_id)
+    : []
 
-  const handleSave = () => {
-    const itensValidos = linhas.filter(l => l.item_id && l.quantidade_solicitada)
-    onSave({ setor_id, secretaria_id: secretaria_id || null, prioridade, observacao, itens: itensValidos })
+  const handleSecretariaChange = async (e) => {
+    const id = e.target.value
+    setSecretariaId(id)
+    setSetorId('')
+    setLinhas([])
+    setBuscaItem('')
+    setItensSecretaria([])
+    if (!id) return
+    const sec = secretarias.find(s => String(s.id) === String(id))
+    if (!sec) return
+    setLoadingItens(true)
+    try {
+      const { data } = await api.get('/almoxarifado/estoque', { params: { secretaria: sec.nome } })
+      setItensSecretaria(data)
+    } catch { } finally { setLoadingItens(false) }
   }
 
+  const itensFiltrados = buscaItem.trim()
+    ? itensSecretaria.filter(it =>
+        it.nome?.toLowerCase().includes(buscaItem.toLowerCase()) ||
+        it.codigo?.toLowerCase().includes(buscaItem.toLowerCase())
+      )
+    : itensSecretaria
+
+  const toggleItem = (item) => {
+    setLinhas(prev => {
+      const exists = prev.find(l => l.item_id === item.id)
+      if (exists) return prev.filter(l => l.item_id !== item.id)
+      return [...prev, { item_id: item.id, _item: item, quantidade_solicitada: '', observacao: '' }]
+    })
+  }
+
+  const setLinha = (item_id, k, v) =>
+    setLinhas(prev => prev.map(l => {
+      if (l.item_id !== item_id) return l
+      if (k === 'quantidade_solicitada') {
+        const it = l._item || itensSecretaria.find(i => i.id === item_id)
+        const max = parseFloat(it?.estoque_atual) || Infinity
+        const val = v === '' ? '' : Math.min(parseFloat(v) || 0, max)
+        return { ...l, [k]: val === '' ? '' : String(val) }
+      }
+      return { ...l, [k]: v }
+    }))
+
+  const temExcesso = linhas.some(l => {
+    const it = l._item || itensSecretaria.find(i => i.id === l.item_id)
+    return parseFloat(l.quantidade_solicitada) > parseFloat(it?.estoque_atual || 0)
+  })
+
+  const handleSave = () => {
+    if (temExcesso) return
+    const itensValidos = linhas.filter(l => l.item_id && l.quantidade_solicitada)
+    onSave({ setor_id, secretaria_id: secretaria_id || null, prioridade, data_solicitacao, observacao, itens: itensValidos })
+  }
+
+  const secretariaNome = secretarias.find(s => String(s.id) === String(secretaria_id))?.nome
+
   return (
-    <AlmoxModal title="Nova Requisição de Material" onClose={onClose} wide>
-      <div className="space-y-4">
-        {erro && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg px-4 py-2 text-sm">{erro}</div>
-        )}
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Setor Solicitante *</label>
-            <select value={setor_id} onChange={e => setSetorId(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
-              <option value="">Selecione...</option>
-              {setores.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
-            </select>
+    <AlmoxModal title="Nova Requisição de Material" onClose={onClose} fullscreen>
+      {/* layout em duas colunas: esquerda = catálogo, direita = carrinho */}
+      <div className="flex flex-col h-full gap-0 -m-6">
+
+        {/* ── cabeçalho de configuração ─────────────────────────────────── */}
+        <div className="px-6 pt-4 pb-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+          {erro && (
+            <div className="mb-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg px-4 py-2 text-sm">{erro}</div>
+          )}
+          <div className="grid grid-cols-5 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Secretaria *</label>
+              <select value={secretaria_id} onChange={handleSecretariaChange}
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
+                <option value="">Selecione...</option>
+                {secretarias.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Setor Solicitante *</label>
+              <select value={setor_id} onChange={e => setSetorId(e.target.value)}
+                disabled={!secretaria_id}
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 disabled:opacity-50">
+                <option value="">{secretaria_id ? 'Selecione...' : '— selecione a secretaria —'}</option>
+                {setoresFiltrados.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Data da Requisição *</label>
+              <input type="date" value={data_solicitacao} onChange={e => setDataSolicitacao(e.target.value)}
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Prioridade</label>
+              <select value={prioridade} onChange={e => setPrioridade(e.target.value)}
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
+                <option value="NORMAL">Normal</option>
+                <option value="URGENTE">Urgente</option>
+                <option value="CRITICA">Crítica</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Observação</label>
+              <input value={observacao} onChange={e => setObservacao(e.target.value)} placeholder="Opcional"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500" />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Secretaria</label>
-            <select value={secretaria_id} onChange={e => setSecretariaId(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
-              <option value="">Opcional</option>
-              {secretarias.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Prioridade</label>
-            <select value={prioridade} onChange={e => setPrioridade(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
-              <option value="NORMAL">Normal</option>
-              <option value="URGENTE">Urgente</option>
-              <option value="CRITICA">Crítica</option>
-            </select>
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Observação</label>
-          <input value={observacao} onChange={e => setObservacao(e.target.value)}
-            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500" />
         </div>
 
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Itens Solicitados *</label>
-            <button onClick={addLinha} className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800">
-              <Plus className="h-4 w-4" /> Adicionar item
-            </button>
+        {/* ── corpo em duas colunas ──────────────────────────────────────── */}
+        <div className="flex flex-1 min-h-0">
+
+          {/* Coluna esquerda: catálogo de itens disponíveis */}
+          <div className="flex flex-col w-1/2 border-r border-gray-200 dark:border-gray-700 min-h-0">
+            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                Itens em Estoque {secretariaNome && <span className="normal-case font-normal">— {secretariaNome}</span>}
+              </p>
+              <input
+                value={buscaItem}
+                onChange={e => setBuscaItem(e.target.value)}
+                placeholder="Buscar item por nome ou código..."
+                disabled={!secretaria_id}
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 disabled:opacity-40"
+              />
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              {!secretaria_id ? (
+                <div className="flex flex-col items-center justify-center h-full text-gray-400 text-sm gap-2">
+                  <Package className="h-8 w-8 opacity-30" />
+                  Selecione a secretaria para ver o estoque
+                </div>
+              ) : loadingItens ? (
+                <div className="flex justify-center items-center h-full">
+                  <RefreshCw className="h-6 w-6 animate-spin text-blue-500" />
+                </div>
+              ) : itensFiltrados.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-amber-500 text-sm gap-2">
+                  <Package className="h-8 w-8 opacity-40" />
+                  {buscaItem ? 'Nenhum item encontrado' : 'Nenhum item em estoque para esta secretaria'}
+                </div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 dark:bg-gray-700/50 sticky top-0">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase w-8"></th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Item</th>
+                      <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Estoque</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase w-12">Unid.</th>
+                      <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Localização</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                    {itensFiltrados.map(it => {
+                      const selecionado = linhas.some(l => l.item_id === it.id)
+                      return (
+                        <tr
+                          key={it.id}
+                          onClick={() => toggleItem(it)}
+                          className={`cursor-pointer transition-colors ${selecionado ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700/40'}`}
+                        >
+                          <td className="px-4 py-2 text-center">
+                            <div className={`w-4 h-4 rounded border-2 mx-auto flex items-center justify-center transition-colors ${selecionado ? 'bg-blue-600 border-blue-600' : 'border-gray-300 dark:border-gray-600'}`}>
+                              {selecionado && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                            </div>
+                          </td>
+                          <td className="px-4 py-2">
+                            <p className={`font-medium text-xs ${selecionado ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'}`}>{it.nome}</p>
+                            {it.codigo && <p className="text-xs text-gray-400">{it.codigo}</p>}
+                          </td>
+                          <td className={`px-4 py-2 text-right font-semibold text-xs tabular-nums ${parseFloat(it.estoque_atual) <= parseFloat(it.estoque_minimo || 0) ? 'text-red-600' : 'text-green-700 dark:text-green-400'}`}>
+                            {fmt(it.estoque_atual)}
+                          </td>
+                          <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">{it.unidade}</td>
+                          <td className="px-4 py-2 text-right text-xs text-gray-400">
+                            {[it.corredor, it.prateleira, it.gaveta].filter(Boolean).join('-') || '—'}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
-          <div className="space-y-2">
-            {linhas.map((linha, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <select value={linha.item_id} onChange={e => setLinha(i, 'item_id', e.target.value)}
-                  className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
-                  <option value="">Selecione o item...</option>
-                  {itens.map(it => (
-                    <option key={it.id} value={it.id}>{it.codigo ? `${it.codigo} — ` : ''}{it.nome} — Estoque: {fmt(it.estoque_atual)} {it.unidade}</option>
-                  ))}
-                </select>
-                <input type="number" step="0.001" min="0.001" placeholder="Qtd."
-                  value={linha.quantidade_solicitada}
-                  onChange={e => setLinha(i, 'quantidade_solicitada', e.target.value)}
-                  className="w-24 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500" />
-                <input placeholder="Obs." value={linha.observacao}
-                  onChange={e => setLinha(i, 'observacao', e.target.value)}
-                  className="w-36 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500" />
-                {linhas.length > 1 && (
-                  <button onClick={() => removeLinha(i)} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded">
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
+
+          {/* Coluna direita: carrinho / itens selecionados */}
+          <div className="flex flex-col w-1/2 min-h-0">
+            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex-shrink-0 flex items-center justify-between">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                Itens Selecionados <span className="ml-1 text-blue-600 dark:text-blue-400">{linhas.length}</span>
+              </p>
+              {linhas.length > 0 && (
+                <button onClick={() => setLinhas([])} className="text-xs text-red-500 hover:text-red-700">Limpar tudo</button>
+              )}
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              {linhas.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-gray-400 text-sm gap-2">
+                  <Send className="h-8 w-8 opacity-30" />
+                  Clique nos itens ao lado para adicioná-los
+                </div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 dark:bg-gray-700/50 sticky top-0">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Item</th>
+                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase w-28">Quantidade</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Observação</th>
+                      <th className="w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                    {linhas.map(l => {
+                      const it = l._item || itensSecretaria.find(i => i.id === l.item_id)
+                      const estoqueMax = parseFloat(it?.estoque_atual) || 0
+                      const qtd = parseFloat(l.quantidade_solicitada) || 0
+                      const excede = qtd > estoqueMax
+                      return (
+                        <tr key={l.item_id}>
+                          <td className="px-4 py-2">
+                            <p className="font-medium text-xs text-gray-900 dark:text-white">{it?.nome}</p>
+                            <p className="text-xs text-gray-400">{it?.codigo} · disponível: <span className="font-medium text-green-600 dark:text-green-400">{fmt(estoqueMax)}</span> {it?.unidade}</p>
+                          </td>
+                          <td className="px-4 py-2">
+                            <input
+                              type="number" step="0.001" min="0.001"
+                              max={estoqueMax}
+                              placeholder="Qtd."
+                              value={l.quantidade_solicitada}
+                              onChange={e => setLinha(l.item_id, 'quantidade_solicitada', e.target.value)}
+                              className={`w-full border rounded-lg px-2 py-1.5 text-sm text-center bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 ${excede ? 'border-red-400 focus:ring-red-400 bg-red-50 dark:bg-red-900/20' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'}`}
+                              autoFocus={linhas[linhas.length - 1]?.item_id === l.item_id}
+                            />
+                            {excede && <p className="text-xs text-red-500 mt-0.5 text-center">máx {fmt(estoqueMax)}</p>}
+                          </td>
+                          <td className="px-4 py-2">
+                            <input
+                              placeholder="Opcional"
+                              value={l.observacao}
+                              onChange={e => setLinha(l.item_id, 'observacao', e.target.value)}
+                              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+                            />
+                          </td>
+                          <td className="px-2 py-2">
+                            <button onClick={() => toggleItem({ id: l.item_id })} className="p-1 text-red-400 hover:text-red-600 rounded">
+                              <X className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* Rodapé com ação */}
+            <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0 bg-gray-50 dark:bg-gray-700/30">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {linhas.filter(l => l.quantidade_solicitada).length} de {linhas.length} iten(s) com quantidade
+              </p>
+              <div className="flex gap-3">
+                <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
+                <button onClick={handleSave}
+                  disabled={saving || !setor_id || !secretaria_id || linhas.every(l => !l.quantidade_solicitada) || temExcesso}
+                  title={temExcesso ? 'Corrija as quantidades que excedem o estoque' : ''}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+                  <Send className="h-4 w-4" /> {saving ? 'Enviando...' : 'Enviar para Autorização'}
+                </button>
               </div>
-            ))}
+            </div>
           </div>
-        </div>
-
-        <div className="flex justify-end gap-3 pt-2">
-          <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
-          <button onClick={handleSave} disabled={saving || !setor_id || linhas.every(l => !l.item_id)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
-            <Send className="h-4 w-4" /> {saving ? 'Enviando...' : 'Enviar para Autorização'}
-          </button>
         </div>
       </div>
     </AlmoxModal>
@@ -328,7 +522,7 @@ function ReqRow({ r, onAutorizar, onSeparar, onEntregar, onCancelar, onRegenerar
       <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{r.setor?.nome || '—'}</td>
       <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{r.solicitante?.nome || '—'}</td>
       <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
-        {r.data_solicitacao ? new Date(r.data_solicitacao + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
+        {r.data_solicitacao ? new Date(String(r.data_solicitacao).slice(0, 10) + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
       </td>
       <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 text-center">
         {r.itens?.length || 0}
@@ -391,7 +585,6 @@ export default function AlmoxRequisicoes() {
   const [autorizando,  setAutorizando] = useState(null)
   const [entregando,   setEntregando]  = useState(null)
   const [cancelando,   setCancelando]  = useState(null)
-  const [itens,        setItens]       = useState([])
   const [setores,      setSetores]     = useState([])
   const [secretarias,  setSecretarias] = useState([])
   const [saving,       setSaving]      = useState(false)
@@ -411,12 +604,10 @@ export default function AlmoxRequisicoes() {
 
   const loadAux = useCallback(async () => {
     try {
-      const [itensR, setoresR, secR] = await Promise.all([
-        api.get('/almoxarifado/itens'),
+      const [setoresR, secR] = await Promise.all([
         api.get('/organizacao/setores'),
         api.get('/organizacao/secretarias').catch(() => ({ data: [] }))
       ])
-      setItens(itensR.data)
       setSetores(setoresR.data?.setores || setoresR.data || [])
       setSecretarias(secR.data?.secretarias || secR.data || [])
     } catch { }
@@ -592,7 +783,7 @@ export default function AlmoxRequisicoes() {
       {/* Modais */}
       {novaReq && (
         <NovaRequisicaoModal
-          itens={itens} setores={setores} secretarias={secretarias}
+          setores={setores} secretarias={secretarias}
           onClose={() => setNovaReq(false)}
           onSave={handleCriar} saving={saving} erro={erro}
         />

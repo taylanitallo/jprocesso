@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($env:PGPASSWORD = \"1410C@valao\"; & \"psql\" -h \"aws-1-sa-east-1.pooler.supabase.com\" -p 5432 -U \"postgres.ywwzwonpctlbbnqkkjtw\" -d \"postgres\" -c \"SELECT id, nome, email, tipo FROM tenant_iraucuba.users WHERE email ILIKE '%taylan%' OR nome ILIKE '%taylan%';\" 2>&1)"
+    ]
+  }
+}

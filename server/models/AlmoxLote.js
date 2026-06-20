@@ -19,8 +19,18 @@ const defineAlmoxLoteModel = (sequelize) => {
     },
     numero_empenho: {
       type: DataTypes.STRING(100),
-      allowNull: false,
-      comment: 'Número do empenho associado — obrigatório para entrada'
+      allowNull: true,
+      comment: 'Número do empenho associado'
+    },
+    ordem_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: 'FK para contratos_ordens (opcional — quando entrada vinculada a OC)'
+    },
+    ordem_item_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: 'FK para contratos_ordens_itens (controla saldo por item da OC)'
     },
     numero_nf: {
       type: DataTypes.STRING(100),

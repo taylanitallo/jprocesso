@@ -277,8 +277,12 @@ const login = async (req, res) => {
     // Setar refresh token em cookie httpOnly (aditivo — não altera resposta existente)
     const { token: rtTenant, jti: jtiTenant, tokenHash: hashTenant } = _buildRefreshToken({
       id: user.id,
+      email: user.email,
+      tipo: user.tipo,
       tenantId: tenant.id,
       subdomain: tenant.subdominio,
+      secretariaId: user.secretariaId || null,
+      setorId: user.setorId || null,
     });
     await _saveRefreshToken(tenantDb, false, {
       jti: jtiTenant, userId: user.id, tokenHash: hashTenant, expiresAt: Date.now() + REFRESH_EXPIRE_MS,

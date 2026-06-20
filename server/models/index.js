@@ -126,6 +126,8 @@ const initTenantModels = (sequelize) => {
   AlmoxLote.belongsTo(AlmoxarifadoItem, { foreignKey: 'item_id', as: 'item' });
   AlmoxarifadoItem.hasMany(AlmoxLote, { foreignKey: 'item_id', as: 'lotes' });
   AlmoxLote.belongsTo(User, { foreignKey: 'usuario_id', as: 'usuario' });
+  AlmoxLote.belongsTo(ContratoOrdem, { foreignKey: 'ordem_id', as: 'ordemCompra', constraints: false });
+  AlmoxLote.belongsTo(ContratoOrdemItem, { foreignKey: 'ordem_item_id', as: 'ordemItem', constraints: false });
 
   // Movimentações → Lote
   AlmoxarifadoMovimentacao.belongsTo(AlmoxLote, { foreignKey: 'lote_id', as: 'lote' });
