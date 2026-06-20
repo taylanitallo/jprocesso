@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from 'react-query';
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import JSZip from 'jszip';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
@@ -528,7 +528,21 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
   const [logoLoginFile, setLogoLoginFile]         = useState(null);
   const [logoInternaFile, setLogoInternaFile]     = useState(null);
   const [logoTimbradoFile, setLogoTimbradoFile]   = useState(null);
+  const [timbradoPreviewUrl, setTimbradoPreviewUrl] = useState(null);
   const [logoLoading, setLogoLoading]             = useState('');
+
+  useEffect(() => {
+    if (!tenant.configuracoes?.timbrado_path && !tenant.configuracoes?.timbrado_url) return;
+    let objectUrl = null;
+    api.get(`/superadmin/tenants/${tenant.id}/timbrado`, { responseType: 'blob' })
+      .then(({ data: blob }) => {
+        objectUrl = URL.createObjectURL(blob);
+        setTimbradoPreviewUrl(objectUrl);
+      })
+      .catch(() => {});
+    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [tenant.id, tenant.configuracoes?.timbrado_path, tenant.configuracoes?.timbrado_url]);
+
 
   const [editNome, setEditNome]   = useState(tenant.nome_municipio);
   const [editAtivo, setEditAtivo] = useState(tenant.ativo);
@@ -775,15 +789,16 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
 
   // ── Logo handlers ─────────────────────────────────────────────────────────
 
-  const handleUploadLogo = async (tipo, file) => {
+  const handleUploadLogo = async (tipo, file, clearFile) => {
     if (!file) return;
     setLogoLoading(tipo);
     try {
       const form = new FormData();
       form.append('logo', file);
-      await api.post(`/superadmin/tenants/${tenant.id}/logos/${tipo}`, form, {
+      const { data } = await api.post(`/superadmin/tenants/${tenant.id}/logos/${tipo}`, form, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
+      clearFile?.();
       onUpdate();
       alert('Logo enviada com sucesso!');
     } catch (err) {
@@ -1363,16 +1378,22 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
             };
 
             const exportPDF = async () => {
-              const timbradoUrl = tenant.configuracoes?.timbrado_url || '';
+              const hasTimbrado = !!(tenant.configuracoes?.timbrado_path || tenant.configuracoes?.timbrado_url);
 
               // Margens padrão (sem timbrado)
               let timbradoSrc = '';
               let mg = { top: 20, bottom: 20, left: 20, right: 20 };
 
-              if (timbradoUrl) {
-                const result = await new Promise((resolve) => {
+              if (hasTimbrado) {
+                // Busca o timbrado via proxy autenticado → converte para base64
+                let timbradoObjectUrl = '';
+                try {
+                  const { data: blob } = await api.get(`/superadmin/tenants/${tenant.id}/timbrado`, { responseType: 'blob' });
+                  timbradoObjectUrl = URL.createObjectURL(blob);
+                } catch { /* sem timbrado */ }
+
+                if (timbradoObjectUrl) await new Promise((resolve) => {
                   const img = new window.Image();
-                  img.crossOrigin = 'anonymous';
                   img.onload = () => {
                     // ── base64 em resolução original (qualidade de impressão) ──
                     const full = document.createElement('canvas');
@@ -1459,11 +1480,12 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                     });
                   };
                   img.onerror = () => resolve({ src: '', mg: { top: 50, bottom: 35, left: 20, right: 20 } });
-                  img.src = timbradoUrl;
+                  img.src = timbradoObjectUrl;
+                }).then(result => {
+                  timbradoSrc = result.src;
+                  mg = result.mg;
+                  URL.revokeObjectURL(timbradoObjectUrl);
                 });
-
-                timbradoSrc = result.src;
-                mg = result.mg;
               }
 
               const rows = relLogs.map(l => `
@@ -2092,35 +2114,83 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                   ].map(({ tipo, label, field, file, setFile, accept }) => {
                     const currentUrl = tenant.configuracoes?.[field];
                     const isTimbrado = tipo === 'timbrado';
+                    const previewSrc = isTimbrado
+                      ? (timbradoPreviewUrl || currentUrl)
+                      : currentUrl;
+
                     return (
                       <div key={tipo} className={`border border-gray-200 dark:border-slate-700 rounded-xl p-4${isTimbrado ? ' col-span-2' : ''}`}>
                         <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{label}</p>
-                        <div className="flex gap-3 items-start">
-                          <div className={`border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg flex items-center justify-center bg-gray-50 dark:bg-slate-700 overflow-hidden shrink-0${isTimbrado ? ' w-28 h-40' : ' w-20 h-20'}`}>
-                            {currentUrl
-                              ? <img src={currentUrl} alt="Logo" className="max-w-full max-h-full object-contain" />
-                              : <Image className="h-8 w-8 text-gray-300" />}
-                          </div>
-                          <div className="flex-1 space-y-2">
-                            <input type="file" accept={accept || 'image/*'}
-                              onChange={e => setFile(e.target.files[0] || null)}
-                              className="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-700 dark:text-gray-400" />
-                            <div className="flex gap-2">
-                              <button onClick={() => { handleUploadLogo(tipo, file); setFile(null); }}
-                                disabled={!file || logoLoading === tipo}
-                                className="flex items-center gap-1 text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 disabled:opacity-50">
-                                {logoLoading === tipo ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
-                                Enviar
-                              </button>
-                              {currentUrl && (
-                                <button onClick={() => handleRemoveLogo(tipo)}
-                                  className="flex items-center gap-1 text-xs bg-red-50 text-red-600 border border-red-200 px-2 py-1 rounded hover:bg-red-100">
-                                  <Trash2 className="h-3 w-3" /> Remover
+
+                        {isTimbrado ? (
+                          <div className="flex gap-4 items-start">
+                            {/* Pré-visualização A4 do timbrado */}
+                            <div className="shrink-0 flex flex-col items-center gap-1">
+                              <div className="relative bg-white rounded shadow-md overflow-hidden"
+                                style={{ width: 148, height: 209, border: '1px solid #d1d5db' }}>
+                                {previewSrc
+                                  ? <img src={previewSrc} alt="Timbrado" className="w-full h-full object-fill opacity-100" />
+                                  : <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-gray-50">
+                                      <Image className="h-8 w-8 text-gray-300" />
+                                      <span className="text-[10px] text-gray-400">A4 retrato</span>
+                                    </div>
+                                }
+                              </div>
+                              <span className="text-[10px] text-gray-400">Pré-visualização</span>
+                            </div>
+                            <div className="flex-1 space-y-2 pt-1">
+                              <input type="file" accept="image/png"
+                                onChange={e => {
+                                  const f = e.target.files[0] || null;
+                                  setFile(f);
+                                  if (f) setTimbradoPreviewUrl(URL.createObjectURL(f));
+                                }}
+                                className="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-700 dark:text-gray-400" />
+                              <p className="text-[11px] text-gray-400">PNG em proporção A4 (210×297mm). A imagem será exibida como fundo do documento PDF.</p>
+                              <div className="flex gap-2">
+                                <button onClick={() => handleUploadLogo(tipo, file, () => setFile(null))}
+                                  disabled={!file || logoLoading === tipo}
+                                  className="flex items-center gap-1 text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 disabled:opacity-50">
+                                  {logoLoading === tipo ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                                  Enviar
                                 </button>
-                              )}
+                                {(currentUrl || timbradoPreviewUrl) && (
+                                  <button onClick={() => { handleRemoveLogo(tipo); setTimbradoPreviewUrl(null); }}
+                                    className="flex items-center gap-1 text-xs bg-red-50 text-red-600 border border-red-200 px-2 py-1 rounded hover:bg-red-100">
+                                    <Trash2 className="h-3 w-3" /> Remover
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        ) : (
+                          <div className="flex gap-3 items-start">
+                            <div className="border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg flex items-center justify-center bg-gray-50 dark:bg-slate-700 overflow-hidden shrink-0 w-20 h-20">
+                              {previewSrc
+                                ? <img src={previewSrc} alt="Logo" className="max-w-full max-h-full object-contain" />
+                                : <Image className="h-8 w-8 text-gray-300" />}
+                            </div>
+                            <div className="flex-1 space-y-2">
+                              <input type="file" accept={accept || 'image/*'}
+                                onChange={e => setFile(e.target.files[0] || null)}
+                                className="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-700 dark:text-gray-400" />
+                              <div className="flex gap-2">
+                                <button onClick={() => { handleUploadLogo(tipo, file); setFile(null); }}
+                                  disabled={!file || logoLoading === tipo}
+                                  className="flex items-center gap-1 text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 disabled:opacity-50">
+                                  {logoLoading === tipo ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                                  Enviar
+                                </button>
+                                {currentUrl && (
+                                  <button onClick={() => handleRemoveLogo(tipo)}
+                                    className="flex items-center gap-1 text-xs bg-red-50 text-red-600 border border-red-200 px-2 py-1 rounded hover:bg-red-100">
+                                    <Trash2 className="h-3 w-3" /> Remover
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}

@@ -23,7 +23,7 @@ const {
   restoreTenant,
 
   // Logos e Config
-  updateLogos, deleteLogo, updateConfig,
+  updateLogos, deleteLogo, updateConfig, getTimbrado,
 
   // Utilitários
   criarBucket, ativarTenant,
@@ -89,5 +89,6 @@ router.post('/tenants/:id/restore-v1', ...sa, upload.single('arquivo'), restoreT
 router.post  ('/tenants/:id/logos/:tipo', ...sa, upload.single('logo'), updateLogos);
 router.delete('/tenants/:id/logos/:tipo', ...sa, deleteLogo);
 router.put   ('/tenants/:id/config',      ...sa, updateConfig);
+router.get   ('/tenants/:id/timbrado',    ...sa, getTimbrado);
 
 module.exports = router;

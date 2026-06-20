@@ -22,7 +22,34 @@ export default function Layout() {
   const [moduloBloqueado, setModuloBloqueado] = useState(null)
   const [profileOpen, setProfileOpen] = useState(false)
   const [showJAI, setShowJAI] = useState(true)
+  const [geoLocation, setGeoLocation] = useState('')
   const profileRef = useRef(null)
+
+  const BR_STATES = {
+    'Acre':'AC','Alagoas':'AL','Amapá':'AP','Amazonas':'AM','Bahia':'BA',
+    'Ceará':'CE','Distrito Federal':'DF','Espírito Santo':'ES','Goiás':'GO',
+    'Maranhão':'MA','Mato Grosso':'MT','Mato Grosso do Sul':'MS','Minas Gerais':'MG',
+    'Pará':'PA','Paraíba':'PB','Paraná':'PR','Pernambuco':'PE','Piauí':'PI',
+    'Rio de Janeiro':'RJ','Rio Grande do Norte':'RN','Rio Grande do Sul':'RS',
+    'Rondônia':'RO','Roraima':'RR','Santa Catarina':'SC','São Paulo':'SP',
+    'Sergipe':'SE','Tocantins':'TO',
+  }
+
+  useEffect(() => {
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(async ({ coords }) => {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${coords.latitude}&lon=${coords.longitude}&format=json&accept-language=pt-BR`
+        )
+        const data = await res.json()
+        const city = data.address?.city || data.address?.town || data.address?.municipality || data.address?.village || ''
+        const stateFull = data.address?.state || ''
+        const stateCode = BR_STATES[stateFull] || stateFull.slice(0, 2).toUpperCase()
+        if (city) setGeoLocation(`${city}-${stateCode}`)
+      } catch {}
+    }, () => {})
+  }, [])
 
   // Atualiza o relógio a cada minuto (sem segundos)
   useEffect(() => {
@@ -56,7 +83,6 @@ export default function Layout() {
 
   const handleLogout = () => {
     logout()
-    navigate(`/${subdomain}/login`)
   }
 
   const modHabilitados = tenant?.configuracoes?.modulos_habilitados
@@ -343,7 +369,7 @@ export default function Layout() {
       <footer className="fixed bottom-0 left-0 right-0 z-40 h-8 flex items-center bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700/50 px-4">
         <div className="w-full grid grid-cols-3 items-center text-[11px] text-gray-400 dark:text-slate-500">
           <span className="flex items-center gap-1 truncate">
-            📍 {currentPage}
+            {geoLocation ? <>📍 {geoLocation}</> : <span className="opacity-40">localizando...</span>}
           </span>
           <span className="text-center font-medium text-gray-500 dark:text-slate-400 whitespace-nowrap">
             JEOS Sistema de Governo &copy;
