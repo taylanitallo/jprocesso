@@ -204,7 +204,7 @@ export default function MunicipioSelector() {
 
       {/* copyright */}
       <div className="relative text-center pb-4 text-xs text-white/20">
-        © 2026&nbsp;&nbsp;JEOS SISTEMAS E ASSESSORIAS LTDA&nbsp;&nbsp;•&nbsp;&nbsp;V1.0.0
+        © 2026&nbsp;&nbsp;JEOS SISTEMAS E ASSESSORIAS LTDA&nbsp;&nbsp;•&nbsp;&nbsp;V{__APP_VERSION__}
       </div>
     </div>
   )

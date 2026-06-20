@@ -381,7 +381,7 @@ export default function Login() {
             JEOS SISTEMAS E ASSESSORIAS LTDA
           </a>
           <span className="mx-3 text-fuchsia-400/70">•</span>
-          V1.0.0
+          V{__APP_VERSION__}
         </p>
       </div>
     </div>

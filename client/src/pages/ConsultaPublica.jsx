@@ -862,7 +862,7 @@ export default function ConsultaPublica() {
               JEOS SISTEMAS E ASSESSORIA LTDA
             </a>
             <span className="mx-2 text-violet-500/50">•</span>
-            V1.0.0
+            V{__APP_VERSION__}
           </p>
         </div>
       </footer>
