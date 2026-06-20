@@ -44,7 +44,9 @@ async function ensureTables(req) {
   await addCol(`ALTER TABLE ${s}."almoxarifado_itens"        ALTER COLUMN unidade_medida        SET DEFAULT 'UN'`);
   // usuario_id é coluna legada em requisicoes — modelo usa usuario_solicitante_id
   await addCol(`ALTER TABLE ${s}."almoxarifado_requisicoes"  ALTER COLUMN usuario_id            DROP NOT NULL`);
-  await addCol(`ALTER TABLE ${s}."almoxarifado_requisicoes"  ADD COLUMN IF NOT EXISTS secretaria_id UUID`);
+  await addCol(`ALTER TABLE ${s}."almoxarifado_requisicoes"  ADD COLUMN IF NOT EXISTS secretaria_id      UUID`);
+  await addCol(`ALTER TABLE ${s}."almoxarifado_requisicoes"  ADD COLUMN IF NOT EXISTS hash_solicitante   VARCHAR(128)`);
+  await addCol(`ALTER TABLE ${s}."almoxarifado_requisicoes"  ADD COLUMN IF NOT EXISTS hash_entrega       VARCHAR(128)`);
 
   initializedSchemas.add(schema);
 }
@@ -790,6 +792,7 @@ const listRequisicoes = async (req, res) => {
         { model: Setor, as: 'setor', attributes: ['nome'] },
         { model: User, as: 'solicitante', attributes: ['nome'] },
         { model: User, as: 'autorizador', attributes: ['nome'], required: false },
+        { model: User, as: 'atendente', attributes: ['nome'], required: false },
         { model: Secretaria, as: 'secretaria', attributes: ['nome'], required: false },
         {
           model: AlmoxarifadoRequisicaoItem, as: 'itens',
@@ -809,6 +812,31 @@ const listRequisicoes = async (req, res) => {
   }
 };
 
+const getRequisicao = async (req, res) => {
+  try {
+    await ensureTables(req);
+    const { AlmoxarifadoRequisicao, AlmoxarifadoRequisicaoItem, AlmoxarifadoItem, User, Setor, Secretaria } = req.models;
+    const requisicao = await AlmoxarifadoRequisicao.findByPk(req.params.id, {
+      include: [
+        { model: Setor, as: 'setor', attributes: ['nome'] },
+        { model: User, as: 'solicitante', attributes: ['id', 'nome'] },
+        { model: User, as: 'autorizador', attributes: ['id', 'nome'], required: false },
+        { model: User, as: 'atendente', attributes: ['id', 'nome'], required: false },
+        { model: Secretaria, as: 'secretaria', attributes: ['nome'], required: false },
+        {
+          model: AlmoxarifadoRequisicaoItem, as: 'itens',
+          include: [{ model: AlmoxarifadoItem, as: 'item', attributes: ['nome', 'unidade', 'codigo'] }]
+        }
+      ]
+    });
+    if (!requisicao) return res.status(404).json({ error: 'Requisição não encontrada' });
+    res.json(requisicao);
+  } catch (error) {
+    console.error('Erro getRequisicao:', error);
+    res.status(500).json({ error: 'Erro ao buscar requisição' });
+  }
+};
+
 const createRequisicao = async (req, res) => {
   try {
     await ensureTables(req);
@@ -823,6 +851,10 @@ const createRequisicao = async (req, res) => {
     const count = await AlmoxarifadoRequisicao.count();
     const numero = `REQ-${ano}-${String(count + 1).padStart(4, '0')}`;
 
+    const hash_solicitante = crypto.createHash('sha256')
+      .update(`${numero}|SOLICITACAO|${req.user.id}|${Date.now()}`)
+      .digest('hex');
+
     const requisicao = await AlmoxarifadoRequisicao.create({
       numero,
       setor_id,
@@ -831,7 +863,8 @@ const createRequisicao = async (req, res) => {
       status: 'PENDENTE_AUTORIZACAO',
       prioridade: prioridade || 'NORMAL',
       data_solicitacao: data_solicitacao || new Date().toISOString().split('T')[0],
-      observacao
+      observacao,
+      hash_solicitante
     });
 
     for (const it of itens) {
@@ -1007,7 +1040,7 @@ const entregarComToken = async (req, res) => {
         item_id: ri.item_id,
         quantidade: pendente,
         data: hoje,
-        requisicao_id: requisicao.numero,
+        requisicao_id: requisicao.id,
         user_id: req.user.id
       });
 
@@ -1022,13 +1055,18 @@ const entregarComToken = async (req, res) => {
       return res.status(400).json({ error: 'NÃ£o foi possÃ­vel entregar nenhum item', detalhes: erros });
     }
 
+    const hash_entrega = crypto.createHash('sha256')
+      .update(`${requisicao.numero}|ENTREGUE|${req.user.id}|${Date.now()}`)
+      .digest('hex');
+
     const antes = { status: requisicao.status };
     await requisicao.update({
       status: 'ENTREGUE',
       data_entrega: new Date(),
       data_atendimento: hoje,
       usuario_atendente_id: req.user.id,
-      token_entrega: null,    // invalida o token apÃ³s uso
+      hash_entrega,
+      token_entrega: null,
       token_expiry: null
     });
 
@@ -1691,7 +1729,7 @@ module.exports = {
   listMovimentacoes, registrarEntrada, registrarSaida,
   listLotes, registrarEntradaLote,
   importarNFe, consultarNFSe,
-  listRequisicoes, createRequisicao,
+  listRequisicoes, getRequisicao, createRequisicao,
   autorizarRequisicao, iniciarSeparacao, entregarComToken, regenerarToken,
   atenderRequisicao, cancelarRequisicao,
   relatorioConsumo,

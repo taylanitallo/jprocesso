@@ -8,7 +8,7 @@ const {
   listMovimentacoes, registrarEntrada, registrarSaida,
   listLotes, registrarEntradaLote,
   importarNFe, consultarNFSe,
-  listRequisicoes, createRequisicao,
+  listRequisicoes, getRequisicao, createRequisicao,
   autorizarRequisicao, iniciarSeparacao, entregarComToken, regenerarToken,
   atenderRequisicao, cancelarRequisicao,
   relatorioConsumo,
@@ -51,6 +51,7 @@ router.post('/lotes',  midGestor, registrarEntradaLote);
 
 // Requisições — fluxo digital completo
 router.get('/requisicoes',                        mid,       listRequisicoes);
+router.get('/requisicoes/:id',                    mid,       getRequisicao);
 router.post('/requisicoes',                       mid,       createRequisicao);
 router.put('/requisicoes/:id/autorizar',          midGestor, autorizarRequisicao);
 router.put('/requisicoes/:id/separacao',          mid,       iniciarSeparacao);

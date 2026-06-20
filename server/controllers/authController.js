@@ -536,9 +536,28 @@ const refreshToken = async (req, res) => {
       return res.status(401).json({ error: 'Refresh token expirado' });
     }
 
-    // Montar novo access token sem campos internos do JWT
+    // Montar novo access token — busca tipo atualizado do banco para não perder permissões
     const { iat, exp, jti: _jti, ...cleanPayload } = decoded;
-    const newAccessToken = generateAccessToken(cleanPayload);
+    let freshPayload = { ...cleanPayload };
+    if (decoded.subdomain && decoded.id && !decoded.isAdmin) {
+      try {
+        const tenantForRefresh = await Tenant.findOne({ where: { subdominio: decoded.subdomain, ativo: true } });
+        if (tenantForRefresh) {
+          const tenantDbForRefresh = await getTenantConnection(tenantForRefresh.schema);
+          const modelsForRefresh   = initTenantModels(tenantDbForRefresh);
+          const freshUser = await modelsForRefresh.User?.findByPk(decoded.id, {
+            attributes: ['tipo', 'email', 'secretariaId', 'setorId']
+          });
+          if (freshUser) {
+            freshPayload.tipo        = freshUser.tipo;
+            freshPayload.email       = freshUser.email || cleanPayload.email;
+            freshPayload.secretariaId = freshUser.secretariaId || null;
+            freshPayload.setorId     = freshUser.setorId || null;
+          }
+        }
+      } catch { /* mantém cleanPayload se falhar */ }
+    }
+    const newAccessToken = generateAccessToken(freshPayload);
 
     res.json({ success: true, token: newAccessToken });
   } catch (error) {

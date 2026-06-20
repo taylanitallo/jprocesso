@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   Plus, ChevronLeft, ChevronRight, RefreshCw, X,
   CheckCircle, Clock, AlertTriangle, XCircle, Package,
-  Send, Truck, ShieldCheck, Key, Zap, ClipboardList
+  Send, Truck, ShieldCheck, Key, Zap, ClipboardList, Eye, Printer
 } from 'lucide-react'
 import api from '../services/api'
+import { gerarRequisicaoAlmoxPDF } from '../utils/gerarDocumentoPDF'
 import AlmoxModal from './AlmoxModal'
 import { fmt, fmtMoney, STATUS_REQ, PRIORIDADE } from './almoxConstants'
 import { useAuth } from '../context/AuthContext'
@@ -497,8 +498,177 @@ function CancelarModal({ req, onClose, onSave, saving, erro }) {
   )
 }
 
+// ─── Modal: Visualizar / Imprimir Requisição ──────────────────────────────────
+function RequisicaoViewModal({ reqId, onClose }) {
+  const { tenant } = useAuth() || {}
+  const [req, setReq] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [previewUrl, setPreviewUrl] = useState(null)
+  const [generating, setGenerating] = useState(false)
+
+  useEffect(() => {
+    api.get(`/almoxarifado/requisicoes/${reqId}`)
+      .then(r => setReq(r.data))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [reqId])
+
+  // Limpa a URL do blob ao fechar
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl) }, [previewUrl])
+
+  const fmtDate = (v) => v ? new Date(String(v).slice(0, 10) + 'T00:00:00').toLocaleDateString('pt-BR') : '—'
+  const fmtDateTime = (v) => v ? new Date(v).toLocaleString('pt-BR') : '—'
+
+  const handleVerPDF = async () => {
+    if (!req || generating) return
+    setGenerating(true)
+    const url = await gerarRequisicaoAlmoxPDF({ req, tenantNome: tenant?.nome, mode: 'preview' })
+    if (url) setPreviewUrl(url)
+    setGenerating(false)
+  }
+  const handleGerarPDF = () => req && gerarRequisicaoAlmoxPDF({ req, tenantNome: tenant?.nome, mode: 'download' })
+  const handleImprimir = () => req && gerarRequisicaoAlmoxPDF({ req, tenantNome: tenant?.nome, mode: 'print' })
+
+  const st = req ? STATUS_REQ[req.status] || STATUS_REQ.PENDENTE_AUTORIZACAO : null
+
+  return (
+    <AlmoxModal title={`Requisição ${req?.numero || '...'}`} onClose={onClose} fullscreen={!!previewUrl} wide={!previewUrl}>
+      {loading ? (
+        <div className="flex justify-center py-12"><RefreshCw className="h-6 w-6 animate-spin text-blue-500" /></div>
+      ) : !req ? (
+        <p className="text-center text-gray-500 py-8">Não foi possível carregar a requisição.</p>
+      ) : previewUrl ? (
+        /* ── Visualização do PDF em iframe ── */
+        <div className="flex flex-col h-full -m-6">
+          <iframe src={previewUrl} className="flex-1 w-full border-0" title={`PDF ${req.numero}`} />
+          <div className="flex justify-end gap-3 px-6 py-3 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <button onClick={() => setPreviewUrl(null)} className="btn-secondary text-sm">Voltar</button>
+            <button onClick={handleGerarPDF}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">
+              <Eye className="h-4 w-4" /> Baixar PDF
+            </button>
+            <button onClick={handleImprimir}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-700 text-white rounded-lg text-sm font-medium hover:bg-slate-800">
+              <Printer className="h-4 w-4" /> Imprimir
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Cabeçalho */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="space-y-2">
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase">Número</label>
+                <p className="font-mono font-bold text-blue-700 dark:text-blue-400 text-base">{req.numero}</p>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase">Secretaria</label>
+                <p className="text-sm text-gray-900 dark:text-white">{req.secretaria?.nome || '—'}</p>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase">Setor Solicitante</label>
+                <p className="text-sm text-gray-900 dark:text-white">{req.setor?.nome || '—'}</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase">Status</label>
+                <p>
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${st?.color}`}>
+                    {st?.label}
+                  </span>
+                </p>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase">Data da Solicitação</label>
+                <p className="text-sm text-gray-900 dark:text-white">{fmtDate(req.data_solicitacao)}</p>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase">Prioridade</label>
+                <p className="text-sm text-gray-900 dark:text-white">{PRIORIDADE[req.prioridade]?.label || req.prioridade || 'Normal'}</p>
+              </div>
+            </div>
+          </div>
+
+          {req.observacao && (
+            <div className="mb-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg px-3 py-2">
+              <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase mb-1">Observação</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300">{req.observacao}</p>
+            </div>
+          )}
+
+          {/* Tabela de itens */}
+          <div className="mb-6">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Itens Solicitados</p>
+            <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+              <thead className="bg-gray-50 dark:bg-gray-700/50">
+                <tr>
+                  {['#', 'Item', 'Qtd. Solicitada', 'Qtd. Entregue', 'Unidade'].map(h => (
+                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase border-b border-gray-200 dark:border-gray-700">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                {(req.itens || []).map((ri, i) => (
+                  <tr key={ri.id}>
+                    <td className="px-3 py-2 text-xs text-gray-400">{i + 1}</td>
+                    <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">
+                      {ri.item?.nome}
+                      {ri.item?.codigo && <span className="ml-1 text-xs text-gray-400">({ri.item.codigo})</span>}
+                    </td>
+                    <td className="px-3 py-2 tabular-nums">{fmt(ri.quantidade_solicitada)}</td>
+                    <td className="px-3 py-2 tabular-nums text-green-700 dark:text-green-400">{ri.quantidade_entregue != null ? fmt(ri.quantidade_entregue) : '—'}</td>
+                    <td className="px-3 py-2 text-gray-500">{ri.item?.unidade || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Blocos de assinatura */}
+          <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            {[
+              { nome: req.solicitante?.nome, papel: 'Solicitante', data: fmtDate(req.data_solicitacao), hash: req.hash_solicitante },
+              { nome: req.autorizador?.nome, papel: 'Autorizador', data: req.data_autorizacao ? fmtDateTime(req.data_autorizacao) : '—', hash: req.hash_assinatura },
+              { nome: req.atendente?.nome,   papel: 'Entregador',  data: req.data_entrega ? fmtDateTime(req.data_entrega) : '—', hash: req.hash_entrega },
+            ].map(({ nome, papel, data, hash }) => (
+              <div key={papel} className="text-center">
+                <div className="border-t-2 border-gray-400 dark:border-gray-500 pt-3">
+                  <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">{nome || '—'}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{papel}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{data}</p>
+                  {hash && (
+                    <p className="text-xs font-mono text-gray-300 dark:text-gray-600 mt-1 break-all leading-tight" title="Assinatura eletrônica">
+                      {hash.slice(0, 16)}…
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Botões de ação */}
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700 mt-6">
+            <button onClick={onClose} className="btn-secondary text-sm">Fechar</button>
+            <button onClick={handleVerPDF} disabled={generating}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
+              {generating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+              {generating ? 'Gerando...' : 'Ver PDF'}
+            </button>
+            <button onClick={handleImprimir}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-700 text-white rounded-lg text-sm font-medium hover:bg-slate-800">
+              <Printer className="h-4 w-4" /> Imprimir
+            </button>
+          </div>
+        </>
+      )}
+    </AlmoxModal>
+  )
+}
+
 // ─── Linha de Requisição ──────────────────────────────────────────────────────
-function ReqRow({ r, onAutorizar, onSeparar, onEntregar, onCancelar, onRegenerarToken, userTipo }) {
+function ReqRow({ r, onAutorizar, onSeparar, onEntregar, onCancelar, onRegenerarToken, onVisualizar, userTipo }) {
   const st      = STATUS_REQ[r.status] || STATUS_REQ.PENDENTE_AUTORIZACAO
   const StIcon  = STATUS_ICONS[r.status] || Clock
   const priorSt = PRIORIDADE[r.prioridade]
@@ -534,6 +704,10 @@ function ReqRow({ r, onAutorizar, onSeparar, onEntregar, onCancelar, onRegenerar
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-1 flex-wrap">
+          <button onClick={() => onVisualizar(r.id)}
+            className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 font-medium">
+            <Eye className="h-3 w-3" /> Ver
+          </button>
           {podeAutorizar && (
             <button onClick={() => onAutorizar(r)}
               className="flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 rounded hover:bg-green-200 font-medium">
@@ -585,6 +759,7 @@ export default function AlmoxRequisicoes() {
   const [autorizando,  setAutorizando] = useState(null)
   const [entregando,   setEntregando]  = useState(null)
   const [cancelando,   setCancelando]  = useState(null)
+  const [viewingReqId, setViewingReqId] = useState(null)
   const [setores,      setSetores]     = useState([])
   const [secretarias,  setSecretarias] = useState([])
   const [saving,       setSaving]      = useState(false)
@@ -752,6 +927,7 @@ export default function AlmoxRequisicoes() {
                   key={r.id}
                   r={r}
                   userTipo={userTipo}
+                  onVisualizar={(id) => setViewingReqId(id)}
                   onAutorizar={(req) => { setAutorizando(req); setErro('') }}
                   onSeparar={handleSeparar}
                   onEntregar={(req) => { setEntregando(req); setErro('') }}
@@ -807,6 +983,12 @@ export default function AlmoxRequisicoes() {
           req={cancelando}
           onClose={() => setCancelando(null)}
           onSave={handleCancelar} saving={saving} erro={erro}
+        />
+      )}
+      {viewingReqId && (
+        <RequisicaoViewModal
+          reqId={viewingReqId}
+          onClose={() => setViewingReqId(null)}
         />
       )}
     </div>

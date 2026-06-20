@@ -604,6 +604,131 @@ export async function gerarPautaPDF(processo) {
   } finally { setPDFLoading(false) }
 }
 
+// ─── REQUISIÇÃO DE ALMOXARIFADO ───────────────────────────────────────────────
+// mode: 'preview' → retorna blob URL (para iframe); 'download' → baixa; 'print' → abre e imprime
+export async function gerarRequisicaoAlmoxPDF({ req, tenantNome, mode = 'download' }) {
+  setPDFLoading(true)
+  try {
+  refreshM()
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  let y = cabecalho(doc, 'REQUISIÇÃO DE MATERIAL', req.numero, req.secretaria?.nome || tenantNome || '')
+
+  const fmtQtd  = v => (v != null && v !== '') ? Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 3 }) : '—'
+  const fmtDt   = v => v ? new Date(String(v).slice(0, 10) + 'T00:00:00').toLocaleDateString('pt-BR') : '—'
+  const fmtDtHr = v => v ? new Date(v).toLocaleString('pt-BR') : '—'
+
+  // ─ Informações gerais em duas colunas
+  // campo() calcula largura do texto como: largura - xOffset - 2
+  // Col A (x=M, xOffset=0):      passa half+2  → texto = half+2 - 0 - 2 = half
+  // Col B (x=M+half+6, xOffset=half+6): passa UW → texto = UW - (half+6) - 2 ≈ half-8
+  y = secao(doc, y, 'Identificação da Requisição')
+  const half = UW / 2 - 3
+  let r1a = campo(doc, y, 'Secretaria',          req.secretaria?.nome,          0,        half + 2)
+  let r1b = campo(doc, y, 'Setor Solicitante',   req.setor?.nome,               half + 6, UW)
+  y = Math.max(r1a, r1b) + 2
+  let r2a = campo(doc, y, 'Data da Solicitação', fmtDt(req.data_solicitacao),   0,        half + 2)
+  let r2b = campo(doc, y, 'Prioridade',          req.prioridade || 'NORMAL',    half + 6, UW)
+  y = Math.max(r2a, r2b) + 2
+  if (req.observacao) y = campo(doc, y, 'Observação', req.observacao)
+
+  // ─ Itens
+  y = secao(doc, y + 4, 'Itens Solicitados')
+  y = checkPage(doc, y, 12)
+
+  // Larguras absolutas das colunas (somam UW)
+  const CW = { num: 8, nome: UW - 8 - 22 - 28 - 28, unid: 22, qtdS: 28, qtdE: 28 }
+  const CX = {
+    num:  M,
+    nome: M + CW.num,
+    unid: M + CW.num + CW.nome,
+    qtdS: M + CW.num + CW.nome + CW.unid,
+    qtdE: M + CW.num + CW.nome + CW.unid + CW.qtdS,
+  }
+
+  doc.setFillColor(18, 26, 48)
+  doc.rect(M, y, UW, 8, 'F')
+  doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255)
+  doc.text('#',             CX.num  + 1,  y + 5.5)
+  doc.text('Item',          CX.nome + 1,  y + 5.5)
+  doc.text('Unidade',       CX.unid + 1,  y + 5.5)
+  doc.text('Qtd. Sol.',     CX.qtdS + 1,  y + 5.5)
+  doc.text('Qtd. Entregue', CX.qtdE + 1,  y + 5.5)
+  y += 8
+
+  ;(req.itens || []).forEach((ri, i) => {
+    const nomeItem  = ri.item?.nome || '—'
+    const nomeLines = doc.splitTextToSize(nomeItem, CW.nome - 3)
+    const rowH      = Math.max(7, nomeLines.length * 5 + 4)
+    y = checkPage(doc, y, rowH)
+    doc.setFillColor(i % 2 === 0 ? 249 : 243, i % 2 === 0 ? 250 : 244, i % 2 === 0 ? 252 : 248)
+    doc.rect(M, y, UW, rowH, 'F')
+    doc.setDrawColor(220, 225, 233); doc.rect(M, y, UW, rowH, 'S')
+    doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(22, 28, 36)
+    doc.text(String(i + 1),                  CX.num  + 1, y + 5)
+    doc.text(nomeLines,                       CX.nome + 1, y + 5)
+    doc.text(ri.item?.unidade || 'UN',        CX.unid + 1, y + 5)
+    doc.text(fmtQtd(ri.quantidade_solicitada),CX.qtdS + 1, y + 5)
+    doc.text(fmtQtd(ri.quantidade_entregue),  CX.qtdE + 1, y + 5)
+    if (ri.item?.codigo) {
+      doc.setFontSize(7); doc.setTextColor(130, 140, 155)
+      doc.text(`(${ri.item.codigo})`, CX.nome + 1, y + rowH - 1.5)
+      doc.setFontSize(9); doc.setTextColor(22, 28, 36)
+    }
+    y += rowH
+  })
+  y += 4
+
+  // ─ Assinaturas eletrônicas
+  y = checkPage(doc, y + 8, 44)
+  doc.setFillColor(220, 225, 233)
+  doc.rect(M, y, UW, 0.4, 'F')
+  y += 8
+
+  const sigs = [
+    { label: 'Solicitante', nome: req.solicitante?.nome, data: fmtDt(req.data_solicitacao),   hash: req.hash_solicitante },
+    { label: 'Autorizador', nome: req.autorizador?.nome, data: fmtDtHr(req.data_autorizacao), hash: req.hash_assinatura  },
+    { label: 'Entregador',  nome: req.atendente?.nome,   data: fmtDtHr(req.data_entrega),     hash: req.hash_entrega     },
+  ]
+  const sw = UW / 3 - 2
+  sigs.forEach((s, i) => {
+    const bx = M + i * (sw + 3)
+    doc.setFillColor(243, 245, 248)
+    doc.roundedRect(bx, y, sw, 36, 2, 2, 'F')
+    // Rótulo
+    doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(41, 82, 196)
+    doc.text(s.label, bx + sw / 2, y + 6, { align: 'center' })
+    // Nome (pode ter duas linhas)
+    doc.setFontSize(8.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(22, 28, 36)
+    const nomeLines = doc.splitTextToSize(s.nome || '—', sw - 6)
+    doc.text(nomeLines, bx + sw / 2, y + 13, { align: 'center' })
+    const afterNome = y + 13 + nomeLines.length * 5
+    // Data
+    doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(90, 100, 115)
+    doc.text(s.data, bx + sw / 2, afterNome + 1, { align: 'center' })
+    // Hash (truncado)
+    if (s.hash) {
+      doc.setFontSize(6); doc.setTextColor(150, 160, 175)
+      doc.text(s.hash.slice(0, 28) + '…', bx + sw / 2, afterNome + 6, { align: 'center' })
+    }
+    // Linha de assinatura
+    doc.setFillColor(100, 110, 125)
+    doc.rect(bx + 6, y + 32, sw - 12, 0.3, 'F')
+  })
+
+  const nomeArq = `Requisicao_Almox_${req.numero || 'doc'}.pdf`
+  const blob    = doc.output('blob')
+  if (mode === 'preview') {
+    return URL.createObjectURL(blob)
+  } else if (mode === 'print') {
+    const url = URL.createObjectURL(blob)
+    const win = window.open(url, '_blank')
+    if (win) win.addEventListener('load', () => { win.print(); URL.revokeObjectURL(url) })
+  } else {
+    _download(blob, nomeArq)
+  }
+  } finally { setPDFLoading(false) }
+}
+
 // ─── REQUISIÇÃO ───────────────────────────────────────────────────────────────
 export async function gerarRequisicaoPDF(processo) {
   setPDFLoading(true)
