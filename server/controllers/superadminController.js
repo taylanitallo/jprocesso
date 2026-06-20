@@ -807,8 +807,25 @@ const getTimbrado = async (req, res) => {
     const tenant = await getTenantOrFail(req.params.id, res);
     if (!tenant) return;
 
-    const storagePath = tenant.configuracoes?.timbrado_path || tenant.configuracoes?.timbrado_url;
+    let storagePath = tenant.configuracoes?.timbrado_path || tenant.configuracoes?.timbrado_url;
     if (!storagePath) return res.status(404).json({ error: 'Timbrado não configurado' });
+
+    // Se for URL completa do Supabase, extrair apenas o caminho relativo dentro do bucket
+    if (storagePath.startsWith('http')) {
+      const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'jprocesso-documentos';
+      const markers = [`/object/public/${bucket}/`, `/object/sign/${bucket}/`, `/object/authenticated/${bucket}/`];
+      for (const marker of markers) {
+        if (storagePath.includes(marker)) {
+          storagePath = storagePath.split(marker)[1].split('?')[0];
+          break;
+        }
+      }
+      // fallback genérico: pegar tudo após o nome do bucket
+      if (storagePath.startsWith('http')) {
+        const m = storagePath.match(new RegExp(`${bucket}/(.+?)(?:\\?|$)`));
+        if (m) storagePath = m[1];
+      }
+    }
 
     const buffer = await storageService.downloadDocumento(storagePath);
     res.setHeader('Content-Type', 'image/png');

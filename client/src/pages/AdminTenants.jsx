@@ -1537,23 +1537,30 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
   tbody tr{page-break-inside:avoid}
   .ev-login{color:#16a34a;font-weight:600}
   .ev-logout{color:#dc2626;font-weight:600}
-  /* impressão: timbrado como background repetido em cada folha A4 */
   @media print{
-    body{
-      background:white;
-      ${timbradoSrc
-        ? `background-image:url('${timbradoSrc}');
-           background-size:210mm 297mm;
-           background-repeat:repeat;
-           print-color-adjust:exact;
-           -webkit-print-color-adjust:exact;`
-        : ''}
-    }
+    body{background:white}
     .toolbar{display:none!important}
     .wrapper{padding:0;gap:0}
-    .page{box-shadow:none;background:transparent;break-after:page}
+    .page{
+      box-shadow:none;
+      background:white;
+      break-after:page;
+      position:relative;
+      width:210mm;
+      min-height:297mm;
+    }
     .page:last-child{break-after:auto}
-    .timbrado-bg{display:none}
+    .timbrado-bg{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      object-fit:fill;
+      display:block;
+      print-color-adjust:exact;
+      -webkit-print-color-adjust:exact;
+      opacity:1;
+    }
     @page{size:A4 portrait;margin:0}
   }
 </style>
