@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { progressBus } from './progressBus'
 
 // ── Token manager — M-3: access token em memória, nunca em localStorage ───────
 // Zerado a cada recarga de página; sessão é restaurada via refresh token cookie.
@@ -25,6 +26,15 @@ api.interceptors.request.use(
     // subdomain não é sensível — pode ficar em localStorage
     const subdomain = localStorage.getItem('subdomain')
     if (subdomain) config.headers['x-tenant-subdomain'] = subdomain
+
+    // Progresso global — ignora refresh silencioso e download de blobs grandes
+    const silent = config.url?.includes('/auth/refresh') || config._silent
+    if (!silent) {
+      progressBus.start()
+      config.onDownloadProgress = (e) => {
+        if (e.total) progressBus.advance(Math.round((e.loaded / e.total) * 90))
+      }
+    }
 
     return config
   },
@@ -60,7 +70,11 @@ const _forceLogout = (subdomain) => {
 
 // ── Interceptor de response ───────────────────────────────────────────────────
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (!response.config?._silent && !response.config?.url?.includes('/auth/refresh'))
+      progressBus.done()
+    return response
+  },
   async (error) => {
     const originalRequest = error.config
 
@@ -92,10 +106,13 @@ api.interceptors.response.use(
         return api(originalRequest)
       } catch {
         _forceLogout(subdomain)
+        progressBus.done()
         return Promise.reject(error)
       }
     }
 
+    if (!error.config?._silent && !error.config?.url?.includes('/auth/refresh'))
+      progressBus.done()
     return Promise.reject(error)
   }
 )

@@ -5,6 +5,7 @@ import {
   Send, Truck, ShieldCheck, Key, Zap, ClipboardList, Eye, Printer, Lock
 } from 'lucide-react'
 import api from '../services/api'
+import LoadingBar from '../components/LoadingBar'
 import { gerarRequisicaoAlmoxPDF } from '../utils/gerarDocumentoPDF'
 import AlmoxModal from './AlmoxModal'
 import { fmt, fmtMoney, STATUS_REQ, PRIORIDADE } from './almoxConstants'
@@ -285,9 +286,7 @@ function NovaRequisicaoModal({ setores, secretarias, onClose, onSave, saving, er
                   Selecione a secretaria para ver o estoque
                 </div>
               ) : loadingItens ? (
-                <div className="flex justify-center items-center h-full">
-                  <RefreshCw className="h-6 w-6 animate-spin text-blue-500" />
-                </div>
+                <LoadingBar label="Carregando itens..." />
               ) : itensFiltrados.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-amber-500 text-sm gap-2">
                   <Package className="h-8 w-8 opacity-40" />
@@ -638,7 +637,7 @@ function RequisicaoViewModal({ reqId, onClose }) {
   return (
     <AlmoxModal title={`Requisição ${req?.numero || '...'}`} onClose={onClose} fullscreen={!!previewUrl} wide={!previewUrl}>
       {loading ? (
-        <div className="flex justify-center py-12"><RefreshCw className="h-6 w-6 animate-spin text-blue-500" /></div>
+        <LoadingBar label="Carregando requisição..." />
       ) : !req ? (
         <p className="text-center text-gray-500 py-8">Não foi possível carregar a requisição.</p>
       ) : previewUrl ? (
@@ -1002,9 +1001,7 @@ export default function AlmoxRequisicoes() {
       </FilterBar>
 
       {loading ? (
-        <div className="flex justify-center py-12">
-          <RefreshCw className="h-7 w-7 animate-spin text-blue-500" />
-        </div>
+        <LoadingBar label="Carregando requisições..." />
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="px-4 pt-4">

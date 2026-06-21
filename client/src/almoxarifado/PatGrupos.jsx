@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { RefreshCw, Plus, Pencil, Layers } from 'lucide-react'
 import api from '../services/api'
+import LoadingBar from '../components/LoadingBar'
 import PageHeader from '../components/ui/PageHeader'
 import SectionTitle from '../components/ui/SectionTitle'
 import EmptyState from '../components/ui/EmptyState'
@@ -104,7 +105,7 @@ export default function PatGrupos() {
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {loading ? (
               <tr><td colSpan="7" className="text-center py-8">
-                <RefreshCw className="h-6 w-6 animate-spin text-blue-500 mx-auto" />
+                <LoadingBar label="Carregando grupos..." />
               </td></tr>
             ) : grupos.length === 0 ? (
               <tr><td colSpan="7" className="px-4 py-0">

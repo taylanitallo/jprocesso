@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { RefreshCw, Plus, ClipboardList, CheckCircle, AlertCircle, XCircle } from 'lucide-react'
 import api from '../services/api'
+import LoadingBar from '../components/LoadingBar'
 import PageHeader from '../components/ui/PageHeader'
 import SectionTitle from '../components/ui/SectionTitle'
 import EmptyState from '../components/ui/EmptyState'
@@ -155,9 +156,7 @@ export default function PatInventario({ userRole }) {
       {/* Lista de inventários */}
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center h-24">
-            <RefreshCw className="h-6 w-6 animate-spin text-blue-500" />
-          </div>
+          <LoadingBar label="Carregando inventários..." />
         ) : inventarios.length === 0 ? (
           <EmptyState
             icon={ClipboardList}
@@ -237,9 +236,7 @@ export default function PatInventario({ userRole }) {
             </div>
 
             {detLoading ? (
-              <div className="flex items-center justify-center h-40">
-                <RefreshCw className="h-7 w-7 animate-spin text-blue-500" />
-              </div>
+              <LoadingBar label="Carregando detalhes..." />
             ) : invDetail ? (
               <div className="p-6 space-y-4">
                 {/* Resumo */}

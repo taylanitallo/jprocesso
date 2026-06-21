@@ -7,6 +7,7 @@ import {
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import api from '../../services/api'
+import LoadingBar from '../../components/LoadingBar'
 import { salvarDocumentoGerado } from '../../utils/salvarDocumentoGerado'
 import { setPDFLoading } from '../../utils/pdfLoadingStore'
 import {
@@ -327,10 +328,7 @@ function SelecionarItemModal({ contrato_id, itensBase = [], onSelect, onClose })
         {/* Lista */}
         <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700/40">
           {carregando && filtrados.length === 0 && (
-            <div className="flex items-center justify-center py-10 text-gray-400 gap-2">
-              <RefreshCw className="w-4 h-4 animate-spin" />
-              <span className="text-sm">Carregando dados de uso...</span>
-            </div>
+            <LoadingBar label="Carregando dados de uso..." />
           )}
           {!carregando && filtrados.length === 0 && (
             <div className="flex flex-col items-center justify-center py-10 text-gray-400">
@@ -1478,7 +1476,7 @@ function TabOrdens() {
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
               {loading && (
                 <tr><td colSpan={8} className="text-center py-10 text-gray-400">
-                  <RefreshCw className="w-5 h-5 mx-auto mb-2 animate-spin" />Carregando...
+                  <LoadingBar label="Carregando ordens..." />
                 </td></tr>
               )}
               {!loading && ordens.length === 0 && (

@@ -5,6 +5,7 @@ import {
   ShoppingCart, Clock, TrendingUp
 } from 'lucide-react'
 import api from '../services/api'
+import LoadingBar from '../components/LoadingBar'
 import { fmt, fmtMoney } from './almoxConstants'
 import StatCard from '../components/ui/StatCard'
 import SectionTitle from '../components/ui/SectionTitle'
@@ -25,11 +26,7 @@ export default function AlmoxPainel() {
   useEffect(() => { load() }, [load])
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-48">
-        <RefreshCw className="h-8 w-8 animate-spin text-blue-500" />
-      </div>
-    )
+    return <LoadingBar label="Carregando painel..." />
   }
   if (!dados) return (
     <EmptyState

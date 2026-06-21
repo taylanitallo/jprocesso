@@ -5,6 +5,7 @@ import {
   ClipboardList, ShoppingCart, Wrench,
 } from 'lucide-react'
 import api from '../../services/api'
+import LoadingBar from '../../components/LoadingBar'
 
 function TabRelatorios() {
   const [contratos, setContratos] = useState([])
@@ -36,12 +37,7 @@ function TabRelatorios() {
     return Math.ceil((fim - hoje) / 86400000)
   }
 
-  if (loading) return (
-    <div className="flex items-center justify-center py-24 gap-3 text-slate-400">
-      <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-      <span className="text-sm">Carregando relatórios...</span>
-    </div>
-  )
+  if (loading) return <LoadingBar label="Carregando relatórios..." />
 
   const ativos   = contratos.filter(c => c.status === 'ATIVO')
   const totalVal = contratos.reduce((a, c) => a + parseVal(c.valor), 0)

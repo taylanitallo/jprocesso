@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import ModalTramitacao from '../components/ModalTramitacao'
+import LoadingBar from '../components/LoadingBar'
 import ModalDevolver from '../components/ModalDevolver'
 import ModalConcluir from '../components/ModalConcluir'
 import ModalDespacho from '../components/ModalDespacho'
@@ -331,14 +332,7 @@ export default function DetalhesProcesso() {
 
   /* ── loading ─────────────────────────────────────────────────────────── */
   if (!processo) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-center space-y-3">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto" />
-          <p className="text-sm text-gray-500 dark:text-slate-400">Carregando processo...</p>
-        </div>
-      </div>
-    )
+    return <LoadingBar label="Carregando processo..." />
   }
 
   /* ── helpers locais ──────────────────────────────────────────────────── */

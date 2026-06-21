@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import api from '../services/api'
 import { PageHeader } from '../components/ui'
+import LoadingBar from '../components/LoadingBar'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmtMoeda = (v) =>
@@ -532,10 +533,7 @@ export default function ContratosDashboard() {
 
       {/* ── Loading / Vazio ───────────────────────────────────────────────── */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-24 gap-3 text-slate-400">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-          <span className="text-sm">Carregando contratos...</span>
-        </div>
+        <LoadingBar label="Carregando contratos..." />
       ) : contratos.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 gap-3 text-slate-400">
           <FileText className="w-12 h-12 text-slate-300 dark:text-slate-600" />

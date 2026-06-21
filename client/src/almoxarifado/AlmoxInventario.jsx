@@ -4,6 +4,7 @@ import {
   CheckCircle2, AlertTriangle, X, Eye, Pencil, Trash2
 } from 'lucide-react'
 import api from '../services/api'
+import LoadingBar from '../components/LoadingBar'
 import AlmoxModal from './AlmoxModal'
 import { fmt, fmtMoney, STATUS_INVENTARIO } from './almoxConstants'
 
@@ -97,7 +98,7 @@ function InventarioDetalheModal({ inventario, onClose, onRefresh }) {
 
         {/* Lista de itens */}
         {loading ? (
-          <div className="flex justify-center py-8"><RefreshCw className="h-6 w-6 animate-spin text-blue-500" /></div>
+          <LoadingBar label="Carregando itens do inventário..." />
         ) : (
           <div className="max-h-[50vh] overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg">
             <table className="w-full text-sm">
@@ -376,9 +377,7 @@ export default function AlmoxInventario() {
 
       {/* Tabela */}
       {loading ? (
-        <div className="flex justify-center py-12">
-          <RefreshCw className="h-7 w-7 animate-spin text-blue-500" />
-        </div>
+        <LoadingBar label="Carregando inventários..." />
       ) : inventarios.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-gray-400 dark:text-gray-500">
           <ClipboardList className="h-12 w-12 mb-3 opacity-30" />

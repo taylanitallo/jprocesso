@@ -9,6 +9,8 @@ import { subscribePDFLoading } from './utils/pdfLoadingStore'
 
 // ── Imports estáticos — shell crítico (sempre carregado) ──────────────────────
 import Layout from './components/Layout'
+import GlobalProgressBar from './components/GlobalProgressBar'
+import LoadingBar from './components/LoadingBar'
 import Login from './pages/Login'
 import LoginAdmin from './pages/LoginAdmin'
 import MunicipioSelector from './pages/MunicipioSelector'
@@ -36,13 +38,8 @@ const Arquivo            = lazy(() => import('./pages/Arquivo'))
 const Tesouraria         = lazy(() => import('./pages/Tesouraria'))
 
 // ── PageLoader — fallback enquanto chunk carrega ──────────────────────────────
-function PageLoader() {
-  return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-      <div className="w-8 h-8 border-[3px] border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin" />
-      <p className="text-sm font-medium text-gray-500 dark:text-slate-400">Carregando módulo...</p>
-    </div>
-  )
+function PageLoader({ label = 'Carregando módulo...' }) {
+  return <LoadingBar label={label} />
 }
 
 function TimbradoSync() {
@@ -142,6 +139,7 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <GlobalProgressBar />
         <TimbradoSync />
         <MargensSync />
         <PDFLoadingOverlay />

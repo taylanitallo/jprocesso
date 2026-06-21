@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Search, Filter, X, RefreshCw, Download, ChevronLeft, ChevronRight, Clock, User, Building2, Layers, ClipboardList, Activity, Users, LayoutGrid } from 'lucide-react'
 import api from '../services/api'
 import PageHeader from '../components/ui/PageHeader'
+import LoadingBar from '../components/LoadingBar'
 
 // Mapa de cores e ícones por módulo
 const moduloConfig = {
@@ -393,9 +394,7 @@ export default function Registros() {
       {/* Tabela */}
       <div className="card overflow-hidden">
         {isLoading ? (
-          <div className="flex justify-center items-center py-20">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-600" />
-          </div>
+          <LoadingBar label="Carregando registros de atividade..." />
         ) : logs.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-gray-400 dark:text-slate-600 text-sm">Nenhum registro encontrado para os filtros selecionados.</p>

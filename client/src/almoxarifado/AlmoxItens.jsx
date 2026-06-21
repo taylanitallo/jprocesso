@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Search, Edit2, RefreshCw, Package, MapPin, AlertTriangle, Building2 } from 'lucide-react'
 import api from '../services/api'
+import LoadingBar from '../components/LoadingBar'
 import AlmoxModal from './AlmoxModal'
 import { fmt, fmtMoney, TIPO_ITEM } from './almoxConstants'
 import PageHeader from '../components/ui/PageHeader'
@@ -279,9 +280,7 @@ export default function AlmoxItens() {
       </FilterBar>
 
       {loading ? (
-        <div className="flex justify-center py-12">
-          <RefreshCw className="h-7 w-7 animate-spin text-blue-500" />
-        </div>
+        <LoadingBar label="Carregando itens..." />
       ) : todosItens.length === 0 ? (
         <EmptyState
           icon={Package}

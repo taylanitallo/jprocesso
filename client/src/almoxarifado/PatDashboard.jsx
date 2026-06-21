@@ -4,6 +4,7 @@ import {
   RefreshCw, ClipboardCheck, TrendingDown, BarChart2
 } from 'lucide-react'
 import api from '../services/api'
+import LoadingBar from '../components/LoadingBar'
 import PageHeader from '../components/ui/PageHeader'
 import StatCard from '../components/ui/StatCard'
 import SectionTitle from '../components/ui/SectionTitle'
@@ -27,11 +28,7 @@ export default function PatDashboard() {
   useEffect(() => { load() }, [load])
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-48">
-        <RefreshCw className="h-8 w-8 animate-spin text-blue-500" />
-      </div>
-    )
+    return <LoadingBar label="Carregando painel patrimonial..." />
   }
   if (!dados) return (
     <EmptyState

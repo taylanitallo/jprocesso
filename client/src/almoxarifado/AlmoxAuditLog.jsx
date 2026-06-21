@@ -6,6 +6,7 @@ import {
   Settings, Key, ClipboardList, Filter, X
 } from 'lucide-react'
 import api from '../services/api'
+import LoadingBar from '../components/LoadingBar'
 
 // ─── Configuração de ações ────────────────────────────────────────────────────
 const ACAO_CFG = {
@@ -408,10 +409,7 @@ export default function AlmoxAuditLog() {
         {/* Timeline principal */}
         <div className="flex-1 min-w-0">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-              <RefreshCw className="h-8 w-8 animate-spin mb-3" />
-              <p className="text-sm">Carregando registros...</p>
-            </div>
+            <LoadingBar label="Carregando registros..." />
           ) : logs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
               <Shield className="h-12 w-12 mb-3 opacity-20" />

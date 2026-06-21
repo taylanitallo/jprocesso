@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import PageHeader from '../components/ui/PageHeader';
+import LoadingBar from '../components/LoadingBar';
 import StatCard from '../components/ui/StatCard';
 import SectionTitle from '../components/ui/SectionTitle';
 import EmptyState from '../components/ui/EmptyState';
@@ -904,10 +905,7 @@ export default function Usuarios() {
             </div>
             <div className="p-6">
               {importLoading ? (
-                <div className="flex flex-col items-center gap-3 py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                  <p className="text-sm text-gray-500 dark:text-slate-400">Importando usuários...</p>
-                </div>
+                <LoadingBar label="Importando usuários..." />
               ) : (
                 <>
                   <div className="flex gap-4 mb-4 text-sm">

@@ -5,6 +5,7 @@ import {
   QrCode, Key, ShieldAlert, MapPin, Building2, Search, ClipboardList
 } from 'lucide-react'
 import api from '../services/api'
+import LoadingBar from '../components/LoadingBar'
 import AlmoxModal from './AlmoxModal'
 import { fmt, fmtMoney, today } from './almoxConstants'
 
@@ -66,9 +67,7 @@ function OrdemCompraPickerModal({ onSelect, onClose }) {
 
         {/* Lista */}
         {loading ? (
-          <div className="flex justify-center py-10">
-            <RefreshCw className="h-6 w-6 animate-spin text-amber-500" />
-          </div>
+          <LoadingBar label="Carregando ordens..." />
         ) : filtradas.length === 0 ? (
           <div className="text-center py-10 text-gray-400 text-sm">
             <ClipboardList className="h-8 w-8 mx-auto mb-2 opacity-40" />
@@ -778,9 +777,7 @@ export default function AlmoxLotes() {
 
       {/* Tabela */}
       {loading ? (
-        <div className="flex justify-center py-12">
-          <RefreshCw className="h-7 w-7 animate-spin text-amber-500" />
-        </div>
+        <LoadingBar label="Carregando lotes..." />
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="overflow-x-auto">

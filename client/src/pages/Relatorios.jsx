@@ -3,6 +3,7 @@ import { useQuery } from 'react-query'
 import { BarChart3, TrendingUp, FileText, Building2, Clock, CheckCircle, ClipboardList, Calendar, ListFilter, FileDown, FileSpreadsheet, Trash2, Loader2, Inbox } from 'lucide-react'
 import api from '../services/api'
 import { PageHeader, SectionTitle } from '../components/ui'
+import LoadingBar from '../components/LoadingBar'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
@@ -611,9 +612,7 @@ export default function Relatorios() {
           )}
         </div>
         {isLoading && (
-          <p className="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400 mt-3">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />Carregando dados...
-          </p>
+          <LoadingBar label="Carregando dados..." />
         )}
       </div>
 

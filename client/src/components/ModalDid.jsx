@@ -5,6 +5,7 @@ import {
   Shield, Edit3, Check
 } from 'lucide-react'
 import api from '../services/api'
+import LoadingBar from './LoadingBar'
 
 const STATUS_LABELS = {
   rascunho: 'Rascunho',
@@ -288,10 +289,7 @@ export default function ModalDid({ processo, onClose }) {
 
           {/* Loading */}
           {loading && (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-              <span className="ml-3 text-gray-600 dark:text-slate-400">Carregando DID...</span>
-            </div>
+            <LoadingBar label="Carregando DID..." />
           )}
 
           {/* ── FORMULÁRIO DE CRIAÇÃO ── */}

@@ -4,6 +4,7 @@ import {
   ArrowDownCircle, ArrowUpCircle
 } from 'lucide-react'
 import api from '../services/api'
+import LoadingBar from '../components/LoadingBar'
 import AlmoxModal from './AlmoxModal'
 import { fmt, fmtMoney, today } from './almoxConstants'
 import PageHeader from '../components/ui/PageHeader'
@@ -246,9 +247,7 @@ function MovimentacoesTab({ tipo }) {
       </FilterBar>
 
       {loading ? (
-        <div className="flex justify-center py-12">
-          <RefreshCw className="h-7 w-7 animate-spin text-blue-500" />
-        </div>
+        <LoadingBar label="Carregando movimentações..." />
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="px-4 pt-4">

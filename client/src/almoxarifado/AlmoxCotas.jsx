@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Plus, Trash2, RefreshCw, BarChart2 } from 'lucide-react'
 import api from '../services/api'
+import LoadingBar from '../components/LoadingBar'
 import AlmoxModal from './AlmoxModal'
 import { fmt } from './almoxConstants'
 
@@ -200,9 +201,7 @@ export default function AlmoxCotas() {
 
       {/* Tabela */}
       {loading ? (
-        <div className="flex justify-center py-12">
-          <RefreshCw className="h-7 w-7 animate-spin text-teal-500" />
-        </div>
+        <LoadingBar label="Carregando cotas..." />
       ) : cotas.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-gray-400 dark:text-gray-500">
           <BarChart2 className="h-12 w-12 mb-3 opacity-30" />

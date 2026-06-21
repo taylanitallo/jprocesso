@@ -9,6 +9,7 @@ import {
   X, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import { PageHeader, EmptyState } from '../components/ui'
+import LoadingBar from '../components/LoadingBar'
 
 // ── Constantes de badge / cor ─────────────────────────────────────────────────
 const TIPO_CLS = {
@@ -348,10 +349,7 @@ export default function Processos() {
 
           {/* ── Lista ── */}
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-16">
-              <div className="h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-3" />
-              <p className="text-gray-400 dark:text-slate-500 text-sm">Carregando processos...</p>
-            </div>
+            <LoadingBar label="Carregando processos..." />
           ) : data?.processos && data.processos.length > 0 ? (
             <>
               <div className="space-y-2">
@@ -523,10 +521,7 @@ export default function Processos() {
           </div>
 
           {loadEnv && (
-            <div className="flex flex-col items-center justify-center py-16">
-              <div className="h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-3" />
-              <p className="text-gray-400 dark:text-slate-500 text-sm">Carregando processos enviados...</p>
-            </div>
+            <LoadingBar label="Carregando processos enviados..." />
           )}
 
           {!loadEnv && processosEnv.length > 0 && (

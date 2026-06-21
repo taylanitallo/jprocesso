@@ -6,6 +6,7 @@ import {
   ChevronRight, ChevronDown, Download, FolderInput, X, Zap,
 } from 'lucide-react'
 import { PageHeader } from '../components/ui'
+import LoadingBar from '../components/LoadingBar'
 
 const TIPO_LABEL = {
   did:        { label: 'DID',           cor: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300' },
@@ -508,11 +509,7 @@ export default function Arquivo() {
   }
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <div className="h-7 w-7 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
+    return <LoadingBar label="Carregando arquivo..." />
   }
 
   return (
@@ -561,9 +558,7 @@ export default function Arquivo() {
       {aba === 'gerados' && (
         <div className="card p-4">
           {loadingGerados ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            </div>
+            <LoadingBar label="Carregando documentos gerados..." />
           ) : docsGerados.length === 0 ? (
             <div className="text-center py-14 space-y-3">
               <Zap className="h-10 w-10 text-gray-200 dark:text-slate-700 mx-auto" />

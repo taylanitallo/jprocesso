@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import api from '../services/api'
 import { PageHeader, SectionTitle, ActionBar } from '../components/ui'
+import LoadingBar from '../components/LoadingBar'
 import { gerarPainelPDF } from './financeiro/gerarPainelPDF'
 import { gerarDidPDF } from './did/gerarDidPDF'
 import { useAuth } from '../context/AuthContext'
@@ -318,10 +319,7 @@ function ModalVerDid({ processoId, tenant, onClose }) {
         {/* Corpo */}
         <div className="overflow-y-auto flex-1 p-5 space-y-3">
           {loading ? (
-            <div className="flex flex-col items-center justify-center h-40 gap-3 text-slate-400">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-              <span className="text-sm">Carregando DID...</span>
-            </div>
+            <LoadingBar label="Carregando DID..." />
           ) : !did ? (
             <div className="flex flex-col items-center justify-center h-40 gap-3 text-slate-400">
               <AlertTriangle className="w-8 h-8 text-yellow-500" />
@@ -1097,10 +1095,7 @@ export default function Financeiro() {
           </div>}
 
           {loadingPainel ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-              <span className="text-sm">Carregando painel...</span>
-            </div>
+            <LoadingBar label="Carregando painel..." />
           ) : painel ? (
             <>
               {/* ── Cards de métricas DID ─────────────────────────── */}
@@ -1123,10 +1118,7 @@ export default function Financeiro() {
                   )}
                 </div>
                 {painelDidsLoading ? (
-                  <div className="flex items-center justify-center py-12 gap-2 text-slate-400">
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span className="text-sm">Carregando...</span>
-                  </div>
+                  <LoadingBar label="Carregando DIDs..." />
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
@@ -1552,10 +1544,7 @@ export default function Financeiro() {
           <div className="bg-white dark:bg-slate-900/70 border border-gray-100 dark:border-slate-700/50 rounded-2xl overflow-hidden">
             <div className="overflow-x-auto">
               {procsLoading ? (
-                <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
-                  <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                  <span className="text-sm">Carregando processos...</span>
-                </div>
+                <LoadingBar label="Carregando processos..." />
               ) : (
                 <table className="w-full text-sm">
                   <thead className="bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700/50">
@@ -1718,10 +1707,7 @@ export default function Financeiro() {
           </div>
 
           {relLoading ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-              <span className="text-sm">Gerando relatório...</span>
-            </div>
+            <LoadingBar label="Gerando relatório..." />
           ) : relatorio ? (
             <>
               {/* ── KPI Cards — linha 1: 4 principais ─────────────────────── */}

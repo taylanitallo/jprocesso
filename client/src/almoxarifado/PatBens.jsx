@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Search, Eye, DownloadCloud, RefreshCw, ChevronLeft, ChevronRight, Landmark, ArrowLeftRight, ClipboardList } from 'lucide-react'
 import api from '../services/api'
+import LoadingBar from '../components/LoadingBar'
 import PageHeader from '../components/ui/PageHeader'
 import FilterBar from '../components/ui/FilterBar'
 import SectionTitle from '../components/ui/SectionTitle'
@@ -163,7 +164,7 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {loading ? (
               <tr><td colSpan="8" className="text-center py-8">
-                <RefreshCw className="h-6 w-6 animate-spin text-blue-500 mx-auto" />
+                <LoadingBar label="Carregando bens..." />
               </td></tr>
             ) : bens.length === 0 ? (
               <tr><td colSpan="8" className="px-4 py-0">
@@ -254,9 +255,7 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
             onClick={e => e.stopPropagation()}
           >
             {detLoading ? (
-              <div className="flex items-center justify-center h-48">
-                <RefreshCw className="h-8 w-8 animate-spin text-blue-500" />
-              </div>
+              <LoadingBar label="Carregando bem..." />
             ) : detalhe && (
               <div className="p-6 space-y-4">
                 <div className="flex items-start justify-between">
