@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import api from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
+import { gerarDnaItemPDF } from '../../utils/gerarDocumentoPDF'
 import {
   CATEGORIAS, UNIDADES, STATUS_ITEM, proximoCodigo,
   SectionCard, PremiumInput, PremiumSelect, PremiumTextarea
@@ -243,6 +244,13 @@ function RelatorioModal({ item, onClose }) {
   const [loading, setLoading] = useState(true)
   const [dna, setDna] = useState(null)
   const [erro, setErro] = useState(null)
+  const [pdfLoading, setPdfLoading] = useState(false)
+
+  const handlePDF = async (imprimir) => {
+    if (!dna) return
+    setPdfLoading(true)
+    try { await gerarDnaItemPDF(item, dna, imprimir) } finally { setPdfLoading(false) }
+  }
 
   useEffect(() => {
     api.get(`/contratos/itens/${item.id}/dna`)
@@ -394,7 +402,7 @@ function RelatorioModal({ item, onClose }) {
                                 </span>
                               </td>
                               <td className="px-3 py-2 text-blue-600 dark:text-blue-400 font-medium whitespace-nowrap">{ordem?.contrato?.numero_contrato || '—'}</td>
-                              <td className="px-3 py-2 text-gray-600 dark:text-slate-400 max-w-[140px] truncate">{ordem?.secretaria || ordem?.contrato?.secretaria || '—'}</td>
+                              <td className="px-3 py-2 text-gray-600 dark:text-slate-400 max-w-[140px] truncate">{ordem?.contrato?.secretaria || ordem?.secretaria || '—'}</td>
                               <td className="px-3 py-2 whitespace-nowrap text-gray-500">{ordem?.data_emissao ? new Date(ordem.data_emissao).toLocaleDateString('pt-BR') : '—'}</td>
                               <td className="px-3 py-2 text-center">
                                 <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${ordem?.status === 'ATENDIDA' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : ordem?.status === 'CANCELADA' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'}`}>
@@ -416,9 +424,31 @@ function RelatorioModal({ item, onClose }) {
           )}
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-slate-700/50 flex justify-between items-center shrink-0">
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-slate-700/50 flex justify-between items-center shrink-0 gap-3">
           <span className="text-xs text-gray-400">{totalContratos} contrato(s) · {totalOrdens} ordem(ns)</span>
-          <button onClick={onClose} className="btn-secondary text-sm">Fechar</button>
+          <div className="flex items-center gap-2">
+            {dna && (
+              <>
+                <button
+                  onClick={() => handlePDF(false)}
+                  disabled={pdfLoading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 transition-colors"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  {pdfLoading ? 'Gerando...' : 'Ver PDF'}
+                </button>
+                <button
+                  onClick={() => handlePDF(true)}
+                  disabled={pdfLoading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 hover:bg-slate-800 text-white disabled:opacity-50 transition-colors"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  {pdfLoading ? 'Gerando...' : 'Imprimir'}
+                </button>
+              </>
+            )}
+            <button onClick={onClose} className="btn-secondary text-sm">Fechar</button>
+          </div>
         </div>
       </div>
     </div>

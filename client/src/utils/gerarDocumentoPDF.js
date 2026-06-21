@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import { salvarDocumentoGerado } from './salvarDocumentoGerado'
 import { applyTimbradoToPage } from './timbradoStore'
 import { getMargens } from './margensStore'
@@ -866,4 +867,175 @@ export async function gerarRequisicaoPDF(processo) {
   salvarDocumentoGerado(blobReq, { nome: nomeArqReq, processoId: processo.id, tipoOrigem: 'requisicao' })
   _download(blobReq, nomeArqReq)
   } finally { setPDFLoading(false) }
+}
+
+// ─── DNA DO ITEM ──────────────────────────────────────────────────────────────
+export async function gerarDnaItemPDF(item, dna, imprimir = false) {
+  setPDFLoading(true)
+  try {
+    refreshM()
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+    const W = 210
+    const CINZA = [100, 110, 125]
+    const AZUL  = [41, 82, 196]
+
+    const fmtMoeda = v => v != null ? Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—'
+    const fmtQtd   = v => v != null ? Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 4 }) : '—'
+    const fmtData  = v => v ? new Date(v).toLocaleDateString('pt-BR') : '—'
+    const s        = v => (v && String(v).trim()) ? String(v).trim() : '—'
+
+    let y = cabecalho(doc, 'DNA DO ITEM', item.codigo || 'S/COD', item.categoria || '')
+
+    // ── Info do item ─────────────────────────────────────────────────────────
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...CINZA)
+    doc.text('DESCRIÇÃO', M, y)
+    y += 4.5
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(22, 28, 36)
+    const descLines = doc.splitTextToSize(s(item.descricao), UW)
+    doc.text(descLines, M, y)
+    y += descLines.length * 5.5 + 3
+
+    autoTable(doc, {
+      startY: y,
+      head: [],
+      body: [
+        ['Código', s(item.codigo), 'Unidade', s(item.unidade_medida)],
+        ['Categoria', s(item.categoria), 'Status', s(item.status)],
+      ],
+      theme: 'plain',
+      styles: { fontSize: 8, cellPadding: 1.5, textColor: [30, 30, 30] },
+      columnStyles: {
+        0: { fontStyle: 'bold', textColor: CINZA, cellWidth: 35 },
+        1: { cellWidth: 'auto' },
+        2: { fontStyle: 'bold', textColor: CINZA, cellWidth: 35 },
+        3: { cellWidth: 'auto' },
+      },
+      margin: { left: M, right: M },
+    })
+    y = doc.lastAutoTable.finalY + 5
+
+    // ── KPIs ─────────────────────────────────────────────────────────────────
+    const totalContratos = dna.vinculosContrato?.length ?? 0
+    const totalOrdens    = dna.vinculosOrdem?.length ?? 0
+    const vlContratos    = dna.vinculosContrato?.reduce((s, v) => s + Number(v.valor_total || 0), 0) ?? 0
+    const vlOrdens       = dna.vinculosOrdem?.reduce((s, v) => s + Number(v.valor_total || 0), 0) ?? 0
+
+    autoTable(doc, {
+      startY: y,
+      head: [['Contratos vinculados', 'Ordens vinculadas', 'Valor em contratos', 'Valor em ordens']],
+      body: [[String(totalContratos), String(totalOrdens), fmtMoeda(vlContratos), fmtMoeda(vlOrdens)]],
+      theme: 'grid',
+      headStyles: { fillColor: [30, 40, 65], textColor: 255, fontSize: 7.5, fontStyle: 'bold', halign: 'center' },
+      bodyStyles: { fontSize: 9, fontStyle: 'bold', halign: 'center', textColor: [22, 28, 36] },
+      margin: { left: M, right: M },
+    })
+    y = doc.lastAutoTable.finalY + 6
+
+    // ── Contratos ────────────────────────────────────────────────────────────
+    y = checkPage(doc, y, 20)
+    doc.setFillColor(220, 225, 233)
+    doc.rect(M, y, UW, 0.4, 'F')
+    y += 3
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...AZUL)
+    doc.text(`CONTRATOS (${totalContratos})`, M, y + 3)
+    y += 8
+
+    if (totalContratos === 0) {
+      doc.setFontSize(8.5)
+      doc.setFont('helvetica', 'italic')
+      doc.setTextColor(...CINZA)
+      doc.text('Este item não está vinculado a nenhum contrato.', M, y)
+      y += 7
+    } else {
+      autoTable(doc, {
+        startY: y,
+        head: [['Nº Contrato', 'Credor', 'Secretaria', 'Status', 'Qtd', 'Vl. Unit.', 'Total']],
+        body: dna.vinculosContrato.map(v => [
+          s(v.contrato?.numero_contrato),
+          s(v.contrato?.credor?.nome_fantasia || v.contrato?.credor?.razao_social),
+          s(v.contrato?.secretaria),
+          s(v.contrato?.status),
+          fmtQtd(v.quantidade),
+          fmtMoeda(v.valor_unitario),
+          fmtMoeda(v.valor_total),
+        ]),
+        theme: 'striped',
+        headStyles: { fillColor: [41, 82, 196], textColor: 255, fontSize: 7, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 7.5, textColor: [30, 30, 30] },
+        columnStyles: {
+          0: { fontStyle: 'bold' },
+          4: { halign: 'right' },
+          5: { halign: 'right' },
+          6: { halign: 'right', fontStyle: 'bold' },
+        },
+        margin: { left: M, right: M },
+      })
+      y = doc.lastAutoTable.finalY + 6
+    }
+
+    // ── Ordens ───────────────────────────────────────────────────────────────
+    y = checkPage(doc, y, 20)
+    doc.setFillColor(220, 225, 233)
+    doc.rect(M, y, UW, 0.4, 'F')
+    y += 3
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...AZUL)
+    doc.text(`ORDENS DE COMPRA / SERVIÇO (${totalOrdens})`, M, y + 3)
+    y += 8
+
+    if (totalOrdens === 0) {
+      doc.setFontSize(8.5)
+      doc.setFont('helvetica', 'italic')
+      doc.setTextColor(...CINZA)
+      doc.text('Este item não aparece em nenhuma ordem.', M, y)
+    } else {
+      autoTable(doc, {
+        startY: y,
+        head: [['Nº Ordem', 'Tipo', 'Contrato', 'Secretaria', 'Emissão', 'Status', 'Qtd', 'Vl. Unit.', 'Total']],
+        body: dna.vinculosOrdem.map(v => {
+          const ordem = v.ordemPai
+          return [
+            s(ordem?.numero),
+            s(ordem?.tipo),
+            s(ordem?.contrato?.numero_contrato),
+            s(ordem?.contrato?.secretaria || ordem?.secretaria),
+            fmtData(ordem?.data_emissao),
+            s(ordem?.status),
+            fmtQtd(v.quantidade),
+            fmtMoeda(v.valor_unitario),
+            fmtMoeda(v.valor_total),
+          ]
+        }),
+        theme: 'striped',
+        headStyles: { fillColor: [80, 40, 160], textColor: 255, fontSize: 7, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 7.5, textColor: [30, 30, 30] },
+        columnStyles: {
+          0: { fontStyle: 'bold' },
+          6: { halign: 'right' },
+          7: { halign: 'right' },
+          8: { halign: 'right', fontStyle: 'bold' },
+        },
+        margin: { left: M, right: M },
+      })
+    }
+
+    const nomeArq = `DNA_Item_${item.codigo || item.id}.pdf`
+    const blob = doc.output('blob')
+    if (imprimir) {
+      const url = URL.createObjectURL(blob)
+      const win = window.open(url, '_blank')
+      if (win) win.addEventListener('load', () => { win.print(); URL.revokeObjectURL(url) })
+    } else {
+      _download(blob, nomeArq)
+    }
+  } finally {
+    setPDFLoading(false)
+  }
 }
