@@ -2,8 +2,8 @@
 const router = express.Router();
 const {
   listCredores, createCredor, updateCredor, deleteCredor,
-  listItens, createItem, updateItem, deleteItem,
-  importarItensUrl, excluirItensInativos, verificarItensUrl,
+  listItens, createItem, updateItem, deleteItem, getDnaItem,
+  importarItensUrl, excluirItensInativos, contarItensSemVinculo, excluirItensSemVinculo, verificarItensUrl,
   listContratos, createContrato, updateContrato, deleteContrato,
   syncFromDids,
 } = require('../controllers/contratosController');
@@ -25,10 +25,13 @@ router.delete('/credores/:id', deleteCredor);
 router.post('/itens/verificar-url',  authorize('admin', 'jeos'), verificarItensUrl);
 router.post('/itens/importar-url',   authorize('admin', 'jeos'), importarItensUrl);
 router.delete('/itens/inativos',     authorize('admin', 'jeos'), excluirItensInativos);
-router.get('/itens',       listItens);
-router.post('/itens',      createItem);
-router.put('/itens/:id',   updateItem);
-router.delete('/itens/:id', deleteItem);
+router.get('/itens/sem-vinculo/count', authorize('admin', 'jeos'), contarItensSemVinculo);
+router.delete('/itens/sem-vinculo',    authorize('admin', 'jeos'), excluirItensSemVinculo);
+router.get('/itens',            listItens);
+router.get('/itens/:id/dna',   getDnaItem);
+router.post('/itens',          createItem);
+router.put('/itens/:id',       updateItem);
+router.delete('/itens/:id',    deleteItem);
 
 // Ordens de Compra/Serviço
 router.get('/ordens',                              listOrdens);

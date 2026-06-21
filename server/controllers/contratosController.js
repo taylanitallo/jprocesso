@@ -149,6 +149,53 @@ const deleteItem = async (req, res) => {
   }
 };
 
+// ── DNA DO ITEM ────────────────────────────────────────────────────────────────
+const getDnaItem = async (req, res) => {
+  try {
+    const models = req.models;
+    const { id } = req.params;
+
+    // Valida que os modelos necessários existem
+    if (!models.ContratoItem) return res.status(500).json({ error: 'Modelo ContratoItem não disponível' });
+    if (!models.ContratoItemVinculo) return res.status(500).json({ error: 'Modelo ContratoItemVinculo não disponível' });
+    if (!models.ContratoOrdemItem) return res.status(500).json({ error: 'Modelo ContratoOrdemItem não disponível' });
+
+    const { ContratoItem, ContratoItemVinculo, ContratoOrdemItem, ContratoOrdem, Contrato, Credor } = models;
+
+    const item = await ContratoItem.findByPk(id);
+    if (!item) return notFound(res, 'Item');
+
+    // Contratos que têm este item no quadro de itens
+    const vinculosContrato = await ContratoItemVinculo.findAll({
+      where: { item_id: id },
+      include: [{
+        model: Contrato,
+        as: 'contrato',
+        include: [{ model: Credor, as: 'credor', attributes: ['razao_social', 'nome_fantasia'] }],
+      }],
+    });
+
+    // Ordens de compra/serviço que usam este item
+    const vinculosOrdem = await ContratoOrdemItem.findAll({
+      where: { item_id: id },
+      include: [{
+        model: ContratoOrdem,
+        as: 'ordemPai',
+        include: [{
+          model: Contrato,
+          as: 'contrato',
+          attributes: ['id', 'numero_contrato', 'secretaria'],
+        }],
+      }],
+    });
+
+    res.json({ item, vinculosContrato, vinculosOrdem });
+  } catch (err) {
+    console.error('getDnaItem:', err.message, '\n', err.stack?.split('\n').slice(1,3).join('\n'));
+    res.status(500).json({ error: `Erro ao buscar DNA: ${err.message}` });
+  }
+};
+
 // â”€â”€ CONTRATOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const listContratos = async (req, res) => {
@@ -483,26 +530,18 @@ const importarItensUrl = async (req, res) => {
     });
     const descSet = new Set(existentes.map(i => i.descricao.toUpperCase().trim()));
 
-    // Último código sequencial
-    const ultimo = await ContratoItem.findOne({
-      order: [['codigo', 'DESC']],
-      where: { codigo: { [Op.not]: null } },
-    });
-    let proxNum = ultimo ? (parseInt(ultimo.codigo, 10) || 0) + 1 : 1;
-
-    // Filtrar e preparar registros novos
+    // Filtrar e preparar registros novos (sem código — ficam INATIVO até validação)
     const novos = [];
     let ignorados = 0;
     for (const item of candidatos) {
       if (!item.descricao || descSet.has(item.descricao)) { ignorados++; continue; }
-      descSet.add(item.descricao); // evitar duplicatas dentro do mesmo lote
+      descSet.add(item.descricao);
       novos.push({
         ...item,
-        codigo: String(proxNum).padStart(5, '0'),
-        status: 'ATIVO',
+        codigo: null,
+        status: 'INATIVO',
         validado: false,
       });
-      proxNum++;
     }
 
     // ── Inserção em lotes de 500 ─────────────────────────────────────────────
@@ -528,9 +567,10 @@ const importarItensUrl = async (req, res) => {
 const excluirItensInativos = async (req, res) => {
   try {
     const { ContratoItem } = req.models;
+    const { Sequelize } = require('sequelize');
     const [count] = await ContratoItem.update(
       { status: 'EXCLUÍDO' },
-      { where: { status: 'INATIVO' } }
+      { where: Sequelize.where(Sequelize.fn('UPPER', Sequelize.col('status')), 'INATIVO') }
     );
     res.json({ excluidos: count });
   } catch (err) {
@@ -539,10 +579,54 @@ const excluirItensInativos = async (req, res) => {
   }
 };
 
+// ── HELPER: IDs de itens vinculados a algum contrato ou ordem ──────────────
+async function _idsVinculados(models) {
+  const { ContratoItemVinculo, ContratoOrdemItem } = models;
+  const [vinc, ordens] = await Promise.all([
+    ContratoItemVinculo.findAll({ attributes: ['item_id'], where: { item_id: { [Op.not]: null } } }),
+    ContratoOrdemItem.findAll({ attributes: ['item_id'], where: { item_id: { [Op.not]: null } } }),
+  ]);
+  return new Set([...vinc, ...ordens].map(r => r.item_id).filter(Boolean));
+}
+
+// ── CONTAR ITENS SEM VÍNCULO ────────────────────────────────────────────────
+const contarItensSemVinculo = async (req, res) => {
+  try {
+    const { ContratoItem } = req.models;
+    const vinculados = await _idsVinculados(req.models);
+    const whereClause = {
+      status: { [Op.ne]: 'EXCLUÍDO' },
+      ...(vinculados.size > 0 ? { id: { [Op.notIn]: [...vinculados] } } : {}),
+    };
+    const total = await ContratoItem.count({ where: whereClause });
+    res.json({ total });
+  } catch (err) {
+    console.error('contarItensSemVinculo:', err);
+    res.status(500).json({ error: 'Erro ao contar itens' });
+  }
+};
+
+// ── EXCLUIR ITENS SEM VÍNCULO ───────────────────────────────────────────────
+const excluirItensSemVinculo = async (req, res) => {
+  try {
+    const { ContratoItem } = req.models;
+    const vinculados = await _idsVinculados(req.models);
+    const whereClause = {
+      status: { [Op.ne]: 'EXCLUÍDO' },
+      ...(vinculados.size > 0 ? { id: { [Op.notIn]: [...vinculados] } } : {}),
+    };
+    const [count] = await ContratoItem.update({ status: 'EXCLUÍDO' }, { where: whereClause });
+    res.json({ excluidos: count });
+  } catch (err) {
+    console.error('excluirItensSemVinculo:', err);
+    res.status(500).json({ error: 'Erro ao excluir itens sem vínculo' });
+  }
+};
+
 module.exports = {
   listCredores, createCredor, updateCredor, deleteCredor,
-  listItens, createItem, updateItem, deleteItem,
-  importarItensUrl, excluirItensInativos, verificarItensUrl,
+  listItens, createItem, updateItem, deleteItem, getDnaItem,
+  importarItensUrl, excluirItensInativos, contarItensSemVinculo, excluirItensSemVinculo, verificarItensUrl,
   listContratos, createContrato, updateContrato, deleteContrato,
   syncFromDids,
 };

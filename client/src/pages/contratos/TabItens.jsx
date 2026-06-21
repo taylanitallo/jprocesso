@@ -240,17 +240,33 @@ function ItemModal({ modo, item, onSave, onClose }) {
 //  MODAL: RELATÓRIO DO ITEM
 // ══════════════════════════════════════════════════════════════════════════════
 function RelatorioModal({ item, onClose }) {
-  // Estrutura pronta — dados virão da API quando o backend for conectado
-  const usos = []
+  const [loading, setLoading] = useState(true)
+  const [dna, setDna] = useState(null)
+  const [erro, setErro] = useState(null)
+
+  useEffect(() => {
+    api.get(`/contratos/itens/${item.id}/dna`)
+      .then(r => { setDna(r.data); setLoading(false) })
+      .catch((err) => { setErro(err.response?.data?.error || err.message || 'Erro ao carregar dados do item.'); setLoading(false) })
+  }, [item.id])
+
+  const fmt = (v) => v != null ? Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—'
+  const fmtQtd = (v) => v != null ? Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 4 }) : '—'
+
+  const totalContratos = dna?.vinculosContrato?.length ?? 0
+  const totalOrdens = dna?.vinculosOrdem?.length ?? 0
+  const valorTotalContratos = dna?.vinculosContrato?.reduce((s, v) => s + Number(v.valor_total || 0), 0) ?? 0
+  const valorTotalOrdens = dna?.vinculosOrdem?.reduce((s, v) => s + Number(v.valor_total || 0), 0) ?? 0
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
 
-        <div className="flex items-center justify-between bg-slate-900 dark:bg-slate-900 px-5 py-3 rounded-t-2xl shrink-0">
+        {/* Header */}
+        <div className="flex items-center justify-between bg-slate-900 px-5 py-3 rounded-t-2xl shrink-0">
           <div>
-            <h2 className="text-sm font-semibold text-white flex items-center gap-2"><BarChart2 className="w-4 h-4" /> Relatório do Item</h2>
-            <p className="text-xs text-gray-500 mt-0.5">Todos os contratos e processos onde o item é utilizado</p>
+            <h2 className="text-sm font-semibold text-white flex items-center gap-2"><BarChart2 className="w-4 h-4" /> DNA do Item</h2>
+            <p className="text-xs text-slate-400 mt-0.5">Contratos, secretarias e ordens vinculadas a este item</p>
           </div>
           <button onClick={onClose} className="p-0.5 rounded hover:bg-slate-700 text-white/80 hover:text-white">
             <X className="w-4 h-4" />
@@ -258,59 +274,151 @@ function RelatorioModal({ item, onClose }) {
         </div>
 
         {/* Info do item */}
-        <div className="px-6 py-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700/50">
-          <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Item selecionado</p>
+        <div className="px-6 py-3 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700/50 shrink-0">
+          <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Item</p>
           <p className="font-semibold text-gray-800 dark:text-slate-100 text-sm mt-0.5">{item.descricao}</p>
-          <div className="flex gap-4 mt-1 text-xs text-gray-500">
+          <div className="flex flex-wrap gap-4 mt-1 text-xs text-gray-500 dark:text-slate-400">
             <span>Código: <strong className="text-gray-700 dark:text-slate-300">{item.codigo || '—'}</strong></span>
-            <span>Unidade: <strong className="text-gray-700 dark:text-slate-300">{item.unidade_medida}</strong></span>
-            <span>Categoria: <strong className="text-gray-700 dark:text-slate-300">{item.categoria}</strong></span>
+            <span>Unidade: <strong className="text-gray-700 dark:text-slate-300">{item.unidade_medida || '—'}</strong></span>
+            <span>Categoria: <strong className="text-gray-700 dark:text-slate-300">{item.categoria || '—'}</strong></span>
+            <span>Status: <strong className={(item.status || '').toUpperCase() === 'ATIVO' ? 'text-green-600' : 'text-gray-500'}>{item.status}</strong></span>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
-          {usos.length === 0 ? (
-            <div className="text-center py-12 text-gray-400 dark:text-slate-500">
-              <BarChart2 className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p className="font-medium">Nenhum uso encontrado</p>
-              <p className="text-sm mt-1">Este item ainda não foi utilizado em nenhum contrato ou processo.</p>
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {loading && (
+            <div className="flex items-center gap-3 py-8 justify-center text-gray-400 dark:text-slate-500">
+              <span className="w-5 h-5 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
+              Carregando dados do item...
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">
-                  <th className="text-left px-3 py-2.5 font-semibold">Contrato / Processo</th>
-                  <th className="text-left px-3 py-2.5 font-semibold">Secretaria</th>
-                  <th className="text-right px-3 py-2.5 font-semibold">Qtd</th>
-                  <th className="text-right px-3 py-2.5 font-semibold">Valor Unit.</th>
-                  <th className="text-right px-3 py-2.5 font-semibold">Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
-                {usos.map((u, i) => (
-                  <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td className="px-3 py-2 font-medium text-blue-600">{u.contrato}</td>
-                    <td className="px-3 py-2 text-gray-600">{u.secretaria}</td>
-                    <td className="px-3 py-2 text-right">{u.quantidade}</td>
-                    <td className="px-3 py-2 text-right">{u.valor_unit}</td>
-                    <td className="px-3 py-2 text-right font-semibold">{u.total}</td>
-                  </tr>
+          )}
+
+          {erro && (
+            <div className="flex items-center gap-2 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 text-sm">
+              <AlertTriangle className="w-4 h-4 shrink-0" /> {erro}
+            </div>
+          )}
+
+          {dna && (
+            <>
+              {/* KPIs */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { label: 'Contratos', value: totalContratos, color: 'text-blue-600 dark:text-blue-400' },
+                  { label: 'Ordens', value: totalOrdens, color: 'text-purple-600 dark:text-purple-400' },
+                  { label: 'Valor em Contratos', value: fmt(valorTotalContratos), color: 'text-green-600 dark:text-green-400', small: true },
+                  { label: 'Valor em Ordens', value: fmt(valorTotalOrdens), color: 'text-teal-600 dark:text-teal-400', small: true },
+                ].map((k, i) => (
+                  <div key={i} className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3 border border-gray-100 dark:border-slate-600">
+                    <p className="text-xs text-gray-500 dark:text-slate-400">{k.label}</p>
+                    <p className={`font-bold mt-0.5 ${k.small ? 'text-sm' : 'text-xl'} ${k.color}`}>{k.value}</p>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-            </div>
+              </div>
+
+              {/* Seção: Contratos */}
+              <div>
+                <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                  <FileText className="w-3.5 h-3.5" /> Contratos ({totalContratos})
+                </h3>
+                {totalContratos === 0 ? (
+                  <p className="text-sm text-gray-400 dark:text-slate-500 italic">Este item não está vinculado a nenhum contrato.</p>
+                ) : (
+                  <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-slate-700">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                          <th className="text-left px-3 py-2 font-semibold">Nº Contrato</th>
+                          <th className="text-left px-3 py-2 font-semibold">Credor</th>
+                          <th className="text-left px-3 py-2 font-semibold">Secretaria</th>
+                          <th className="text-center px-3 py-2 font-semibold">Status</th>
+                          <th className="text-right px-3 py-2 font-semibold">Qtd</th>
+                          <th className="text-right px-3 py-2 font-semibold">Vl. Unit.</th>
+                          <th className="text-right px-3 py-2 font-semibold">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
+                        {dna.vinculosContrato.map((v, i) => (
+                          <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                            <td className="px-3 py-2 font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap">{v.contrato?.numero_contrato || '—'}</td>
+                            <td className="px-3 py-2 text-gray-700 dark:text-slate-300 max-w-[160px] truncate">{v.contrato?.credor?.nome_fantasia || v.contrato?.credor?.razao_social || '—'}</td>
+                            <td className="px-3 py-2 text-gray-600 dark:text-slate-400 max-w-[160px] truncate">{v.contrato?.secretaria || '—'}</td>
+                            <td className="px-3 py-2 text-center">
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${(v.contrato?.status || '').toUpperCase() === 'ATIVO' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-slate-400'}`}>
+                                {v.contrato?.status || '—'}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 text-right tabular-nums">{fmtQtd(v.quantidade)}</td>
+                            <td className="px-3 py-2 text-right tabular-nums">{fmt(v.valor_unitario)}</td>
+                            <td className="px-3 py-2 text-right font-semibold tabular-nums text-green-700 dark:text-green-400">{fmt(v.valor_total)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Seção: Ordens */}
+              <div>
+                <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                  <PackageOpen className="w-3.5 h-3.5" /> Ordens de Compra / Serviço ({totalOrdens})
+                </h3>
+                {totalOrdens === 0 ? (
+                  <p className="text-sm text-gray-400 dark:text-slate-500 italic">Este item não aparece em nenhuma ordem.</p>
+                ) : (
+                  <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-slate-700">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                          <th className="text-left px-3 py-2 font-semibold">Nº Ordem</th>
+                          <th className="text-left px-3 py-2 font-semibold">Tipo</th>
+                          <th className="text-left px-3 py-2 font-semibold">Contrato</th>
+                          <th className="text-left px-3 py-2 font-semibold">Secretaria</th>
+                          <th className="text-left px-3 py-2 font-semibold">Emissão</th>
+                          <th className="text-center px-3 py-2 font-semibold">Status</th>
+                          <th className="text-right px-3 py-2 font-semibold">Qtd</th>
+                          <th className="text-right px-3 py-2 font-semibold">Vl. Unit.</th>
+                          <th className="text-right px-3 py-2 font-semibold">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
+                        {dna.vinculosOrdem.map((v, i) => {
+                          const ordem = v.ordemPai
+                          return (
+                            <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                              <td className="px-3 py-2 font-semibold text-purple-600 dark:text-purple-400 whitespace-nowrap">{ordem?.numero || '—'}</td>
+                              <td className="px-3 py-2">
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${ordem?.tipo === 'COMPRA' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400'}`}>
+                                  {ordem?.tipo || '—'}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 text-blue-600 dark:text-blue-400 font-medium whitespace-nowrap">{ordem?.contrato?.numero_contrato || '—'}</td>
+                              <td className="px-3 py-2 text-gray-600 dark:text-slate-400 max-w-[140px] truncate">{ordem?.secretaria || ordem?.contrato?.secretaria || '—'}</td>
+                              <td className="px-3 py-2 whitespace-nowrap text-gray-500">{ordem?.data_emissao ? new Date(ordem.data_emissao).toLocaleDateString('pt-BR') : '—'}</td>
+                              <td className="px-3 py-2 text-center">
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${ordem?.status === 'ATENDIDA' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : ordem?.status === 'CANCELADA' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'}`}>
+                                  {ordem?.status || '—'}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 text-right tabular-nums">{fmtQtd(v.quantidade)}</td>
+                              <td className="px-3 py-2 text-right tabular-nums">{fmt(v.valor_unitario)}</td>
+                              <td className="px-3 py-2 text-right font-semibold tabular-nums text-teal-700 dark:text-teal-400">{fmt(v.valor_total)}</td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-slate-700/50 flex justify-between items-center">
-          <span className="text-xs text-gray-400">{usos.length} registro(s) encontrado(s)</span>
-          <div className="flex gap-3">
-            <button className="btn-secondary text-sm flex items-center gap-2">
-              <Printer className="w-4 h-4" /> Imprimir
-            </button>
-            <button onClick={onClose} className="btn-secondary text-sm">Fechar</button>
-          </div>
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-slate-700/50 flex justify-between items-center shrink-0">
+          <span className="text-xs text-gray-400">{totalContratos} contrato(s) · {totalOrdens} ordem(ns)</span>
+          <button onClick={onClose} className="btn-secondary text-sm">Fechar</button>
         </div>
       </div>
     </div>
@@ -646,12 +754,113 @@ function ExcluirInativosModal({ qtdInativos, onConfirm, onClose }) {
   )
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+//  MODAL: CONFIRMAR EXCLUSÃO DE ITENS SEM VÍNCULO
+// ══════════════════════════════════════════════════════════════════════════════
+function ExcluirSemVinculoModal({ onClose, onSucesso }) {
+  const [step, setStep] = useState('carregando') // carregando | preview | excluindo | done | erro
+  const [total, setTotal] = useState(0)
+  const [excluidos, setExcluidos] = useState(0)
+  const [erro, setErro] = useState(null)
+
+  useEffect(() => {
+    api.get('/contratos/itens/sem-vinculo/count')
+      .then(r => { setTotal(r.data.total); setStep('preview') })
+      .catch(() => { setErro('Erro ao consultar itens.'); setStep('erro') })
+  }, [])
+
+  const confirmar = async () => {
+    setStep('excluindo')
+    try {
+      const { data } = await api.delete('/contratos/itens/sem-vinculo')
+      setExcluidos(data.excluidos)
+      setStep('done')
+      onSucesso()
+    } catch {
+      setErro('Erro ao excluir itens.')
+      setStep('erro')
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="p-6 space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center shrink-0">
+              <XOctagon className="w-5 h-5 text-orange-600" />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-800 dark:text-slate-100">Excluir Itens Sem Vínculo</h3>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Remove itens que não estão em nenhum contrato</p>
+            </div>
+          </div>
+
+          {step === 'carregando' && (
+            <div className="flex items-center gap-3 py-2 text-sm text-gray-500 dark:text-slate-400">
+              <span className="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
+              Verificando itens sem vínculo...
+            </div>
+          )}
+
+          {step === 'preview' && (
+            <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded-lg p-4 space-y-1">
+              <p className="text-sm text-orange-800 dark:text-orange-300 font-medium">
+                {total > 0
+                  ? <><strong>{total.toLocaleString('pt-BR')}</strong> item(s) sem vínculo com contratos serão removidos do catálogo.</>
+                  : 'Nenhum item sem vínculo encontrado. Todos os itens estão vinculados a contratos.'
+                }
+              </p>
+              {total > 0 && <p className="text-xs text-orange-600 dark:text-orange-400">Itens vinculados a contratos não serão afetados. Esta ação não pode ser desfeita.</p>}
+            </div>
+          )}
+
+          {step === 'excluindo' && (
+            <div className="flex items-center gap-3 py-2 text-sm text-gray-500 dark:text-slate-400">
+              <span className="w-4 h-4 border-2 border-gray-300 border-t-orange-500 rounded-full animate-spin" />
+              Excluindo {total.toLocaleString('pt-BR')} item(s)...
+            </div>
+          )}
+
+          {step === 'done' && (
+            <div className="flex items-start gap-2 p-3 rounded-lg text-sm border bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700 text-green-800 dark:text-green-300">
+              <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+              <span><strong>{excluidos.toLocaleString('pt-BR')}</strong> item(s) removidos do catálogo com sucesso.</span>
+            </div>
+          )}
+
+          {step === 'erro' && (
+            <div className="flex items-start gap-2 p-3 rounded-lg text-sm border bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700 text-red-800 dark:text-red-300">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{erro}</span>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-1">
+            <button onClick={onClose} className="px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 text-sm text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 font-medium transition-all">
+              {step === 'done' ? 'Fechar' : 'Cancelar'}
+            </button>
+            {step === 'preview' && total > 0 && (
+              <button onClick={confirmar}
+                className="flex items-center gap-2 px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm">
+                <Trash2 className="w-4 h-4" /> Excluir {total.toLocaleString('pt-BR')} item(s)
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function TabItens() {
   const { user, tenant } = useAuth()
   const isAdmin = user?.tipo === 'admin' || user?.tipo === 'jeos'
   const urlImportacao = tenant?.configuracoes?.url_importacao_itens || ''
 
   const [itens, setItens] = useState([])
+  const [carregando, setCarregando] = useState(true)
+  const [progressoCarga, setProgressoCarga] = useState(0)
   const FILTROS_VAZIOS = { descricao: '', codigo: '', categoria: '', status: '' }
   const [filtros, setFiltros]           = useState(FILTROS_VAZIOS)
   const [filtrosAtivos, setFiltrosAtivos] = useState(FILTROS_VAZIOS)
@@ -660,11 +869,33 @@ function TabItens() {
   const [ordenar, setOrdenar]           = useState({ col: 'descricao', asc: true })
   const [pagina, setPagina]             = useState(1)
   const PER_PAGE_ITEM = 20
+  const cargaTimerRef = useRef(null)
 
-  const recarregarItens = () =>
-    api.get('/contratos/itens').then(r => setItens(r.data)).catch(() => {})
+  const recarregarItens = () => {
+    setCarregando(true)
+    setProgressoCarga(0)
+    let p = 0
+    cargaTimerRef.current = setInterval(() => {
+      p = Math.min(p + Math.random() * 8, 85)
+      setProgressoCarga(Math.round(p))
+    }, 150)
+    api.get('/contratos/itens')
+      .then(r => {
+        clearInterval(cargaTimerRef.current)
+        setProgressoCarga(100)
+        setItens(r.data)
+        setTimeout(() => setCarregando(false), 300)
+      })
+      .catch(() => {
+        clearInterval(cargaTimerRef.current)
+        setCarregando(false)
+      })
+  }
 
-  useEffect(() => { recarregarItens() }, [])
+  useEffect(() => {
+    recarregarItens()
+    return () => clearInterval(cargaTimerRef.current)
+  }, [])
 
   const setF = (k, v) => setFiltros(p => ({ ...p, [k]: v }))
 
@@ -680,12 +911,13 @@ function TabItens() {
   const f = filtrosAtivos
   const itensFiltrados = itens
     .filter(item => {
-      if (item.status === 'EXCLUÍDO') return false
+      const st = (item.status || '').toUpperCase()
+      if (st === 'EXCLUÍDO') return false
       if (f.descricao && !item.descricao.toLowerCase().includes(f.descricao.toLowerCase())) return false
       if (f.codigo && !String(item.codigo || '').includes(f.codigo)) return false
 
       if (f.categoria && item.categoria !== f.categoria) return false
-      if (f.status && item.status !== f.status) return false
+      if (f.status && st !== f.status.toUpperCase()) return false
       return true
     })
     .sort((a, b) => {
@@ -746,7 +978,7 @@ function TabItens() {
     } catch { alert('Erro ao excluir itens inativos.') }
   }
 
-  const qtdInativos = itens.filter(i => i.status === 'INATIVO').length
+  const qtdInativos = itens.filter(i => (i.status || '').toUpperCase() === 'INATIVO').length
 
   const podeAgir = !!itemSelecionado
 
@@ -757,7 +989,7 @@ function TabItens() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: 'Total Itens',  value: itens.length,                                              icon: PackageOpen,  color: 'from-blue-500 to-indigo-600'  },
-          { label: 'Ativos',       value: itens.filter(i => i.status === 'ATIVO').length,            icon: CheckCircle2, color: 'from-green-500 to-emerald-600' },
+          { label: 'Ativos',       value: itens.filter(i => (i.status || '').toUpperCase() === 'ATIVO').length,            icon: CheckCircle2, color: 'from-green-500 to-emerald-600' },
           { label: 'Filtrados',    value: itensFiltrados.length,                                     icon: Search,       color: 'from-purple-500 to-violet-600' },
           { label: 'Categorias',   value: new Set(itens.map(i => i.categoria).filter(Boolean)).size, icon: Tag,          color: 'from-teal-500 to-cyan-600'    },
         ].map((k, i) => (
@@ -826,6 +1058,27 @@ function TabItens() {
       </div>
 
       {/* ── Tabela ── */}
+      {carregando && (
+        <div className="card p-5 space-y-3">
+          <div className="flex items-center justify-between text-sm">
+            <span className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-medium">
+              <span className="w-4 h-4 border-2 border-blue-400/40 border-t-blue-500 rounded-full animate-spin" />
+              Carregando itens...
+            </span>
+            <span className="text-gray-400 dark:text-slate-500 text-xs tabular-nums">{progressoCarga}%</span>
+          </div>
+          <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+            <div
+              className="h-2 bg-blue-500 rounded-full transition-all duration-200"
+              style={{ width: `${progressoCarga}%` }}
+            />
+          </div>
+          {itens.length > 0 && (
+            <p className="text-xs text-gray-400 dark:text-slate-500">{itens.length.toLocaleString('pt-BR')} itens carregados até agora...</p>
+          )}
+        </div>
+      )}
+
       <div className="card overflow-hidden">
         <div className="overflow-x-auto" style={{ maxHeight: '380px', overflowY: 'auto' }}>
           <table className="w-full text-sm">
@@ -864,7 +1117,7 @@ function TabItens() {
                       sel
                         ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 text-gray-700 dark:text-slate-300'
-                    } ${item.status === 'EXCLUÍDO' ? 'opacity-50 line-through' : ''}`}
+                    } ${(item.status || '').toUpperCase() === 'EXCLUÍDO' ? 'opacity-50 line-through' : ''}`}
                   >
                     <td className="px-3 py-2 font-medium">{item.codigo || '—'}</td>
                     <td className="px-3 py-2 max-w-xs truncate font-medium">{item.descricao}</td>
@@ -872,9 +1125,9 @@ function TabItens() {
                     <td className="px-3 py-2">{item.categoria}</td>
                     <td className="px-3 py-2 text-center">
                       <span className={`font-bold px-2 py-0.5 rounded-full text-xs ${
-                        item.status === 'ATIVO'
+                        (item.status || '').toUpperCase() === 'ATIVO'
                           ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                          : item.status === 'EXCLUÍDO'
+                          : (item.status || '').toUpperCase() === 'EXCLUÍDO'
                           ? 'bg-red-100 text-red-700'
                           : 'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-400'
                       }`}>{item.status}</span>
@@ -992,6 +1245,10 @@ function TabItens() {
               className="flex items-center gap-1.5 px-4 py-1.5 bg-rose-700 hover:bg-rose-800 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
               <XOctagon className="w-4 h-4" /> Excluir Inativos
             </button>
+            <button onClick={() => setModal('excluir-sem-vinculo')}
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
+              <XOctagon className="w-4 h-4" /> Excluir Sem Vínculo
+            </button>
           </>
         )}
 
@@ -1038,6 +1295,12 @@ function TabItens() {
           qtdInativos={qtdInativos}
           onConfirm={excluirInativos}
           onClose={() => setModal(null)}
+        />
+      )}
+      {modal === 'excluir-sem-vinculo' && (
+        <ExcluirSemVinculoModal
+          onClose={() => setModal(null)}
+          onSucesso={recarregarItens}
         />
       )}
     </div>
