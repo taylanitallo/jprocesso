@@ -50,11 +50,15 @@ export function applyTimbradoToPage(doc) {
 // Retorna bloco CSS completo para prints HTML
 export function timbradoPrintCSS() {
   const { top, bottom, left, right } = getMargens()
-  const page = `body{padding:${top}mm ${right}mm ${bottom}mm ${left}mm;margin:0}`
+  // @page define tamanho A4 sem margem própria; padding no body cria as margens
+  const page = `@page{size:A4 portrait;margin:0}body{padding:${top}mm ${right}mm ${bottom}mm ${left}mm;margin:0;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}`
   if (!_timbrado) return page
+  // Usa dimensões absolutas A4 (210×297mm) para evitar corte em browsers mobile
   return `${page}
-    body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;
-      background-image:url("${_timbrado}");background-size:100% 100%;
-      background-repeat:no-repeat;opacity:0.75;z-index:-1;
-      -webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}`
+    body::before{content:'';display:block;position:fixed;top:0;left:0;
+      width:210mm;height:297mm;min-width:210mm;min-height:297mm;
+      background-image:url("${_timbrado}");
+      background-size:210mm 297mm;background-repeat:no-repeat;background-position:top left;
+      opacity:0.75;z-index:-1;pointer-events:none;
+      -webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}`
 }

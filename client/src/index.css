@@ -166,9 +166,10 @@ button, a, input, select, textarea {
 
 /* print */
 @media print {
+  @page { size: A4 portrait; margin: 0; }
   *,*::before,*::after { box-shadow:none !important; text-shadow:none !important; }
   html,body,#root { background:#fff !important; background-image:none !important; color:#111827 !important; height:auto !important; overflow:visible !important; }
-  .no-print,header,nav,footer,button,input,select,textarea,form { display:none !important; }
+  .no-print,header,nav,footer,aside,button,input,select,textarea,form { display:none !important; }
   .print-area { display:block !important; background:#fff !important; color:#111827 !important; width:100% !important; max-width:none !important; margin:0 !important; padding:24px !important; }
   .print-card { background:#fff !important; border:1px solid #d1d5db !important; color:#111827 !important; break-inside:avoid; page-break-inside:avoid; margin-bottom:20px; border-radius:12px; }
   .print-card-header { background:#f9fafb !important; border-bottom:1px solid #e5e7eb !important; }
@@ -178,3 +179,115 @@ button, a, input, select, textarea {
   .print-badge-atual { background:#d1fae5 !important; color:#065f46 !important; border:1px solid #6ee7b7 !important; }
   .print-title-violet { color:#4c1d95 !important; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE — Mobile & Tablet
+   Complementa as classes Tailwind para garantir usabilidade em telas
+   pequenas. Não altera comportamento em telas ≥ 1024px (desktop).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Scroll suave por toque em todos os contêineres overflow ─────────── */
+@media (max-width: 1023px) {
+  .overflow-x-auto,
+  .overflow-y-auto,
+  .overflow-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ── 2. Inputs e selects: fonte mínima 16px evita zoom automático no iOS ── */
+@media (max-width: 1023px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="search"],
+  input[type="date"],
+  input[type="time"],
+  input[type="tel"],
+  input[type="url"],
+  select,
+  textarea {
+    font-size: max(16px, 1em) !important;
+  }
+}
+
+/* ── 3. Grids sem variante responsiva: colapsar em celular ─────────────── */
+/* [class~="X"] = token exato; não afeta sm:grid-cols-X / md: / lg:        */
+@media (max-width: 639px) {
+  [class~="grid-cols-3"]:not([class*="sm:grid-cols"]):not([class*="md:grid-cols"]):not([class*="lg:grid-cols"]):not([class*="xl:grid-cols"]) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  [class~="grid-cols-4"]:not([class*="sm:grid-cols"]):not([class*="md:grid-cols"]):not([class*="lg:grid-cols"]):not([class*="xl:grid-cols"]) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  [class~="grid-cols-5"]:not([class*="sm:grid-cols"]):not([class*="md:grid-cols"]):not([class*="lg:grid-cols"]):not([class*="xl:grid-cols"]) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  [class~="grid-cols-6"]:not([class*="sm:grid-cols"]):not([class*="md:grid-cols"]):not([class*="lg:grid-cols"]):not([class*="xl:grid-cols"]) {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+/* Tablet (640–1023px): grids de 5+ colunas sem breakpoint responsivo      */
+@media (min-width: 640px) and (max-width: 1023px) {
+  [class~="grid-cols-5"]:not([class*="md:grid-cols"]):not([class*="lg:grid-cols"]):not([class*="xl:grid-cols"]) {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  [class~="grid-cols-6"]:not([class*="md:grid-cols"]):not([class*="lg:grid-cols"]):not([class*="xl:grid-cols"]) {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+/* ── 4. Modais: padding reduzido e largura máxima em celulares ─────────── */
+@media (max-width: 639px) {
+  /* Overlay do modal (fixed inset-0 flex items-center justify-center) */
+  [class~="fixed"][class~="inset-0"][class~="flex"][class~="items-center"][class~="justify-center"] {
+    padding: 0.375rem !important;
+  }
+  /* Caixas de modal: nunca ultrapassar a tela */
+  [class~="max-w-lg"],
+  [class~="max-w-xl"],
+  [class~="max-w-2xl"],
+  [class~="max-w-3xl"],
+  [class~="max-w-4xl"],
+  [class~="max-w-5xl"] {
+    max-width: calc(100vw - 0.75rem) !important;
+  }
+}
+
+/* ── 5. Tabelas: garantir scroll horizontal em mobile ──────────────────── */
+@media (max-width: 1023px) {
+  /* Tabelas dentro de contêineres overflow-x-auto: não limitar largura */
+  .overflow-x-auto > table {
+    min-width: max-content;
+  }
+}
+
+/* ── 6. PageHeader: actions wrapping em telas muito pequenas ────────────── */
+@media (max-width: 479px) {
+  /* Garante que botões de ação não ultrapassem a tela */
+  [class~="shrink-0"][class~="flex-wrap"] {
+    flex-shrink: 1 !important;
+    min-width: 0;
+  }
+}
+
+/* ── 7. Texto compacto em células de tabela em tablet ───────────────────── */
+@media (max-width: 1023px) {
+  table th { font-size: 0.75rem; }
+  table td { font-size: 0.8125rem; }
+}
+
+/* ── 8. Sidebar: em tablet (< 1024px) o conteúdo ocupa 100% da tela ────── */
+/* Tailwind's lg:pl-[260px] já é inativo em < 1024px — sem override adicional */
+
+/* ── 9. Assistente JAI: adaptar janela para celulares estreitos ─────────── */
+@media (max-width: 479px) {
+  /* Janela do chat: limitar largura ao viewport em celulares pequenos */
+  [class~="w-80"][class~="fixed"][class~="right-4"] {
+    width: calc(100vw - 1.5rem) !important;
+    right: 0.5rem !important;
+  }
+}
+

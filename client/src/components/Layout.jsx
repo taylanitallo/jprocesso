@@ -308,7 +308,7 @@ export default function Layout() {
                   </div>
                 </button>
                 {profileOpen && (
-                  <div className="absolute right-0 top-full mt-3 w-80 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700/50 rounded-2xl shadow-2xl z-[100] overflow-hidden">
+                  <div className="absolute right-0 top-full mt-3 w-72 sm:w-80 max-w-[calc(100vw-1rem)] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700/50 rounded-2xl shadow-2xl z-[100] overflow-hidden">
                     <div className="p-5 flex items-center gap-4 border-b border-gray-100 dark:border-slate-700/50">
                       <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-fuchsia-600 flex items-center justify-center text-white text-base font-bold flex-shrink-0">
                         {user?.nome?.charAt(0)?.toUpperCase() || '?'}
@@ -366,8 +366,14 @@ export default function Layout() {
       </div>
 
       {/* Rodapé fixo â€" largura total, sobre sidebar e conteúdo */}
-      <footer className="fixed bottom-0 left-0 right-0 z-40 h-8 flex items-center bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700/50 px-4">
-        <div className="w-full grid grid-cols-3 items-center text-[11px] text-gray-400 dark:text-slate-500">
+      <footer className="fixed bottom-0 left-0 right-0 z-40 h-8 flex items-center bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700/50 px-3 sm:px-4">
+        {/* Mobile: só nome do sistema + hora */}
+        <div className="sm:hidden w-full flex items-center justify-between text-[10px] text-gray-400 dark:text-slate-500">
+          <span className="font-medium text-gray-500 dark:text-slate-400 truncate">JEOS Sistema de Governo</span>
+          <span className="tabular-nums flex-shrink-0 ml-2">{fmtHora(now)}</span>
+        </div>
+        {/* Desktop: 3 colunas */}
+        <div className="hidden sm:grid w-full grid-cols-3 items-center text-[11px] text-gray-400 dark:text-slate-500">
           <span className="flex items-center gap-1 truncate">
             {geoLocation ? <>📍 {geoLocation}</> : <span className="opacity-40">localizando...</span>}
           </span>
