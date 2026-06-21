@@ -3,7 +3,7 @@ const router = express.Router();
 const {
   listCredores, createCredor, updateCredor, deleteCredor,
   listItens, createItem, updateItem, deleteItem,
-  importarItensUrl, excluirItensInativos,
+  importarItensUrl, excluirItensInativos, verificarItensUrl,
   listContratos, createContrato, updateContrato, deleteContrato,
   syncFromDids,
 } = require('../controllers/contratosController');
@@ -22,6 +22,7 @@ router.put('/credores/:id',   updateCredor);
 router.delete('/credores/:id', deleteCredor);
 
 // Catálogo de Itens
+router.post('/itens/verificar-url',  authorize('admin', 'jeos'), verificarItensUrl);
 router.post('/itens/importar-url',   authorize('admin', 'jeos'), importarItensUrl);
 router.delete('/itens/inativos',     authorize('admin', 'jeos'), excluirItensInativos);
 router.get('/itens',       listItens);

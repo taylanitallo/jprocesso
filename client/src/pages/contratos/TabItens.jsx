@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import {
   PackageOpen, Tag, FileText, Search, X, Plus, Edit3, Trash2, Eye,
   BarChart2, List, Check, AlertTriangle, Printer, ChevronUp, ChevronDown,
@@ -433,23 +433,53 @@ function ConfirmModal({ item, onConfirm, onClose }) {
 //  MODAL: IMPORTAR VIA URL
 // ══════════════════════════════════════════════════════════════════════════════
 function ImportarUrlModal({ urlConfigurada, onClose, onSucesso }) {
-  const [loading, setLoading] = useState(false)
+  // step: 'idle' | 'verificando' | 'preview' | 'importando' | 'done' | 'erro'
+  const [step, setStep] = useState('idle')
+  const [preview, setPreview] = useState(null)   // { total, novos, ja_existem }
+  const [progresso, setProgresso] = useState(0)
   const [resultado, setResultado] = useState(null)
+  const [erro, setErro] = useState(null)
+  const progressoRef = useRef(null)
 
-  const importar = async () => {
-    if (!urlConfigurada) return
-    setLoading(true)
-    setResultado(null)
+  const verificar = async () => {
+    setStep('verificando')
+    setErro(null)
     try {
-      const { data } = await api.post('/contratos/itens/importar-url', { url: urlConfigurada })
-      setResultado({ ok: true, ...data })
-      onSucesso()
+      const { data } = await api.post('/contratos/itens/verificar-url', { url: urlConfigurada })
+      setPreview(data)
+      setStep('preview')
     } catch (err) {
-      setResultado({ ok: false, msg: err.response?.data?.error || 'Erro ao importar itens.' })
-    } finally {
-      setLoading(false)
+      setErro(err.response?.data?.error || 'Erro ao verificar itens.')
+      setStep('erro')
     }
   }
+
+  const importar = async () => {
+    setStep('importando')
+    setProgresso(0)
+
+    // Simula progresso até 90%
+    let p = 0
+    progressoRef.current = setInterval(() => {
+      p = Math.min(p + Math.random() * 3, 90)
+      setProgresso(Math.round(p))
+    }, 300)
+
+    try {
+      const { data } = await api.post('/contratos/itens/importar-url', { url: urlConfigurada })
+      clearInterval(progressoRef.current)
+      setProgresso(100)
+      setResultado(data)
+      setStep('done')
+      onSucesso()
+    } catch (err) {
+      clearInterval(progressoRef.current)
+      setErro(err.response?.data?.error || 'Erro ao importar itens.')
+      setStep('erro')
+    }
+  }
+
+  useEffect(() => () => clearInterval(progressoRef.current), [])
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -461,7 +491,7 @@ function ImportarUrlModal({ urlConfigurada, onClose, onSucesso }) {
             </div>
             <div>
               <h3 className="font-bold text-gray-800 dark:text-slate-100">Importar Itens via URL</h3>
-              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Busca e importa itens da API configurada</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Busca e importa itens da fonte configurada</p>
             </div>
           </div>
 
@@ -470,40 +500,85 @@ function ImportarUrlModal({ urlConfigurada, onClose, onSucesso }) {
               <AlertTriangle className="w-4 h-4 inline mr-2" />
               Nenhuma URL configurada. Acesse <strong>Configurações → Import/Export</strong> e configure a URL da API de itens.
             </div>
-          ) : (
+          ) : (step === 'idle' || step === 'verificando') ? (
             <div className="space-y-3">
               <div>
                 <p className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">URL configurada</p>
                 <code className="block text-xs text-gray-700 dark:text-slate-300 bg-gray-100 dark:bg-slate-700 px-3 py-2 rounded-lg break-all">{urlConfigurada}</code>
               </div>
-              <p className="text-xs text-gray-400 dark:text-slate-500">Itens já existentes (mesma descrição) serão ignorados para evitar duplicatas.</p>
+              <p className="text-xs text-gray-400 dark:text-slate-500">Clique em Verificar para consultar quantos itens estão disponíveis para importação.</p>
             </div>
-          )}
-
-          {resultado && (
-            <div className={`flex items-start gap-2 p-3 rounded-lg text-sm border ${
-              resultado.ok
-                ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700 text-green-800 dark:text-green-300'
-                : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700 text-red-800 dark:text-red-300'
-            }`}>
-              {resultado.ok
-                ? <><CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" /><span>Importação concluída: <strong>{resultado.importados}</strong> item(s) importado(s), <strong>{resultado.ignorados}</strong> ignorado(s) de um total de {resultado.total}.</span></>
-                : <><AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /><span>{resultado.msg}</span></>
-              }
+          ) : step === 'preview' ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{preview.total}</p>
+                  <p className="text-xs text-blue-500 dark:text-blue-400 mt-0.5">encontrados</p>
+                </div>
+                <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{preview.novos}</p>
+                  <p className="text-xs text-green-500 dark:text-green-400 mt-0.5">novos</p>
+                </div>
+                <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-bold text-gray-500 dark:text-slate-400">{preview.ja_existem}</p>
+                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">já existem</p>
+                </div>
+              </div>
+              {preview.novos === 0 ? (
+                <p className="text-sm text-gray-500 dark:text-slate-400 text-center">Nenhum item novo para importar — todos já estão no catálogo.</p>
+              ) : (
+                <p className="text-sm text-gray-600 dark:text-slate-300 text-center"><strong>{preview.novos}</strong> item(s) serão adicionados ao catálogo.</p>
+              )}
             </div>
-          )}
+          ) : step === 'importando' ? (
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600 dark:text-slate-300 text-center">Importando {preview?.novos} item(s)...</p>
+              <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-3 overflow-hidden">
+                <div
+                  className="h-3 bg-blue-500 rounded-full transition-all duration-300"
+                  style={{ width: `${progresso}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-400 dark:text-slate-500 text-center">{progresso}%</p>
+            </div>
+          ) : step === 'done' ? (
+            <div className="flex items-start gap-2 p-3 rounded-lg text-sm border bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700 text-green-800 dark:text-green-300">
+              <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>Importação concluída: <strong>{resultado.importados}</strong> item(s) importado(s), <strong>{resultado.ignorados}</strong> ignorado(s) de um total de {resultado.total}.</span>
+            </div>
+          ) : step === 'erro' ? (
+            <div className="flex items-start gap-2 p-3 rounded-lg text-sm border bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700 text-red-800 dark:text-red-300">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{erro}</span>
+            </div>
+          ) : null}
 
           <div className="flex justify-end gap-3 pt-1">
             <button onClick={onClose} className="px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 text-sm text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 font-medium transition-all">
-              {resultado?.ok ? 'Fechar' : 'Cancelar'}
+              {step === 'done' ? 'Fechar' : 'Cancelar'}
             </button>
-            {urlConfigurada && !resultado?.ok && (
-              <button onClick={importar} disabled={loading}
-                className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm disabled:opacity-50">
-                {loading
-                  ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Importando...</>
-                  : <><Download className="w-4 h-4" /> Importar Agora</>
-                }
+
+            {urlConfigurada && step === 'idle' && (
+              <button onClick={verificar}
+                className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm">
+                <Download className="w-4 h-4" /> Verificar
+              </button>
+            )}
+            {step === 'verificando' && (
+              <button disabled className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold opacity-60">
+                <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Verificando...
+              </button>
+            )}
+            {step === 'preview' && preview?.novos > 0 && (
+              <button onClick={importar}
+                className="flex items-center gap-2 px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm">
+                <Download className="w-4 h-4" /> Importar {preview.novos} item(s)
+              </button>
+            )}
+            {step === 'erro' && (
+              <button onClick={() => setStep('idle')}
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm">
+                Tentar novamente
               </button>
             )}
           </div>

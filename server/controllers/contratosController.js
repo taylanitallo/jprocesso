@@ -344,6 +344,114 @@ const syncFromDids = async (req, res) => {
 };
 
 
+// ── HELPER: parsing de itens de uma resposta (JSON ou HTML) ────────────────
+function _parseItensFromResponse(responseData, contentType) {
+  const ct = (contentType || '').toLowerCase();
+
+  if (ct.includes('application/json')) {
+    let json = typeof responseData === 'string' ? JSON.parse(responseData) : responseData;
+    if (!Array.isArray(json)) return null;
+    return json.map(item => ({
+      descricao:      (item.descricao || '').toString().toUpperCase().trim(),
+      categoria:      item.categoria || 'COMPRAS',
+      unidade_medida: (item.unidade_medida || item.unidadeMedida || 'UNIDADE').toUpperCase(),
+      especificacao:  item.especificacao || item.detalhes || '',
+      catalogo: item.catalogo || '', classificacao: item.classificacao || '',
+      subclassificacao: item.subclassificacao || '', catmat_serv: item.catmat_serv || '',
+      lote: item.lote || '',
+      palavra1: item.palavra1 || '', palavra2: item.palavra2 || '',
+      palavra3: item.palavra3 || '', palavra4: item.palavra4 || '',
+    }));
+  }
+
+  // HTML scraping
+  const html = Buffer.isBuffer(responseData)
+    ? responseData.toString('utf-8')
+    : String(responseData);
+
+  const descs = [];
+  const units = [];
+  const cats  = [];
+
+  const descRe = /data-title="Descri[^"]*"[^>]*><p[^>]*>\s*([\s\S]*?)\s*<\/p>/gi;
+  const unitRe = /data-title="Unid[^"]*"[^>]*><p[^>]*>\s*([\s\S]*?)\s*<\/p>/gi;
+  const catRe  = /data-title="Categoria"[^>]*><p[^>]*>\s*([\s\S]*?)\s*<\/p>/gi;
+
+  let m;
+  while ((m = descRe.exec(html)) !== null) descs.push(m[1].replace(/<[^>]+>/g, '').trim());
+  while ((m = unitRe.exec(html)) !== null) units.push(m[1].replace(/<[^>]+>/g, '').trim());
+  while ((m = catRe.exec(html))  !== null)  cats.push(m[1].replace(/<[^>]+>/g, '').trim());
+
+  if (descs.length === 0) return null;
+
+  const mapCat = (c) => {
+    const u = (c || '').toUpperCase();
+    if (u.includes('MATERIAL')) return 'COMPRAS';
+    return 'SERVIÇOS';
+  };
+
+  return descs.map((desc, i) => ({
+    descricao:      desc.toUpperCase(),
+    categoria:      mapCat(cats[i] || ''),
+    unidade_medida: (units[i] || 'UNIDADE').toUpperCase(),
+    especificacao: '', catalogo: '', classificacao: '', subclassificacao: '',
+    catmat_serv: '', lote: '',
+    palavra1: '', palavra2: '', palavra3: '', palavra4: '',
+  }));
+}
+
+// ── VERIFICAR URL (sem inserir — retorna estatísticas) ──────────────────────
+const verificarItensUrl = async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url) return res.status(400).json({ error: 'URL não informada' });
+
+    const axios = require('axios');
+    const response = await axios.get(url, {
+      timeout: 60000,
+      responseType: 'arraybuffer',
+      headers: {
+        'Accept': 'text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept-Language': 'pt-BR,pt;q=0.9',
+      },
+    });
+
+    const ct = response.headers['content-type'] || 'text/html';
+    const candidatos = _parseItensFromResponse(response.data, ct);
+
+    if (!candidatos) {
+      return res.status(400).json({ error: 'Não foi possível encontrar itens na página. Verifique se a URL está correta.' });
+    }
+
+    const { ContratoItem } = req.models;
+    const existentes = await ContratoItem.findAll({
+      attributes: ['descricao'],
+      where: { status: { [Op.ne]: 'EXCLUÍDO' } },
+    });
+    const descSet = new Set(existentes.map(i => i.descricao.toUpperCase().trim()));
+
+    let novos = 0, jaExistem = 0;
+    for (const item of candidatos) {
+      if (!item.descricao || descSet.has(item.descricao)) jaExistem++;
+      else novos++;
+    }
+
+    res.json({
+      total: candidatos.length,
+      novos,
+      ja_existem: jaExistem,
+      amostra: candidatos.slice(0, 3).map(i => i.descricao),
+    });
+  } catch (err) {
+    console.error('verificarItensUrl:', err.message);
+    if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') {
+      return res.status(422).json({ error: `URL inacessível: ${err.message}` });
+    }
+    res.status(500).json({ error: `Erro ao verificar URL: ${err.message}` });
+  }
+};
+
 // ── IMPORTAR ITENS VIA URL EXTERNA ─────────────────────────────────────────
 const importarItensUrl = async (req, res) => {
   try {
@@ -351,55 +459,59 @@ const importarItensUrl = async (req, res) => {
     if (!url) return res.status(400).json({ error: 'URL não informada' });
 
     const axios = require('axios');
-    const { data } = await axios.get(url, { timeout: 30000 });
+    const response = await axios.get(url, {
+      timeout: 60000,
+      headers: { 'Accept': 'text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8',
+                 'User-Agent': 'Mozilla/5.0 (compatible; jProcesso/2.0)' },
+      responseType: 'arraybuffer',
+    });
 
-    if (!Array.isArray(data)) {
-      return res.status(400).json({ error: 'A URL deve retornar um array JSON de itens' });
+    const contentType = response.headers['content-type'] || '';
+    const candidatos = _parseItensFromResponse(response.data, contentType);
+
+    if (!candidatos || candidatos.length === 0) {
+      return res.status(400).json({ error: 'Não foi possível encontrar itens na página. Verifique se a URL está correta.' });
     }
 
+    // ── Deduplicação ─────────────────────────────────────────────────────────
     const { ContratoItem } = req.models;
+
+    // Carrega todas as descrições existentes de uma vez (O(1) lookup)
+    const existentes = await ContratoItem.findAll({
+      attributes: ['descricao'],
+      where: { status: { [Op.ne]: 'EXCLUÍDO' } },
+    });
+    const descSet = new Set(existentes.map(i => i.descricao.toUpperCase().trim()));
+
+    // Último código sequencial
     const ultimo = await ContratoItem.findOne({
       order: [['codigo', 'DESC']],
       where: { codigo: { [Op.not]: null } },
     });
     let proxNum = ultimo ? (parseInt(ultimo.codigo, 10) || 0) + 1 : 1;
 
-    let importados = 0;
+    // Filtrar e preparar registros novos
+    const novos = [];
     let ignorados = 0;
-
-    for (const item of data) {
-      if (!item.descricao) { ignorados++; continue; }
-      const descNorm = item.descricao.toString().toUpperCase().trim();
-      const existe = await ContratoItem.findOne({
-        where: { descricao: descNorm, status: { [Op.ne]: 'EXCLUÍDO' } },
+    for (const item of candidatos) {
+      if (!item.descricao || descSet.has(item.descricao)) { ignorados++; continue; }
+      descSet.add(item.descricao); // evitar duplicatas dentro do mesmo lote
+      novos.push({
+        ...item,
+        codigo: String(proxNum).padStart(5, '0'),
+        status: 'ATIVO',
+        validado: false,
       });
-      if (existe) { ignorados++; continue; }
-
-      const codigo = String(proxNum).padStart(5, '0');
       proxNum++;
-
-      await ContratoItem.create({
-        descricao:        descNorm,
-        categoria:        item.categoria || 'COMPRAS',
-        unidade_medida:   item.unidade_medida || item.unidadeMedida || 'UNIDADE',
-        codigo,
-        especificacao:    item.especificacao || item.detalhes || '',
-        palavra1:         item.palavra1 || '',
-        palavra2:         item.palavra2 || '',
-        palavra3:         item.palavra3 || '',
-        palavra4:         item.palavra4 || '',
-        catalogo:         item.catalogo || '',
-        classificacao:    item.classificacao || '',
-        subclassificacao: item.subclassificacao || '',
-        catmat_serv:      item.catmat_serv || item.catmatServ || '',
-        lote:             item.lote || '',
-        status:           'ATIVO',
-        validado:         false,
-      });
-      importados++;
     }
 
-    res.json({ importados, ignorados, total: data.length });
+    // ── Inserção em lotes de 500 ─────────────────────────────────────────────
+    const LOTE = 500;
+    for (let i = 0; i < novos.length; i += LOTE) {
+      await ContratoItem.bulkCreate(novos.slice(i, i + LOTE));
+    }
+
+    res.json({ importados: novos.length, ignorados, total: candidatos.length });
   } catch (err) {
     console.error('importarItensUrl:', err);
     if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') {
@@ -408,7 +520,7 @@ const importarItensUrl = async (req, res) => {
     if (err.response) {
       return res.status(422).json({ error: `Erro ao acessar URL: status ${err.response.status}` });
     }
-    res.status(500).json({ error: 'Erro ao importar itens' });
+    res.status(500).json({ error: `Erro ao importar itens: ${err.message}` });
   }
 };
 
@@ -430,7 +542,7 @@ const excluirItensInativos = async (req, res) => {
 module.exports = {
   listCredores, createCredor, updateCredor, deleteCredor,
   listItens, createItem, updateItem, deleteItem,
-  importarItensUrl, excluirItensInativos,
+  importarItensUrl, excluirItensInativos, verificarItensUrl,
   listContratos, createContrato, updateContrato, deleteContrato,
   syncFromDids,
 };
