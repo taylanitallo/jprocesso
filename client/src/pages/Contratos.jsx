@@ -12,7 +12,7 @@ export default function Contratos() {
   const { subdomain, tab: tabParam } = useParams()
   const navigate = useNavigate()
   const VALID_TABS_CTR = TABS.map(t => t.key)
-  const tab = VALID_TABS_CTR.includes(tabParam) ? tabParam : 'contratos'
+  const tab = VALID_TABS_CTR.includes(tabParam) ? tabParam : TABS[0].key
   const setTab = (key) => navigate(`/${subdomain}/contratos/${key}`)
 
   return (

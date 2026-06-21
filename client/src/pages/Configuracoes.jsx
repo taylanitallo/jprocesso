@@ -221,6 +221,27 @@ export default function Configuracoes() {
   const [exportLoading, setExportLoading] = useState('');
   const importInputRef = useRef(null);
 
+  // ── URL de integração para importação de itens
+  const [urlImportacaoItens, setUrlImportacaoItens] = useState(tenant?.configuracoes?.url_importacao_itens || '');
+  const [savingUrlImportacao, setSavingUrlImportacao] = useState(false);
+
+  useEffect(() => {
+    if (tenant?.configuracoes?.url_importacao_itens !== undefined)
+      setUrlImportacaoItens(tenant.configuracoes.url_importacao_itens || '');
+  }, [tenant?.configuracoes?.url_importacao_itens]);
+
+  const salvarUrlImportacao = async () => {
+    setSavingUrlImportacao(true);
+    try {
+      await updateTenantConfig({ url_importacao_itens: urlImportacaoItens.trim() });
+      feedback('✅ URL de importação salva!');
+    } catch (err) {
+      feedback(err.response?.data?.error || 'Erro ao salvar URL', true);
+    } finally {
+      setSavingUrlImportacao(false);
+    }
+  };
+
   const handleExport = async (tipo, formato = 'json') => {
     setExportLoading(tipo + formato);
     try {
@@ -803,6 +824,37 @@ export default function Configuracoes() {
                   >
                     <Upload className="h-4 w-4" />
                     Importar Dados
+                  </button>
+                </div>
+              </div>
+
+              <hr className="border-gray-200 dark:border-slate-700/50" />
+
+              {/* URL DE IMPORTAÇÃO DE ITENS */}
+              <div>
+                <SectionTitle icon={ArrowLeftRight} title="Integração — Catálogo de Itens" />
+                <p className="text-xs text-gray-400 dark:text-slate-500 mb-5">
+                  Configure o endereço de onde o sistema irá buscar itens ao clicar em <strong>"Importar Itens"</strong> na aba Itens do módulo Contratos. A URL deve retornar um array JSON com os campos <code className="bg-gray-100 dark:bg-slate-700/30 px-1 rounded text-xs">descricao</code>, <code className="bg-gray-100 dark:bg-slate-700/30 px-1 rounded text-xs">categoria</code> e <code className="bg-gray-100 dark:bg-slate-700/30 px-1 rounded text-xs">unidade_medida</code>.
+                </p>
+                <div className="flex gap-3 items-end max-w-xl">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">URL da API de Itens</label>
+                    <input
+                      type="url"
+                      value={urlImportacaoItens}
+                      onChange={e => setUrlImportacaoItens(e.target.value)}
+                      placeholder="https://api.exemplo.gov.br/itens"
+                      className="input-field text-sm font-mono"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={salvarUrlImportacao}
+                    disabled={savingUrlImportacao}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {savingUrlImportacao ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    Salvar
                   </button>
                 </div>
               </div>

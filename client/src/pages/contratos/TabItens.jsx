@@ -2,9 +2,10 @@
 import {
   PackageOpen, Tag, FileText, Search, X, Plus, Edit3, Trash2, Eye,
   BarChart2, List, Check, AlertTriangle, Printer, ChevronUp, ChevronDown,
-  CheckCircle2, ShoppingBag
+  CheckCircle2, ShoppingBag, Download, XOctagon
 } from 'lucide-react'
 import api from '../../services/api'
+import { useAuth } from '../../context/AuthContext'
 import {
   CATEGORIAS, UNIDADES, STATUS_ITEM, proximoCodigo,
   SectionCard, PremiumInput, PremiumSelect, PremiumTextarea
@@ -428,13 +429,159 @@ function ConfirmModal({ item, onConfirm, onClose }) {
 }
 
 
+// ══════════════════════════════════════════════════════════════════════════════
+//  MODAL: IMPORTAR VIA URL
+// ══════════════════════════════════════════════════════════════════════════════
+function ImportarUrlModal({ urlConfigurada, onClose, onSucesso }) {
+  const [loading, setLoading] = useState(false)
+  const [resultado, setResultado] = useState(null)
+
+  const importar = async () => {
+    if (!urlConfigurada) return
+    setLoading(true)
+    setResultado(null)
+    try {
+      const { data } = await api.post('/contratos/itens/importar-url', { url: urlConfigurada })
+      setResultado({ ok: true, ...data })
+      onSucesso()
+    } catch (err) {
+      setResultado({ ok: false, msg: err.response?.data?.error || 'Erro ao importar itens.' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="p-6 space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center shrink-0">
+              <Download className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-800 dark:text-slate-100">Importar Itens via URL</h3>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Busca e importa itens da API configurada</p>
+            </div>
+          </div>
+
+          {!urlConfigurada ? (
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4 text-sm text-amber-800 dark:text-amber-300">
+              <AlertTriangle className="w-4 h-4 inline mr-2" />
+              Nenhuma URL configurada. Acesse <strong>Configurações → Import/Export</strong> e configure a URL da API de itens.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">URL configurada</p>
+                <code className="block text-xs text-gray-700 dark:text-slate-300 bg-gray-100 dark:bg-slate-700 px-3 py-2 rounded-lg break-all">{urlConfigurada}</code>
+              </div>
+              <p className="text-xs text-gray-400 dark:text-slate-500">Itens já existentes (mesma descrição) serão ignorados para evitar duplicatas.</p>
+            </div>
+          )}
+
+          {resultado && (
+            <div className={`flex items-start gap-2 p-3 rounded-lg text-sm border ${
+              resultado.ok
+                ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700 text-green-800 dark:text-green-300'
+                : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700 text-red-800 dark:text-red-300'
+            }`}>
+              {resultado.ok
+                ? <><CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" /><span>Importação concluída: <strong>{resultado.importados}</strong> item(s) importado(s), <strong>{resultado.ignorados}</strong> ignorado(s) de um total de {resultado.total}.</span></>
+                : <><AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /><span>{resultado.msg}</span></>
+              }
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-1">
+            <button onClick={onClose} className="px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 text-sm text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 font-medium transition-all">
+              {resultado?.ok ? 'Fechar' : 'Cancelar'}
+            </button>
+            {urlConfigurada && !resultado?.ok && (
+              <button onClick={importar} disabled={loading}
+                className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm disabled:opacity-50">
+                {loading
+                  ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Importando...</>
+                  : <><Download className="w-4 h-4" /> Importar Agora</>
+                }
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  MODAL: CONFIRMAR EXCLUSÃO DE INATIVOS
+// ══════════════════════════════════════════════════════════════════════════════
+function ExcluirInativosModal({ qtdInativos, onConfirm, onClose }) {
+  const [loading, setLoading] = useState(false)
+
+  const confirmar = async () => {
+    setLoading(true)
+    await onConfirm()
+    setLoading(false)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center shrink-0">
+              <XOctagon className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-800 dark:text-slate-100">Excluir Itens Inativos</h3>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Ação restrita a administradores</p>
+            </div>
+          </div>
+
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4">
+            <p className="text-sm text-red-800 dark:text-red-300 font-medium">
+              {qtdInativos > 0
+                ? <><strong>{qtdInativos}</strong> item(s) com status <strong>INATIVO</strong> serão excluídos do catálogo.</>
+                : 'Nenhum item inativo encontrado no catálogo.'
+              }
+            </p>
+            {qtdInativos > 0 && (
+              <p className="text-xs text-red-600 dark:text-red-400 mt-1">Esta ação não pode ser desfeita.</p>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-3 pt-1">
+            <button onClick={onClose} className="px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 text-sm text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 font-medium transition-all">
+              Cancelar
+            </button>
+            {qtdInativos > 0 && (
+              <button onClick={confirmar} disabled={loading}
+                className="flex items-center gap-2 px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm disabled:opacity-50">
+                {loading
+                  ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Excluindo...</>
+                  : <><Trash2 className="w-4 h-4" /> Confirmar Exclusão</>
+                }
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function TabItens() {
+  const { user, tenant } = useAuth()
+  const isAdmin = user?.tipo === 'admin' || user?.tipo === 'jeos'
+  const urlImportacao = tenant?.configuracoes?.url_importacao_itens || ''
+
   const [itens, setItens] = useState([])
   const FILTROS_VAZIOS = { descricao: '', codigo: '', categoria: '', status: '' }
   const [filtros, setFiltros]           = useState(FILTROS_VAZIOS)
   const [filtrosAtivos, setFiltrosAtivos] = useState(FILTROS_VAZIOS)
   const [selecionado, setSelecionado]   = useState(null)
-  const [modal, setModal]               = useState(null) // 'novo'|'editar'|'visualizar'|'excluir'|'relatorio'|'listagem'
+  const [modal, setModal]               = useState(null) // 'novo'|'editar'|'visualizar'|'excluir'|'relatorio'|'listagem'|'importar-url'|'excluir-inativos'
   const [ordenar, setOrdenar]           = useState({ col: 'descricao', asc: true })
   const [pagina, setPagina]             = useState(1)
   const PER_PAGE_ITEM = 20
@@ -515,6 +662,16 @@ function TabItens() {
   const abrirVisualizar = () => { if (itemSelecionado) setModal('visualizar') }
   const abrirRelatorio = () => { if (itemSelecionado) setModal('relatorio') }
   const abrirListagem = () => { if (itemSelecionado) setModal('listagem') }
+
+  const excluirInativos = async () => {
+    try {
+      await api.delete('/contratos/itens/inativos')
+      setModal(null)
+      recarregarItens()
+    } catch { alert('Erro ao excluir itens inativos.') }
+  }
+
+  const qtdInativos = itens.filter(i => i.status === 'INATIVO').length
 
   const podeAgir = !!itemSelecionado
 
@@ -750,6 +907,19 @@ function TabItens() {
           <Eye className="w-4 h-4" /> Visualizar
         </button>
 
+        {isAdmin && (
+          <>
+            <button onClick={() => setModal('importar-url')}
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
+              <Download className="w-4 h-4" /> Importar Itens
+            </button>
+            <button onClick={() => setModal('excluir-inativos')}
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-rose-700 hover:bg-rose-800 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
+              <XOctagon className="w-4 h-4" /> Excluir Inativos
+            </button>
+          </>
+        )}
+
         <div className="flex-1" />
 
         <button onClick={abrirRelatorio} disabled={!podeAgir}
@@ -780,6 +950,20 @@ function TabItens() {
       )}
       {modal === 'listagem' && itemSelecionado && (
         <ListagemModal item={itemSelecionado} onClose={() => setModal(null)} />
+      )}
+      {modal === 'importar-url' && (
+        <ImportarUrlModal
+          urlConfigurada={urlImportacao}
+          onClose={() => setModal(null)}
+          onSucesso={recarregarItens}
+        />
+      )}
+      {modal === 'excluir-inativos' && (
+        <ExcluirInativosModal
+          qtdInativos={qtdInativos}
+          onConfirm={excluirInativos}
+          onClose={() => setModal(null)}
+        />
       )}
     </div>
   )

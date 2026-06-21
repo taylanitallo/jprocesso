@@ -6,7 +6,9 @@
       "PowerShell(Stop-Process -Force -Confirm:$false)",
       "PowerShell(Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"cd 'd:\\\\JEOS Sistemas\\\\jprocesso2'; npm run dev:full\" -WindowStyle Normal)",
       "PowerShell(Get-Process -Name \"node\" -ErrorAction SilentlyContinue | Stop-Process -Force -Confirm:$false; Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"cd 'd:\\\\JEOS Sistemas\\\\jprocesso2'; npm run dev:full\" -WindowStyle Normal; Write-Output \"Servidores reiniciados.\")",
-      "PowerShell(Get-Process -Name \"node\" -ErrorAction SilentlyContinue | Stop-Process -Force -Confirm:$false; Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"cd 'd:\\\\JEOS Sistemas\\\\jprocesso2'; npm run dev:full\" -WindowStyle Normal; Write-Output \"Reiniciado.\")"
+      "PowerShell(Get-Process -Name \"node\" -ErrorAction SilentlyContinue | Stop-Process -Force -Confirm:$false; Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"cd 'd:\\\\JEOS Sistemas\\\\jprocesso2'; npm run dev:full\" -WindowStyle Normal; Write-Output \"Reiniciado.\")",
+      "PowerShell(cd \"d:\\\\JEOS Sistemas\\\\jprocesso2\"; $env:NODE_ENV=\"development\"; Start-Process -FilePath \"node\" -ArgumentList \"server/index.js\" -WorkingDirectory \"d:\\\\JEOS Sistemas\\\\jprocesso2\" -WindowStyle Hidden; Write-Host \"Backend iniciado\")",
+      "PowerShell(Start-Sleep -Seconds 3; try { $r = Invoke-WebRequest -Uri \"http://localhost:5001/health\" -TimeoutSec 5 -UseBasicParsing; Write-Host \"Backend OK: $\\($r.StatusCode\\)\" } catch { Write-Host \"Backend: $_\" })"
     ]
   }
 }

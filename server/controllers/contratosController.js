@@ -344,9 +344,93 @@ const syncFromDids = async (req, res) => {
 };
 
 
+// ── IMPORTAR ITENS VIA URL EXTERNA ─────────────────────────────────────────
+const importarItensUrl = async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url) return res.status(400).json({ error: 'URL não informada' });
+
+    const axios = require('axios');
+    const { data } = await axios.get(url, { timeout: 30000 });
+
+    if (!Array.isArray(data)) {
+      return res.status(400).json({ error: 'A URL deve retornar um array JSON de itens' });
+    }
+
+    const { ContratoItem } = req.models;
+    const ultimo = await ContratoItem.findOne({
+      order: [['codigo', 'DESC']],
+      where: { codigo: { [Op.not]: null } },
+    });
+    let proxNum = ultimo ? (parseInt(ultimo.codigo, 10) || 0) + 1 : 1;
+
+    let importados = 0;
+    let ignorados = 0;
+
+    for (const item of data) {
+      if (!item.descricao) { ignorados++; continue; }
+      const descNorm = item.descricao.toString().toUpperCase().trim();
+      const existe = await ContratoItem.findOne({
+        where: { descricao: descNorm, status: { [Op.ne]: 'EXCLUÍDO' } },
+      });
+      if (existe) { ignorados++; continue; }
+
+      const codigo = String(proxNum).padStart(5, '0');
+      proxNum++;
+
+      await ContratoItem.create({
+        descricao:        descNorm,
+        categoria:        item.categoria || 'COMPRAS',
+        unidade_medida:   item.unidade_medida || item.unidadeMedida || 'UNIDADE',
+        codigo,
+        especificacao:    item.especificacao || item.detalhes || '',
+        palavra1:         item.palavra1 || '',
+        palavra2:         item.palavra2 || '',
+        palavra3:         item.palavra3 || '',
+        palavra4:         item.palavra4 || '',
+        catalogo:         item.catalogo || '',
+        classificacao:    item.classificacao || '',
+        subclassificacao: item.subclassificacao || '',
+        catmat_serv:      item.catmat_serv || item.catmatServ || '',
+        lote:             item.lote || '',
+        status:           'ATIVO',
+        validado:         false,
+      });
+      importados++;
+    }
+
+    res.json({ importados, ignorados, total: data.length });
+  } catch (err) {
+    console.error('importarItensUrl:', err);
+    if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') {
+      return res.status(422).json({ error: `URL inacessível: ${err.message}` });
+    }
+    if (err.response) {
+      return res.status(422).json({ error: `Erro ao acessar URL: status ${err.response.status}` });
+    }
+    res.status(500).json({ error: 'Erro ao importar itens' });
+  }
+};
+
+// ── EXCLUIR TODOS OS ITENS INATIVOS ────────────────────────────────────────
+const excluirItensInativos = async (req, res) => {
+  try {
+    const { ContratoItem } = req.models;
+    const [count] = await ContratoItem.update(
+      { status: 'EXCLUÍDO' },
+      { where: { status: 'INATIVO' } }
+    );
+    res.json({ excluidos: count });
+  } catch (err) {
+    console.error('excluirItensInativos:', err);
+    res.status(500).json({ error: 'Erro ao excluir itens inativos' });
+  }
+};
+
 module.exports = {
   listCredores, createCredor, updateCredor, deleteCredor,
   listItens, createItem, updateItem, deleteItem,
+  importarItensUrl, excluirItensInativos,
   listContratos, createContrato, updateContrato, deleteContrato,
   syncFromDids,
 };
