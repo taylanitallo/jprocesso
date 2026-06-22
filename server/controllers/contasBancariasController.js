@@ -43,7 +43,11 @@ const listContas = async (req, res) => {
     const { secretaria_id, ativo } = req.query;
 
     const where = {};
-    if (secretaria_id) where.secretaria_id = secretaria_id;
+    if (secretaria_id) {
+      where.secretaria_id = secretaria_id;
+    } else if (req.user.tipo !== 'admin' && req.user.tipo !== 'jeos' && req.user.secretariaId) {
+      where.secretaria_id = req.user.secretariaId;
+    }
     if (ativo !== undefined) where.ativo = ativo === 'true';
 
     const contas = await ContaBancaria.findAll({

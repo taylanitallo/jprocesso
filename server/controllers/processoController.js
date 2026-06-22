@@ -1083,7 +1083,7 @@ const getArquivoProcessos = async (req, res) => {
         model: Secretaria,
         as: 'secretaria',
         attributes: ['id', 'nome', 'sigla'],
-        ...(tipoUsuario === 'gestor' && req.user.secretariaId
+        ...((tipoUsuario === 'gestor' || tipoUsuario === 'operacional') && req.user.secretariaId
           ? { where: { id: req.user.secretariaId }, required: true }
           : {}),
       }],

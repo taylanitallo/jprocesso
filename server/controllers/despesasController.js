@@ -16,7 +16,11 @@ const listDespesas = async (req, res) => {
 
     const where = {};
     if (tipo && tipo !== 'TODOS') where.tipo = tipo;
-    if (secretaria) where.secretaria = { [Op.iLike]: `%${secretaria}%` };
+    if (secretaria) {
+      where.secretaria = { [Op.iLike]: `%${secretaria}%` };
+    } else if (req.user.tipo !== 'admin' && req.user.tipo !== 'jeos' && req.user.secretariaNome) {
+      where.secretaria = { [Op.iLike]: req.user.secretariaNome };
+    }
     if (data_de || data_ate) {
       where.data_emissao = {};
       if (data_de) where.data_emissao[Op.gte] = data_de;
