@@ -100,12 +100,12 @@ export default function Layout() {
   const menuItems = [
     { path: `/${subdomain}`,              icon: Home,        label: 'Dashboard',    exact: true },
     { path: `/${subdomain}/processos`,    icon: Inbox,       label: 'Processos',    modulo: 'processos' },
-    { path: `/${subdomain}/arquivo`,      icon: Archive,     label: 'Ger. de Arquivos', modulo: 'processos' },
+    { path: `/${subdomain}/arquivo`,      icon: Archive,     label: 'Ger. de Arquivos', modulo: 'processos',    permissao: 'acessar_arquivo' },
     { path: `/${subdomain}/almoxarifado`, icon: Package,     label: 'Almoxarifado', modulo: 'almoxarifado', permissao: 'acessar_almoxarifado' },
     { path: `/${subdomain}/patrimonio`,   icon: Landmark,    label: 'Patrimônio',   modulo: 'patrimonio',   permissao: 'acessar_almoxarifado' },
     { path: `/${subdomain}/financeiro`,   icon: DollarSign,  label: 'Financeiro',   modulo: 'financeiro',   permissao: 'acessar_financeiro' },
     { path: `/${subdomain}/contratos`,    icon: ScrollText,  label: 'Contratos',    modulo: 'contratos',    permissao: 'acessar_contratos' },
-    { path: `/${subdomain}/tesouraria`,   icon: Landmark,    label: 'Tesouraria',   modulo: 'tesouraria' },
+    { path: `/${subdomain}/tesouraria`,   icon: Landmark,    label: 'Tesouraria',   modulo: 'tesouraria',   permissao: 'acessar_tesouraria' },
   ]
 
   const adminMenuItems = [

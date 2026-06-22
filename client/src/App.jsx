@@ -172,7 +172,7 @@ function App() {
                 <Route path="enviados"           element={<EnviadosRedirect />} />
 
                 {/* Arquivo de Processos */}
-                <Route path="arquivo" element={<Arquivo />} />
+                <Route path="arquivo" element={<PermissionRoute permissao="acessar_arquivo"><Arquivo /></PermissionRoute>} />
 
                 {/* Organização */}
                 <Route path="organizacao"      element={<PermissionRoute permissao="gerenciar_secretarias"><Secretarias /></PermissionRoute>} />
@@ -180,8 +180,8 @@ function App() {
                 <Route path="secretarias"      element={<OrganizacaoRedirect />} />
 
                 {/* Tesouraria */}
-                <Route path="tesouraria"      element={<Tesouraria />} />
-                <Route path="tesouraria/:tab" element={<Tesouraria />} />
+                <Route path="tesouraria"      element={<PermissionRoute permissao="acessar_tesouraria"><Tesouraria /></PermissionRoute>} />
+                <Route path="tesouraria/:tab" element={<PermissionRoute permissao="acessar_tesouraria"><Tesouraria /></PermissionRoute>} />
 
                 {/* Usuários */}
                 <Route path="usuarios" element={<PermissionRoute permissao="gerenciar_usuarios"><Usuarios /></PermissionRoute>} />

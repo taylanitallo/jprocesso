@@ -135,7 +135,7 @@ export default function Usuarios() {
             permissoes: {
               criar_processo: true, editar_processo: true, excluir_processo: false,
               tramitar_processo: true, acessar_almoxarifado: false, acessar_financeiro: false,
-              acessar_contratos: false, visualizar_relatorios: false,
+              acessar_arquivo: false, acessar_contratos: false, acessar_tesouraria: false, visualizar_relatorios: false,
               gerenciar_usuarios: false, gerenciar_secretarias: false, gerenciar_configuracoes: false,
               visualizar_registros: false,
             },
@@ -394,22 +394,36 @@ export default function Usuarios() {
     { value: 'operacional', label: 'Operacional', color: 'green' },
   ];
 
-  const permissoesDisponiveis = [
-    // Processos
-    { key: 'criar_processo',       label: '📋 Criar Processos',       description: 'Abrir novos processos no sistema' },
-    { key: 'editar_processo',      label: '✏️ Editar Processos',      description: 'Editar dados de processos existentes' },
-    { key: 'excluir_processo',     label: '🗑️ Excluir Processos',     description: 'Excluir processos do sistema' },
-    { key: 'tramitar_processo',    label: '🔄 Tramitar Processos',    description: 'Tramitar e despachar processos entre setores' },
-    // Módulos
-    { key: 'acessar_almoxarifado', label: '📦 Almoxarifado',          description: 'Acessar o módulo de almoxarifado' },
-    { key: 'acessar_financeiro',   label: '💵 Financeiro / DID',      description: 'Acessar o módulo financeiro e empenhos' },
-    { key: 'acessar_contratos',    label: '📝 Contratos',             description: 'Acessar o módulo de contratos' },
-    // Administração
-    { key: 'visualizar_relatorios',  label: '📊 Relatórios',            description: 'Visualizar relatórios e estatísticas' },
-    { key: 'gerenciar_usuarios',     label: '👥 Gerenciar Usuários',    description: 'Criar, editar e excluir usuários' },
-    { key: 'gerenciar_secretarias',  label: '🏛️ Gerenciar Organização', description: 'Gerenciar secretarias e setores' },
-    { key: 'gerenciar_configuracoes',label: '⚙️ Configurações',         description: 'Acessar configurações do sistema' },
-    { key: 'visualizar_registros',   label: '📋 Registros de Atividade', description: 'Visualizar o histórico de ações dos usuários' },
+  const permissoesGrupos = [
+    {
+      grupo: 'Processos',
+      itens: [
+        { key: 'criar_processo',    label: 'Criar Processos',    description: 'Abrir novos processos no sistema' },
+        { key: 'editar_processo',   label: 'Editar Processos',   description: 'Editar dados de processos existentes' },
+        { key: 'excluir_processo',  label: 'Excluir Processos',  description: 'Excluir processos do sistema' },
+        { key: 'tramitar_processo', label: 'Tramitar Processos', description: 'Tramitar e despachar processos entre setores' },
+      ],
+    },
+    {
+      grupo: 'Módulos',
+      itens: [
+        { key: 'acessar_arquivo',      label: 'Ger. de Arquivos',   description: 'Acessar o gerenciador de arquivos e processos arquivados' },
+        { key: 'acessar_almoxarifado', label: 'Almoxarifado & Patrimônio', description: 'Acessar os módulos de almoxarifado e patrimônio' },
+        { key: 'acessar_financeiro',   label: 'Financeiro / DID',   description: 'Acessar o módulo financeiro e empenhos' },
+        { key: 'acessar_contratos',    label: 'Contratos',          description: 'Acessar o módulo de contratos' },
+        { key: 'acessar_tesouraria',   label: 'Tesouraria',         description: 'Acessar o módulo de tesouraria' },
+      ],
+    },
+    {
+      grupo: 'Administração',
+      itens: [
+        { key: 'visualizar_relatorios',   label: 'Relatórios',            description: 'Visualizar relatórios e estatísticas' },
+        { key: 'gerenciar_usuarios',      label: 'Gerenciar Usuários',    description: 'Criar, editar e excluir usuários' },
+        { key: 'gerenciar_secretarias',   label: 'Gerenciar Organização', description: 'Gerenciar secretarias e setores' },
+        { key: 'gerenciar_configuracoes', label: 'Configurações',         description: 'Acessar configurações do sistema' },
+        { key: 'visualizar_registros',    label: 'Registros de Atividade', description: 'Visualizar o histórico de ações dos usuários' },
+      ],
+    },
   ];
 
   return (
@@ -705,17 +719,24 @@ export default function Usuarios() {
 
               <div className="border-t dark:border-slate-700/50 pt-6">
                 <SectionTitle icon={Shield} title="Permissões de Acesso" />
-                <div className="bg-gray-50 dark:bg-slate-700/20 rounded-lg p-4 space-y-3">
-                  {permissoesDisponiveis.map((perm) => (
-                    <div key={perm.key} className="flex items-start justify-between py-2">
-                      <div className="flex-1">
-                        <label className="font-medium text-gray-800 dark:text-slate-200 text-sm">{perm.label}</label>
-                        <p className="text-xs text-gray-500 dark:text-slate-400">{perm.description}</p>
+                <div className="bg-gray-50 dark:bg-slate-700/20 rounded-lg p-4 space-y-4">
+                  {permissoesGrupos.map((grupo) => (
+                    <div key={grupo.grupo}>
+                      <p className="text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-2 pb-1 border-b border-gray-200 dark:border-slate-700">{grupo.grupo}</p>
+                      <div className="space-y-1">
+                        {grupo.itens.map((perm) => (
+                          <div key={perm.key} className="flex items-start justify-between py-2">
+                            <div className="flex-1">
+                              <label className="font-medium text-gray-800 dark:text-slate-200 text-sm">{perm.label}</label>
+                              <p className="text-xs text-gray-500 dark:text-slate-400">{perm.description}</p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer ml-4">
+                              <input type="checkbox" checked={!!formData.permissoes[perm.key]} onChange={(e) => setFormData({ ...formData, permissoes: { ...formData.permissoes, [perm.key]: e.target.checked } })} className="sr-only peer" />
+                              <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
+                            </label>
+                          </div>
+                        ))}
                       </div>
-                      <label className="relative inline-flex items-center cursor-pointer ml-4">
-                        <input type="checkbox" checked={formData.permissoes[perm.key]} onChange={(e) => setFormData({ ...formData, permissoes: { ...formData.permissoes, [perm.key]: e.target.checked } })} className="sr-only peer" />
-                        <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
-                      </label>
                     </div>
                   ))}
                 </div>
@@ -814,17 +835,24 @@ export default function Usuarios() {
               {/* Permissões */}
               <div className="border-t dark:border-slate-700/50 pt-6">
                 <SectionTitle icon={Shield} title="Permissões de Acesso" />
-                <div className="bg-gray-50 dark:bg-slate-700/20 rounded-lg p-4 space-y-3">
-                  {permissoesDisponiveis.map((perm) => (
-                    <div key={perm.key} className="flex items-start justify-between py-2">
-                      <div className="flex-1">
-                        <label className="font-medium text-gray-800 dark:text-slate-200 text-sm">{perm.label}</label>
-                        <p className="text-xs text-gray-500 dark:text-slate-400">{perm.description}</p>
+                <div className="bg-gray-50 dark:bg-slate-700/20 rounded-lg p-4 space-y-4">
+                  {permissoesGrupos.map((grupo) => (
+                    <div key={grupo.grupo}>
+                      <p className="text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-2 pb-1 border-b border-gray-200 dark:border-slate-700">{grupo.grupo}</p>
+                      <div className="space-y-1">
+                        {grupo.itens.map((perm) => (
+                          <div key={perm.key} className="flex items-start justify-between py-2">
+                            <div className="flex-1">
+                              <label className="font-medium text-gray-800 dark:text-slate-200 text-sm">{perm.label}</label>
+                              <p className="text-xs text-gray-500 dark:text-slate-400">{perm.description}</p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer ml-4">
+                              <input type="checkbox" checked={!!editData.permissoes[perm.key]} onChange={(e) => setEditData({ ...editData, permissoes: { ...editData.permissoes, [perm.key]: e.target.checked } })} className="sr-only peer" />
+                              <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
+                            </label>
+                          </div>
+                        ))}
                       </div>
-                      <label className="relative inline-flex items-center cursor-pointer ml-4">
-                        <input type="checkbox" checked={!!editData.permissoes[perm.key]} onChange={(e) => setEditData({ ...editData, permissoes: { ...editData.permissoes, [perm.key]: e.target.checked } })} className="sr-only peer" />
-                        <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
-                      </label>
                     </div>
                   ))}
                 </div>
