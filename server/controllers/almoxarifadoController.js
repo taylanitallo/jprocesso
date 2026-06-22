@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const xml2js = require('xml2js');
 const nfseService = require('../services/nfseService');
 const { registrarLog } = require('../middleware/activityLogger');
+const { applyScopeToWhere } = require('../utils/scopeFilter');
 
 // â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -780,10 +781,7 @@ const listRequisicoes = async (req, res) => {
 
     const where = {};
     if (status) where.status = status;
-    // Restringe ao usuário não-admin a apenas sua secretaria
-    if (req.user.tipo !== 'admin' && req.user.secretariaId) {
-      where.secretaria_id = req.user.secretariaId;
-    }
+    await applyScopeToWhere(where, req, 'secretaria_id', 'almoxarifado', 'requisicoes', 'ver');
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const { count, rows } = await AlmoxarifadoRequisicao.findAndCountAll({

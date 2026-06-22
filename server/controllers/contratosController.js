@@ -3,6 +3,7 @@
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const { Op } = require('sequelize');
 const { registrarLog } = require('../middleware/activityLogger');
+const { applyScopeToWhereByName } = require('../utils/scopeFilter');
 
 // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -211,11 +212,7 @@ const listContratos = async (req, res) => {
         { objeto: { [Op.iLike]: `%${q}%` } },
       ];
     }
-    // Restringe ao usuÃ¡rio nÃ£o-admin a apenas sua secretaria
-    if (req.user.tipo !== 'admin' && req.user.secretariaId && Secretaria) {
-      const sec = await Secretaria.findByPk(req.user.secretariaId, { attributes: ['nome'] });
-      if (sec) where.secretaria = sec.nome;
-    }
+    await applyScopeToWhereByName(where, req, 'secretaria', 'contratos', 'contratos', 'ver');
 
     const contratos = await Contrato.findAll({
       where,

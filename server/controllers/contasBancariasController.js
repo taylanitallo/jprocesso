@@ -1,5 +1,6 @@
 const axios = require('axios');
 const initializedSchemas = new Set();
+const { applyScopeToWhere } = require('../utils/scopeFilter');
 
 // Cache em memória — lista de bancos muda raramente
 let _bancosCache = null;
@@ -45,8 +46,8 @@ const listContas = async (req, res) => {
     const where = {};
     if (secretaria_id) {
       where.secretaria_id = secretaria_id;
-    } else if (req.user.tipo !== 'admin' && req.user.tipo !== 'jeos' && req.user.secretariaId) {
-      where.secretaria_id = req.user.secretariaId;
+    } else {
+      await applyScopeToWhere(where, req, 'secretaria_id', 'tesouraria', 'contas', 'ver');
     }
     if (ativo !== undefined) where.ativo = ativo === 'true';
 

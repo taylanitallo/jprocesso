@@ -2,6 +2,7 @@ const QRCode = require('qrcode');
 const crypto = require('crypto');
 const { Op, Sequelize } = require('sequelize');
 const { registrarLog } = require('../middleware/activityLogger');
+const { getScopeSetorInclude, getScopeSecretariaInclude } = require('../utils/scopeFilter');
 
 const createProcesso = async (req, res) => {
   const transaction = await req.tenantDb.transaction();
@@ -506,26 +507,30 @@ const listProcessos = async (req, res) => {
       Object.assign(where, accessCond);
     }
 
-    // Filtro por secretaria: param explícito tem prioridade; apenas gestor recebe filtro implícito
-    const secFiltro = secretariaId ||
-      (tipoUsuario === 'gestor' && req.user.secretariaId ? req.user.secretariaId : null);
+    // Scope de secretaria via setor: param explícito tem prioridade; caso contrário usa escopo da permissão
+    let scopeInclude = {}
+    if (secretariaId) {
+      scopeInclude = { where: { secretariaId }, required: true }
+    } else if (tipoUsuario !== 'operacional') {
+      // Operacional já tem filtro pessoal por setor/usuário; scope de secretaria se aplica a gestor e acima
+      scopeInclude = await getScopeSetorInclude(req, 'processos', 'ver')
+    }
 
     // Include Setor + Secretaria aninhada (com filtro opcional por secretaria)
     const setorInclude = {
       model: Setor,
       as: 'setorAtual',
       attributes: ['id', 'nome', 'sigla'],
-      required: !!secFiltro,
-      ...(secFiltro ? { where: { secretariaId: secFiltro } } : {}),
+      ...scopeInclude,
       include: [{ model: Secretaria, as: 'secretaria', attributes: ['id', 'nome', 'sigla'] }],
     };
 
     // ── 1. COUNT separado (evita quirks de findAndCountAll + separate:true) ──
     const countOptions = { where };
-    if (secFiltro) {
+    if (scopeInclude.where) {
       countOptions.include = [{
         model: Setor, as: 'setorAtual', required: true,
-        where: { secretariaId: secFiltro }, attributes: [],
+        ...scopeInclude, attributes: [],
       }];
     }
     const total = await Processo.count(countOptions);
@@ -1083,9 +1088,7 @@ const getArquivoProcessos = async (req, res) => {
         model: Secretaria,
         as: 'secretaria',
         attributes: ['id', 'nome', 'sigla'],
-        ...((tipoUsuario === 'gestor' || tipoUsuario === 'operacional') && req.user.secretariaId
-          ? { where: { id: req.user.secretariaId }, required: true }
-          : {}),
+        ...(await getScopeSecretariaInclude(req, 'processos', 'ver')),
       }],
     };
 

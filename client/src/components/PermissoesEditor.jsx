@@ -106,12 +106,74 @@ function Toggle({ checked, onChange }) {
   )
 }
 
+// ── Scope select — substitui o Toggle para ações "ver" ────────────────────────
+const SCOPE_OPTIONS = [
+  { value: 'none',    label: 'Bloqueado',     cls: 'bg-red-500 text-white' },
+  { value: 'propria', label: 'Só sua sec.',   cls: 'bg-blue-500 text-white' },
+  { value: 'todas',   label: 'Todas',         cls: 'bg-green-500 text-white' },
+  { value: 'algumas', label: 'Específicas…',  cls: 'bg-amber-500 text-white' },
+]
+
+function ScopeSelect({ value, onChange }) {
+  const normalized = value === false ? 'none'
+    : value === 'todas'   ? 'todas'
+    : value === 'algumas' ? 'algumas'
+    : 'propria'
+
+  const active = SCOPE_OPTIONS.find(o => o.value === normalized)
+
+  return (
+    <div className="relative inline-block">
+      <select
+        value={normalized}
+        onChange={e => {
+          const v = e.target.value
+          onChange(v === 'none' ? false : v)
+        }}
+        className={`h-5 text-[10px] font-semibold pl-1.5 pr-5 rounded border-0 appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-400 ${active?.cls ?? 'bg-gray-200 text-gray-600'}`}
+        style={{ minWidth: '82px' }}
+      >
+        {SCOPE_OPTIONS.map(o => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+      <span className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-[8px] opacity-60">▼</span>
+    </div>
+  )
+}
+
+// ── Checkboxes de secretarias para scope "Algumas" ────────────────────────────
+function SecretariasCheckboxes({ secretariaIds, secretariasList, onChange }) {
+  if (secretariasList.length === 0) {
+    return <span className="text-[10px] text-gray-400 italic">Nenhuma secretaria disponível</span>
+  }
+  return (
+    <div className="flex flex-wrap gap-x-3 gap-y-1">
+      {secretariasList.map(s => (
+        <label key={s.id} className="flex items-center gap-1 text-[10px] cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={(secretariaIds || []).includes(s.id)}
+            onChange={e => {
+              const ids = secretariaIds || []
+              onChange(e.target.checked ? [...ids, s.id] : ids.filter(id => id !== s.id))
+            }}
+            className="w-3 h-3 accent-blue-600"
+          />
+          <span className="text-gray-600 dark:text-slate-400">{s.sigla ? `${s.sigla} – ${s.nome}` : s.nome}</span>
+        </label>
+      ))}
+    </div>
+  )
+}
+
 // ── Componente principal ──────────────────────────────────────────────────────
-export default function PermissoesEditor({ permissoes, onChange }) {
+export default function PermissoesEditor({ permissoes, onChange, secretariasList = [] }) {
   const [open, setOpen] = useState({})
 
   const perm = permissoes ?? {}
 
+  // ── leitura/escrita de ações simples (boolean) ────────────────────────────
   const get = (modKey, ...path) => {
     const val = getIn(perm[modKey], path)
     return val !== false
@@ -119,6 +181,23 @@ export default function PermissoesEditor({ permissoes, onChange }) {
 
   const set = (modKey, value, ...path) => {
     const newMod = setIn(perm[modKey] ?? {}, path, value)
+    onChange({ ...perm, [modKey]: newMod })
+  }
+
+  // ── leitura/escrita de escopo de "ver" ────────────────────────────────────
+  // parentPath: [] para módulos diretos, ['abaKey'] para módulos com abas
+  const getVerScope = (modKey, ...parentPath) => {
+    const val  = getIn(perm[modKey], [...parentPath, 'ver'])
+    const secs = getIn(perm[modKey], [...parentPath, 'ver_secretarias']) || []
+    if (val === false)   return { scope: false,    secretariaIds: [] }
+    if (val === 'todas') return { scope: 'todas',  secretariaIds: [] }
+    if (val === 'algumas') return { scope: 'algumas', secretariaIds: secs }
+    return { scope: 'propria', secretariaIds: [] }
+  }
+
+  const setVerScope = (modKey, scope, secretariaIds, ...parentPath) => {
+    let newMod = setIn(perm[modKey] ?? {}, [...parentPath, 'ver'], scope)
+    newMod = setIn(newMod, [...parentPath, 'ver_secretarias'], scope === 'algumas' ? secretariaIds : [])
     onChange({ ...perm, [modKey]: newMod })
   }
 
@@ -156,41 +235,80 @@ export default function PermissoesEditor({ permissoes, onChange }) {
               </button>
             </div>
 
-            {/* Body — abas com ações */}
+            {/* Body */}
             {isOpen && (
               <div className="px-4 py-3 bg-white dark:bg-slate-800/30 border-t border-gray-100 dark:border-slate-700 space-y-2">
-                {/* Módulo com abas */}
-                {mod.abas?.map(aba => (
-                  <div key={aba.key} className="flex items-center gap-2 flex-wrap">
-                    <span className="w-28 shrink-0 text-xs text-gray-500 dark:text-slate-400 font-medium">{aba.label}</span>
-                    <div className="flex flex-wrap gap-3">
-                      {aba.acoes.map(acao => (
-                        <label key={acao.key} className="flex items-center gap-1.5 cursor-pointer select-none">
-                          <Toggle
-                            checked={get(mod.key, aba.key, acao.key)}
-                            onChange={v => set(mod.key, v, aba.key, acao.key)}
-                          />
-                          <span className="text-xs text-gray-600 dark:text-slate-300">{acao.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                ))}
 
-                {/* Módulo com acoes diretas (processos, administracao) */}
-                {mod.acoes && (
-                  <div className="flex flex-wrap gap-3">
-                    {mod.acoes.map(acao => (
-                      <label key={acao.key} className="flex items-center gap-1.5 cursor-pointer select-none">
-                        <Toggle
-                          checked={get(mod.key, acao.key)}
-                          onChange={v => set(mod.key, v, acao.key)}
-                        />
-                        <span className="text-xs text-gray-600 dark:text-slate-300">{acao.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
+                {/* Módulo com abas */}
+                {mod.abas?.map(aba => {
+                  const { scope: verScope, secretariaIds } = getVerScope(mod.key, aba.key)
+                  return (
+                    <div key={aba.key} className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="w-28 shrink-0 text-xs text-gray-500 dark:text-slate-400 font-medium">{aba.label}</span>
+                        <div className="flex flex-wrap gap-3 items-center">
+                          {aba.acoes.map(acao => (
+                            <div key={acao.key} className="flex items-center gap-1.5">
+                              {acao.key === 'ver' ? (
+                                <ScopeSelect
+                                  value={verScope}
+                                  onChange={s => setVerScope(mod.key, s, s === 'algumas' ? secretariaIds : [], aba.key)}
+                                />
+                              ) : (
+                                <Toggle checked={get(mod.key, aba.key, acao.key)} onChange={v => set(mod.key, v, aba.key, acao.key)} />
+                              )}
+                              <span className="text-xs text-gray-600 dark:text-slate-300">{acao.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      {verScope === 'algumas' && (
+                        <div className="ml-30 pl-1 pb-1">
+                          <SecretariasCheckboxes
+                            secretariaIds={secretariaIds}
+                            secretariasList={secretariasList}
+                            onChange={ids => setVerScope(mod.key, 'algumas', ids, aba.key)}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+
+                {/* Módulo com ações diretas (processos, administracao) */}
+                {mod.acoes && (() => {
+                  const hasVer = mod.acoes.some(a => a.key === 'ver')
+                  const { scope: verScope, secretariaIds } = hasVer ? getVerScope(mod.key) : { scope: 'propria', secretariaIds: [] }
+                  return (
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap gap-3 items-center">
+                        {mod.acoes.map(acao => (
+                          <div key={acao.key} className="flex items-center gap-1.5">
+                            {acao.key === 'ver' ? (
+                              <ScopeSelect
+                                value={verScope}
+                                onChange={s => setVerScope(mod.key, s, s === 'algumas' ? secretariaIds : [])}
+                              />
+                            ) : (
+                              <Toggle checked={get(mod.key, acao.key)} onChange={v => set(mod.key, v, acao.key)} />
+                            )}
+                            <span className="text-xs text-gray-600 dark:text-slate-300">{acao.label}</span>
+                          </div>
+                        ))}
+                      </div>
+                      {hasVer && verScope === 'algumas' && (
+                        <div className="pl-1 pb-1">
+                          <SecretariasCheckboxes
+                            secretariaIds={secretariaIds}
+                            secretariasList={secretariasList}
+                            onChange={ids => setVerScope(mod.key, 'algumas', ids)}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
+
               </div>
             )}
           </div>

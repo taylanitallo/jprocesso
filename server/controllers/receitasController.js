@@ -1,5 +1,6 @@
 const { Op } = require('sequelize');
 const initializedSchemas = new Set();
+const { applyScopeToWhere } = require('../utils/scopeFilter');
 
 async function ensureTable(req) {
   const schema = req.tenant?.schema;
@@ -27,9 +28,7 @@ const listReceitas = async (req, res) => {
     const contaWhere = {};
     if (banco)     contaWhere.banco_nome = { [Op.iLike]: `%${banco}%` };
     if (num_conta) contaWhere.conta      = { [Op.iLike]: `%${num_conta}%` };
-    if (req.user.tipo !== 'admin' && req.user.tipo !== 'jeos' && req.user.secretariaId) {
-      contaWhere.secretaria_id = req.user.secretariaId;
-    }
+    await applyScopeToWhere(contaWhere, req, 'secretaria_id', 'tesouraria', 'receitas', 'ver');
     const hasContaFilter = Object.keys(contaWhere).length > 0;
 
     const receitas = await TesReceita.findAll({

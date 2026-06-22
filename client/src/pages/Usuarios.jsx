@@ -661,6 +661,7 @@ export default function Usuarios() {
                   <PermissoesEditor
                     permissoes={formData.permissoes}
                     onChange={(p) => setFormData({ ...formData, permissoes: p })}
+                    secretariasList={secretarias}
                   />
                 </div>
               </div>
@@ -681,7 +682,7 @@ export default function Usuarios() {
       {/* Modal Editar Usuário */}
       {showEditModal && selectedUser && editData && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-xl max-w-4xl w-full my-8 shadow-xl">
+          <div className="bg-white dark:bg-slate-900 rounded-xl w-[95%] my-8 shadow-xl">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700/50 sticky top-0 bg-white dark:bg-slate-900 z-10">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100">Editar Usuário</h2>
               <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Atualize as informações e permissões</p>
@@ -762,6 +763,7 @@ export default function Usuarios() {
                   <PermissoesEditor
                     permissoes={editData.permissoes}
                     onChange={(p) => setEditData({ ...editData, permissoes: p })}
+                    secretariasList={secretarias}
                   />
                 </div>
               </div>

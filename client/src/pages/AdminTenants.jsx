@@ -1044,6 +1044,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                             <PermissoesEditor
                               permissoes={userForm.permissoes}
                               onChange={(p) => setUserForm(f => ({ ...f, permissoes: p }))}
+                              secretariasList={secretariasData?.secretarias || []}
                             />
                           </div>
                         )}
