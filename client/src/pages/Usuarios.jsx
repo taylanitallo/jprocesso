@@ -137,6 +137,7 @@ export default function Usuarios() {
               tramitar_processo: true, acessar_almoxarifado: false, acessar_financeiro: false,
               acessar_contratos: false, visualizar_relatorios: false,
               gerenciar_usuarios: false, gerenciar_secretarias: false, gerenciar_configuracoes: false,
+              visualizar_registros: false,
             },
           });
           results.push({ nome, status: 'ok', msg: 'Importado com sucesso' });

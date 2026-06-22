@@ -82,7 +82,8 @@ const defineUserModel = (sequelize) => {
         visualizar_relatorios: false,
         gerenciar_usuarios: false,
         gerenciar_secretarias: false,
-        gerenciar_configuracoes: false
+        gerenciar_configuracoes: false,
+        visualizar_registros: false
       },
       comment: 'Permissões específicas do usuário'
     },

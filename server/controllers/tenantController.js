@@ -368,8 +368,11 @@ async function migrarSchemaUsuarios(schema, pool) {
   await pool.query(`
     ALTER TABLE IF EXISTS ${schema}.usuarios
       ADD COLUMN IF NOT EXISTS nome_reduzido VARCHAR(60),
-      ADD COLUMN IF NOT EXISTS permissoes JSONB NOT NULL DEFAULT '{"criar_processo":true,"editar_processo":true,"excluir_processo":false,"tramitar_processo":true,"acessar_almoxarifado":false,"acessar_financeiro":false,"acessar_contratos":false,"visualizar_relatorios":false,"gerenciar_usuarios":false,"gerenciar_secretarias":false,"gerenciar_configuracoes":false}'::jsonb;
+      ADD COLUMN IF NOT EXISTS permissoes JSONB NOT NULL DEFAULT '{"criar_processo":true,"editar_processo":true,"excluir_processo":false,"tramitar_processo":true,"acessar_almoxarifado":false,"acessar_financeiro":false,"acessar_contratos":false,"visualizar_relatorios":false,"gerenciar_usuarios":false,"gerenciar_secretarias":false,"gerenciar_configuracoes":false,"visualizar_registros":false}'::jsonb;
     ALTER TABLE IF EXISTS ${schema}.usuarios ALTER COLUMN email DROP NOT NULL;
+    UPDATE ${schema}.usuarios
+      SET permissoes = permissoes || '{"visualizar_registros":false}'::jsonb
+      WHERE NOT (permissoes ? 'visualizar_registros');
   `);
 
   // processos
@@ -810,7 +813,7 @@ async function criarEstruturaIsolada(schema, tenant, usuarioAdmin) {
         ativo BOOLEAN DEFAULT TRUE,
         secretaria_id UUID REFERENCES ${schema}.secretarias(id),
         setor_id UUID REFERENCES ${schema}.setores(id),
-        permissoes JSONB NOT NULL DEFAULT '{"criar_processo":true,"editar_processo":true,"excluir_processo":false,"tramitar_processo":true,"acessar_almoxarifado":false,"acessar_financeiro":false,"acessar_contratos":false,"visualizar_relatorios":false,"gerenciar_usuarios":false,"gerenciar_secretarias":false,"gerenciar_configuracoes":false}'::jsonb,
+        permissoes JSONB NOT NULL DEFAULT '{"criar_processo":true,"editar_processo":true,"excluir_processo":false,"tramitar_processo":true,"acessar_almoxarifado":false,"acessar_financeiro":false,"acessar_contratos":false,"visualizar_relatorios":false,"gerenciar_usuarios":false,"gerenciar_secretarias":false,"gerenciar_configuracoes":false,"visualizar_registros":false}'::jsonb,
         ultimo_acesso TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
