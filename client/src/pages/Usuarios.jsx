@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import PermissoesEditor from '../components/PermissoesEditor';
 import PageHeader from '../components/ui/PageHeader';
 import LoadingBar from '../components/LoadingBar';
 import StatCard from '../components/ui/StatCard';
@@ -31,6 +32,17 @@ import {
   FileSpreadsheet,
   ChevronDown
 } from 'lucide-react';
+
+const DEFAULT_PERMISSOES = () => ({
+  processos:     { ver: true, criar: true, editar: true, excluir: false, tramitar: true, devolver: true, concluir: true, arquivar: false, anexar_documento: true, excluir_documento: false },
+  arquivo:       { acessar: false },
+  almoxarifado:  { acessar: false, painel: { ver: true }, estoque: { ver: true, editar: true }, entradas: { ver: true, registrar: true }, saidas: { ver: true, registrar: true }, requisicoes: { ver: true, criar: true, aprovar: false, cancelar: false }, cotas: { ver: true, gerenciar: false }, inventario: { ver: true, realizar: false }, auditoria: { ver: false } },
+  patrimonio:    { acessar: false, painel: { ver: true }, bens: { ver: true, criar: false, editar: false, excluir: false }, tombamento: { ver: true, realizar: false }, transferencia: { ver: true, realizar: false }, baixa: { ver: true, realizar: false }, inventario: { ver: true, realizar: false }, grupos: { ver: false, gerenciar: false } },
+  financeiro:    { acessar: false, painel: { ver: true }, processos_did: { ver: true }, relatorio: { ver: false } },
+  contratos:     { acessar: false, itens: { ver: true, criar: false, editar: false, excluir: false }, credores: { ver: true, criar: false, editar: false, excluir: false }, contratos: { ver: true, criar: false, editar: false, excluir: false }, ordens: { ver: true, criar: false, editar: false, excluir: false }, relatorios: { ver: true } },
+  tesouraria:    { acessar: false, contas: { ver: true, criar: false, editar: false, excluir: false }, receitas: { ver: true, criar: false, editar: false, excluir: false }, despesas: { ver: true, criar: false, editar: false, excluir: false }, relatorios: { ver: true } },
+  administracao: { gerenciar_usuarios: false, gerenciar_secretarias: false, gerenciar_configuracoes: false, visualizar_relatorios: false, visualizar_registros: false },
+})
 
 export default function Usuarios() {
   const { user, refreshUser } = useAuth();
@@ -132,13 +144,7 @@ export default function Usuarios() {
             tipo,
             secretariaId: secretaria?.id || null,
             setorId: setor?.id || null,
-            permissoes: {
-              criar_processo: true, editar_processo: true, excluir_processo: false,
-              tramitar_processo: true, acessar_almoxarifado: false, acessar_financeiro: false,
-              acessar_arquivo: false, acessar_contratos: false, acessar_tesouraria: false, visualizar_relatorios: false,
-              gerenciar_usuarios: false, gerenciar_secretarias: false, gerenciar_configuracoes: false,
-              visualizar_registros: false,
-            },
+            permissoes: DEFAULT_PERMISSOES(),
           });
           results.push({ nome, status: 'ok', msg: 'Importado com sucesso' });
         } catch (err) {
@@ -204,19 +210,7 @@ export default function Usuarios() {
     tipo: 'operacional',
     secretariaId: '',
     setorId: '',
-    permissoes: {
-      criar_processo: true,
-      editar_processo: true,
-      excluir_processo: false,
-      tramitar_processo: true,
-      acessar_almoxarifado: false,
-      acessar_financeiro: false,
-      acessar_contratos: false,
-      visualizar_relatorios: false,
-      gerenciar_usuarios: false,
-      gerenciar_secretarias: false,
-      gerenciar_configuracoes: false,
-    },
+    permissoes: DEFAULT_PERMISSOES(),
   });
 
   const handleSubmit = async (e) => {
@@ -241,19 +235,7 @@ export default function Usuarios() {
         tipo: 'operacional',
         secretariaId: '',
         setorId: '',
-        permissoes: {
-          criar_processo: true,
-          editar_processo: true,
-          excluir_processo: false,
-          tramitar_processo: true,
-          acessar_almoxarifado: false,
-          acessar_financeiro: false,
-          acessar_contratos: false,
-          visualizar_relatorios: false,
-          gerenciar_usuarios: false,
-          gerenciar_secretarias: false,
-          gerenciar_configuracoes: false,
-        },
+        permissoes: DEFAULT_PERMISSOES(),
       });
       
       setSuccessMessage('Usuário criado com sucesso!');
@@ -278,20 +260,7 @@ export default function Usuarios() {
       setorId: usuario.setor?.id || usuario.setorId || '',
       ativo: usuario.ativo,
       novaSenha: '',
-      permissoes: {
-        criar_processo: true,
-        editar_processo: true,
-        excluir_processo: false,
-        tramitar_processo: true,
-        acessar_almoxarifado: false,
-        acessar_financeiro: false,
-        acessar_contratos: false,
-        visualizar_relatorios: false,
-        gerenciar_usuarios: false,
-        gerenciar_secretarias: false,
-        gerenciar_configuracoes: false,
-        ...(usuario.permissoes || {}),
-      },
+      permissoes: { ...DEFAULT_PERMISSOES(), ...(usuario.permissoes || {}) },
     });
     setShowEditPassword(false);
     setShowEditModal(true);
@@ -394,37 +363,6 @@ export default function Usuarios() {
     { value: 'operacional', label: 'Operacional', color: 'green' },
   ];
 
-  const permissoesGrupos = [
-    {
-      grupo: 'Processos',
-      itens: [
-        { key: 'criar_processo',    label: 'Criar Processos',    description: 'Abrir novos processos no sistema' },
-        { key: 'editar_processo',   label: 'Editar Processos',   description: 'Editar dados de processos existentes' },
-        { key: 'excluir_processo',  label: 'Excluir Processos',  description: 'Excluir processos do sistema' },
-        { key: 'tramitar_processo', label: 'Tramitar Processos', description: 'Tramitar e despachar processos entre setores' },
-      ],
-    },
-    {
-      grupo: 'Módulos',
-      itens: [
-        { key: 'acessar_arquivo',      label: 'Ger. de Arquivos',   description: 'Acessar o gerenciador de arquivos e processos arquivados' },
-        { key: 'acessar_almoxarifado', label: 'Almoxarifado & Patrimônio', description: 'Acessar os módulos de almoxarifado e patrimônio' },
-        { key: 'acessar_financeiro',   label: 'Financeiro / DID',   description: 'Acessar o módulo financeiro e empenhos' },
-        { key: 'acessar_contratos',    label: 'Contratos',          description: 'Acessar o módulo de contratos' },
-        { key: 'acessar_tesouraria',   label: 'Tesouraria',         description: 'Acessar o módulo de tesouraria' },
-      ],
-    },
-    {
-      grupo: 'Administração',
-      itens: [
-        { key: 'visualizar_relatorios',   label: 'Relatórios',            description: 'Visualizar relatórios e estatísticas' },
-        { key: 'gerenciar_usuarios',      label: 'Gerenciar Usuários',    description: 'Criar, editar e excluir usuários' },
-        { key: 'gerenciar_secretarias',   label: 'Gerenciar Organização', description: 'Gerenciar secretarias e setores' },
-        { key: 'gerenciar_configuracoes', label: 'Configurações',         description: 'Acessar configurações do sistema' },
-        { key: 'visualizar_registros',    label: 'Registros de Atividade', description: 'Visualizar o histórico de ações dos usuários' },
-      ],
-    },
-  ];
 
   return (
     <div className="max-w-7xl mx-auto space-y-5 animate-fade-in">
@@ -719,26 +657,11 @@ export default function Usuarios() {
 
               <div className="border-t dark:border-slate-700/50 pt-6">
                 <SectionTitle icon={Shield} title="Permissões de Acesso" />
-                <div className="bg-gray-50 dark:bg-slate-700/20 rounded-lg p-4 space-y-4">
-                  {permissoesGrupos.map((grupo) => (
-                    <div key={grupo.grupo}>
-                      <p className="text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-2 pb-1 border-b border-gray-200 dark:border-slate-700">{grupo.grupo}</p>
-                      <div className="space-y-1">
-                        {grupo.itens.map((perm) => (
-                          <div key={perm.key} className="flex items-start justify-between py-2">
-                            <div className="flex-1">
-                              <label className="font-medium text-gray-800 dark:text-slate-200 text-sm">{perm.label}</label>
-                              <p className="text-xs text-gray-500 dark:text-slate-400">{perm.description}</p>
-                            </div>
-                            <label className="relative inline-flex items-center cursor-pointer ml-4">
-                              <input type="checkbox" checked={!!formData.permissoes[perm.key]} onChange={(e) => setFormData({ ...formData, permissoes: { ...formData.permissoes, [perm.key]: e.target.checked } })} className="sr-only peer" />
-                              <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                <div className="mt-3">
+                  <PermissoesEditor
+                    permissoes={formData.permissoes}
+                    onChange={(p) => setFormData({ ...formData, permissoes: p })}
+                  />
                 </div>
               </div>
 
@@ -835,26 +758,11 @@ export default function Usuarios() {
               {/* Permissões */}
               <div className="border-t dark:border-slate-700/50 pt-6">
                 <SectionTitle icon={Shield} title="Permissões de Acesso" />
-                <div className="bg-gray-50 dark:bg-slate-700/20 rounded-lg p-4 space-y-4">
-                  {permissoesGrupos.map((grupo) => (
-                    <div key={grupo.grupo}>
-                      <p className="text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-2 pb-1 border-b border-gray-200 dark:border-slate-700">{grupo.grupo}</p>
-                      <div className="space-y-1">
-                        {grupo.itens.map((perm) => (
-                          <div key={perm.key} className="flex items-start justify-between py-2">
-                            <div className="flex-1">
-                              <label className="font-medium text-gray-800 dark:text-slate-200 text-sm">{perm.label}</label>
-                              <p className="text-xs text-gray-500 dark:text-slate-400">{perm.description}</p>
-                            </div>
-                            <label className="relative inline-flex items-center cursor-pointer ml-4">
-                              <input type="checkbox" checked={!!editData.permissoes[perm.key]} onChange={(e) => setEditData({ ...editData, permissoes: { ...editData.permissoes, [perm.key]: e.target.checked } })} className="sr-only peer" />
-                              <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                <div className="mt-3">
+                  <PermissoesEditor
+                    permissoes={editData.permissoes}
+                    onChange={(p) => setEditData({ ...editData, permissoes: p })}
+                  />
                 </div>
               </div>
 

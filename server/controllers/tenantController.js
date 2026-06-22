@@ -368,16 +368,85 @@ async function migrarSchemaUsuarios(schema, pool) {
   await pool.query(`
     ALTER TABLE IF EXISTS ${schema}.usuarios
       ADD COLUMN IF NOT EXISTS nome_reduzido VARCHAR(60),
-      ADD COLUMN IF NOT EXISTS permissoes JSONB NOT NULL DEFAULT '{"criar_processo":true,"editar_processo":true,"excluir_processo":false,"tramitar_processo":true,"acessar_arquivo":false,"acessar_almoxarifado":false,"acessar_financeiro":false,"acessar_contratos":false,"acessar_tesouraria":false,"visualizar_relatorios":false,"gerenciar_usuarios":false,"gerenciar_secretarias":false,"gerenciar_configuracoes":false,"visualizar_registros":false}'::jsonb;
+      ADD COLUMN IF NOT EXISTS permissoes JSONB NOT NULL DEFAULT '{"processos":{"ver":true,"criar":true,"editar":true,"excluir":false,"tramitar":true,"devolver":true,"concluir":true,"arquivar":false,"anexar_documento":true,"excluir_documento":false},"arquivo":{"acessar":false},"almoxarifado":{"acessar":false,"painel":{"ver":true},"estoque":{"ver":true,"editar":true},"entradas":{"ver":true,"registrar":true},"saidas":{"ver":true,"registrar":true},"requisicoes":{"ver":true,"criar":true,"aprovar":false,"cancelar":false},"cotas":{"ver":true,"gerenciar":false},"inventario":{"ver":true,"realizar":false},"auditoria":{"ver":false}},"patrimonio":{"acessar":false,"painel":{"ver":true},"bens":{"ver":true,"criar":false,"editar":false,"excluir":false},"tombamento":{"ver":true,"realizar":false},"transferencia":{"ver":true,"realizar":false},"baixa":{"ver":true,"realizar":false},"inventario":{"ver":true,"realizar":false},"grupos":{"ver":false,"gerenciar":false}},"financeiro":{"acessar":false,"painel":{"ver":true},"processos_did":{"ver":true},"relatorio":{"ver":false}},"contratos":{"acessar":false,"itens":{"ver":true,"criar":false,"editar":false,"excluir":false},"credores":{"ver":true,"criar":false,"editar":false,"excluir":false},"contratos":{"ver":true,"criar":false,"editar":false,"excluir":false},"ordens":{"ver":true,"criar":false,"editar":false,"excluir":false},"relatorios":{"ver":true}},"tesouraria":{"acessar":false,"contas":{"ver":true,"criar":false,"editar":false,"excluir":false},"receitas":{"ver":true,"criar":false,"editar":false,"excluir":false},"despesas":{"ver":true,"criar":false,"editar":false,"excluir":false},"relatorios":{"ver":true}},"administracao":{"gerenciar_usuarios":false,"gerenciar_secretarias":false,"gerenciar_configuracoes":false,"visualizar_relatorios":false,"visualizar_registros":false}}'::jsonb;
     ALTER TABLE IF EXISTS ${schema}.usuarios ALTER COLUMN email DROP NOT NULL;
-    UPDATE ${schema}.usuarios
-      SET permissoes = permissoes
-        || CASE WHEN NOT (permissoes ? 'visualizar_registros') THEN '{"visualizar_registros":false}'::jsonb ELSE '{}'::jsonb END
-        || CASE WHEN NOT (permissoes ? 'acessar_tesouraria')   THEN '{"acessar_tesouraria":false}'::jsonb   ELSE '{}'::jsonb END
-        || CASE WHEN NOT (permissoes ? 'acessar_arquivo')      THEN '{"acessar_arquivo":false}'::jsonb      ELSE '{}'::jsonb END
-      WHERE NOT (permissoes ? 'visualizar_registros')
-         OR NOT (permissoes ? 'acessar_tesouraria')
-         OR NOT (permissoes ? 'acessar_arquivo');
+    DO $$
+    DECLARE
+      u RECORD;
+      old JSONB;
+      np  JSONB;
+    BEGIN
+      FOR u IN SELECT id, permissoes FROM ${schema}.usuarios WHERE NOT (permissoes ? 'processos') LOOP
+        old := u.permissoes;
+        np := jsonb_build_object(
+          'processos', jsonb_build_object(
+            'ver', true,
+            'criar',             COALESCE((old->>'criar_processo')::boolean, true),
+            'editar',            COALESCE((old->>'editar_processo')::boolean, true),
+            'excluir',           COALESCE((old->>'excluir_processo')::boolean, false),
+            'tramitar',          COALESCE((old->>'tramitar_processo')::boolean, true),
+            'devolver',          true,
+            'concluir',          true,
+            'arquivar',          false,
+            'anexar_documento',  true,
+            'excluir_documento', false
+          ),
+          'arquivo', jsonb_build_object(
+            'acessar', COALESCE((old->>'acessar_arquivo')::boolean, false)
+          ),
+          'almoxarifado', jsonb_build_object(
+            'acessar',     COALESCE((old->>'acessar_almoxarifado')::boolean, false),
+            'painel',      jsonb_build_object('ver', COALESCE((old->>'almox_tab_painel')::boolean, true)),
+            'estoque',     jsonb_build_object('ver', COALESCE((old->>'almox_tab_itens')::boolean, true),      'editar',    true),
+            'entradas',    jsonb_build_object('ver', COALESCE((old->>'almox_tab_lotes')::boolean, true),      'registrar', true),
+            'saidas',      jsonb_build_object('ver', COALESCE((old->>'almox_tab_saidas')::boolean, true),     'registrar', true),
+            'requisicoes', jsonb_build_object('ver', COALESCE((old->>'almox_tab_requisicoes')::boolean, true),'criar', true, 'aprovar', false, 'cancelar', false),
+            'cotas',       jsonb_build_object('ver', COALESCE((old->>'almox_tab_cotas')::boolean, true),      'gerenciar', false),
+            'inventario',  jsonb_build_object('ver', COALESCE((old->>'almox_tab_inventario')::boolean, true), 'realizar',  false),
+            'auditoria',   jsonb_build_object('ver', COALESCE((old->>'almox_tab_auditoria')::boolean, false))
+          ),
+          'patrimonio', jsonb_build_object(
+            'acessar',      COALESCE((old->>'acessar_almoxarifado')::boolean, false),
+            'painel',       jsonb_build_object('ver', COALESCE((old->>'pat_tab_painel')::boolean, true)),
+            'bens',         jsonb_build_object('ver', COALESCE((old->>'pat_tab_bens')::boolean, true),          'criar', false, 'editar', false, 'excluir', false),
+            'tombamento',   jsonb_build_object('ver', COALESCE((old->>'pat_tab_tombamento')::boolean, true),    'realizar', false),
+            'transferencia',jsonb_build_object('ver', COALESCE((old->>'pat_tab_transferencia')::boolean, true), 'realizar', false),
+            'baixa',        jsonb_build_object('ver', COALESCE((old->>'pat_tab_baixa')::boolean, true),         'realizar', false),
+            'inventario',   jsonb_build_object('ver', COALESCE((old->>'pat_tab_inventario')::boolean, true),    'realizar', false),
+            'grupos',       jsonb_build_object('ver', COALESCE((old->>'pat_tab_grupos')::boolean, false),       'gerenciar', false)
+          ),
+          'financeiro', jsonb_build_object(
+            'acessar',       COALESCE((old->>'acessar_financeiro')::boolean, false),
+            'painel',        jsonb_build_object('ver', COALESCE((old->>'fin_tab_painel')::boolean, true)),
+            'processos_did', jsonb_build_object('ver', COALESCE((old->>'fin_tab_processos')::boolean, true)),
+            'relatorio',     jsonb_build_object('ver', COALESCE((old->>'fin_tab_relatorio')::boolean, false))
+          ),
+          'contratos', jsonb_build_object(
+            'acessar',   COALESCE((old->>'acessar_contratos')::boolean, false),
+            'itens',     jsonb_build_object('ver', COALESCE((old->>'cont_tab_itens')::boolean, true),      'criar', false, 'editar', false, 'excluir', false),
+            'credores',  jsonb_build_object('ver', COALESCE((old->>'cont_tab_credor')::boolean, true),     'criar', false, 'editar', false, 'excluir', false),
+            'contratos', jsonb_build_object('ver', COALESCE((old->>'cont_tab_contratos')::boolean, true),  'criar', false, 'editar', false, 'excluir', false),
+            'ordens',    jsonb_build_object('ver', COALESCE((old->>'cont_tab_ordens')::boolean, true),     'criar', false, 'editar', false, 'excluir', false),
+            'relatorios',jsonb_build_object('ver', COALESCE((old->>'cont_tab_relatorios')::boolean, true))
+          ),
+          'tesouraria', jsonb_build_object(
+            'acessar',   COALESCE((old->>'acessar_tesouraria')::boolean, false),
+            'contas',    jsonb_build_object('ver', COALESCE((old->>'tes_tab_contas')::boolean, true),    'criar', false, 'editar', false, 'excluir', false),
+            'receitas',  jsonb_build_object('ver', COALESCE((old->>'tes_tab_receitas')::boolean, true),  'criar', false, 'editar', false, 'excluir', false),
+            'despesas',  jsonb_build_object('ver', COALESCE((old->>'tes_tab_despesas')::boolean, true),  'criar', false, 'editar', false, 'excluir', false),
+            'relatorios',jsonb_build_object('ver', COALESCE((old->>'tes_tab_relatorios')::boolean, true))
+          ),
+          'administracao', jsonb_build_object(
+            'gerenciar_usuarios',    COALESCE((old->>'gerenciar_usuarios')::boolean, false),
+            'gerenciar_secretarias', COALESCE((old->>'gerenciar_secretarias')::boolean, false),
+            'gerenciar_configuracoes',COALESCE((old->>'gerenciar_configuracoes')::boolean, false),
+            'visualizar_relatorios', COALESCE((old->>'visualizar_relatorios')::boolean, false),
+            'visualizar_registros',  COALESCE((old->>'visualizar_registros')::boolean, false)
+          )
+        );
+        UPDATE ${schema}.usuarios SET permissoes = np WHERE id = u.id;
+      END LOOP;
+    END $$;
   `);
 
   // processos
@@ -818,7 +887,7 @@ async function criarEstruturaIsolada(schema, tenant, usuarioAdmin) {
         ativo BOOLEAN DEFAULT TRUE,
         secretaria_id UUID REFERENCES ${schema}.secretarias(id),
         setor_id UUID REFERENCES ${schema}.setores(id),
-        permissoes JSONB NOT NULL DEFAULT '{"criar_processo":true,"editar_processo":true,"excluir_processo":false,"tramitar_processo":true,"acessar_arquivo":false,"acessar_almoxarifado":false,"acessar_financeiro":false,"acessar_contratos":false,"acessar_tesouraria":false,"visualizar_relatorios":false,"gerenciar_usuarios":false,"gerenciar_secretarias":false,"gerenciar_configuracoes":false,"visualizar_registros":false}'::jsonb,
+        permissoes JSONB NOT NULL DEFAULT '{"criar_processo":true,"editar_processo":true,"excluir_processo":false,"tramitar_processo":true,"acessar_arquivo":false,"acessar_almoxarifado":false,"acessar_financeiro":false,"acessar_contratos":false,"acessar_tesouraria":false,"visualizar_relatorios":false,"gerenciar_usuarios":false,"gerenciar_secretarias":false,"gerenciar_configuracoes":false,"visualizar_registros":false,"almox_tab_painel":true,"almox_tab_itens":true,"almox_tab_lotes":true,"almox_tab_saidas":true,"almox_tab_requisicoes":true,"almox_tab_cotas":true,"almox_tab_inventario":true,"almox_tab_auditoria":true,"pat_tab_painel":true,"pat_tab_bens":true,"pat_tab_tombamento":true,"pat_tab_transferencia":true,"pat_tab_baixa":true,"pat_tab_inventario":true,"pat_tab_grupos":true,"fin_tab_painel":true,"fin_tab_processos":true,"fin_tab_relatorio":true,"cont_tab_itens":true,"cont_tab_credor":true,"cont_tab_contratos":true,"cont_tab_ordens":true,"cont_tab_relatorios":true,"tes_tab_contas":true,"tes_tab_receitas":true,"tes_tab_despesas":true,"tes_tab_relatorios":true}'::jsonb,
         ultimo_acesso TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

@@ -4,6 +4,7 @@ import {
   Landmark, BarChart2, List, Plus, ArrowLeftRight,
   PackageX, ClipboardList, Settings
 } from 'lucide-react'
+import { hasPerm } from '../utils/permissions'
 import PatDashboard from '../almoxarifado/PatDashboard'
 import PatBens from '../almoxarifado/PatBens'
 import PatEntrada from '../almoxarifado/PatEntrada'
@@ -14,23 +15,22 @@ import PatGrupos from '../almoxarifado/PatGrupos'
 import { useAuth } from '../context/AuthContext'
 
 const TABS = [
-  { id: 'painel',       label: 'Painel',        icon: BarChart2    },
-  { id: 'bens',         label: 'Bens',           icon: List         },
-  { id: 'tombamento',   label: 'Tombamento',     icon: Plus         },
-  { id: 'transferencia',label: 'Transferência',  icon: ArrowLeftRight },
-  { id: 'baixa',        label: 'Baixa',          icon: PackageX     },
-  { id: 'inventario',   label: 'Inventário',     icon: ClipboardList },
-  { id: 'grupos',       label: 'Grupos',         icon: Settings     },
+  { id: 'painel',        label: 'Painel',        icon: BarChart2,     permPath: ['patrimonio', 'painel',        'ver'] },
+  { id: 'bens',          label: 'Bens',           icon: List,          permPath: ['patrimonio', 'bens',          'ver'] },
+  { id: 'tombamento',    label: 'Tombamento',     icon: Plus,          permPath: ['patrimonio', 'tombamento',    'ver'] },
+  { id: 'transferencia', label: 'Transferência',  icon: ArrowLeftRight, permPath: ['patrimonio', 'transferencia', 'ver'] },
+  { id: 'baixa',         label: 'Baixa',          icon: PackageX,      permPath: ['patrimonio', 'baixa',         'ver'] },
+  { id: 'inventario',    label: 'Inventário',     icon: ClipboardList, permPath: ['patrimonio', 'inventario',    'ver'] },
+  { id: 'grupos',        label: 'Grupos',         icon: Settings,      permPath: ['patrimonio', 'grupos',        'ver'] },
 ]
 
 export default function Patrimonio() {
   const { subdomain, tab: tabParam } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const userRole = user?.cargo || user?.role || 'usuario'
-
-  const VALID_TABS = TABS.map(t => t.id)
-  const activeTab = VALID_TABS.includes(tabParam) ? tabParam : 'painel'
+  const visibleTabs = TABS.filter(t => hasPerm(user, ...t.permPath))
+  const VALID_TABS = visibleTabs.map(t => t.id)
+  const activeTab = VALID_TABS.includes(tabParam) ? tabParam : (visibleTabs[0]?.id || 'painel')
   const setActiveTab = (key) => navigate(`/${subdomain}/patrimonio/${key}`)
 
   // Bem selecionado para transferência ou baixa (vindo da tela de bens)
@@ -114,7 +114,7 @@ export default function Patrimonio() {
         style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
       >
         <nav className="flex space-x-1 min-w-max">
-          {TABS.map(tab => {
+          {visibleTabs.map(tab => {
             const Icon = tab.icon
             const active = activeTab === tab.id
             return (

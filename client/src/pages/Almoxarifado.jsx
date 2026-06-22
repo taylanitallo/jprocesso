@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { Component } from 'react'
 import { Package, BarChart2, List, ArrowDownCircle, ArrowUpCircle, ClipboardList, Shield, ClipboardCheck, CalendarRange, AlertTriangle } from 'lucide-react'
+import { hasPerm } from '../utils/permissions'
 
 class TabErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null } }
@@ -26,23 +27,26 @@ import AlmoxAuditLog from '../almoxarifado/AlmoxAuditLog'
 import AlmoxInventario from '../almoxarifado/AlmoxInventario'
 import AlmoxCotas from '../almoxarifado/AlmoxCotas'
 import { PageHeader } from '../components/ui'
+import { useAuth } from '../context/AuthContext'
 
 const TABS = [
-  { id: 'painel',      label: 'Painel',        icon: BarChart2       },
-  { id: 'itens',       label: 'Estoque',        icon: List            },
-  { id: 'lotes',       label: 'Entradas',       icon: ArrowDownCircle },
-  { id: 'saidas',      label: 'Saídas',         icon: ArrowUpCircle   },
-  { id: 'requisicoes', label: 'Requisições',    icon: ClipboardList   },
-  { id: 'cotas',       label: 'Cotas',          icon: CalendarRange   },
-  { id: 'inventario',  label: 'Inventário',     icon: ClipboardCheck  },
-  { id: 'auditoria',   label: 'Auditoria',      icon: Shield          },
+  { id: 'painel',      label: 'Painel',        icon: BarChart2,       permPath: ['almoxarifado', 'painel',      'ver'] },
+  { id: 'itens',       label: 'Estoque',        icon: List,            permPath: ['almoxarifado', 'estoque',     'ver'] },
+  { id: 'lotes',       label: 'Entradas',       icon: ArrowDownCircle, permPath: ['almoxarifado', 'entradas',    'ver'] },
+  { id: 'saidas',      label: 'Saídas',         icon: ArrowUpCircle,   permPath: ['almoxarifado', 'saidas',      'ver'] },
+  { id: 'requisicoes', label: 'Requisições',    icon: ClipboardList,   permPath: ['almoxarifado', 'requisicoes', 'ver'] },
+  { id: 'cotas',       label: 'Cotas',          icon: CalendarRange,   permPath: ['almoxarifado', 'cotas',       'ver'] },
+  { id: 'inventario',  label: 'Inventário',     icon: ClipboardCheck,  permPath: ['almoxarifado', 'inventario',  'ver'] },
+  { id: 'auditoria',   label: 'Auditoria',      icon: Shield,          permPath: ['almoxarifado', 'auditoria',   'ver'] },
 ]
 
 export default function Almoxarifado() {
   const { subdomain, tab: tabParam } = useParams()
   const navigate = useNavigate()
-  const VALID_TABS = TABS.map(t => t.id)
-  const activeTab = VALID_TABS.includes(tabParam) ? tabParam : 'painel'
+  const { user } = useAuth()
+  const visibleTabs = TABS.filter(t => hasPerm(user, ...t.permPath))
+  const VALID_TABS = visibleTabs.map(t => t.id)
+  const activeTab = VALID_TABS.includes(tabParam) ? tabParam : (visibleTabs[0]?.id || 'painel')
   const setActiveTab = (key) => navigate(`/${subdomain}/almoxarifado/${key}`)
 
   const renderTab = () => {
@@ -73,7 +77,7 @@ export default function Almoxarifado() {
         style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
       >
         <nav className="flex space-x-1 min-w-max">
-          {TABS.map(tab => {
+          {visibleTabs.map(tab => {
             const Icon = tab.icon
             const active = activeTab === tab.id
             return (

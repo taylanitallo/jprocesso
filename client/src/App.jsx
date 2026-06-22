@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
+import { hasPerm } from './utils/permissions'
 import AuthProvider from './context/AuthContext'
 import ThemeProvider from './context/ThemeContext'
 import { setTimbrado } from './utils/timbradoStore'
@@ -97,8 +98,8 @@ function PermissionRoute({ children, permissao }) {
   const { user } = useAuth()
   const subdomain = window.location.pathname.split('/')[1]
   if (!permissao) return children
-  if (user?.tipo === 'admin') return children
-  if (!user?.permissoes?.[permissao]) return <Navigate to={`/${subdomain}`} replace />
+  const path = Array.isArray(permissao) ? permissao : permissao.split('.')
+  if (!hasPerm(user, ...path)) return <Navigate to={`/${subdomain}`} replace />
   return children
 }
 
@@ -172,42 +173,42 @@ function App() {
                 <Route path="enviados"           element={<EnviadosRedirect />} />
 
                 {/* Arquivo de Processos */}
-                <Route path="arquivo" element={<PermissionRoute permissao="acessar_arquivo"><Arquivo /></PermissionRoute>} />
+                <Route path="arquivo" element={<PermissionRoute permissao="arquivo.acessar"><Arquivo /></PermissionRoute>} />
 
                 {/* Organização */}
-                <Route path="organizacao"      element={<PermissionRoute permissao="gerenciar_secretarias"><Secretarias /></PermissionRoute>} />
-                <Route path="organizacao/:tab" element={<PermissionRoute permissao="gerenciar_secretarias"><Secretarias /></PermissionRoute>} />
+                <Route path="organizacao"      element={<PermissionRoute permissao="administracao.gerenciar_secretarias"><Secretarias /></PermissionRoute>} />
+                <Route path="organizacao/:tab" element={<PermissionRoute permissao="administracao.gerenciar_secretarias"><Secretarias /></PermissionRoute>} />
                 <Route path="secretarias"      element={<OrganizacaoRedirect />} />
 
                 {/* Tesouraria */}
-                <Route path="tesouraria"      element={<PermissionRoute permissao="acessar_tesouraria"><Tesouraria /></PermissionRoute>} />
-                <Route path="tesouraria/:tab" element={<PermissionRoute permissao="acessar_tesouraria"><Tesouraria /></PermissionRoute>} />
+                <Route path="tesouraria"      element={<PermissionRoute permissao="tesouraria.acessar"><Tesouraria /></PermissionRoute>} />
+                <Route path="tesouraria/:tab" element={<PermissionRoute permissao="tesouraria.acessar"><Tesouraria /></PermissionRoute>} />
 
                 {/* Usuários */}
-                <Route path="usuarios" element={<PermissionRoute permissao="gerenciar_usuarios"><Usuarios /></PermissionRoute>} />
+                <Route path="usuarios" element={<PermissionRoute permissao="administracao.gerenciar_usuarios"><Usuarios /></PermissionRoute>} />
 
                 {/* Almoxarifado */}
-                <Route path="almoxarifado"      element={<PermissionRoute permissao="acessar_almoxarifado"><Almoxarifado /></PermissionRoute>} />
-                <Route path="almoxarifado/:tab" element={<PermissionRoute permissao="acessar_almoxarifado"><Almoxarifado /></PermissionRoute>} />
+                <Route path="almoxarifado"      element={<PermissionRoute permissao="almoxarifado.acessar"><Almoxarifado /></PermissionRoute>} />
+                <Route path="almoxarifado/:tab" element={<PermissionRoute permissao="almoxarifado.acessar"><Almoxarifado /></PermissionRoute>} />
 
                 {/* Patrimônio */}
-                <Route path="patrimonio"      element={<PermissionRoute permissao="acessar_almoxarifado"><Patrimonio /></PermissionRoute>} />
-                <Route path="patrimonio/:tab" element={<PermissionRoute permissao="acessar_almoxarifado"><Patrimonio /></PermissionRoute>} />
+                <Route path="patrimonio"      element={<PermissionRoute permissao="patrimonio.acessar"><Patrimonio /></PermissionRoute>} />
+                <Route path="patrimonio/:tab" element={<PermissionRoute permissao="patrimonio.acessar"><Patrimonio /></PermissionRoute>} />
 
                 {/* Financeiro */}
-                <Route path="financeiro"      element={<PermissionRoute permissao="acessar_financeiro"><Financeiro /></PermissionRoute>} />
-                <Route path="financeiro/:tab" element={<PermissionRoute permissao="acessar_financeiro"><Financeiro /></PermissionRoute>} />
+                <Route path="financeiro"      element={<PermissionRoute permissao="financeiro.acessar"><Financeiro /></PermissionRoute>} />
+                <Route path="financeiro/:tab" element={<PermissionRoute permissao="financeiro.acessar"><Financeiro /></PermissionRoute>} />
 
                 {/* Contratos */}
-                <Route path="contratos"           element={<PermissionRoute permissao="acessar_contratos"><Contratos /></PermissionRoute>} />
-                <Route path="contratos/dashboard" element={<PermissionRoute permissao="acessar_contratos"><ContratosDashboard /></PermissionRoute>} />
-                <Route path="contratos/:tab"      element={<PermissionRoute permissao="acessar_contratos"><Contratos /></PermissionRoute>} />
+                <Route path="contratos"           element={<PermissionRoute permissao="contratos.acessar"><Contratos /></PermissionRoute>} />
+                <Route path="contratos/dashboard" element={<PermissionRoute permissao="contratos.acessar"><ContratosDashboard /></PermissionRoute>} />
+                <Route path="contratos/:tab"      element={<PermissionRoute permissao="contratos.acessar"><Contratos /></PermissionRoute>} />
 
                 {/* Admin */}
-                <Route path="relatorios"          element={<PermissionRoute permissao="visualizar_relatorios"><Relatorios /></PermissionRoute>} />
-                <Route path="configuracoes"       element={<PermissionRoute permissao="gerenciar_configuracoes"><Configuracoes /></PermissionRoute>} />
-                <Route path="configuracoes/:tab"  element={<PermissionRoute permissao="gerenciar_configuracoes"><Configuracoes /></PermissionRoute>} />
-                <Route path="registros"           element={<PermissionRoute permissao="visualizar_registros"><Registros /></PermissionRoute>} />
+                <Route path="relatorios"          element={<PermissionRoute permissao="administracao.visualizar_relatorios"><Relatorios /></PermissionRoute>} />
+                <Route path="configuracoes"       element={<PermissionRoute permissao="administracao.gerenciar_configuracoes"><Configuracoes /></PermissionRoute>} />
+                <Route path="configuracoes/:tab"  element={<PermissionRoute permissao="administracao.gerenciar_configuracoes"><Configuracoes /></PermissionRoute>} />
+                <Route path="registros"           element={<PermissionRoute permissao="administracao.visualizar_registros"><Registros /></PermissionRoute>} />
               </Route>
             </Route>
 

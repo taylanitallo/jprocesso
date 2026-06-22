@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
+import { hasPerm } from '../utils/permissions'
 import {
   LayoutDashboard, FileText, BarChart3,
   Calendar, FolderOpen, Tag, Building2, Landmark, DollarSign,
@@ -48,9 +49,9 @@ const PROC_STATUS = {
   arquivado:  { label: 'Arquivado',   color: 'bg-gray-100   text-gray-600   dark:bg-slate-700/50  dark:text-slate-400' },
 }
 const TABS = [
-  { id: 'painel',    label: 'Painel',        Icon: LayoutDashboard },
-  { id: 'processos', label: 'Processos DID', Icon: FileText },
-  { id: 'relatorio', label: 'Relatório',     Icon: BarChart3 },
+  { id: 'painel',    label: 'Painel',        Icon: LayoutDashboard, permPath: ['financeiro', 'painel',        'ver'] },
+  { id: 'processos', label: 'Processos DID', Icon: FileText,        permPath: ['financeiro', 'processos_did', 'ver'] },
+  { id: 'relatorio', label: 'Relatório',     Icon: BarChart3,       permPath: ['financeiro', 'relatorio',     'ver'] },
 ]
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 const MESES_NOMES = [
@@ -630,8 +631,10 @@ function ModalVerDid({ processoId, tenant, onClose }) {
 export default function Financeiro() {
   const { subdomain, tab: tabParam } = useParams()
   const navigate = useNavigate()
-  const VALID_TABS_FIN = TABS.map(t => t.id)
-  const tab = VALID_TABS_FIN.includes(tabParam) ? tabParam : 'painel'
+  const { user } = useAuth()
+  const visibleTabsFin = TABS.filter(t => hasPerm(user, ...t.permPath))
+  const VALID_TABS_FIN = visibleTabsFin.map(t => t.id)
+  const tab = VALID_TABS_FIN.includes(tabParam) ? tabParam : (visibleTabsFin[0]?.id || 'painel')
   const setTab = (key) => navigate(`/${subdomain}/financeiro/${key}`)
 
   // ── Painel state
@@ -938,7 +941,7 @@ export default function Financeiro() {
       {/* Tabs */}
       <div className="overflow-x-auto overflow-y-hidden scrollbar-none touch-pan-x">
         <div className="flex gap-1 bg-gray-100/70 dark:bg-slate-800/50 rounded-xl p-1 min-w-max w-fit">
-          {TABS.map(({ id, label, Icon }) => (
+          {visibleTabsFin.map(({ id, label, Icon }) => (
             <button
               key={id}
               onClick={() => setTab(id)}

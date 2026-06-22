@@ -4,11 +4,11 @@ import { FileText, ShoppingBag, User, BarChart2, ClipboardList } from 'lucide-re
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 export const TABS = [
-  { key: 'itens',      label: 'Itens',                   icon: ShoppingBag,   emoji: '📦' },
-  { key: 'credor',     label: 'Credores',                icon: User,          emoji: '🏢' },
-  { key: 'contratos',  label: 'Contratos',               icon: FileText,      emoji: '📋' },
-  { key: 'ordens',     label: 'Ordem de Compra/Serviço', icon: ClipboardList, emoji: '🛒' },
-  { key: 'relatorios', label: 'Relatórios',              icon: BarChart2,     emoji: '📊' },
+  { key: 'itens',      label: 'Itens',                   icon: ShoppingBag,   emoji: '📦', permPath: ['contratos', 'itens',     'ver'] },
+  { key: 'credor',     label: 'Credores',                icon: User,          emoji: '🏢', permPath: ['contratos', 'credores',  'ver'] },
+  { key: 'contratos',  label: 'Contratos',               icon: FileText,      emoji: '📋', permPath: ['contratos', 'contratos', 'ver'] },
+  { key: 'ordens',     label: 'Ordem de Compra/Serviço', icon: ClipboardList, emoji: '🛒', permPath: ['contratos', 'ordens',    'ver'] },
+  { key: 'relatorios', label: 'Relatórios',              icon: BarChart2,     emoji: '📊', permPath: ['contratos', 'relatorios','ver'] },
 ]
 
 export const UNIDADES      = ['UNIDADE','MÊS','SERVIÇO','SERVIÇOS','CONJUNTO','KG','LITRO','METRO','HORA','DIA','PACOTE','RESMA','CAIXA','PAR','AMPOLA','COMPRIMIDO','FRASCO']

@@ -3,6 +3,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import JSZip from 'jszip';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import PermissoesEditor from '../components/PermissoesEditor';
 import {
   Plus, Building, Edit2, Trash2, Globe, MapPin, CheckCircle, XCircle,
   Database, Shield, BarChart3, LogOut, Upload, UserPlus, AlertTriangle,
@@ -37,42 +38,16 @@ const TABS = [
 const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
 const DEFAULT_PERMS = {
-  criar_processo: true, editar_processo: true, excluir_processo: false,
-  tramitar_processo: true, acessar_almoxarifado: false, acessar_financeiro: false,
-  acessar_contratos: false, acessar_patrimonio: false, visualizar_relatorios: false,
-  gerenciar_usuarios: false, gerenciar_secretarias: false, gerenciar_configuracoes: false,
-  modulos_visiveis: ['processos'],
+  processos:     { ver: true, criar: true, editar: true, excluir: false, tramitar: true, devolver: true, concluir: true, arquivar: false, anexar_documento: true, excluir_documento: false },
+  arquivo:       { acessar: false },
+  almoxarifado:  { acessar: false, painel: { ver: true }, estoque: { ver: true, editar: true }, entradas: { ver: true, registrar: true }, saidas: { ver: true, registrar: true }, requisicoes: { ver: true, criar: true, aprovar: false, cancelar: false }, cotas: { ver: true, gerenciar: false }, inventario: { ver: true, realizar: false }, auditoria: { ver: false } },
+  patrimonio:    { acessar: false, painel: { ver: true }, bens: { ver: true, criar: false, editar: false, excluir: false }, tombamento: { ver: true, realizar: false }, transferencia: { ver: true, realizar: false }, baixa: { ver: true, realizar: false }, inventario: { ver: true, realizar: false }, grupos: { ver: false, gerenciar: false } },
+  financeiro:    { acessar: false, painel: { ver: true }, processos_did: { ver: true }, relatorio: { ver: false } },
+  contratos:     { acessar: false, itens: { ver: true, criar: false, editar: false, excluir: false }, credores: { ver: true, criar: false, editar: false, excluir: false }, contratos: { ver: true, criar: false, editar: false, excluir: false }, ordens: { ver: true, criar: false, editar: false, excluir: false }, relatorios: { ver: true } },
+  tesouraria:    { acessar: false, contas: { ver: true, criar: false, editar: false, excluir: false }, receitas: { ver: true, criar: false, editar: false, excluir: false }, despesas: { ver: true, criar: false, editar: false, excluir: false }, relatorios: { ver: true } },
+  administracao: { gerenciar_usuarios: false, gerenciar_secretarias: false, gerenciar_configuracoes: false, visualizar_relatorios: false, visualizar_registros: false },
 };
 
-const PERM_GROUPS = [
-  {
-    label: 'Processos', color: 'blue',
-    perms: [
-      { key: 'criar_processo',    label: 'Criar processo' },
-      { key: 'editar_processo',   label: 'Editar processo' },
-      { key: 'tramitar_processo', label: 'Tramitar processo' },
-      { key: 'excluir_processo',  label: 'Excluir processo' },
-    ],
-  },
-  {
-    label: 'Acesso a módulos', color: 'purple',
-    perms: [
-      { key: 'acessar_almoxarifado', label: 'Almoxarifado' },
-      { key: 'acessar_financeiro',   label: 'Financeiro' },
-      { key: 'acessar_contratos',    label: 'Contratos' },
-      { key: 'acessar_patrimonio',   label: 'Patrimônio' },
-    ],
-  },
-  {
-    label: 'Administração', color: 'orange',
-    perms: [
-      { key: 'visualizar_relatorios',    label: 'Ver relatórios' },
-      { key: 'gerenciar_usuarios',       label: 'Gerenciar usuários' },
-      { key: 'gerenciar_secretarias',    label: 'Gerenciar secretarias' },
-      { key: 'gerenciar_configuracoes',  label: 'Configurações do sistema' },
-    ],
-  },
-];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -959,11 +934,6 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                   const secretarias = secretariasData?.secretarias || [];
                   const setoresDaSecretaria = secretarias.find(s => s.id === userForm.secretaria_id)?.setores || [];
                   const isFullAccess = userForm.tipo === 'admin' || userForm.tipo === 'jeos';
-                  const setP = (key, val) => setUserForm(f => ({ ...f, permissoes: { ...f.permissoes, [key]: val } }));
-                  const toggleMod = (id) => {
-                    const cur = userForm.permissoes?.modulos_visiveis || [];
-                    setP('modulos_visiveis', cur.includes(id) ? cur.filter(m => m !== id) : [...cur, id]);
-                  };
 
                   return (
                     <div ref={editFormRef} className="border border-blue-200 dark:border-blue-800 rounded-xl overflow-hidden">
@@ -1065,68 +1035,16 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                           </div>
                         )}
 
-                        {/* Abas visíveis (apenas para não-admin) */}
+                        {/* Permissões (apenas para não-admin) */}
                         {!isFullAccess && (
                           <div className="border-t border-gray-100 dark:border-slate-700 pt-4">
                             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                              Módulos visíveis
-                            </p>
-                            <div className="flex flex-wrap gap-2">
-                              {SYSTEM_MODULES.map(({ id, label, Icon }) => {
-                                const ativo = (userForm.permissoes?.modulos_visiveis || []).includes(id);
-                                return (
-                                  <button key={id} type="button" onClick={() => toggleMod(id)}
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border-2 font-medium transition-all ${
-                                      ativo
-                                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                                        : 'border-gray-200 dark:border-slate-600 text-gray-400 dark:text-gray-500 line-through'
-                                    }`}>
-                                    <Icon className="h-3 w-3" /> {label}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                            <p className="text-xs text-gray-400 mt-2">Módulos não selecionados serão ocultos para este usuário</p>
-                          </div>
-                        )}
-
-                        {/* Permissões (apenas para não-admin) */}
-                        {!isFullAccess && (
-                          <div className="border-t border-gray-100 dark:border-slate-700 pt-4 space-y-4">
-                            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                               Permissões
                             </p>
-                            {PERM_GROUPS.map(({ label, color, perms }) => {
-                              const colors = {
-                                blue:   'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800',
-                                purple: 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800',
-                                orange: 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800',
-                              };
-                              const textColors = {
-                                blue:   'text-blue-700 dark:text-blue-300',
-                                purple: 'text-purple-700 dark:text-purple-300',
-                                orange: 'text-orange-700 dark:text-orange-300',
-                              };
-                              return (
-                                <div key={label} className={`rounded-xl border p-3 ${colors[color]}`}>
-                                  <p className={`text-xs font-semibold mb-2 ${textColors[color]}`}>{label}</p>
-                                  <div className="grid grid-cols-2 gap-2">
-                                    {perms.map(({ key, label: pLabel }) => {
-                                      const val = userForm.permissoes?.[key] ?? false;
-                                      return (
-                                        <label key={key} className="flex items-center gap-2 cursor-pointer select-none">
-                                          <button type="button" onClick={() => setP(key, !val)}
-                                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0 ${val ? 'bg-green-500' : 'bg-gray-300 dark:bg-slate-600'}`}>
-                                            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform shadow ${val ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                                          </button>
-                                          <span className="text-xs text-gray-700 dark:text-gray-300">{pLabel}</span>
-                                        </label>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              );
-                            })}
+                            <PermissoesEditor
+                              permissoes={userForm.permissoes}
+                              onChange={(p) => setUserForm(f => ({ ...f, permissoes: p }))}
+                            />
                           </div>
                         )}
 

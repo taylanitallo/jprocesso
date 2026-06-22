@@ -1,6 +1,7 @@
 ﻿import { Outlet, Link, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
+import { hasPerm } from '../utils/permissions'
 import {
   Home, Building2, LogOut, Menu, X, Inbox, BarChart3, Settings,
   Users, Package, Sun, Moon, ChevronRight, DollarSign, ScrollText,
@@ -93,27 +94,27 @@ export default function Layout() {
 
   const temPermissao = (permissao) => {
     if (!permissao) return true
-    if (user?.tipo === 'admin' || user?.tipo === 'jeos') return true
-    return !!user?.permissoes?.[permissao]
+    const path = Array.isArray(permissao) ? permissao : permissao.split('.')
+    return hasPerm(user, ...path)
   }
 
   const menuItems = [
-    { path: `/${subdomain}`,              icon: Home,        label: 'Dashboard',    exact: true },
-    { path: `/${subdomain}/processos`,    icon: Inbox,       label: 'Processos',    modulo: 'processos' },
-    { path: `/${subdomain}/arquivo`,      icon: Archive,     label: 'Ger. de Arquivos', modulo: 'processos',    permissao: 'acessar_arquivo' },
-    { path: `/${subdomain}/almoxarifado`, icon: Package,     label: 'Almoxarifado', modulo: 'almoxarifado', permissao: 'acessar_almoxarifado' },
-    { path: `/${subdomain}/patrimonio`,   icon: Landmark,    label: 'Patrimônio',   modulo: 'patrimonio',   permissao: 'acessar_almoxarifado' },
-    { path: `/${subdomain}/financeiro`,   icon: DollarSign,  label: 'Financeiro',   modulo: 'financeiro',   permissao: 'acessar_financeiro' },
-    { path: `/${subdomain}/contratos`,    icon: ScrollText,  label: 'Contratos',    modulo: 'contratos',    permissao: 'acessar_contratos' },
-    { path: `/${subdomain}/tesouraria`,   icon: Landmark,    label: 'Tesouraria',   modulo: 'tesouraria',   permissao: 'acessar_tesouraria' },
+    { path: `/${subdomain}`,              icon: Home,        label: 'Dashboard',        exact: true },
+    { path: `/${subdomain}/processos`,    icon: Inbox,       label: 'Processos',        modulo: 'processos' },
+    { path: `/${subdomain}/arquivo`,      icon: Archive,     label: 'Ger. de Arquivos', modulo: 'processos',    permissao: 'arquivo.acessar' },
+    { path: `/${subdomain}/almoxarifado`, icon: Package,     label: 'Almoxarifado',     modulo: 'almoxarifado', permissao: 'almoxarifado.acessar' },
+    { path: `/${subdomain}/patrimonio`,   icon: Landmark,    label: 'Patrimônio',       modulo: 'patrimonio',   permissao: 'patrimonio.acessar' },
+    { path: `/${subdomain}/financeiro`,   icon: DollarSign,  label: 'Financeiro',       modulo: 'financeiro',   permissao: 'financeiro.acessar' },
+    { path: `/${subdomain}/contratos`,    icon: ScrollText,  label: 'Contratos',        modulo: 'contratos',    permissao: 'contratos.acessar' },
+    { path: `/${subdomain}/tesouraria`,   icon: Landmark,    label: 'Tesouraria',       modulo: 'tesouraria',   permissao: 'tesouraria.acessar' },
   ]
 
   const adminMenuItems = [
-    { path: `/${subdomain}/organizacao`,   icon: Building2,    label: 'Organização',   permissao: 'gerenciar_secretarias' },
-    { path: `/${subdomain}/usuarios`,      icon: Users,        label: 'Usuários',      permissao: 'gerenciar_usuarios' },
-    { path: `/${subdomain}/relatorios`,    icon: BarChart3,    label: 'Relatórios',    permissao: 'visualizar_relatorios' },
-    { path: `/${subdomain}/configuracoes`, icon: Settings,     label: 'Configurações', permissao: 'gerenciar_configuracoes' },
-    { path: `/${subdomain}/registros`,     icon: ClipboardList, label: 'Registros',   permissao: 'visualizar_registros' },
+    { path: `/${subdomain}/organizacao`,   icon: Building2,    label: 'Organização',   permissao: 'administracao.gerenciar_secretarias' },
+    { path: `/${subdomain}/usuarios`,      icon: Users,        label: 'Usuários',      permissao: 'administracao.gerenciar_usuarios' },
+    { path: `/${subdomain}/relatorios`,    icon: BarChart3,    label: 'Relatórios',    permissao: 'administracao.visualizar_relatorios' },
+    { path: `/${subdomain}/configuracoes`, icon: Settings,     label: 'Configurações', permissao: 'administracao.gerenciar_configuracoes' },
+    { path: `/${subdomain}/registros`,     icon: ClipboardList, label: 'Registros',   permissao: 'administracao.visualizar_registros' },
   ]
 
   const isActive = (path, exact = false) => {

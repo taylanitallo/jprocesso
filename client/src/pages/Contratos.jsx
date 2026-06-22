@@ -2,6 +2,8 @@
 import { FileText, BarChart3 } from 'lucide-react'
 import { PageHeader } from '../components/ui'
 import { TABS } from './contratos/ContratosShared'
+import { useAuth } from '../context/AuthContext'
+import { hasPerm } from '../utils/permissions'
 import TabItens from './contratos/TabItens'
 import TabCredor from './contratos/TabCredor'
 import TabContratos from './contratos/TabContratos'
@@ -11,8 +13,10 @@ import TabRelatorios from './contratos/TabRelatorios'
 export default function Contratos() {
   const { subdomain, tab: tabParam } = useParams()
   const navigate = useNavigate()
-  const VALID_TABS_CTR = TABS.map(t => t.key)
-  const tab = VALID_TABS_CTR.includes(tabParam) ? tabParam : TABS[0].key
+  const { user } = useAuth()
+  const visibleTabsCtr = TABS.filter(t => hasPerm(user, ...t.permPath))
+  const VALID_TABS_CTR = visibleTabsCtr.map(t => t.key)
+  const tab = VALID_TABS_CTR.includes(tabParam) ? tabParam : (visibleTabsCtr[0]?.key || TABS[0].key)
   const setTab = (key) => navigate(`/${subdomain}/contratos/${key}`)
 
   return (
@@ -36,7 +40,7 @@ export default function Contratos() {
         style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
       >
         <nav className="flex gap-1 min-w-max">
-          {TABS.map(t => {
+          {visibleTabsCtr.map(t => {
             const active = tab === t.key
             const Icon = t.icon
             return (

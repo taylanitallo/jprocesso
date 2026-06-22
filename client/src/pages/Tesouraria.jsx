@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { hasPerm } from '../utils/permissions';
 import api from '../services/api';
 import PageHeader from '../components/ui/PageHeader';
 import SectionTitle from '../components/ui/SectionTitle';
@@ -13,10 +14,10 @@ import {
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 const TABS = [
-  { key: 'contas',    label: 'Contas Bancárias', Icon: Landmark },
-  { key: 'receitas',  label: 'Receitas',          Icon: TrendingUp },
-  { key: 'despesas',  label: 'Despesas',           Icon: TrendingDown },
-  { key: 'relatorios', label: 'Relatórios',        Icon: BarChart2 },
+  { key: 'contas',    label: 'Contas Bancárias', Icon: Landmark,    permPath: ['tesouraria', 'contas',    'ver'] },
+  { key: 'receitas',  label: 'Receitas',          Icon: TrendingUp,  permPath: ['tesouraria', 'receitas',  'ver'] },
+  { key: 'despesas',  label: 'Despesas',          Icon: TrendingDown, permPath: ['tesouraria', 'despesas', 'ver'] },
+  { key: 'relatorios', label: 'Relatórios',       Icon: BarChart2,   permPath: ['tesouraria', 'relatorios','ver'] },
 ];
 
 const TIPOS_CONTA = [
@@ -46,8 +47,12 @@ const EMPTY_CONTA = {
 export default function Tesouraria() {
   const { tab, subdomain } = useParams();
   const navigate = useNavigate();
-  const { tenant } = useAuth();
-  const [activeTab, setActiveTab] = useState(tab || 'contas');
+  const { tenant, user } = useAuth();
+  const visibleTabsTes = TABS.filter(t => hasPerm(user, ...t.permPath));
+  const [activeTab, setActiveTab] = useState(() => {
+    const validKeys = visibleTabsTes.map(t => t.key);
+    return validKeys.includes(tab) ? tab : (visibleTabsTes[0]?.key || 'contas');
+  });
   const [secretarias, setSecretarias] = useState([]);
 
   useEffect(() => {
@@ -74,7 +79,7 @@ export default function Tesouraria() {
 
         {/* Tabs */}
         <div className="flex gap-1 border-b border-gray-200 dark:border-slate-700/50">
-          {TABS.map(({ key, label, Icon }) => (
+          {visibleTabsTes.map(({ key, label, Icon }) => (
             <button
               key={key}
               onClick={() => handleTab(key)}
