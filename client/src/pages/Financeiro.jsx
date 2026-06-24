@@ -1761,7 +1761,8 @@ export default function Financeiro() {
             <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 mb-3 uppercase tracking-wide flex items-center gap-1.5">
               <Search className="w-3 h-3" /> Filtros
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {/* Linha 1: Datas + Tipo */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
               <div>
                 <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Data início</label>
                 <input type="date" className="input-field w-full" value={relFiltros.data_inicio} onChange={e => setRelFiltros(f => ({ ...f, data_inicio: e.target.value }))} />
@@ -1778,27 +1779,30 @@ export default function Financeiro() {
                   <option value="variaveis">Variáveis</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Secretaria</label>
-                <select className="input-field w-full" value={relFiltros.secretarias[0] || ''} onChange={e => setRelFiltros(f => ({ ...f, secretarias: e.target.value ? [e.target.value] : [] }))}>
-                  <option value="">Todas</option>
-                  {relOptions.secretarias.map(s => <option key={s} value={s}>{secSigla(s) || s}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Credor</label>
-                <select className="input-field w-full" value={relFiltros.credores[0] || ''} onChange={e => setRelFiltros(f => ({ ...f, credores: e.target.value ? [e.target.value] : [] }))}>
-                  <option value="">Todos</option>
-                  {relOptions.credores.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Fonte de Recurso</label>
-                <select className="input-field w-full" value={relFiltros.fontes[0] || ''} onChange={e => setRelFiltros(f => ({ ...f, fontes: e.target.value ? [e.target.value] : [] }))}>
-                  <option value="">Todas</option>
-                  {relOptions.fontes.map(f => <option key={f} value={f}>{f}</option>)}
-                </select>
-              </div>
+            </div>
+            {/* Linha 2: Secretaria + Credor + Fonte */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <MultiSelect
+                label="Secretaria"
+                placeholder="Todas as secretarias"
+                options={relOptions.secretarias}
+                selected={relFiltros.secretarias}
+                onChange={v => setRelFiltros(f => ({ ...f, secretarias: v }))}
+              />
+              <MultiSelect
+                label="Credor"
+                placeholder="Todos os credores"
+                options={relOptions.credores}
+                selected={relFiltros.credores}
+                onChange={v => setRelFiltros(f => ({ ...f, credores: v }))}
+              />
+              <MultiSelect
+                label="Fonte de Recurso"
+                placeholder="Todas as fontes"
+                options={relOptions.fontes}
+                selected={relFiltros.fontes}
+                onChange={v => setRelFiltros(f => ({ ...f, fontes: v }))}
+              />
             </div>
             <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-slate-700/50">
               <button className="btn-primary text-sm h-[36px] inline-flex items-center gap-1.5 px-4" onClick={loadRelatorio}>
