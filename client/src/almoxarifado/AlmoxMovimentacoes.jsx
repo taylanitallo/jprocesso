@@ -13,6 +13,17 @@ import SectionTitle from '../components/ui/SectionTitle'
 import EmptyState from '../components/ui/EmptyState'
 import ActionBar from '../components/ui/ActionBar'
 
+function fmtDataBR(raw) {
+  if (!raw) return '—'
+  const s = String(raw)
+  const hasOffset = s.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(s)
+  const d = new Date(hasOffset ? s : s + 'Z')
+  if (isNaN(d.getTime())) return s
+  const brt = new Date(d.getTime() - 3 * 60 * 60 * 1000)
+  const p = n => String(n).padStart(2, '0')
+  return `${p(brt.getUTCDate())}/${p(brt.getUTCMonth() + 1)}/${brt.getUTCFullYear()} ${p(brt.getUTCHours())}:${p(brt.getUTCMinutes())}`
+}
+
 // ─── Modal: Registrar Entrada / Saída ────────────────────────────────────────
 function MovimentacaoModal({ tipo, itens, onClose, onSave, saving, erro }) {
   const [form, setForm] = useState({
@@ -283,22 +294,10 @@ function MovimentacoesTab({ tipo }) {
               {movs.map(m => (
                 <tr key={m.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
                   <td className="px-4 py-3 text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                    {(() => {
-                      const raw = m.created_at || m.data_movimentacao
-                      if (!raw) return '—'
-                      // Garante que o timestamp seja interpretado como UTC antes de ajustar
-                      const str = String(raw)
-                      const utcStr = str.endsWith('Z') || str.includes('+') ? str : str + 'Z'
-                      const utc = new Date(utcStr)
-                      // Subtrai 3h para converter UTC → Brasília (UTC-3)
-                      const br = new Date(utc.getTime() - 3 * 60 * 60 * 1000)
-                      const p = n => String(n).padStart(2, '0')
-                      return `${p(br.getUTCDate())}/${p(br.getUTCMonth() + 1)}/${br.getUTCFullYear()} ${p(br.getUTCHours())}:${p(br.getUTCMinutes())}`
-                    })()}
+                    {fmtDataBR(m.created_at || m.data_movimentacao)}
                   </td>
                   <td className="px-4 py-3">
                     <p className="font-medium text-gray-900 dark:text-white">{m.item?.nome}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">{m.item?.codigo}</p>
                   </td>
                   <td className={`px-4 py-3 font-semibold ${tipo === 'ENTRADA' ? 'text-green-600' : 'text-red-600'}`}>
                     {tipo === 'ENTRADA' ? '+' : '-'}{fmt(m.quantidade)} {m.item?.unidade}

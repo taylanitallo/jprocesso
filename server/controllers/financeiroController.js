@@ -121,18 +121,26 @@ const getDashboard = async (req, res) => {
     });
 
     // ── Estatísticas dos DIDs (com filtro completo) ───────────────────────
-    const didFiltroAno = didFiltro; // alias legível
+    const didFiltroAno = didFiltro;
+    const filtroPendente = { ...didFiltroAno, [Op.or]: [{ pago: 'nao' }, { pago: null }] };
 
-    // contagens fixas/variáveis respeitam o filtro de tipo se não especificado
-    const filtroFixas     = tipoList.length > 0 ? didFiltroAno : { ...didFiltroAno, tipo_did: 'fixas' };
-    const filtroVariaveis = tipoList.length > 0 ? didFiltroAno : { ...didFiltroAno, tipo_did: 'variaveis' };
-
-    const [totalDidsFixas, totalDidsVariaveis, somaDidBruto, somaDidPago, somaDidPendente, ultimosDids] = await Promise.all([
-      Did.count({ where: filtroFixas }),
-      Did.count({ where: filtroVariaveis }),
+    const [porTipoDid, somaDidBruto, somaDidPago, somaDidPendente, totalPendentesCount, ultimosDids] = await Promise.all([
+      // Contagem e soma por tipo_did (substitui filtroFixas/filtroVariaveis bugados)
+      Did.findAll({
+        attributes: [
+          'tipo_did',
+          [fn('COUNT', col('id')), 'qtd'],
+          [fn('SUM', col('valor_bruto')), 'total']
+        ],
+        where: didFiltroAno,
+        group: ['tipo_did'],
+        raw: true
+      }),
       Did.sum('valor_bruto', { where: didFiltroAno }),
       Did.sum('valor_bruto', { where: { ...didFiltroAno, pago: 'sim' } }),
-      Did.sum('valor_bruto', { where: { ...didFiltroAno, [Op.or]: [{ pago: 'nao' }, { pago: null }] } }),
+      Did.sum('valor_bruto', { where: filtroPendente }),
+      // Contagem real de pendentes (não limitada a 10)
+      Did.count({ where: filtroPendente }),
       Did.findAll({
         where: didFiltroAno,
         include: [{ model: Processo, as: 'processo', attributes: ['numero', 'status', 'id'] }],
@@ -142,20 +150,24 @@ const getDashboard = async (req, res) => {
       })
     ]);
 
-    // ── Analytics detalhados dos DIDs ─────────────────────────────────────
+    const totalDidsFixas     = parseInt(porTipoDid.find(t => t.tipo_did === 'fixas')?.qtd     || 0);
+    const totalDidsVariaveis = parseInt(porTipoDid.find(t => t.tipo_did === 'variaveis')?.qtd || 0);
+
+    // ── Analytics detalhados dos DIDs — todos respeitam didFiltro ─────────
     const [porMesDid, porSecretariaDid, didsPendentes, porCredorDid] = await Promise.all([
-      // Valor bruto por mês (gráfico de barras)
+      // Evolução mensal — pago e pendente separados, aplica todos os filtros
       Did.findAll({
         attributes: [
           [fn('DATE_TRUNC', 'month', col('data_did')), 'mes'],
+          'pago',
           [fn('SUM', col('valor_bruto')), 'total'],
           [fn('COUNT', col('id')), 'qtd']
         ],
-        where: { data_did: { [Op.between]: [`${ano}-01-01`, `${ano}-12-31`] } },
-        group: [fn('DATE_TRUNC', 'month', col('data_did'))],
+        where: { ...didFiltroAno, data_did: { [Op.not]: null } },
+        group: [fn('DATE_TRUNC', 'month', col('data_did')), 'pago'],
         order: [[fn('DATE_TRUNC', 'month', col('data_did')), 'ASC']]
       }),
-      // Valor bruto por secretaria (barras de categoria)
+      // Valor bruto por secretaria
       Did.findAll({
         attributes: [
           ['secretaria_sec1', 'secretaria'],
@@ -167,9 +179,9 @@ const getDashboard = async (req, res) => {
         order: [[literal('total'), 'DESC']],
         limit: 8
       }),
-      // DIDs pendentes (não pagos) — alerta
+      // DIDs pendentes — lista para alertas (limitada a 10 para exibição)
       Did.findAll({
-        where: { ...didFiltroAno, [Op.or]: [{ pago: 'nao' }, { pago: null }] },
+        where: filtroPendente,
         include: [{ model: Processo, as: 'processo', attributes: ['numero', 'id'] }],
         order: [['data_did', 'ASC']],
         limit: 10,
@@ -236,11 +248,13 @@ const getDashboard = async (req, res) => {
       dids: {
         totalFixas: totalDidsFixas || 0,
         totalVariaveis: totalDidsVariaveis || 0,
+        totalPendentes: totalPendentesCount || 0,
         valorBrutoTotal: parseFloat(somaDidBruto || 0).toFixed(2),
         valorPago: parseFloat(somaDidPago || 0).toFixed(2),
         valorPendente: parseFloat(somaDidPendente || 0).toFixed(2),
         ultimos: ultimosDids,
         porMes: porMesDid,
+        porTipo: porTipoDid,
         porSecretaria: porSecretariaDid,
         pendentes: didsPendentes,
         porCredor: porCredorDid
@@ -481,17 +495,11 @@ const getProcessosDid = async (req, res) => {
     if (status) where.status = status;
     if (setor_id) where.setor_atual_id = setor_id;
 
-    // Filtro por ano de abertura
     if (ano && !data_inicio && !data_fim) {
       where.data_abertura = {
         [Op.gte]: new Date(`${ano}-01-01`),
         [Op.lte]: new Date(`${ano}-12-31T23:59:59`)
       };
-    }
-    if (data_inicio || data_fim) {
-      where.data_abertura = {};
-      if (data_inicio) where.data_abertura[Op.gte] = new Date(data_inicio);
-      if (data_fim) where.data_abertura[Op.lte] = new Date(data_fim + 'T23:59:59');
     }
     if (busca) {
       where[Op.or] = [
@@ -501,25 +509,37 @@ const getProcessosDid = async (req, res) => {
       ];
     }
 
-    // Filtros aplicados sobre o DID
+    // Filtros sobre o DID — data_inicio/data_fim filtram data_did (não data_abertura do processo)
     const didWhere = {};
-    if (status_pago) didWhere.pago = status_pago === 'pago' ? 'sim' : 'nao';
-    if (tipo_did) {
-      const tipos = tipo_did.split(',').map(t => t.trim()).filter(Boolean)
-      if (tipos.length === 1) didWhere.tipo_did = tipos[0]
-      else if (tipos.length > 1) didWhere.tipo_did = { [Op.in]: tipos }
+    if (data_inicio || data_fim) {
+      didWhere.data_did = {};
+      if (data_inicio) didWhere.data_did[Op.gte] = data_inicio;
+      if (data_fim)    didWhere.data_did[Op.lte] = data_fim;
     }
+    if (status_pago) didWhere.pago = status_pago === 'pago' ? 'sim' : { [Op.or]: ['nao', null] };
+    if (tipo_did) {
+      const tipos = tipo_did.split(',').map(t => t.trim()).filter(Boolean);
+      if (tipos.length === 1) didWhere.tipo_did = tipos[0];
+      else if (tipos.length > 1) didWhere.tipo_did = { [Op.in]: tipos };
+    }
+    // secretaria aceita tanto nome único (iLike) quanto lista (Op.in)
     if (secretaria) {
-      const secs = secretaria.split(',').map(s => s.trim()).filter(Boolean)
-      didWhere.secretaria_sec1 = secs.length === 1 ? { [Op.iLike]: `%${secs[0]}%` } : { [Op.in]: secs }
+      const secs = secretaria.split(',').map(s => s.trim()).filter(Boolean);
+      didWhere.secretaria_sec1 = secs.length === 1 ? { [Op.iLike]: `%${secs[0]}%` } : { [Op.in]: secs };
     }
     if (credor) {
-      const creds = credor.split(',').map(c => c.trim()).filter(Boolean)
-      didWhere.credor_sec1 = creds.length === 1 ? { [Op.iLike]: `%${creds[0]}%` } : { [Op.in]: creds }
+      const creds = credor.split(',').map(c => c.trim()).filter(Boolean);
+      didWhere.credor_sec1 = creds.length === 1 ? { [Op.iLike]: `%${creds[0]}%` } : { [Op.in]: creds };
     }
     if (mes_ref) {
-      const meses = mes_ref.split(',').map(m => m.trim()).filter(Boolean)
-      didWhere.mes_referencia = meses.length === 1 ? meses[0] : { [Op.in]: meses }
+      const meses = mes_ref.split(',').map(m => m.trim()).filter(Boolean);
+      didWhere.mes_referencia = meses.length === 1 ? meses[0] : { [Op.in]: meses };
+    }
+    // fonte de recurso (parâmetro fontes ou fonte)
+    const fonteParam = req.query.fontes || req.query.fonte;
+    if (fonteParam) {
+      const fs = fonteParam.split(',').map(f => f.trim()).filter(Boolean);
+      if (fs.length) didWhere.fonte_recurso = fs.length === 1 ? fs[0] : { [Op.in]: fs };
     }
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -556,7 +576,7 @@ const getProcessosDid = async (req, res) => {
 const getRelatorio = async (req, res) => {
   try {
     const { Did } = req.models;
-    const { data_inicio, data_fim, tipo } = req.query;
+    const { data_inicio, data_fim, tipo, secretarias, credores, fontes } = req.query;
 
     const where = {};
     if (data_inicio || data_fim) {
@@ -566,8 +586,20 @@ const getRelatorio = async (req, res) => {
     }
     if (tipo) where.tipo_did = tipo;
 
-    const [porStatus, porTipo, porSecretaria, porCredor, valorTotal] = await Promise.all([
-      // Por status de pagamento
+    if (secretarias) {
+      const list = secretarias.split(',').map(s => s.trim()).filter(Boolean);
+      if (list.length) where.secretaria_sec1 = { [Op.in]: list };
+    }
+    if (credores) {
+      const list = credores.split(',').map(s => s.trim()).filter(Boolean);
+      if (list.length) where.credor_sec1 = { [Op.in]: list };
+    }
+    if (fontes) {
+      const list = fontes.split(',').map(s => s.trim()).filter(Boolean);
+      if (list.length) where.fonte_recurso = { [Op.in]: list };
+    }
+
+    const [porStatus, porTipo, porSecretaria, porCredor, porFonte, porMes, valorTotal] = await Promise.all([
       Did.findAll({
         attributes: ['pago', [fn('SUM', col('valor_bruto')), 'total'], [fn('COUNT', col('id')), 'qtd']],
         where,
@@ -575,7 +607,6 @@ const getRelatorio = async (req, res) => {
         order: [[literal('total'), 'DESC']],
         raw: true
       }),
-      // Por tipo (fixas / variáveis)
       Did.findAll({
         attributes: ['tipo_did', [fn('SUM', col('valor_bruto')), 'total'], [fn('COUNT', col('id')), 'qtd']],
         where,
@@ -583,7 +614,6 @@ const getRelatorio = async (req, res) => {
         order: [[literal('total'), 'DESC']],
         raw: true
       }),
-      // Por secretaria
       Did.findAll({
         attributes: [
           ['secretaria_sec1', 'secretaria'],
@@ -596,7 +626,6 @@ const getRelatorio = async (req, res) => {
         limit: 10,
         raw: true
       }),
-      // Por credor (top 10)
       Did.findAll({
         attributes: [
           ['credor_sec1', 'credor'],
@@ -609,6 +638,31 @@ const getRelatorio = async (req, res) => {
         limit: 10,
         raw: true
       }),
+      Did.findAll({
+        attributes: [
+          ['fonte_recurso', 'fonte'],
+          [fn('SUM', col('valor_bruto')), 'total'],
+          [fn('COUNT', col('id')), 'qtd']
+        ],
+        where: { ...where, fonte_recurso: { [Op.not]: null } },
+        group: ['fonte_recurso'],
+        order: [[literal('total'), 'DESC']],
+        limit: 10,
+        raw: true
+      }),
+      // Evolução mensal — pago e pendente separados
+      Did.findAll({
+        attributes: [
+          [fn('DATE_TRUNC', 'month', col('data_did')), 'mes'],
+          'pago',
+          [fn('SUM', col('valor_bruto')), 'total'],
+          [fn('COUNT', col('id')), 'qtd']
+        ],
+        where: { ...where, data_did: { [Op.not]: null } },
+        group: [fn('DATE_TRUNC', 'month', col('data_did')), 'pago'],
+        order: [[fn('DATE_TRUNC', 'month', col('data_did')), 'ASC']],
+        raw: true
+      }),
       Did.sum('valor_bruto', { where })
     ]);
 
@@ -617,7 +671,9 @@ const getRelatorio = async (req, res) => {
       porStatus,
       porTipo,
       porSecretaria,
-      porCredor
+      porCredor,
+      porFonte,
+      porMes
     });
   } catch (error) {
     console.error('Erro getRelatorio financeiro:', error);

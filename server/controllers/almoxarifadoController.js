@@ -48,8 +48,9 @@ async function ensureTables(req) {
   await addCol(`ALTER TABLE ${s}."almoxarifado_requisicoes"  ADD COLUMN IF NOT EXISTS secretaria_id      UUID`);
   await addCol(`ALTER TABLE ${s}."almoxarifado_requisicoes"  ADD COLUMN IF NOT EXISTS hash_solicitante   VARCHAR(128)`);
   await addCol(`ALTER TABLE ${s}."almoxarifado_requisicoes"  ADD COLUMN IF NOT EXISTS hash_entrega       VARCHAR(128)`);
-  // Estende o ENUM com o novo status AGUARDANDO_RETIRADA (IF NOT EXISTS requer PG 9.6+)
+  // Estende o ENUM com o novo status AGUARDANDO_RETIRADA — tenta schema do tenant e public
   await addCol(`ALTER TYPE ${s}."enum_almoxarifado_requisicoes_status" ADD VALUE IF NOT EXISTS 'AGUARDANDO_RETIRADA'`);
+  await addCol(`ALTER TYPE "public"."enum_almoxarifado_requisicoes_status" ADD VALUE IF NOT EXISTS 'AGUARDANDO_RETIRADA'`);
 
   initializedSchemas.add(schema);
 }
@@ -1037,8 +1038,8 @@ const aguardandoRetirada = async (req, res) => {
 
     res.json({ message: 'Aguardando retirada', status: 'AGUARDANDO_RETIRADA' });
   } catch (error) {
-    console.error('Erro aguardandoRetirada:', error);
-    res.status(500).json({ error: error.message || 'Erro ao atualizar status' });
+    console.error('Erro aguardandoRetirada:', error?.message, error?.original?.message, error);
+    res.status(500).json({ error: error?.original?.message || error?.message || 'Erro ao atualizar status' });
   }
 };
 

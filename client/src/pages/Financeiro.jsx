@@ -9,6 +9,11 @@ import {
   Loader2, AlertTriangle, TrendingUp, ChevronDown,
 } from 'lucide-react'
 import api from '../services/api'
+import {
+  PieChart, Pie, Cell, Tooltip as RTooltip, Legend as RLegend, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  LineChart, Line, Area, AreaChart
+} from 'recharts'
 import { PageHeader, SectionTitle, ActionBar } from '../components/ui'
 import LoadingBar from '../components/LoadingBar'
 import { gerarPainelPDF } from './financeiro/gerarPainelPDF'
@@ -681,7 +686,8 @@ export default function Financeiro() {
 
   // ── Relatório state
   const [relatorio, setRelatorio] = useState(null)
-  const [relFiltros, setRelFiltros] = useState({ data_inicio: '', data_fim: '', tipo: '' })
+  const [relFiltros, setRelFiltros] = useState({ data_inicio: '', data_fim: '', tipo: '', secretarias: [], credores: [], fontes: [] })
+  const [relOptions, setRelOptions] = useState({ secretarias: [], credores: [], fontes: [] })
   const [relLoading, setRelLoading] = useState(false)
   // ── Tabela analítica de DIDs (relatório)
   const [relDids, setRelDids] = useState([])
@@ -782,11 +788,27 @@ export default function Financeiro() {
   const loadRelatorio = useCallback(async () => {
     setRelLoading(true)
     try {
-      const p = new URLSearchParams(Object.fromEntries(Object.entries(relFiltros).filter(([, v]) => v)))
-      // Carrega dados agregados E lista completa de DIDs em paralelo
+      // Params para /relatorio (usa nomes próprios da rota de relatório)
+      const pRel = new URLSearchParams()
+      if (relFiltros.data_inicio) pRel.set('data_inicio', relFiltros.data_inicio)
+      if (relFiltros.data_fim)    pRel.set('data_fim',    relFiltros.data_fim)
+      if (relFiltros.tipo)        pRel.set('tipo',        relFiltros.tipo)
+      if (relFiltros.secretarias.length) pRel.set('secretarias', relFiltros.secretarias.join(','))
+      if (relFiltros.credores.length)    pRel.set('credores',    relFiltros.credores.join(','))
+      if (relFiltros.fontes.length)      pRel.set('fontes',      relFiltros.fontes.join(','))
+
+      // Params para /processos-did (nomes diferentes!)
+      const pDid = new URLSearchParams({ limit: 500 })
+      if (relFiltros.data_inicio)        pDid.set('data_inicio', relFiltros.data_inicio)
+      if (relFiltros.data_fim)           pDid.set('data_fim',    relFiltros.data_fim)
+      if (relFiltros.tipo)               pDid.set('tipo_did',    relFiltros.tipo)
+      if (relFiltros.secretarias.length) pDid.set('secretaria',  relFiltros.secretarias.join(','))
+      if (relFiltros.credores.length)    pDid.set('credor',      relFiltros.credores.join(','))
+      if (relFiltros.fontes.length)      pDid.set('fontes',      relFiltros.fontes.join(','))
+
       const [relRes, didsRes] = await Promise.all([
-        api.get(`/financeiro/relatorio?${p}`),
-        api.get(`/financeiro/processos-did?limit=500&${p.toString()}`),
+        api.get(`/financeiro/relatorio?${pRel}`),
+        api.get(`/financeiro/processos-did?${pDid}`),
       ])
       setRelatorio(relRes.data)
       setRelDids(didsRes.data.processos || [])
@@ -795,6 +817,13 @@ export default function Financeiro() {
     } catch { /* silenciar */ }
     setRelLoading(false)
   }, [relFiltros])
+
+  useEffect(() => {
+    if (tab !== 'relatorio') return
+    api.get('/financeiro/dashboard/options')
+      .then(r => setRelOptions(r.data || { secretarias: [], credores: [], fontes: [] }))
+      .catch(() => {})
+  }, [tab])
 
   useEffect(() => { if (tab === 'relatorio') loadRelatorio() }, [tab, loadRelatorio])
 
@@ -812,7 +841,7 @@ export default function Financeiro() {
   const mesesData = buildMesesData()
   const mesesMax = Math.max(...mesesData, 1)
   const totalDIDs = (painel?.dids?.totalFixas || 0) + (painel?.dids?.totalVariaveis || 0)
-  const pendentesQtd = painel?.dids?.pendentes?.length || 0
+  const pendentesQtd = painel?.dids?.totalPendentes ?? painel?.dids?.pendentes?.length ?? 0
   const taxaInad = totalDIDs > 0 ? Math.round((pendentesQtd / totalDIDs) * 100) : 0
   const ticketMedio = totalDIDs > 0 ? parseFloat(painel?.dids?.valorBrutoTotal || 0) / totalDIDs : 0
   const pctPago = totalDIDs > 0 ? Math.round(((totalDIDs - pendentesQtd) / totalDIDs) * 100) : 0
@@ -823,6 +852,26 @@ export default function Financeiro() {
   const inadColor = taxaInad > 20 ? 'red' : taxaInad > 10 ? 'yellow' : 'green'
   const pctPagoValue = pctPago + '%'
   const pctPagoSub = (totalDIDs - pendentesQtd) + ' de ' + totalDIDs
+
+  // ── Helper: converte porMes [{mes, pago, total, qtd}] → [{mes, total, pago, pendente, qtd}]
+  const buildLinhaData = (porMes) => {
+    if (!porMes?.length) return []
+    const mapa = {}
+    porMes.forEach(row => {
+      const d = new Date(row.mes)
+      const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+      const label = MESES[d.getUTCMonth()] + '/' + String(d.getUTCFullYear()).slice(2)
+      if (!mapa[key]) mapa[key] = { mes: label, sort: key, total: 0, pago: 0, pendente: 0, qtd: 0 }
+      const v = parseFloat(row.total) || 0
+      mapa[key].total += v
+      mapa[key].qtd   += parseInt(row.qtd) || 0
+      if (row.pago === 'sim') mapa[key].pago     += v
+      else                    mapa[key].pendente  += v
+    })
+    return Object.values(mapa).sort((a, b) => a.sort.localeCompare(b.sort))
+  }
+
+  const painelLinhaData = buildLinhaData(painel?.dids?.porMes)
 
   // ── Relatório — valores derivados
   const relTotal    = parseFloat(relatorio?.valorTotal) || 0
@@ -1295,6 +1344,40 @@ export default function Financeiro() {
                 </div>
               )}
 
+              {/* ── Evolução mensal (linha) ──────────────────────────── */}
+              {painelLinhaData.length > 1 && (
+                <div className="card p-5">
+                  <SectionTitle icon={TrendingUp} title="Evolução Mensal das Despesas" />
+                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5 mb-4">Valor bruto por mês — pago vs pendente</p>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <AreaChart data={painelLinhaData} margin={{ top: 6, right: 20, left: 10, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="gradPago" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#22c55e" stopOpacity={0.2} />
+                          <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="gradPendente" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#facc15" stopOpacity={0.2} />
+                          <stop offset="95%" stopColor="#facc15" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="gradTotal" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15} />
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,.12)" vertical={false} />
+                      <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                      <YAxis tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={48} />
+                      <RTooltip formatter={(v, name) => [fmtMoeda(v), name === 'total' ? 'Total' : name === 'pago' ? 'Pago' : 'Pendente']} labelStyle={{ fontWeight: 600, color: '#374151' }} contentStyle={{ borderRadius: 10, border: '1px solid #e5e7eb', fontSize: 12 }} />
+                      <RLegend formatter={v => v === 'total' ? 'Total' : v === 'pago' ? 'Pago' : 'Pendente'} wrapperStyle={{ fontSize: 11 }} />
+                      <Area type="monotone" dataKey="total"    stroke="#3b82f6" strokeWidth={2} fill="url(#gradTotal)"    dot={false} activeDot={{ r: 5 }} isAnimationActive />
+                      <Area type="monotone" dataKey="pago"     stroke="#22c55e" strokeWidth={2} fill="url(#gradPago)"     dot={false} activeDot={{ r: 5 }} isAnimationActive />
+                      <Area type="monotone" dataKey="pendente" stroke="#facc15" strokeWidth={2} fill="url(#gradPendente)" dot={false} activeDot={{ r: 5 }} isAnimationActive />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
               {/* ── Separador · Lançamentos Financeiros ─────────────── */}
               {(painel.totais.lancamentos > 0 || parseFloat(painel.totais.valorTotal) > 0) && (
                 <>
@@ -1673,39 +1756,64 @@ export default function Financeiro() {
             </button>
           </div>
 
-          {/* ── Filtros compactos ────────────────────────────────────────────── */}
+          {/* ── Filtros ─────────────────────────────────────────────────────── */}
           <div className="card p-4">
             <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 mb-3 uppercase tracking-wide flex items-center gap-1.5">
               <Search className="w-3 h-3" /> Filtros
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1 flex items-center gap-1"><Calendar className="w-3 h-3" /> Data início</label>
+                <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Data início</label>
                 <input type="date" className="input-field w-full" value={relFiltros.data_inicio} onChange={e => setRelFiltros(f => ({ ...f, data_inicio: e.target.value }))} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1 flex items-center gap-1"><Calendar className="w-3 h-3" /> Data fim</label>
+                <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Data fim</label>
                 <input type="date" className="input-field w-full" value={relFiltros.data_fim} onChange={e => setRelFiltros(f => ({ ...f, data_fim: e.target.value }))} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1 flex items-center gap-1"><Tag className="w-3 h-3" /> Tipo</label>
+                <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Tipo</label>
                 <select className="input-field w-full" value={relFiltros.tipo} onChange={e => setRelFiltros(f => ({ ...f, tipo: e.target.value }))}>
                   <option value="">Todos os tipos</option>
                   <option value="fixas">Fixas</option>
                   <option value="variaveis">Variáveis</option>
                 </select>
               </div>
-              <div className="flex items-end gap-2">
-                <button className="btn-primary text-sm flex-1 h-[38px] inline-flex items-center justify-center gap-1.5" onClick={loadRelatorio}>
-                  <BarChart3 className="w-4 h-4" /> Gerar
-                </button>
-                <button
-                  className="btn-secondary text-sm h-[38px] inline-flex items-center justify-center px-3"
-                  onClick={() => { setRelFiltros({ data_inicio: '', data_fim: '', tipo: '' }); setTimeout(loadRelatorio, 0) }}
-                >
-                  <X className="w-4 h-4" />
-                </button>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Secretaria</label>
+                <select className="input-field w-full" value={relFiltros.secretarias[0] || ''} onChange={e => setRelFiltros(f => ({ ...f, secretarias: e.target.value ? [e.target.value] : [] }))}>
+                  <option value="">Todas</option>
+                  {relOptions.secretarias.map(s => <option key={s} value={s}>{secSigla(s) || s}</option>)}
+                </select>
               </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Credor</label>
+                <select className="input-field w-full" value={relFiltros.credores[0] || ''} onChange={e => setRelFiltros(f => ({ ...f, credores: e.target.value ? [e.target.value] : [] }))}>
+                  <option value="">Todos</option>
+                  {relOptions.credores.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Fonte de Recurso</label>
+                <select className="input-field w-full" value={relFiltros.fontes[0] || ''} onChange={e => setRelFiltros(f => ({ ...f, fontes: e.target.value ? [e.target.value] : [] }))}>
+                  <option value="">Todas</option>
+                  {relOptions.fontes.map(f => <option key={f} value={f}>{f}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-slate-700/50">
+              <button className="btn-primary text-sm h-[36px] inline-flex items-center gap-1.5 px-4" onClick={loadRelatorio}>
+                <BarChart3 className="w-4 h-4" /> Gerar Relatório
+              </button>
+              <button
+                className="btn-secondary text-sm h-[36px] inline-flex items-center justify-center px-3"
+                onClick={() => { setRelFiltros({ data_inicio: '', data_fim: '', tipo: '', secretarias: [], credores: [], fontes: [] }); setTimeout(loadRelatorio, 0) }}
+                title="Limpar filtros"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              {(relFiltros.data_inicio || relFiltros.data_fim || relFiltros.tipo || relFiltros.secretarias.length || relFiltros.credores.length || relFiltros.fontes.length) && (
+                <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">Filtros ativos</span>
+              )}
             </div>
           </div>
 
@@ -1798,127 +1906,245 @@ export default function Financeiro() {
                 </div>
               )}
 
-              {/* ── Grid 2×2: Status, Tipo, Secretarias, Credores ────────────── */}
+              {/* ── Gráficos — linha 1: dois donuts ──────────────────────────── */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
-                {/* Status de pagamento */}
+                {/* Donut: Status de pagamento */}
                 <div className="card p-5">
                   <SectionTitle icon={CheckCircle2} title="Status de Pagamento" />
-                  <div className="mt-4 space-y-3">
-                    {[
-                      { label: 'Pago',     value: relPago,     qtd: relQtdPago,              color: 'bg-green-500',  textColor: 'text-green-700 dark:text-green-400',  bg: 'bg-green-50 dark:bg-green-900/20'  },
-                      { label: 'Pendente', value: relPendente, qtd: relQtdTotal - relQtdPago, color: 'bg-yellow-400', textColor: 'text-yellow-700 dark:text-yellow-400', bg: 'bg-yellow-50 dark:bg-yellow-900/20' },
-                    ].map(item => {
-                      const pct = relTotal > 0 ? Math.min(100, Math.round((item.value / relTotal) * 100)) : 0
-                      return (
-                        <div key={item.label} className={`p-3 rounded-xl ${item.bg}`}>
-                          <div className="flex justify-between items-center mb-2">
-                            <span className={`text-sm font-semibold ${item.textColor}`}>{item.label}</span>
-                            <div className="text-right">
-                              <span className="text-sm font-bold text-gray-900 dark:text-white">{fmtMoeda(item.value)}</span>
-                              <span className="text-xs text-gray-400 ml-1.5">{pct}% · {item.qtd} DID{item.qtd !== 1 ? 's' : ''}</span>
-                            </div>
-                          </div>
-                          <div className="h-2 bg-white/60 dark:bg-slate-800/60 rounded-full">
-                            <div className={`h-2 ${item.color} rounded-full transition-all duration-700`} style={{ width: pct + '%' }} />
-                          </div>
+                  {relQtdTotal > 0 ? (() => {
+                    const donutData = [
+                      { name: 'Pago',     value: relPago,     fill: '#22c55e' },
+                      { name: 'Pendente', value: relPendente, fill: '#facc15' },
+                    ].filter(d => d.value > 0)
+                    return (
+                      <div className="flex flex-col sm:flex-row items-center gap-4 mt-3">
+                        <ResponsiveContainer width={160} height={160}>
+                          <PieChart>
+                            <Pie data={donutData} cx="50%" cy="50%" innerRadius={45} outerRadius={72} dataKey="value" isAnimationActive paddingAngle={3}>
+                              {donutData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                            </Pie>
+                            <RTooltip formatter={(v) => fmtMoeda(v)} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className="flex-1 space-y-2 w-full">
+                          {[
+                            { label: 'Pago',     value: relPago,     qtd: relQtdPago,              color: 'bg-green-500',  text: 'text-green-700 dark:text-green-400'  },
+                            { label: 'Pendente', value: relPendente, qtd: relQtdTotal - relQtdPago, color: 'bg-yellow-400', text: 'text-yellow-700 dark:text-yellow-400' },
+                          ].map(item => {
+                            const pct = relTotal > 0 ? Math.min(100, Math.round((item.value / relTotal) * 100)) : 0
+                            return (
+                              <div key={item.label}>
+                                <div className="flex justify-between items-center mb-1">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className={`w-2.5 h-2.5 rounded-full ${item.color} flex-shrink-0`} />
+                                    <span className={`text-sm font-medium ${item.text}`}>{item.label}</span>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="text-sm font-bold text-gray-900 dark:text-white">{fmtMoeda(item.value)}</span>
+                                    <span className="text-xs text-gray-400 ml-1">{pct}%</span>
+                                  </div>
+                                </div>
+                                <div className="h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full">
+                                  <div className={`h-1.5 ${item.color} rounded-full transition-all duration-700`} style={{ width: pct + '%' }} />
+                                </div>
+                              </div>
+                            )
+                          })}
                         </div>
-                      )
-                    })}
-                    {relQtdTotal === 0 && <p className="text-sm text-gray-400 text-center py-6">Sem dados no período</p>}
-                  </div>
+                      </div>
+                    )
+                  })() : <p className="text-sm text-gray-400 text-center py-8">Sem dados no período</p>}
                 </div>
 
-                {/* Distribuição por Tipo */}
+                {/* Donut: Distribuição por Tipo */}
                 <div className="card p-5">
                   <SectionTitle icon={Tag} title="Distribuição por Tipo" />
-                  <div className="mt-4 space-y-3">
-                    {relatorio.porTipo?.length > 0 ? relatorio.porTipo.map((t, i) => {
-                      const val = parseFloat(t.total) || 0
-                      const pct = relTotal > 0 ? Math.min(100, Math.round((val / relTotal) * 100)) : 0
-                      const colors   = ['bg-blue-500', 'bg-purple-500', 'bg-indigo-500']
-                      const bgs      = ['bg-blue-50 dark:bg-blue-900/20', 'bg-purple-50 dark:bg-purple-900/20', 'bg-indigo-50 dark:bg-indigo-900/20']
-                      const texts    = ['text-blue-700 dark:text-blue-400', 'text-purple-700 dark:text-purple-400', 'text-indigo-700 dark:text-indigo-400']
-                      return (
-                        <div key={i} className={`p-3 rounded-xl ${bgs[i % bgs.length]}`}>
-                          <div className="flex justify-between items-center mb-2">
-                            <span className={`text-sm font-semibold ${texts[i % texts.length]}`}>
-                              {t.tipo_did === 'variaveis' ? 'Variáveis' : t.tipo_did === 'fixas' ? 'Fixas' : t.tipo_did || 'Outros'}
-                            </span>
-                            <div className="text-right">
-                              <span className="text-sm font-bold text-gray-900 dark:text-white">{fmtMoeda(val)}</span>
-                              <span className="text-xs text-gray-400 ml-1.5">{pct}% · {t.qtd} DID{Number(t.qtd) !== 1 ? 's' : ''}</span>
-                            </div>
-                          </div>
-                          <div className="h-2 bg-white/60 dark:bg-slate-800/60 rounded-full">
-                            <div className={`h-2 ${colors[i % colors.length]} rounded-full transition-all duration-700`} style={{ width: pct + '%' }} />
-                          </div>
+                  {relatorio.porTipo?.length > 0 ? (() => {
+                    const TIPO_COLORS = ['#3b82f6', '#a855f7', '#6366f1', '#0ea5e9']
+                    const donutData = relatorio.porTipo.map((t, i) => ({
+                      name:  t.tipo_did === 'variaveis' ? 'Variáveis' : t.tipo_did === 'fixas' ? 'Fixas' : t.tipo_did || 'Outros',
+                      value: parseFloat(t.total) || 0,
+                      fill:  TIPO_COLORS[i % TIPO_COLORS.length],
+                      qtd:   t.qtd
+                    }))
+                    return (
+                      <div className="flex flex-col sm:flex-row items-center gap-4 mt-3">
+                        <ResponsiveContainer width={160} height={160}>
+                          <PieChart>
+                            <Pie data={donutData} cx="50%" cy="50%" innerRadius={45} outerRadius={72} dataKey="value" isAnimationActive paddingAngle={3}>
+                              {donutData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                            </Pie>
+                            <RTooltip formatter={(v) => fmtMoeda(v)} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className="flex-1 space-y-2 w-full">
+                          {donutData.map((item, i) => {
+                            const pct = relTotal > 0 ? Math.min(100, Math.round((item.value / relTotal) * 100)) : 0
+                            return (
+                              <div key={i}>
+                                <div className="flex justify-between items-center mb-1">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: item.fill }} />
+                                    <span className="text-sm font-medium text-gray-700 dark:text-slate-300">{item.name}</span>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="text-sm font-bold text-gray-900 dark:text-white">{fmtMoeda(item.value)}</span>
+                                    <span className="text-xs text-gray-400 ml-1">{pct}%</span>
+                                  </div>
+                                </div>
+                                <div className="h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full">
+                                  <div className="h-1.5 rounded-full transition-all duration-700" style={{ width: pct + '%', background: item.fill }} />
+                                </div>
+                              </div>
+                            )
+                          })}
                         </div>
-                      )
-                    }) : <p className="text-sm text-gray-400 text-center py-6">Sem dados no período</p>}
-                  </div>
-                </div>
-
-                {/* Ranking por Secretaria */}
-                <div className="card p-5">
-                  <SectionTitle icon={Building2} title="Ranking por Secretaria" />
-                  <div className="mt-4 space-y-2.5">
-                    {relatorio.porSecretaria?.length > 0 ? relatorio.porSecretaria.map((s, i) => {
-                      const val    = parseFloat(s.total) || 0
-                      const maxVal = parseFloat(relatorio.porSecretaria[0]?.total) || 1
-                      const pctBar  = Math.min(100, Math.round((val / maxVal) * 100))
-                      const pctTot  = relTotal > 0 ? Math.min(100, Math.round((val / relTotal) * 100)) : 0
-                      return (
-                        <div key={i}>
-                          <div className="flex justify-between items-center mb-1">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-xs font-bold text-gray-400 w-5 flex-shrink-0">#{i + 1}</span>
-                              <span className="text-sm text-gray-700 dark:text-slate-300 truncate" title={s.secretaria || ''}>{secSigla(s.secretaria) || 'Não informada'}</span>
-                            </div>
-                            <div className="text-right flex-shrink-0 ml-2">
-                              <span className="text-sm font-semibold text-gray-900 dark:text-white">{fmtMoeda(val)}</span>
-                              <span className="text-xs text-gray-400 ml-1">({pctTot}%) · {s.qtd}</span>
-                            </div>
-                          </div>
-                          <div className="h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full">
-                            <div className="h-1.5 bg-blue-500 rounded-full transition-all duration-700" style={{ width: pctBar + '%' }} />
-                          </div>
-                        </div>
-                      )
-                    }) : <p className="text-sm text-gray-400 text-center py-6">Sem dados no período</p>}
-                  </div>
-                </div>
-
-                {/* Ranking por Credor */}
-                <div className="card p-5">
-                  <SectionTitle icon={TrendingUp} title="Ranking por Credor" />
-                  <div className="mt-4 space-y-2.5">
-                    {relatorio.porCredor?.length > 0 ? relatorio.porCredor.map((c, i) => {
-                      const val    = parseFloat(c.total) || 0
-                      const maxVal = parseFloat(relatorio.porCredor[0]?.total) || 1
-                      const pctBar  = Math.min(100, Math.round((val / maxVal) * 100))
-                      const pctTot  = relTotal > 0 ? Math.min(100, Math.round((val / relTotal) * 100)) : 0
-                      return (
-                        <div key={i}>
-                          <div className="flex justify-between items-center mb-1">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-xs font-bold text-gray-400 w-5 flex-shrink-0">#{i + 1}</span>
-                              <span className="text-sm text-gray-700 dark:text-slate-300 truncate" title={c.credor || ''}>{c.credor || 'Não informado'}</span>
-                            </div>
-                            <div className="text-right flex-shrink-0 ml-2">
-                              <span className="text-sm font-semibold text-gray-900 dark:text-white">{fmtMoeda(val)}</span>
-                              <span className="text-xs text-gray-400 ml-1">({pctTot}%) · {c.qtd}</span>
-                            </div>
-                          </div>
-                          <div className="h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full">
-                            <div className="h-1.5 bg-indigo-500 rounded-full transition-all duration-700" style={{ width: pctBar + '%' }} />
-                          </div>
-                        </div>
-                      )
-                    }) : <p className="text-sm text-gray-400 text-center py-6">Sem dados no período</p>}
-                  </div>
+                      </div>
+                    )
+                  })() : <p className="text-sm text-gray-400 text-center py-8">Sem dados no período</p>}
                 </div>
               </div>
+
+              {/* ── Gráfico de evolução mensal (linha) ───────────────────────── */}
+              {relatorio.porMes?.length > 0 && (() => {
+                const linhaData = buildLinhaData(relatorio.porMes)
+                if (linhaData.length < 2) return null
+                return (
+                  <div className="card p-5">
+                    <SectionTitle icon={TrendingUp} title="Evolução Mensal das Despesas" />
+                    <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5 mb-4">Valor bruto por mês — pago vs pendente (conforme filtros selecionados)</p>
+                    <ResponsiveContainer width="100%" height={260}>
+                      <AreaChart data={linhaData} margin={{ top: 6, right: 20, left: 10, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="gradRelTotal" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15} /><stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="gradRelPago" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.2} /><stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="gradRelPend" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#facc15" stopOpacity={0.2} /><stop offset="95%" stopColor="#facc15" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,.12)" vertical={false} />
+                        <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                        <YAxis tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={48} />
+                        <RTooltip formatter={(v, name) => [fmtMoeda(v), name === 'total' ? 'Total' : name === 'pago' ? 'Pago' : 'Pendente']} labelStyle={{ fontWeight: 600 }} contentStyle={{ borderRadius: 10, border: '1px solid #e5e7eb', fontSize: 12 }} />
+                        <RLegend formatter={v => v === 'total' ? 'Total' : v === 'pago' ? 'Pago' : 'Pendente'} wrapperStyle={{ fontSize: 11 }} />
+                        <Area type="monotone" dataKey="total"    stroke="#3b82f6" strokeWidth={2} fill="url(#gradRelTotal)" dot={false} activeDot={{ r: 5 }} isAnimationActive />
+                        <Area type="monotone" dataKey="pago"     stroke="#22c55e" strokeWidth={2} fill="url(#gradRelPago)"  dot={false} activeDot={{ r: 5 }} isAnimationActive />
+                        <Area type="monotone" dataKey="pendente" stroke="#facc15" strokeWidth={2} fill="url(#gradRelPend)"  dot={false} activeDot={{ r: 5 }} isAnimationActive />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                )
+              })()}
+
+              {/* ── Gráficos — linha 2: barras horizontais ────────────────────── */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+                {/* Bar horizontal: Secretarias */}
+                <div className="card p-5">
+                  <SectionTitle icon={Building2} title="Ranking por Secretaria" />
+                  {relatorio.porSecretaria?.length > 0 ? (() => {
+                    const data = relatorio.porSecretaria.map(s => ({
+                      name:  secSigla(s.secretaria) || 'N/I',
+                      value: parseFloat(s.total) || 0,
+                      pct:   relTotal > 0 ? Math.min(100, Math.round((parseFloat(s.total) / relTotal) * 100)) : 0,
+                    })).reverse()
+                    return (
+                      <div className="mt-3">
+                        <ResponsiveContainer width="100%" height={data.length * 36 + 16}>
+                          <BarChart data={data} layout="vertical" margin={{ left: 0, right: 60, top: 0, bottom: 0 }}>
+                            <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="rgba(148,163,184,.15)" />
+                            <XAxis type="number" hide />
+                            <YAxis type="category" dataKey="name" width={70} tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={false} />
+                            <RTooltip formatter={(v) => fmtMoeda(v)} cursor={{ fill: 'rgba(59,130,246,.07)' }} />
+                            <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} isAnimationActive>
+                              {data.map((_, i) => <Cell key={i} fill={`hsl(${220 - i * 10},70%,${55 + i * 3}%)`} />)}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )
+                  })() : <p className="text-sm text-gray-400 text-center py-8">Sem dados no período</p>}
+                </div>
+
+                {/* Bar horizontal: Credores */}
+                <div className="card p-5">
+                  <SectionTitle icon={TrendingUp} title="Ranking por Credor" />
+                  {relatorio.porCredor?.length > 0 ? (() => {
+                    const data = relatorio.porCredor.map(c => ({
+                      name:  (c.credor || 'N/I').length > 22 ? (c.credor || 'N/I').slice(0, 22) + '…' : (c.credor || 'N/I'),
+                      full:   c.credor || 'Não informado',
+                      value:  parseFloat(c.total) || 0,
+                    })).reverse()
+                    return (
+                      <div className="mt-3">
+                        <ResponsiveContainer width="100%" height={data.length * 36 + 16}>
+                          <BarChart data={data} layout="vertical" margin={{ left: 0, right: 60, top: 0, bottom: 0 }}>
+                            <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="rgba(148,163,184,.15)" />
+                            <XAxis type="number" hide />
+                            <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 10, fill: '#64748b' }} tickLine={false} axisLine={false} />
+                            <RTooltip formatter={(v, _, p) => [fmtMoeda(v), p.payload.full]} cursor={{ fill: 'rgba(99,102,241,.07)' }} />
+                            <Bar dataKey="value" radius={[0, 4, 4, 0]} isAnimationActive>
+                              {data.map((_, i) => <Cell key={i} fill={`hsl(${260 - i * 8},60%,${55 + i * 3}%)`} />)}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )
+                  })() : <p className="text-sm text-gray-400 text-center py-8">Sem dados no período</p>}
+                </div>
+              </div>
+
+              {/* ── Gráfico — Fonte de Recurso ───────────────────────────────── */}
+              {relatorio.porFonte?.length > 0 && (
+                <div className="card p-5">
+                  <SectionTitle icon={Landmark} title="Distribuição por Fonte de Recurso" />
+                  {(() => {
+                    const FONTE_COLORS = ['#0ea5e9','#22c55e','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#84cc16','#f97316']
+                    const data = relatorio.porFonte.map((f, i) => ({
+                      name:  (f.fonte || 'N/I').length > 30 ? (f.fonte || 'N/I').slice(0, 30) + '…' : (f.fonte || 'N/I'),
+                      full:   f.fonte || 'Não informada',
+                      value:  parseFloat(f.total) || 0,
+                      fill:   FONTE_COLORS[i % FONTE_COLORS.length],
+                    }))
+                    return (
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-3">
+                        <ResponsiveContainer width="100%" height={220}>
+                          <PieChart>
+                            <Pie data={data} cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value" isAnimationActive paddingAngle={2}>
+                              {data.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                            </Pie>
+                            <RTooltip formatter={(v, _, p) => [fmtMoeda(v), p.payload.full]} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className="space-y-2 self-center">
+                          {data.map((item, i) => {
+                            const pct = relTotal > 0 ? Math.min(100, Math.round((item.value / relTotal) * 100)) : 0
+                            return (
+                              <div key={i}>
+                                <div className="flex justify-between items-center mb-0.5">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: item.fill }} />
+                                    <span className="text-xs text-gray-600 dark:text-slate-400 truncate" title={item.full}>{item.name}</span>
+                                  </div>
+                                  <span className="text-xs font-semibold text-gray-800 dark:text-white ml-2 flex-shrink-0">{pct}%</span>
+                                </div>
+                                <div className="h-1 bg-gray-100 dark:bg-slate-700 rounded-full">
+                                  <div className="h-1 rounded-full" style={{ width: pct + '%', background: item.fill }} />
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })()}
+                </div>
+              )}
 
               {/* ── Tabela Analítica de DIDs ───────────────────────────────────── */}
               <div className="bg-white dark:bg-slate-900/70 border border-gray-100 dark:border-slate-700/50 rounded-2xl overflow-hidden">
