@@ -58,11 +58,11 @@ export default function MunicipioSelector() {
       <div className="absolute inset-0 bg-[#050b18]/70" />
 
       {/* conteúdo principal */}
-      <div className="relative flex-1 flex items-center justify-end min-h-screen px-8 py-10 max-w-6xl mx-auto w-full">
+      <div className="relative flex-1 flex items-center justify-center lg:justify-end px-4 sm:px-8 py-6 sm:py-10 max-w-6xl mx-auto w-full">
 
         {/* ── Card de seleção ── */}
         <div
-          className="w-full max-w-md lg:flex-shrink-0 rounded-2xl p-6 sm:p-8 flex flex-col gap-5"
+          className="w-full max-w-md flex-shrink-0 rounded-2xl p-5 sm:p-8 flex flex-col gap-4 sm:gap-5"
           style={{
             background: 'rgba(10, 8, 28, 0.80)',
             backdropFilter: 'blur(24px)',
@@ -95,7 +95,7 @@ export default function MunicipioSelector() {
           </div>
 
           {/* lista de órgãos */}
-          <div className="flex flex-col gap-2 max-h-96 overflow-y-auto pr-0.5">
+          <div className="flex flex-col gap-2 overflow-y-auto pr-0.5" style={{ maxHeight: 'min(384px, 45vh)' }}>
             {error && (
               <p className="text-red-400 text-xs text-center py-3">{error}</p>
             )}
@@ -148,7 +148,7 @@ export default function MunicipioSelector() {
               >
                 {/* brasão / logo */}
                 <div
-                  className="flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center overflow-hidden"
+                  className="flex-shrink-0 w-11 h-11 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center overflow-hidden"
                   style={{
                     background: 'rgba(139,92,246,0.12)',
                     border: '1px solid rgba(139,92,246,0.30)',

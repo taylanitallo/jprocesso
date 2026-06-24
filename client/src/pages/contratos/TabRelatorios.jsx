@@ -1,17 +1,258 @@
-﻿import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import {
   FileText, CheckCircle2, AlertTriangle, XCircle, DollarSign,
-  TrendingUp, Building2, Award, Tag, Activity, Loader2,
-  ClipboardList, ShoppingCart, Wrench,
+  TrendingUp, Building2, Award, Tag, Activity, X,
+  ClipboardList, ShoppingCart, Wrench, FileDown, Loader2,
 } from 'lucide-react'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import api from '../../services/api'
 import LoadingBar from '../../components/LoadingBar'
+import { applyTimbradoToPage } from '../../utils/timbradoStore'
+import { getMargens } from '../../utils/margensStore'
 
+// ── helpers ───────────────────────────────────────────────────────────────────
+const fmtMoeda = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseFloat(String(v ?? '').replace(',', '.')) || 0)
+const parseVal  = v => parseFloat(String(v ?? '').replace(',', '.')) || 0
+const fmtData   = d => { if (!d) return '—'; const [y, m, dia] = d.split('T')[0].split('-'); return `${dia}/${m}/${y}` }
+const safe = v => v === null || v === undefined ? '-' : String(v).replace(/[^\x00-\xFF]/g, '').replace(/\s+/g, ' ').trim() || '-'
+
+const STATUS_BADGE = {
+  ATIVO:      'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  ENCERRADO:  'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-400',
+  SUSPENSO:   'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  RESCINDIDO: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+}
+const STATUS_BAR   = { ATIVO: 'bg-green-500', ENCERRADO: 'bg-gray-400', SUSPENSO: 'bg-amber-500', RESCINDIDO: 'bg-red-500' }
+const CORES = ['bg-blue-500','bg-purple-500','bg-teal-500','bg-indigo-500','bg-cyan-500','bg-violet-500','bg-sky-500','bg-fuchsia-500']
+
+// ── PDF ───────────────────────────────────────────────────────────────────────
+async function gerarListaContratoPDF({ titulo, lista, nomeCredor }) {
+  const mg = getMargens()
+  const M  = mg.left, UW = 210 - mg.left - mg.right
+  const mTop = mg.top, mBottom = mg.bottom
+
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+  const pageW = doc.internal.pageSize.getWidth()
+  const pageH = doc.internal.pageSize.getHeight()
+  const UWL = pageW - mg.left - mg.right
+
+  await applyTimbradoToPage(doc, 0)
+  let y = mTop + 4
+
+  doc.setFontSize(13); doc.setFont('helvetica', 'bold')
+  doc.text(safe(titulo), M, y); y += 7
+
+  doc.setFontSize(8); doc.setFont('helvetica', 'normal')
+  doc.setTextColor(120)
+  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}  |  Total: ${lista.length} contrato(s)`, M, y)
+  doc.setTextColor(0)
+  y += 5
+
+  autoTable(doc, {
+    startY: y,
+    margin: { left: M, right: mg.right, bottom: mBottom + 4 },
+    head: [['Nº Contrato', 'Objeto', 'Credor', 'Secretaria', 'Modalidade', 'Valor', 'Início', 'Fim', 'Status']],
+    body: lista.map(c => [
+      safe(c.numero_contrato),
+      safe(c.objeto),
+      safe(nomeCredor(c.credor_id)),
+      safe(c.secretaria),
+      safe(c.modalidade),
+      safe(fmtMoeda(parseVal(c.valor))),
+      safe(fmtData(c.vigencia_inicio)),
+      safe(fmtData(c.vigencia_fim)),
+      safe(c.status),
+    ]),
+    styles: { fontSize: 7, cellPadding: 2 },
+    headStyles: { fillColor: [30, 58, 138], textColor: 255, fontStyle: 'bold', fontSize: 7 },
+    alternateRowStyles: { fillColor: [245, 247, 250] },
+    columnStyles: {
+      0: { cellWidth: 22 },
+      1: { cellWidth: 50 },
+      2: { cellWidth: 38 },
+      3: { cellWidth: 32 },
+      4: { cellWidth: 22 },
+      5: { cellWidth: 24, halign: 'right' },
+      6: { cellWidth: 18, halign: 'center' },
+      7: { cellWidth: 18, halign: 'center' },
+      8: { cellWidth: 16, halign: 'center' },
+    },
+    didDrawPage: async (data) => {
+      const pg = doc.internal.getCurrentPageInfo().pageNumber
+      if (pg > 1) await applyTimbradoToPage(doc, pg - 1)
+      doc.setFontSize(7); doc.setTextColor(160)
+      doc.text(`Página ${pg}`, pageW - mg.right, pageH - mBottom + 2, { align: 'right' })
+      doc.setTextColor(0)
+    }
+  })
+
+  doc.save(`contratos_${titulo.toLowerCase().replace(/\s+/g, '_')}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`)
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function ModalContratos({ titulo, lista, nomeCredor, diasAte, onClose }) {
+  const [gerando, setGerando] = useState(false)
+
+  const handlePDF = async () => {
+    setGerando(true)
+    try { await gerarListaContratoPDF({ titulo, lista, nomeCredor }) }
+    finally { setGerando(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-[2.5%]">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl flex flex-col" style={{ width: '95%', height: '95%' }}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-slate-700/50 bg-slate-900 rounded-t-2xl flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <FileText className="w-5 h-5 text-blue-400" />
+            <h2 className="font-bold text-white text-base">{titulo}</h2>
+            <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold">{lista.length} contrato(s)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePDF}
+              disabled={gerando}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-xs font-semibold rounded-lg transition-colors"
+            >
+              {gerando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />}
+              Gerar PDF
+            </button>
+            <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-auto">
+          {lista.length === 0 ? (
+            <div className="flex items-center justify-center h-full text-gray-400 text-sm">Nenhum contrato nesta categoria</div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="bg-slate-100 dark:bg-slate-800 sticky top-0 z-10">
+                <tr>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-slate-400 whitespace-nowrap">Nº Contrato</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-slate-400">Objeto</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-slate-400">Credor</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-slate-400 hidden lg:table-cell">Secretaria</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-slate-400 hidden md:table-cell">Modalidade</th>
+                  <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 dark:text-slate-400">Valor</th>
+                  <th className="text-center py-3 px-4 text-xs font-semibold text-gray-500 dark:text-slate-400 whitespace-nowrap hidden sm:table-cell">Início</th>
+                  <th className="text-center py-3 px-4 text-xs font-semibold text-gray-500 dark:text-slate-400 whitespace-nowrap hidden sm:table-cell">Fim</th>
+                  <th className="text-center py-3 px-4 text-xs font-semibold text-gray-500 dark:text-slate-400">Status</th>
+                  <th className="text-center py-3 px-4 text-xs font-semibold text-gray-500 dark:text-slate-400 hidden md:table-cell">Dias</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                {lista.map(c => {
+                  const dias = diasAte(c.vigencia_fim)
+                  return (
+                    <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                      <td className="py-3 px-4 font-mono font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap">{c.numero_contrato || '—'}</td>
+                      <td className="py-3 px-4 text-gray-700 dark:text-slate-300 max-w-[220px]">
+                        <span className="line-clamp-2 text-xs leading-tight">{c.objeto || '—'}</span>
+                      </td>
+                      <td className="py-3 px-4 text-gray-900 dark:text-white font-medium max-w-[160px] truncate">{nomeCredor(c.credor_id)}</td>
+                      <td className="py-3 px-4 text-gray-500 dark:text-slate-400 hidden lg:table-cell text-xs max-w-[140px] truncate">{c.secretaria || '—'}</td>
+                      <td className="py-3 px-4 text-gray-500 dark:text-slate-400 hidden md:table-cell text-xs whitespace-nowrap">{c.modalidade || '—'}</td>
+                      <td className="py-3 px-4 text-right font-semibold text-gray-900 dark:text-white whitespace-nowrap">{fmtMoeda(parseVal(c.valor))}</td>
+                      <td className="py-3 px-4 text-center text-gray-500 dark:text-slate-400 hidden sm:table-cell whitespace-nowrap text-xs">{fmtData(c.vigencia_inicio)}</td>
+                      <td className="py-3 px-4 text-center text-gray-500 dark:text-slate-400 hidden sm:table-cell whitespace-nowrap text-xs">{fmtData(c.vigencia_fim)}</td>
+                      <td className="py-3 px-4 text-center">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_BADGE[c.status] || 'bg-gray-100 text-gray-600'}`}>{c.status || '—'}</span>
+                      </td>
+                      <td className="py-3 px-4 text-center hidden md:table-cell">
+                        {dias !== null ? (
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                            dias < 0  ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' :
+                            dias <= 7 ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' :
+                            dias <= 30? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                        'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                          }`}>
+                            {dias < 0 ? `${Math.abs(dias)}d atrás` : dias === 0 ? 'Hoje' : `${dias}d`}
+                          </span>
+                        ) : '—'}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+              <tfoot className="bg-slate-50 dark:bg-slate-800/50 sticky bottom-0">
+                <tr>
+                  <td colSpan={5} className="py-2.5 px-4 text-xs font-semibold text-gray-500 dark:text-slate-400">Total ({lista.length} contratos)</td>
+                  <td className="py-2.5 px-4 text-right font-bold text-gray-900 dark:text-white whitespace-nowrap">
+                    {fmtMoeda(lista.reduce((a, c) => a + parseVal(c.valor), 0))}
+                  </td>
+                  <td colSpan={4} />
+                </tr>
+              </tfoot>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Componentes internos ──────────────────────────────────────────────────────
+const KpiCard = ({ icon: Icon, label, value, color, onClick }) => {
+  const str = String(value); const sz = Math.min(1.4, Math.max(0.85, 1.4 - 0.07 * (str.length - 7))) + 'rem'
+  return (
+    <div
+      onClick={onClick}
+      className={`bg-white dark:bg-slate-900/70 border border-gray-100 dark:border-slate-700/50 rounded-2xl p-4 flex flex-col gap-2 shadow-sm transition-all ${
+        onClick ? 'cursor-pointer hover:shadow-lg hover:-translate-y-1 hover:border-blue-300 dark:hover:border-blue-600 active:scale-95' : 'hover:shadow-md hover:-translate-y-0.5'
+      }`}
+    >
+      <div className="flex items-start justify-between">
+        <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center shadow-sm`}>
+          <Icon className="w-[18px] h-[18px] text-white" />
+        </div>
+        {onClick && <span className="text-[10px] text-blue-500 dark:text-blue-400 font-medium">ver lista →</span>}
+      </div>
+      <div>
+        <p className="font-black tabular-nums text-gray-900 dark:text-white leading-tight truncate" style={{ fontSize: sz }}>{value}</p>
+        <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 truncate">{label}</p>
+      </div>
+    </div>
+  )
+}
+
+const DashCardR = ({ icon: Icon, title, badge, children }) => (
+  <div className="bg-white dark:bg-slate-900/70 border border-gray-100 dark:border-slate-700/50 rounded-2xl overflow-hidden shadow-sm">
+    <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-100 dark:border-slate-700/50 bg-gray-50/70 dark:bg-slate-800/30">
+      {Icon && <Icon className="w-4 h-4 text-blue-500" />}
+      <h3 className="text-sm font-semibold text-gray-800 dark:text-slate-200">{title}</h3>
+      {badge && <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700/60 text-gray-500">{badge}</span>}
+    </div>
+    <div className="p-5">{children}</div>
+  </div>
+)
+
+const BarRowR = ({ label, value, extra, pct, bar }) => (
+  <div>
+    <div className="flex justify-between items-center mb-1">
+      <span className="text-sm font-medium text-gray-700 dark:text-slate-300 truncate max-w-[55%]" title={label}>{label}</span>
+      <div className="flex items-center gap-2 flex-shrink-0 ml-1">
+        {extra && <span className="text-xs text-gray-400 hidden sm:block">{extra}</span>}
+        <span className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">{value}</span>
+      </div>
+    </div>
+    <div className="h-2 bg-gray-100 dark:bg-slate-700/60 rounded-full overflow-hidden">
+      <div className={`h-2 ${bar} rounded-full transition-all duration-700`} style={{ width: Math.min(100, pct) + '%' }} />
+    </div>
+  </div>
+)
+
+// ── Componente principal ──────────────────────────────────────────────────────
 function TabRelatorios() {
   const [contratos, setContratos] = useState([])
   const [credores,  setCredores]  = useState([])
   const [ordens,    setOrdens]    = useState([])
   const [loading,   setLoading]   = useState(true)
+  const [modal, setModal]         = useState(null) // { titulo, lista }
 
   useEffect(() => {
     Promise.all([
@@ -27,8 +268,6 @@ function TabRelatorios() {
       .finally(() => setLoading(false))
   }, [])
 
-  const fmtMoeda = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseFloat(String(v ?? '').replace(',', '.')) || 0)
-  const parseVal  = v => parseFloat(String(v ?? '').replace(',', '.')) || 0
   const nomeCredor = id => credores.find(c => c.id === id)?.razao_social || '—'
   const diasAte = d => {
     if (!d) return null
@@ -65,20 +304,16 @@ function TabRelatorios() {
   const secList   = Object.entries(mapSec).sort((a, b) => b[1].valor - a[1].valor).slice(0, 8)
   const maxSecVal = secList[0]?.[1]?.valor || 1
 
-  const STATUS_BAR   = { ATIVO: 'bg-green-500', ENCERRADO: 'bg-gray-400', SUSPENSO: 'bg-amber-500', RESCINDIDO: 'bg-red-500' }
-  const STATUS_BADGE = { ATIVO: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', ENCERRADO: 'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-400', SUSPENSO: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', RESCINDIDO: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' }
-  const CORES = ['bg-blue-500','bg-purple-500','bg-teal-500','bg-indigo-500','bg-cyan-500','bg-violet-500','bg-sky-500','bg-fuchsia-500']
-
-  // ── Dados de Ordens ────────────────────────────────────────────────────────
-  const ordensAtivas = ordens.filter(o => o.status !== 'CANCELADA')
-  const ordTotal     = ordens.length
-  const ordCompras   = ordens.filter(o => o.tipo === 'COMPRA').length
-  const ordServicos  = ordens.filter(o => o.tipo === 'SERVICO').length
-  const ordEmitidas  = ordens.filter(o => o.status === 'EMITIDA').length
-  const ordAtendidas = ordens.filter(o => o.status === 'ATENDIDA').length
-  const ordCanceladas= ordens.filter(o => o.status === 'CANCELADA').length
-  const ordValorTotal= ordensAtivas.reduce((a, o) => a + parseVal(o.valor_total), 0)
-  const taxaExecucao = totalVal > 0 ? Math.min(100, (ordValorTotal / totalVal) * 100).toFixed(1) : '0.0'
+  // ── Dados de Ordens ──────────────────────────────────────────────────────────
+  const ordensAtivas  = ordens.filter(o => o.status !== 'CANCELADA')
+  const ordTotal      = ordens.length
+  const ordCompras    = ordens.filter(o => o.tipo === 'COMPRA').length
+  const ordServicos   = ordens.filter(o => o.tipo === 'SERVICO').length
+  const ordEmitidas   = ordens.filter(o => o.status === 'EMITIDA').length
+  const ordAtendidas  = ordens.filter(o => o.status === 'ATENDIDA').length
+  const ordCanceladas = ordens.filter(o => o.status === 'CANCELADA').length
+  const ordValorTotal = ordensAtivas.reduce((a, o) => a + parseVal(o.valor_total), 0)
+  const taxaExecucao  = totalVal > 0 ? Math.min(100, (ordValorTotal / totalVal) * 100).toFixed(1) : '0.0'
 
   const mapOrdSec = {}
   ordensAtivas.forEach(o => {
@@ -86,7 +321,7 @@ function TabRelatorios() {
     if (!mapOrdSec[s]) mapOrdSec[s] = { qtd: 0, valor: 0 }
     mapOrdSec[s].qtd++; mapOrdSec[s].valor += parseVal(o.valor_total)
   })
-  const ordSecList = Object.entries(mapOrdSec).sort((a, b) => b[1].valor - a[1].valor).slice(0, 6)
+  const ordSecList   = Object.entries(mapOrdSec).sort((a, b) => b[1].valor - a[1].valor).slice(0, 6)
   const maxOrdSecVal = ordSecList[0]?.[1]?.valor || 1
 
   const mapOrdCont = {}
@@ -95,60 +330,32 @@ function TabRelatorios() {
     if (!mapOrdCont[num]) mapOrdCont[num] = { qtd: 0, valor: 0 }
     mapOrdCont[num].qtd++; mapOrdCont[num].valor += parseVal(o.valor_total)
   })
-  const ordContList    = Object.entries(mapOrdCont).sort((a, b) => b[1].valor - a[1].valor).slice(0, 8)
-  const maxOrdContVal  = ordContList[0]?.[1]?.valor || 1
+  const ordContList   = Object.entries(mapOrdCont).sort((a, b) => b[1].valor - a[1].valor).slice(0, 8)
+  const maxOrdContVal = ordContList[0]?.[1]?.valor || 1
 
-  const KpiCard = ({ icon: Icon, label, value, color }) => {
-    const str = String(value); const sz = Math.min(1.4, Math.max(0.85, 1.4 - 0.07 * (str.length - 7))) + 'rem'
-    return (
-      <div className="bg-white dark:bg-slate-900/70 border border-gray-100 dark:border-slate-700/50 rounded-2xl p-4 flex flex-col gap-2 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
-        <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center shadow-sm`}>
-          <Icon className="w-[18px] h-[18px] text-white" />
-        </div>
-        <div>
-          <p className="font-black tabular-nums text-gray-900 dark:text-white leading-tight truncate" style={{ fontSize: sz }}>{value}</p>
-          <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 truncate">{label}</p>
-        </div>
-      </div>
-    )
-  }
-
-  const DashCardR = ({ icon: Icon, title, badge, children }) => (
-    <div className="bg-white dark:bg-slate-900/70 border border-gray-100 dark:border-slate-700/50 rounded-2xl overflow-hidden shadow-sm">
-      <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-100 dark:border-slate-700/50 bg-gray-50/70 dark:bg-slate-800/30">
-        {Icon && <Icon className="w-4 h-4 text-blue-500" />}
-        <h3 className="text-sm font-semibold text-gray-800 dark:text-slate-200">{title}</h3>
-        {badge && <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700/60 text-gray-500">{badge}</span>}
-      </div>
-      <div className="p-5">{children}</div>
-    </div>
-  )
-
-  const BarRowR = ({ label, value, extra, pct, bar }) => (
-    <div>
-      <div className="flex justify-between items-center mb-1">
-        <span className="text-sm font-medium text-gray-700 dark:text-slate-300 truncate max-w-[55%]" title={label}>{label}</span>
-        <div className="flex items-center gap-2 flex-shrink-0 ml-1">
-          {extra && <span className="text-xs text-gray-400 hidden sm:block">{extra}</span>}
-          <span className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">{value}</span>
-        </div>
-      </div>
-      <div className="h-2 bg-gray-100 dark:bg-slate-700/60 rounded-full overflow-hidden">
-        <div className={`h-2 ${bar} rounded-full transition-all duration-700`} style={{ width: Math.min(100, pct) + '%' }} />
-      </div>
-    </div>
-  )
+  const abrirModal = (titulo, lista) => setModal({ titulo, lista })
 
   return (
     <div className="space-y-4">
-      {/* KPIs */}
+      {/* Modal */}
+      {modal && (
+        <ModalContratos
+          titulo={modal.titulo}
+          lista={modal.lista}
+          nomeCredor={nomeCredor}
+          diasAte={diasAte}
+          onClose={() => setModal(null)}
+        />
+      )}
+
+      {/* KPIs — os 4 primeiros são clicáveis */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <KpiCard icon={FileText}     label="Total Contratos"  value={String(contratos.length)} color="from-blue-500 to-indigo-600" />
-        <KpiCard icon={CheckCircle2} label="Ativos"           value={String(ativos.length)}    color="from-green-500 to-emerald-600" />
-        <KpiCard icon={AlertTriangle} label="Vencendo (30d)" value={String(vencendo.length)}  color="from-yellow-400 to-orange-500" />
-        <KpiCard icon={XCircle}      label="Vencidos"         value={String(vencidos.length)}  color="from-red-500 to-rose-600" />
-        <KpiCard icon={DollarSign}   label="Valor Total"      value={fmtMoeda(totalVal)}       color="from-blue-600 to-indigo-700" />
-        <KpiCard icon={TrendingUp}   label="Valor Ativo"      value={fmtMoeda(ativoVal)}       color="from-teal-500 to-cyan-600" />
+        <KpiCard icon={FileText}      label="Total Contratos"  value={String(contratos.length)}  color="from-blue-500 to-indigo-600"    onClick={() => abrirModal('Todos os Contratos', contratos)} />
+        <KpiCard icon={CheckCircle2}  label="Ativos"           value={String(ativos.length)}      color="from-green-500 to-emerald-600"  onClick={() => abrirModal('Contratos Ativos', ativos)} />
+        <KpiCard icon={AlertTriangle} label="Vencendo (30d)"   value={String(vencendo.length)}    color="from-yellow-400 to-orange-500"  onClick={() => abrirModal('Vencendo em 30 dias', vencendo)} />
+        <KpiCard icon={XCircle}       label="Vencidos"         value={String(vencidos.length)}    color="from-red-500 to-rose-600"       onClick={() => abrirModal('Contratos Vencidos', vencidos)} />
+        <KpiCard icon={DollarSign}    label="Valor Total"      value={fmtMoeda(totalVal)}         color="from-blue-600 to-indigo-700" />
+        <KpiCard icon={TrendingUp}    label="Valor Ativo"      value={fmtMoeda(ativoVal)}         color="from-teal-500 to-cyan-600" />
       </div>
 
       {/* Alertas de vigência */}
@@ -272,7 +479,7 @@ function TabRelatorios() {
         </DashCardR>
       </div>
 
-      {/* ─── Ordens de Compra / Serviço ──────────────────────────────────── */}
+      {/* ─── Ordens de Compra / Serviço ──────────────────────────────────────── */}
       <div className="bg-white dark:bg-slate-900/70 border border-gray-100 dark:border-slate-700/50 rounded-2xl overflow-hidden shadow-sm">
         <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-100 dark:border-slate-700/50 bg-gray-50/70 dark:bg-slate-800/30">
           <ClipboardList className="w-4 h-4 text-blue-500" />
@@ -280,17 +487,15 @@ function TabRelatorios() {
           <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700/60 text-gray-500">{ordTotal} ordens</span>
         </div>
         <div className="p-5 space-y-5">
-          {/* KPIs */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <KpiCard icon={ClipboardList} label="Total Ordens"     value={String(ordTotal)}          color="from-slate-500 to-slate-600" />
-            <KpiCard icon={ShoppingCart}  label="Ordens Compra"    value={String(ordCompras)}         color="from-blue-500 to-indigo-600" />
-            <KpiCard icon={Wrench}        label="Ordens Serviço"   value={String(ordServicos)}        color="from-orange-500 to-amber-600" />
-            <KpiCard icon={AlertTriangle} label="Emitidas"         value={String(ordEmitidas)}        color="from-yellow-400 to-orange-500" />
-            <KpiCard icon={CheckCircle2}  label="Atendidas"        value={String(ordAtendidas)}       color="from-green-500 to-emerald-600" />
-            <KpiCard icon={DollarSign}    label="Valor Emitido"    value={fmtMoeda(ordValorTotal)}    color="from-teal-500 to-cyan-600" />
+            <KpiCard icon={ClipboardList} label="Total Ordens"  value={String(ordTotal)}       color="from-slate-500 to-slate-600" />
+            <KpiCard icon={ShoppingCart}  label="Ordens Compra" value={String(ordCompras)}      color="from-blue-500 to-indigo-600" />
+            <KpiCard icon={Wrench}        label="Ordens Serviço" value={String(ordServicos)}    color="from-orange-500 to-amber-600" />
+            <KpiCard icon={AlertTriangle} label="Emitidas"      value={String(ordEmitidas)}     color="from-yellow-400 to-orange-500" />
+            <KpiCard icon={CheckCircle2}  label="Atendidas"     value={String(ordAtendidas)}    color="from-green-500 to-emerald-600" />
+            <KpiCard icon={DollarSign}    label="Valor Emitido" value={fmtMoeda(ordValorTotal)} color="from-teal-500 to-cyan-600" />
           </div>
 
-          {/* Taxa de execução */}
           {totalVal > 0 && (
             <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/30 rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
@@ -314,7 +519,6 @@ function TabRelatorios() {
             <p className="text-sm text-gray-400 text-center py-4">Nenhuma ordem cadastrada</p>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Por status */}
               <div>
                 <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-3">Status das Ordens</p>
                 <div className="space-y-2.5">
@@ -342,7 +546,6 @@ function TabRelatorios() {
                 </div>
               </div>
 
-              {/* Por tipo */}
               <div>
                 <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-3">Tipo de Ordem</p>
                 <div className="space-y-2.5">
@@ -371,7 +574,6 @@ function TabRelatorios() {
             </div>
           )}
 
-          {/* Top contratos com mais ordens */}
           {ordContList.length > 0 && (
             <div>
               <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-3">Contratos com Maior Volume de Ordens</p>
@@ -383,7 +585,6 @@ function TabRelatorios() {
             </div>
           )}
 
-          {/* Por secretaria (ordens) */}
           {ordSecList.length > 0 && (
             <div>
               <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-3">Ordens por Secretaria</p>
@@ -399,9 +600,5 @@ function TabRelatorios() {
     </div>
   )
 }
-
-// ══════════════════════════════════════════════════════════════════════════════
-//  PÁGINA CONTRATOS
-// ══════════════════════════════════════════════════════════════════════════════
 
 export default TabRelatorios
