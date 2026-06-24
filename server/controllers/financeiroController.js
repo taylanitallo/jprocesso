@@ -35,7 +35,7 @@ const getDashboard = async (req, res) => {
     // ── Helpers de parse de listas ────────────────────────────────────────
     const parseList = v => {
       if (!v) return [];
-      return (Array.isArray(v) ? v : String(v).split(','))
+      return (Array.isArray(v) ? v : String(v).split('|'))
         .map(s => s.trim()).filter(Boolean);
     };
     const mesesRefList   = parseList(meses_ref);
@@ -524,21 +524,21 @@ const getProcessosDid = async (req, res) => {
     }
     // secretaria aceita tanto nome único (iLike) quanto lista (Op.in)
     if (secretaria) {
-      const secs = secretaria.split(',').map(s => s.trim()).filter(Boolean);
+      const secs = secretaria.split('|').map(s => s.trim()).filter(Boolean);
       didWhere.secretaria_sec1 = secs.length === 1 ? { [Op.iLike]: `%${secs[0]}%` } : { [Op.in]: secs };
     }
     if (credor) {
-      const creds = credor.split(',').map(c => c.trim()).filter(Boolean);
+      const creds = credor.split('|').map(c => c.trim()).filter(Boolean);
       didWhere.credor_sec1 = creds.length === 1 ? { [Op.iLike]: `%${creds[0]}%` } : { [Op.in]: creds };
     }
     if (mes_ref) {
-      const meses = mes_ref.split(',').map(m => m.trim()).filter(Boolean);
+      const meses = mes_ref.split('|').map(m => m.trim()).filter(Boolean);
       didWhere.mes_referencia = meses.length === 1 ? meses[0] : { [Op.in]: meses };
     }
     // fonte de recurso (parâmetro fontes ou fonte)
     const fonteParam = req.query.fontes || req.query.fonte;
     if (fonteParam) {
-      const fs = fonteParam.split(',').map(f => f.trim()).filter(Boolean);
+      const fs = fonteParam.split('|').map(f => f.trim()).filter(Boolean);
       if (fs.length) didWhere.fonte_recurso = fs.length === 1 ? fs[0] : { [Op.in]: fs };
     }
 
@@ -587,15 +587,15 @@ const getRelatorio = async (req, res) => {
     if (tipo) where.tipo_did = tipo;
 
     if (secretarias) {
-      const list = secretarias.split(',').map(s => s.trim()).filter(Boolean);
+      const list = secretarias.split('|').map(s => s.trim()).filter(Boolean);
       if (list.length) where.secretaria_sec1 = { [Op.in]: list };
     }
     if (credores) {
-      const list = credores.split(',').map(s => s.trim()).filter(Boolean);
+      const list = credores.split('|').map(s => s.trim()).filter(Boolean);
       if (list.length) where.credor_sec1 = { [Op.in]: list };
     }
     if (fontes) {
-      const list = fontes.split(',').map(s => s.trim()).filter(Boolean);
+      const list = fontes.split('|').map(s => s.trim()).filter(Boolean);
       if (list.length) where.fonte_recurso = { [Op.in]: list };
     }
 
