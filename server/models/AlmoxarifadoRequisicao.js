@@ -2,8 +2,8 @@ const { DataTypes } = require('sequelize');
 
 /**
  * Fluxo digital de requisição de materiais:
- *   RASCUNHO → PENDENTE_AUTORIZACAO → AUTORIZADA → EM_SEPARACAO → ENTREGUE
- *                                                                ↘ CANCELADA (qualquer etapa antes de ENTREGUE)
+ *   RASCUNHO → PENDENTE_AUTORIZACAO → AUTORIZADA → EM_SEPARACAO → AGUARDANDO_RETIRADA → ENTREGUE
+ *                                                                                       ↘ CANCELADA
  */
 const defineAlmoxarifadoRequisicaoModel = (sequelize) => {
   return sequelize.define('AlmoxarifadoRequisicao', {
@@ -37,6 +37,7 @@ const defineAlmoxarifadoRequisicaoModel = (sequelize) => {
         'PENDENTE_AUTORIZACAO',
         'AUTORIZADA',
         'EM_SEPARACAO',
+        'AGUARDANDO_RETIRADA',
         'ENTREGUE',
         'CANCELADA'
       ),

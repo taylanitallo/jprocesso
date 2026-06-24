@@ -9,7 +9,7 @@ const {
   listLotes, registrarEntradaLote,
   importarNFe, consultarNFSe,
   listRequisicoes, getRequisicao, createRequisicao,
-  autorizarRequisicao, iniciarSeparacao, entregarComToken, regenerarToken,
+  autorizarRequisicao, iniciarSeparacao, aguardandoRetirada, entregarComToken, regenerarToken,
   atenderRequisicao, cancelarRequisicao,
   relatorioConsumo,
   listAuditLog,
@@ -55,8 +55,8 @@ router.get('/requisicoes/:id',                    mid,       getRequisicao);
 router.post('/requisicoes',                       mid,       createRequisicao);
 router.put('/requisicoes/:id/autorizar',          midGestor, autorizarRequisicao);
 router.put('/requisicoes/:id/separacao',          mid,       iniciarSeparacao);
+router.put('/requisicoes/:id/aguardando-retirada', mid,      aguardandoRetirada);
 router.put('/requisicoes/:id/entregar',           mid,       entregarComToken);
-router.put('/requisicoes/:id/token',              midGestor, regenerarToken);
 router.put('/requisicoes/:id/atender',            mid,       atenderRequisicao);   // legado
 router.put('/requisicoes/:id/cancelar',           mid,       cancelarRequisicao);
 

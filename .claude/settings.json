@@ -16,7 +16,14 @@
       "PowerShell(Get-Process -Name \"node\" -ErrorAction SilentlyContinue | Stop-Process -Force -Confirm:$false; Start-Sleep -Seconds 1; cd \"d:\\\\JEOS Sistemas\\\\jprocesso2\\\\server\"; $job = Start-Job { cd \"d:\\\\JEOS Sistemas\\\\jprocesso2\\\\server\"; node index.js 2>&1 }; Start-Sleep -Seconds 4; Receive-Job $job; Stop-Job $job; Remove-Job $job)",
       "PowerShell(Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"cd 'd:\\\\JEOS Sistemas\\\\jprocesso2\\\\server'; node index.js\" -WindowStyle Normal; Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"cd 'd:\\\\JEOS Sistemas\\\\jprocesso2\\\\client'; npx vite --force\" -WindowStyle Normal; Start-Sleep -Seconds 2; Write-Host \"Servidores iniciados\")",
       "PowerShell(Invoke-WebRequest -Uri \"http://localhost:5000/api/tenants/public\" -UseBasicParsing -TimeoutSec 5)",
-      "PowerShell(Get-Process -Name \"node\" -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep -Seconds 1; Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"cd 'd:\\\\JEOS Sistemas\\\\jprocesso2'; npm run dev:full\" -WindowStyle Normal)"
+      "PowerShell(Get-Process -Name \"node\" -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep -Seconds 1; Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"cd 'd:\\\\JEOS Sistemas\\\\jprocesso2'; npm run dev:full\" -WindowStyle Normal)",
+      "Bash(node -e \"require\\('./server/controllers/almoxarifadoController'\\)\")",
+      "Bash(node -e ' *)",
+      "PowerShell(Start-Sleep -Seconds 4; try { $r = Invoke-WebRequest -Uri 'http://localhost:5001' -TimeoutSec 8 -UseBasicParsing -ErrorAction Stop; \"Backend OK \\($\\($r.StatusCode\\)\\)\" } catch { \"Backend nao responde: $\\($_.Exception.Message\\)\" })",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri 'http://localhost:3000' -TimeoutSec 5 -UseBasicParsing -ErrorAction Stop; \"Frontend OK\" } catch { \"Frontend erro: $_\" })",
+      "PowerShell(Start-Process \"http://localhost:3000\")",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri 'http://localhost:3000' -TimeoutSec 5 -UseBasicParsing -ErrorAction Stop; \"Frontend OK\" } catch { \"Erro: $_\" })",
+      "PowerShell($body = '{\"username\":\"admin\",\"password\":\"admin123\"}' ; try { Invoke-WebRequest -Uri 'http://localhost:5001' -TimeoutSec 3 -UseBasicParsing -ErrorAction Stop | Out-Null; \"Backend OK\" } catch { \"Backend erro: $_\" })"
     ]
   }
 }

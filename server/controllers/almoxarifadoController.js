@@ -48,6 +48,8 @@ async function ensureTables(req) {
   await addCol(`ALTER TABLE ${s}."almoxarifado_requisicoes"  ADD COLUMN IF NOT EXISTS secretaria_id      UUID`);
   await addCol(`ALTER TABLE ${s}."almoxarifado_requisicoes"  ADD COLUMN IF NOT EXISTS hash_solicitante   VARCHAR(128)`);
   await addCol(`ALTER TABLE ${s}."almoxarifado_requisicoes"  ADD COLUMN IF NOT EXISTS hash_entrega       VARCHAR(128)`);
+  // Estende o ENUM com o novo status AGUARDANDO_RETIRADA (IF NOT EXISTS requer PG 9.6+)
+  await addCol(`ALTER TYPE ${s}."enum_almoxarifado_requisicoes_status" ADD VALUE IF NOT EXISTS 'AGUARDANDO_RETIRADA'`);
 
   initializedSchemas.add(schema);
 }
@@ -780,7 +782,10 @@ const listRequisicoes = async (req, res) => {
     const { status, page = 1, limit = 20 } = req.query;
 
     const where = {};
-    if (status) where.status = status;
+    if (status) {
+      const statusList = String(status).split(',').map(s => s.trim()).filter(Boolean);
+      where.status = statusList.length === 1 ? statusList[0] : { [Op.in]: statusList };
+    }
     await applyScopeToWhere(where, req, 'secretaria_id', 'almoxarifado', 'requisicoes', 'ver');
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -951,18 +956,12 @@ const autorizarRequisicao = async (req, res) => {
       .update(`${requisicao.numero}|${req.user.id}|${ts}`)
       .digest('hex');
 
-    // Gera token OTP de 6 dÃ­gitos
-    const token_entrega = String(Math.floor(100000 + Math.random() * 900000));
-    const token_expiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 h
-
     const antes = { status: requisicao.status };
     await requisicao.update({
       status: 'AUTORIZADA',
       data_autorizacao: new Date(),
       usuario_autorizador_id: req.user.id,
-      hash_assinatura,
-      token_entrega,
-      token_expiry
+      hash_assinatura
     });
 
     await audit(req.models, {
@@ -973,12 +972,7 @@ const autorizarRequisicao = async (req, res) => {
       user: req.user, ip: req.ip
     });
 
-    res.json({
-      message: 'RequisiÃ§Ã£o autorizada',
-      token_entrega,
-      token_expiry,
-      hash_assinatura
-    });
+    res.json({ message: 'Requisição autorizada', hash_assinatura });
   } catch (error) {
     console.error('Erro autorizarRequisicao:', error);
     res.status(500).json({ error: 'Erro ao autorizar requisiÃ§Ã£o' });
@@ -1018,17 +1012,47 @@ const iniciarSeparacao = async (req, res) => {
 };
 
 /**
- * Confirmar entrega â†’ ENTREGUE
- * Valida token OTP, despacha estoque via FIFO, marca como ENTREGUE.
+ * Marcar como AGUARDANDO_RETIRADA → itens separados, aguardando retirada pelo solicitante.
+ */
+const aguardandoRetirada = async (req, res) => {
+  try {
+    await ensureTables(req);
+    const { AlmoxarifadoRequisicao } = req.models;
+
+    const requisicao = await AlmoxarifadoRequisicao.findByPk(req.params.id);
+    if (!requisicao) return res.status(404).json({ error: 'Requisição não encontrada' });
+    if (requisicao.status !== 'EM_SEPARACAO') {
+      return res.status(400).json({ error: 'A requisição precisa estar Em Separação para marcar como aguardando retirada' });
+    }
+
+    const antes = { status: requisicao.status };
+    await requisicao.update({ status: 'AGUARDANDO_RETIRADA' });
+
+    await audit(req.models, {
+      tabela: 'almoxarifado_requisicoes', registro_id: requisicao.id,
+      acao: 'AGUARDANDO_RETIRADA', descricao: `Requisição ${requisicao.numero} pronta para retirada`,
+      antes, depois: { status: 'AGUARDANDO_RETIRADA' },
+      user: req.user, ip: req.ip
+    });
+
+    res.json({ message: 'Aguardando retirada', status: 'AGUARDANDO_RETIRADA' });
+  } catch (error) {
+    console.error('Erro aguardandoRetirada:', error);
+    res.status(500).json({ error: error.message || 'Erro ao atualizar status' });
+  }
+};
+
+/**
+ * Confirmar entrega → ENTREGUE
+ * Autentica com senha, despacha estoque via FIFO, marca como ENTREGUE.
  */
 const entregarComToken = async (req, res) => {
   try {
     await ensureTables(req);
     const bcrypt = require('bcryptjs');
     const { AlmoxarifadoRequisicao, AlmoxarifadoRequisicaoItem, User } = req.models;
-    const { token, senhaConfirmacao } = req.body;
+    const { senhaConfirmacao } = req.body;
 
-    if (!token) return res.status(400).json({ error: 'Token de entrega obrigatório' });
     if (!senhaConfirmacao) return res.status(400).json({ error: 'Senha obrigatória para assinatura eletrônica' });
     const userDb = await User.findByPk(req.user.id, { attributes: ['senha'] });
     if (!userDb || !(await bcrypt.compare(senhaConfirmacao, userDb.senha))) {
@@ -1038,17 +1062,9 @@ const entregarComToken = async (req, res) => {
     const requisicao = await AlmoxarifadoRequisicao.findByPk(req.params.id, {
       include: [{ model: AlmoxarifadoRequisicaoItem, as: 'itens' }]
     });
-    if (!requisicao) return res.status(404).json({ error: 'RequisiÃ§Ã£o nÃ£o encontrada' });
-    if (!['AUTORIZADA', 'EM_SEPARACAO'].includes(requisicao.status)) {
-      return res.status(400).json({ error: `RequisiÃ§Ã£o no status ${requisicao.status} nÃ£o pode ser entregue` });
-    }
-
-    // Valida token
-    if (requisicao.token_entrega !== String(token)) {
-      return res.status(400).json({ error: 'Token de entrega invÃ¡lido' });
-    }
-    if (!requisicao.token_expiry || new Date() > new Date(requisicao.token_expiry)) {
-      return res.status(400).json({ error: 'Token de entrega expirado. Solicite nova autorizaÃ§Ã£o.' });
+    if (!requisicao) return res.status(404).json({ error: 'Requisição não encontrada' });
+    if (requisicao.status !== 'AGUARDANDO_RETIRADA') {
+      return res.status(400).json({ error: 'A requisição precisa estar com status Aguardando Retirada para ser entregue' });
     }
 
     const hoje = new Date().toISOString().split('T')[0];
@@ -1087,9 +1103,7 @@ const entregarComToken = async (req, res) => {
       data_entrega: new Date(),
       data_atendimento: hoje,
       usuario_atendente_id: req.user.id,
-      hash_entrega,
-      token_entrega: null,
-      token_expiry: null
+      hash_entrega
     });
 
     await audit(req.models, {
@@ -1771,7 +1785,7 @@ module.exports = {
   listLotes, registrarEntradaLote,
   importarNFe, consultarNFSe,
   listRequisicoes, getRequisicao, createRequisicao,
-  autorizarRequisicao, iniciarSeparacao, entregarComToken, regenerarToken,
+  autorizarRequisicao, iniciarSeparacao, aguardandoRetirada, entregarComToken, regenerarToken,
   atenderRequisicao, cancelarRequisicao,
   relatorioConsumo,
   listAuditLog,

@@ -282,7 +282,20 @@ function MovimentacoesTab({ tipo }) {
               )}
               {movs.map(m => (
                 <tr key={m.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{m.data_movimentacao}</td>
+                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                    {(() => {
+                      const raw = m.created_at || m.data_movimentacao
+                      if (!raw) return '—'
+                      // Garante que o timestamp seja interpretado como UTC antes de ajustar
+                      const str = String(raw)
+                      const utcStr = str.endsWith('Z') || str.includes('+') ? str : str + 'Z'
+                      const utc = new Date(utcStr)
+                      // Subtrai 3h para converter UTC → Brasília (UTC-3)
+                      const br = new Date(utc.getTime() - 3 * 60 * 60 * 1000)
+                      const p = n => String(n).padStart(2, '0')
+                      return `${p(br.getUTCDate())}/${p(br.getUTCMonth() + 1)}/${br.getUTCFullYear()} ${p(br.getUTCHours())}:${p(br.getUTCMinutes())}`
+                    })()}
+                  </td>
                   <td className="px-4 py-3">
                     <p className="font-medium text-gray-900 dark:text-white">{m.item?.nome}</p>
                     <p className="text-xs text-gray-400 dark:text-gray-500">{m.item?.codigo}</p>

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   Plus, ChevronLeft, ChevronRight, RefreshCw, X,
   CheckCircle, Clock, AlertTriangle, XCircle, Package,
-  Send, Truck, ShieldCheck, Key, Zap, ClipboardList, Eye, Printer, Lock
+  Send, ShieldCheck, Zap, ClipboardList, Eye, Printer, Lock
 } from 'lucide-react'
 import api from '../services/api'
 import LoadingBar from '../components/LoadingBar'
@@ -33,9 +33,10 @@ const STATUS_ICONS = {
 
 // ─── Stepper de fluxo ─────────────────────────────────────────────────────────
 const STEPS = [
-  { key: 'PENDENTE_AUTORIZACAO', label: 'Aguardando' },
+  { key: 'PENDENTE_AUTORIZACAO', label: 'Aguardando'  },
   { key: 'AUTORIZADA',           label: 'Autorizada'  },
   { key: 'EM_SEPARACAO',         label: 'Separação'   },
+  { key: 'AGUARDANDO_RETIRADA',  label: 'Retirada'    },
   { key: 'ENTREGUE',             label: 'Entregue'    },
 ]
 
@@ -434,40 +435,10 @@ function NovaRequisicaoModal({ setores, secretarias, onClose, onSave, saving, er
 // ─── Modal: Autorizar ─────────────────────────────────────────────────────────
 function AutorizarModal({ req, onClose, onSave, saving, erro }) {
   const [step, setStep] = useState(1) // 1: revisão, 2: assinatura
-  const [resultado, setResultado] = useState(null)
 
   const handleAutorizar = async (senhaConfirmacao) => {
-    const res = await onSave(senhaConfirmacao)
-    if (res) setResultado(res)
-  }
-
-  if (resultado) {
-    return (
-      <AlmoxModal title="Requisição Autorizada ✓" onClose={onClose}>
-        <div className="text-center space-y-4">
-          <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-6">
-            <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-              Requisição <strong>{req.numero}</strong> autorizada. Forneça o token abaixo ao almoxarife no momento da entrega:
-            </p>
-            <div className="flex items-center justify-center gap-3">
-              <div className="bg-white dark:bg-gray-800 border-2 border-green-400 rounded-xl px-8 py-4">
-                <p className="text-4xl font-mono font-bold tracking-widest text-green-700 dark:text-green-300">
-                  {resultado.token_entrega}
-                </p>
-              </div>
-              <div className="flex flex-col gap-1">
-                <Key className="h-6 w-6 text-green-500" />
-              </div>
-            </div>
-            <p className="text-xs text-gray-400 mt-3">
-              Válido por 24h · Expira em {new Date(resultado.token_expiry).toLocaleString('pt-BR')}
-            </p>
-          </div>
-          <button onClick={onClose} className="btn-primary text-sm w-full">Fechar</button>
-        </div>
-      </AlmoxModal>
-    )
+    const ok = await onSave(senhaConfirmacao)
+    if (ok) onClose()
   }
 
   if (step === 2) {
@@ -506,68 +477,13 @@ function AutorizarModal({ req, onClose, onSave, saving, erro }) {
           ))}
         </div>
         <p className="text-xs text-gray-400">
-          Ao autorizar, o sistema verificará o estoque e gerará um token OTP para confirmação da entrega.
+          Ao autorizar, o sistema verificará o estoque disponível. A entrega será gerenciada na aba Solicitações.
         </p>
         <div className="flex justify-end gap-3 pt-2">
           <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
           <button onClick={() => setStep(2)}
             className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
             <ShieldCheck className="h-4 w-4" /> Avançar — Assinar
-          </button>
-        </div>
-      </div>
-    </AlmoxModal>
-  )
-}
-
-// ─── Modal: Entregar com Token ────────────────────────────────────────────────
-function EntregarModal({ req, onClose, onSave, saving, erro }) {
-  const [step, setStep] = useState(1) // 1: token, 2: assinatura
-  const [token, setToken] = useState('')
-
-  if (step === 2) {
-    return (
-      <AlmoxModal title={`Entrega ${req.numero} — Assinatura`} onClose={onClose}>
-        <AssinaturaStep
-          resumo={<>
-            <p><strong>Requisição:</strong> {req.numero}</p>
-            <p><strong>Token OTP:</strong> <span className="font-mono font-bold">{token}</span></p>
-          </>}
-          onConfirm={(senha) => onSave(token, senha)}
-          onBack={() => setStep(1)}
-          saving={saving}
-          erro={erro}
-        />
-      </AlmoxModal>
-    )
-  }
-
-  return (
-    <AlmoxModal title={`Confirmar Entrega — ${req.numero}`} onClose={onClose}>
-      <div className="space-y-4">
-        {erro && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg px-4 py-2 text-sm">{erro}</div>
-        )}
-        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 text-sm text-blue-700 dark:text-blue-300">
-          <p>Insira o token de 6 dígitos fornecido pelo autorizador para confirmar a entrega dos materiais.</p>
-          <p className="mt-1 text-xs opacity-70">O estoque será deduzido automaticamente via FIFO/PEPS.</p>
-        </div>
-        <div className="text-center">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Token de Entrega</label>
-          <input
-            type="text" maxLength={6} inputMode="numeric" pattern="[0-9]*"
-            value={token}
-            onChange={e => setToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            placeholder="000000"
-            className="text-center text-3xl font-mono tracking-widest border-2 border-gray-300 dark:border-gray-600 rounded-xl px-6 py-3 w-48 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            autoFocus
-          />
-        </div>
-        <div className="flex justify-end gap-3 pt-2">
-          <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
-          <button onClick={() => setStep(2)} disabled={token.length !== 6}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
-            <Truck className="h-4 w-4" /> Avançar — Assinar
           </button>
         </div>
       </div>
@@ -776,16 +692,13 @@ function RequisicaoViewModal({ reqId, onClose }) {
 }
 
 // ─── Linha de Requisição ──────────────────────────────────────────────────────
-function ReqRow({ r, onAutorizar, onSeparar, onEntregar, onCancelar, onRegenerarToken, onVisualizar, userTipo }) {
+function ReqRow({ r, onAutorizar, onCancelar, onVisualizar, userTipo }) {
   const st      = STATUS_REQ[r.status] || STATUS_REQ.PENDENTE_AUTORIZACAO
   const StIcon  = STATUS_ICONS[r.status] || Clock
   const priorSt = PRIORIDADE[r.prioridade]
 
-  const podeAutorizar  = ['PENDENTE', 'PENDENTE_AUTORIZACAO'].includes(r.status) && ['admin', 'gestor'].includes(userTipo)
-  const podeSeparar    = r.status === 'AUTORIZADA'
-  const podeEntregar   = ['AUTORIZADA', 'EM_SEPARACAO'].includes(r.status)
-  const podeRegToken   = ['AUTORIZADA', 'EM_SEPARACAO'].includes(r.status) && ['admin', 'gestor'].includes(userTipo)
-  const podeCancelar   = !['ENTREGUE', 'ATENDIDA', 'CANCELADA'].includes(r.status)
+  const podeAutorizar = ['PENDENTE', 'PENDENTE_AUTORIZACAO'].includes(r.status) && ['admin', 'gestor'].includes(userTipo)
+  const podeCancelar  = ['PENDENTE', 'PENDENTE_AUTORIZACAO'].includes(r.status)
 
   return (
     <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
@@ -822,25 +735,6 @@ function ReqRow({ r, onAutorizar, onSeparar, onEntregar, onCancelar, onRegenerar
               <ShieldCheck className="h-3 w-3" /> Autorizar
             </button>
           )}
-          {podeSeparar && (
-            <button onClick={() => onSeparar(r.id)}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 rounded hover:bg-purple-200 font-medium">
-              <Package className="h-3 w-3" /> Separar
-            </button>
-          )}
-          {podeEntregar && (
-            <button onClick={() => onEntregar(r)}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded hover:bg-blue-200 font-medium">
-              <Truck className="h-3 w-3" /> Entregar
-            </button>
-          )}
-          {podeRegToken && (
-            <button onClick={() => onRegenerarToken(r.id)}
-              title="Regenerar token OTP"
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 rounded hover:bg-amber-200 font-medium">
-              <Key className="h-3 w-3" /> Token
-            </button>
-          )}
           {podeCancelar && (
             <button onClick={() => onCancelar(r)}
               className="flex items-center gap-1 px-2 py-1 text-xs bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 rounded hover:bg-red-200 font-medium">
@@ -865,7 +759,6 @@ export default function AlmoxRequisicoes() {
   const [statusFiltro, setStatusFiltro]= useState('')
   const [novaReq,      setNovaReq]     = useState(false)
   const [autorizando,  setAutorizando] = useState(null)
-  const [entregando,   setEntregando]  = useState(null)
   const [cancelando,   setCancelando]  = useState(null)
   const [viewingReqId, setViewingReqId] = useState(null)
   const [setores,      setSetores]     = useState([])
@@ -913,35 +806,13 @@ export default function AlmoxRequisicoes() {
   const handleAutorizar = async (senhaConfirmacao) => {
     setSaving(true); setErro('')
     try {
-      const { data } = await api.put(`/almoxarifado/requisicoes/${autorizando.id}/autorizar`, { senhaConfirmacao })
+      await api.put(`/almoxarifado/requisicoes/${autorizando.id}/autorizar`, { senhaConfirmacao })
       load(page, statusFiltro)
-      loadAux()
-      return data
+      return true
     } catch (e) {
       const det = e.response?.data?.detalhes
       setErro((e.response?.data?.error || 'Erro ao autorizar') + (det ? ': ' + det.join('; ') : ''))
       return null
-    } finally { setSaving(false) }
-  }
-
-  const handleSeparar = async (id) => {
-    try {
-      await api.put(`/almoxarifado/requisicoes/${id}/separacao`)
-      load(page, statusFiltro)
-    } catch (e) {
-      alert(e.response?.data?.error || 'Erro ao iniciar separação')
-    }
-  }
-
-  const handleEntregar = async (token, senhaConfirmacao) => {
-    setSaving(true); setErro('')
-    try {
-      await api.put(`/almoxarifado/requisicoes/${entregando.id}/entregar`, { token, senhaConfirmacao })
-      setEntregando(null)
-      load(page, statusFiltro)
-      loadAux()
-    } catch (e) {
-      setErro(e.response?.data?.error || 'Erro ao confirmar entrega')
     } finally { setSaving(false) }
   }
 
@@ -956,15 +827,6 @@ export default function AlmoxRequisicoes() {
     } finally { setSaving(false) }
   }
 
-  const handleRegenerarToken = async (id) => {
-    try {
-      const { data } = await api.put(`/almoxarifado/requisicoes/${id}/token`)
-      alert(`Novo token gerado: ${data.token_entrega}\nVálido até: ${new Date(data.token_expiry).toLocaleString('pt-BR')}`)
-    } catch (e) {
-      alert(e.response?.data?.error || 'Erro ao regenerar token')
-    }
-  }
-
   const totalPages = Math.ceil(total / PER_PAGE)
 
   return (
@@ -973,7 +835,7 @@ export default function AlmoxRequisicoes() {
         icon={ClipboardList}
         eyebrow="Almoxarifado"
         title="Requisições de Material"
-        subtitle="Gerencie solicitações de materiais, autorizações e entregas com controle por token OTP"
+        subtitle="Crie e autorize requisições de materiais. Entregas são gerenciadas na aba Solicitações."
         actions={
           <ActionBar>
             <button onClick={() => load(page, statusFiltro)} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
@@ -1035,10 +897,7 @@ export default function AlmoxRequisicoes() {
                   userTipo={userTipo}
                   onVisualizar={(id) => setViewingReqId(id)}
                   onAutorizar={(req) => { setAutorizando(req); setErro('') }}
-                  onSeparar={handleSeparar}
-                  onEntregar={(req) => { setEntregando(req); setErro('') }}
                   onCancelar={(req) => { setCancelando(req); setErro('') }}
-                  onRegenerarToken={handleRegenerarToken}
                 />
               ))}
             </tbody>
@@ -1075,13 +934,6 @@ export default function AlmoxRequisicoes() {
           req={autorizando}
           onClose={() => setAutorizando(null)}
           onSave={handleAutorizar} saving={saving} erro={erro}
-        />
-      )}
-      {entregando && (
-        <EntregarModal
-          req={entregando}
-          onClose={() => setEntregando(null)}
-          onSave={handleEntregar} saving={saving} erro={erro}
         />
       )}
       {cancelando && (

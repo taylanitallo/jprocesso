@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { Component } from 'react'
-import { Package, BarChart2, List, ArrowDownCircle, ArrowUpCircle, ClipboardList, Shield, ClipboardCheck, CalendarRange, AlertTriangle } from 'lucide-react'
+import { Package, BarChart2, List, ArrowDownCircle, ArrowUpCircle, ClipboardList, Shield, ClipboardCheck, Inbox, AlertTriangle } from 'lucide-react'
 import { hasPerm } from '../utils/permissions'
 
 class TabErrorBoundary extends Component {
@@ -25,7 +25,7 @@ import { AlmoxSaidas } from '../almoxarifado/AlmoxMovimentacoes'
 import AlmoxRequisicoes from '../almoxarifado/AlmoxRequisicoes'
 import AlmoxAuditLog from '../almoxarifado/AlmoxAuditLog'
 import AlmoxInventario from '../almoxarifado/AlmoxInventario'
-import AlmoxCotas from '../almoxarifado/AlmoxCotas'
+import AlmoxSolicitacoes from '../almoxarifado/AlmoxSolicitacoes'
 import { PageHeader } from '../components/ui'
 import { useAuth } from '../context/AuthContext'
 
@@ -35,7 +35,7 @@ const TABS = [
   { id: 'lotes',       label: 'Entradas',       icon: ArrowDownCircle, permPath: ['almoxarifado', 'entradas',    'ver'] },
   { id: 'saidas',      label: 'Saídas',         icon: ArrowUpCircle,   permPath: ['almoxarifado', 'saidas',      'ver'] },
   { id: 'requisicoes', label: 'Requisições',    icon: ClipboardList,   permPath: ['almoxarifado', 'requisicoes', 'ver'] },
-  { id: 'cotas',       label: 'Cotas',          icon: CalendarRange,   permPath: ['almoxarifado', 'cotas',       'ver'] },
+  { id: 'solicitacoes', label: 'Solicitações',   icon: Inbox,           permPath: ['almoxarifado', 'cotas',       'ver'] },
   { id: 'inventario',  label: 'Inventário',     icon: ClipboardCheck,  permPath: ['almoxarifado', 'inventario',  'ver'] },
   { id: 'auditoria',   label: 'Auditoria',      icon: Shield,          permPath: ['almoxarifado', 'auditoria',   'ver'] },
 ]
@@ -56,7 +56,7 @@ export default function Almoxarifado() {
       case 'lotes':       return <AlmoxLotes />
       case 'saidas':      return <AlmoxSaidas />
       case 'requisicoes': return <AlmoxRequisicoes />
-      case 'cotas':       return <AlmoxCotas />
+      case 'solicitacoes': return <AlmoxSolicitacoes />
       case 'inventario':  return <AlmoxInventario />
       case 'auditoria':   return <AlmoxAuditLog />
       default:            return null
