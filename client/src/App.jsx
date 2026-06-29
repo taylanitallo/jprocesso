@@ -46,8 +46,11 @@ function PageLoader({ label = 'Carregando módulo...' }) {
 function TimbradoSync() {
   const { tenant } = useAuth()
   useEffect(() => {
-    setTimbrado(tenant?.configuracoes?.timbrado ?? null)
-  }, [tenant?.configuracoes?.timbrado])
+    setTimbrado(
+      tenant?.configuracoes?.timbrado ?? null,
+      tenant?.configuracoes?.timbrado_opacity ?? 75
+    )
+  }, [tenant?.configuracoes?.timbrado, tenant?.configuracoes?.timbrado_opacity])
   return null
 }
 

@@ -1,14 +1,24 @@
 import { getMargens } from './margensStore'
 
 let _timbrado = null
-let _timbradoFaded = null  // versão pré-processada a 75% de opacidade via canvas
+let _timbradoFaded = null  // versão pré-processada com a opacidade configurada via canvas
+let _opacity = 0.75        // 0..1 — opacidade da marca d'água (padrão 75%)
 
-export function setTimbrado(val) {
+function clampOpacity(v) {
+  const n = Number(v)
+  if (isNaN(n)) return 0.75
+  return Math.min(1, Math.max(0, n))
+}
+
+export function setTimbrado(val, opacityPct) {
   _timbrado = val || null
+  if (opacityPct !== undefined && opacityPct !== null) {
+    _opacity = clampOpacity(Number(opacityPct) / 100)
+  }
   _timbradoFaded = null
   if (!_timbrado) return
 
-  // Bake 75% opacity no próprio pixel data — nenhum GState necessário no PDF
+  // Bake a opacidade configurada no próprio pixel data — nenhum GState necessário no PDF
   try {
     const img = new Image()
     img.onload = () => {
@@ -21,13 +31,18 @@ export function setTimbrado(val) {
         const ctx = canvas.getContext('2d')
         ctx.fillStyle = '#ffffff'
         ctx.fillRect(0, 0, w, h)
-        ctx.globalAlpha = 0.75
+        ctx.globalAlpha = _opacity
         ctx.drawImage(img, 0, 0)
         _timbradoFaded = canvas.toDataURL('image/jpeg', 0.88)
       } catch { /* fallback silencioso */ }
     }
     img.src = _timbrado
   } catch { /* fallback silencioso */ }
+}
+
+// Permite atualizar apenas a opacidade (reprocessa o canvas se já houver timbrado)
+export function setTimbradoOpacity(opacityPct) {
+  setTimbrado(_timbrado, opacityPct)
 }
 
 export function getTimbrado() {
@@ -59,6 +74,6 @@ export function timbradoPrintCSS() {
       width:210mm;height:297mm;min-width:210mm;min-height:297mm;
       background-image:url("${_timbrado}");
       background-size:210mm 297mm;background-repeat:no-repeat;background-position:top left;
-      opacity:0.75;z-index:-1;pointer-events:none;
+      opacity:${_opacity};z-index:-1;pointer-events:none;
       -webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}`
 }

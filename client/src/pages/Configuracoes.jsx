@@ -89,6 +89,7 @@ export default function Configuracoes() {
     logo_sidebar:      conf.logo_sidebar      || null,
     imagem_fundo_login: conf.imagem_fundo_login || null,
     timbrado:          conf.timbrado          || null,
+    timbrado_opacity:  conf.timbrado_opacity  ?? 75,
     cor_relatorio_primaria:   conf.cor_relatorio_primaria   || '#1e40af',
     cor_relatorio_secundaria: conf.cor_relatorio_secundaria || '#1e3a5f',
     cor_relatorio_texto:      conf.cor_relatorio_texto      || '#111827',
@@ -118,6 +119,7 @@ export default function Configuracoes() {
           logo_sidebar:             c.logo_sidebar             ?? null,
           imagem_fundo_login:       c.imagem_fundo_login       ?? null,
           timbrado:                 c.timbrado                 ?? null,
+          timbrado_opacity:         c.timbrado_opacity         ?? 75,
           cor_relatorio_primaria:   c.cor_relatorio_primaria   || '#1e40af',
           cor_relatorio_secundaria: c.cor_relatorio_secundaria || '#1e3a5f',
           cor_relatorio_texto:      c.cor_relatorio_texto      || '#111827',
@@ -424,13 +426,6 @@ export default function Configuracoes() {
                     hint="Aparece no cabeçalho principal dos relatórios e documentos oficiais."
                     disabled={!editandoGerais}
                   />
-                  <ImageUpload
-                    label="Logo do Sistema (Sidebar)"
-                    value={geraisData.logo_sidebar}
-                    onChange={(v) => handleLogoChange('logo_sidebar', v)}
-                    hint="Substitui o ícone padrão no canto inferior esquerdo do menu lateral."
-                    disabled={!editandoGerais}
-                  />
                 </div>
               </div>
 
@@ -439,13 +434,34 @@ export default function Configuracoes() {
                 <SectionTitle title="Timbrado" />
                 <p className="text-xs text-gray-400 dark:text-slate-500 mb-5">Imagem PNG usada como marca d'água de fundo nos relatórios gerados pelo sistema.</p>
                 <div className="flex flex-col gap-6 md:flex-row md:items-start">
-                  <ImageUpload
-                    label="Arquivo do Timbrado (PNG)"
-                    value={geraisData.timbrado}
-                    onChange={(v) => handleLogoChange('timbrado', v)}
-                    hint="Use PNG com fundo transparente para melhor resultado."
-                    disabled={!editandoGerais}
-                  />
+                  <div className="flex flex-col gap-3">
+                    <ImageUpload
+                      label="Arquivo do Timbrado (PNG)"
+                      value={geraisData.timbrado}
+                      onChange={(v) => handleLogoChange('timbrado', v)}
+                      hint="Use PNG com fundo transparente para melhor resultado."
+                      disabled={!editandoGerais}
+                    />
+                    {geraisData.timbrado && (
+                      <div className="max-w-[260px]">
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs font-medium text-gray-600 dark:text-slate-400">Opacidade do timbrado</label>
+                          <span className="text-xs font-mono text-gray-700 dark:text-slate-300">{geraisData.timbrado_opacity}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0}
+                          max={100}
+                          step={1}
+                          value={geraisData.timbrado_opacity}
+                          onChange={e => setGeraisData(p => ({ ...p, timbrado_opacity: Number(e.target.value) }))}
+                          disabled={!editandoGerais}
+                          className="w-full accent-blue-600 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                        />
+                        <p className="text-[11px] text-gray-400 dark:text-slate-500 mt-1">Controla a transparência da marca d'água nos relatórios (0% = invisível, 100% = opaco).</p>
+                      </div>
+                    )}
+                  </div>
                   {geraisData.timbrado && (
                     <div className="flex-1">
                       <p className="text-xs font-medium text-gray-600 dark:text-slate-400 mb-2">Pré-visualização (proporção A4 · 210 × 297 mm)</p>
@@ -468,7 +484,7 @@ export default function Configuracoes() {
                           <img
                             src={geraisData.timbrado}
                             alt="timbrado"
-                            style={{ width: '100%', height: '100%', objectFit: 'fill', opacity: 0.75 }}
+                            style={{ width: '100%', height: '100%', objectFit: 'fill', opacity: (geraisData.timbrado_opacity ?? 75) / 100 }}
                           />
                         </div>
                       </div>
