@@ -123,7 +123,12 @@ export default function MunicipioSelector() {
             )}
 
             {!loading && municipiosFiltrados.map(m => {
+              // Logo da tela de login fica no bucket privado → servida via endpoint proxy.
+              // Fallback para URLs públicas legadas (logo_url/brasao_url/imagem_url).
               const logoUrl =
+                ((m.configuracoes?.logo_login_url || m.configuracoes?.logo_interna_url) && m.subdominio
+                  ? `/api/tenants/${m.subdominio}/logo/${m.configuracoes?.logo_login_url ? 'login' : 'interna'}`
+                  : null) ||
                 m.configuracoes?.logo_url ||
                 m.configuracoes?.brasao_url ||
                 m.configuracoes?.imagem_url ||
