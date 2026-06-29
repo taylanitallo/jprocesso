@@ -581,10 +581,22 @@ async function migrarSchemaUsuarios(schema, pool) {
       ADD COLUMN IF NOT EXISTS versao        INTEGER               DEFAULT 1,
       ADD COLUMN IF NOT EXISTS created_at    TIMESTAMP             DEFAULT NOW(),
       ADD COLUMN IF NOT EXISTS updated_at    TIMESTAMP             DEFAULT NOW();
-    ALTER TABLE ${schema}.anexos
-      ALTER COLUMN nome_original SET DEFAULT '',
-      ALTER COLUMN caminho       SET DEFAULT '',
-      ALTER COLUMN tamanho       SET DEFAULT 0;
+    -- Colunas legadas (schemas antigos): só ajustar default se existirem
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_schema = '${schema}' AND table_name = 'anexos' AND column_name = 'nome_original') THEN
+        ALTER TABLE ${schema}.anexos ALTER COLUMN nome_original SET DEFAULT '';
+      END IF;
+      IF EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_schema = '${schema}' AND table_name = 'anexos' AND column_name = 'caminho') THEN
+        ALTER TABLE ${schema}.anexos ALTER COLUMN caminho SET DEFAULT '';
+      END IF;
+      IF EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_schema = '${schema}' AND table_name = 'anexos' AND column_name = 'tamanho') THEN
+        ALTER TABLE ${schema}.anexos ALTER COLUMN tamanho SET DEFAULT 0;
+      END IF;
+    END$$;
   `);
 
   // =====================================================================
@@ -793,10 +805,15 @@ async function migrarSchemaUsuarios(schema, pool) {
       ADD COLUMN IF NOT EXISTS tipo_origem VARCHAR(30) DEFAULT 'anexo';
   `);
 
-  // tramitacoes: adicionar valor 'recebimento' ao ENUM tipo_acao
+  // tramitacoes: adicionar valor 'recebimento' ao ENUM tipo_acao (apenas se o tipo enum existir)
   await pool.query(`
     DO $$ BEGIN
-      IF NOT EXISTS (
+      IF EXISTS (
+        SELECT 1 FROM pg_type t
+        JOIN pg_namespace n ON t.typnamespace = n.oid
+        WHERE n.nspname = '${schema}'
+          AND t.typname = 'enum_tramitacoes_tipo_acao'
+      ) AND NOT EXISTS (
         SELECT 1 FROM pg_enum e
         JOIN pg_type t ON e.enumtypid = t.oid
         JOIN pg_namespace n ON t.typnamespace = n.oid
@@ -916,6 +933,8 @@ async function criarEstruturaIsolada(schema, tenant, usuarioAdmin) {
         ativo BOOLEAN DEFAULT TRUE,
         secretaria_id UUID REFERENCES ${schema}.secretarias(id),
         setor_id UUID REFERENCES ${schema}.setores(id),
+        cargo VARCHAR(120) DEFAULT NULL,
+        portaria_nomeacao VARCHAR(60) DEFAULT NULL,
         permissoes JSONB NOT NULL DEFAULT '{"criar_processo":true,"editar_processo":true,"excluir_processo":false,"tramitar_processo":true,"acessar_arquivo":false,"acessar_almoxarifado":false,"acessar_financeiro":false,"acessar_contratos":false,"acessar_tesouraria":false,"visualizar_relatorios":false,"gerenciar_usuarios":false,"gerenciar_secretarias":false,"gerenciar_configuracoes":false,"visualizar_registros":false,"almox_tab_painel":true,"almox_tab_itens":true,"almox_tab_lotes":true,"almox_tab_saidas":true,"almox_tab_requisicoes":true,"almox_tab_cotas":true,"almox_tab_inventario":true,"almox_tab_auditoria":true,"pat_tab_painel":true,"pat_tab_bens":true,"pat_tab_tombamento":true,"pat_tab_transferencia":true,"pat_tab_baixa":true,"pat_tab_inventario":true,"pat_tab_grupos":true,"fin_tab_painel":true,"fin_tab_processos":true,"fin_tab_relatorio":true,"cont_tab_itens":true,"cont_tab_credor":true,"cont_tab_contratos":true,"cont_tab_ordens":true,"cont_tab_relatorios":true,"tes_tab_contas":true,"tes_tab_receitas":true,"tes_tab_despesas":true,"tes_tab_relatorios":true}'::jsonb,
         ultimo_acesso TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -1003,6 +1022,11 @@ async function criarEstruturaIsolada(schema, tenant, usuarioAdmin) {
     `;
 
     await pool.query(createTables);
+
+    // Aplicar migrações de schema para alinhar o schema recém-criado ao model atual
+    // (adiciona colunas como cargo/portaria_nomeacao e atualiza a estrutura de permissões)
+    await migrarSchemaUsuarios(schema, pool);
+    await migrarAgentes(schema, pool);
 
     // Tabelas do módulo Tesouraria
     await migrarTesouraria(schema, pool);

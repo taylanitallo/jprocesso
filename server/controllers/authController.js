@@ -322,7 +322,13 @@ const login = async (req, res) => {
     });
   } catch (error) {
     console.error('Erro ao fazer login:', error);
-    res.status(500).json({ error: 'Erro ao fazer login' });
+    // Erro de banco (ex: coluna ausente em schema desatualizado) — expõe a causa real
+    if (error.name === 'SequelizeDatabaseError') {
+      return res.status(500).json({
+        error: `Erro no banco de dados ao fazer login: ${error.original?.message || error.message}`
+      });
+    }
+    res.status(500).json({ error: error.message || 'Erro ao fazer login' });
   }
 };
 
