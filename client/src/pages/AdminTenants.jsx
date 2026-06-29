@@ -158,7 +158,7 @@ function TenantCard({ tenant, onGerenciar, onDelete, onAtivar }) {
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shrink-0 shadow-sm">
             {tenant.configuracoes?.logo_interna_url
-              ? <img src={tenant.configuracoes.logo_interna_url} alt="" className="w-8 h-8 object-contain rounded-lg" />
+              ? <img src={`/api/tenants/${tenant.subdominio}/logo/interna`} alt="" className="w-8 h-8 object-contain rounded-lg" />
               : <Building className="h-5 w-5 text-white" />}
           </div>
           <div className="min-w-0">
@@ -504,6 +504,8 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
   const [logoInternaFile, setLogoInternaFile]     = useState(null);
   const [logoTimbradoFile, setLogoTimbradoFile]   = useState(null);
   const [timbradoPreviewUrl, setTimbradoPreviewUrl] = useState(null);
+  const [localPreview, setLocalPreview]           = useState({}); // { login: objectUrl, interna: objectUrl }
+  const [logoVersion, setLogoVersion]             = useState(Date.now()); // cache-busting após upload/remoção
   const [logoLoading, setLogoLoading]             = useState('');
 
   useEffect(() => {
@@ -774,6 +776,8 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       clearFile?.();
+      setLogoVersion(Date.now());
+      setLocalPreview(prev => ({ ...prev, [tipo]: undefined }));
       onUpdate();
       alert('Logo enviada com sucesso!');
     } catch (err) {
@@ -785,6 +789,8 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
 
   const handleRemoveLogo = async (tipo) => {
     await api.delete(`/superadmin/tenants/${tenant.id}/logos/${tipo}`);
+    setLogoVersion(Date.now());
+    setLocalPreview(prev => ({ ...prev, [tipo]: undefined }));
     onUpdate();
   };
 
@@ -2040,9 +2046,13 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                   ].map(({ tipo, label, field, file, setFile, accept }) => {
                     const currentUrl = tenant.configuracoes?.[field];
                     const isTimbrado = tipo === 'timbrado';
+                    // login/interna: bucket é privado → servir via endpoint proxy por subdomain
+                    const proxySrc = currentUrl
+                      ? `/api/tenants/${tenant.subdominio}/logo/${tipo}?v=${logoVersion}`
+                      : null;
                     const previewSrc = isTimbrado
                       ? (timbradoPreviewUrl || currentUrl)
-                      : currentUrl;
+                      : (localPreview[tipo] || proxySrc);
 
                     return (
                       <div key={tipo} className={`border border-gray-200 dark:border-slate-700 rounded-xl p-4${isTimbrado ? ' col-span-2' : ''}`}>
@@ -2098,7 +2108,11 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                             </div>
                             <div className="flex-1 space-y-2">
                               <input type="file" accept={accept || 'image/*'}
-                                onChange={e => setFile(e.target.files[0] || null)}
+                                onChange={e => {
+                                  const f = e.target.files[0] || null;
+                                  setFile(f);
+                                  setLocalPreview(prev => ({ ...prev, [tipo]: f ? URL.createObjectURL(f) : undefined }));
+                                }}
                                 className="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-700 dark:text-gray-400" />
                               <div className="flex gap-2">
                                 <button onClick={() => { handleUploadLogo(tipo, file); setFile(null); }}

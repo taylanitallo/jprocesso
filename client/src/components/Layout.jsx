@@ -146,8 +146,8 @@ export default function Layout() {
 
         {/* Logo */}
         <div className="h-[70px] px-5 flex items-center justify-between border-b border-gray-200 dark:border-slate-700/50 flex-shrink-0">
-          {tenant?.configuracoes?.logo_sidebar
-            ? <img src={tenant.configuracoes.logo_sidebar} alt="logo" className="h-9 object-contain" />
+          {tenant?.configuracoes?.logo_interna_url && tenant?.subdominio
+            ? <img src={`/api/tenants/${tenant.subdominio}/logo/interna`} alt="logo" className="h-9 object-contain" />
             : <img src="/logo_jprocesso.png" alt="jProcesso" className="h-9 object-contain dark:brightness-0 dark:invert" />
           }
           <button

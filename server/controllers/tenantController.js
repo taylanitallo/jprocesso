@@ -1134,6 +1134,55 @@ const getTenantInfo = async (req, res) => {
   }
 };
 
+// Servir a logo (login/interna) do tenant a partir do bucket privado.
+// Rota PÚBLICA por subdomain — usada na tela de login e no layout interno.
+const getTenantLogo = async (req, res) => {
+  try {
+    const storageService = require('../services/storageService');
+    const { subdomain, tipo } = req.params;
+
+    if (!['login', 'interna'].includes(tipo)) {
+      return res.status(400).json({ error: 'Tipo inválido. Use "login" ou "interna"' });
+    }
+
+    const tenant = await Tenant.findOne({
+      where: { subdominio: subdomain, ativo: true },
+      attributes: ['configuracoes']
+    });
+    if (!tenant) return res.status(404).json({ error: 'Município não encontrado' });
+
+    const campoMap = { login: 'logo_login_url', interna: 'logo_interna_url' };
+    let storagePath = tenant.configuracoes?.[campoMap[tipo]];
+    if (!storagePath) return res.status(404).json({ error: 'Logo não configurada' });
+
+    // Se for URL completa do Supabase, extrair o caminho relativo dentro do bucket
+    if (storagePath.startsWith('http')) {
+      const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'jprocesso-documentos';
+      const markers = [`/object/public/${bucket}/`, `/object/sign/${bucket}/`, `/object/authenticated/${bucket}/`];
+      for (const marker of markers) {
+        if (storagePath.includes(marker)) { storagePath = storagePath.split(marker)[1].split('?')[0]; break; }
+      }
+      if (storagePath.startsWith('http')) {
+        const m = storagePath.match(new RegExp(`${bucket}/(.+?)(?:\\?|$)`));
+        if (m) storagePath = m[1];
+      }
+    }
+
+    const buffer = await storageService.downloadDocumento(storagePath);
+    const ext = (storagePath.split('.').pop() || 'png').toLowerCase();
+    const mime = ext === 'svg' ? 'image/svg+xml'
+      : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg'
+      : ext === 'webp' ? 'image/webp'
+      : 'image/png';
+    res.setHeader('Content-Type', mime);
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.send(buffer);
+  } catch (error) {
+    console.error('Erro ao servir logo do tenant:', error);
+    res.status(404).json({ error: 'Logo não encontrada' });
+  }
+};
+
 // Atualizar apenas as configurações gerais do tenant (logos, cores)
 // Endpoint usado pela aba Gerais das Configurações
 const updateTenantConfiguracoes = async (req, res) => {
@@ -1160,6 +1209,7 @@ module.exports = {
   listTenants,
   getTenantById,
   getTenantInfo,
+  getTenantLogo,
   updateTenant,
   updateTenantConfiguracoes,
   deleteTenant,

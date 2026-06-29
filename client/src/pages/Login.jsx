@@ -56,7 +56,11 @@ export default function Login() {
   }
 
   const nomeMunicipio = tenantInfo?.tenant?.nome_municipio
-  const brasaoUrl = tenantInfo?.tenant?.configuracoes?.brasao_url
+  // Bucket privado → logo de login servida via endpoint proxy por subdomain.
+  // Mantém compatibilidade com brasao_url (URL pública legada), se existir.
+  const brasaoUrl = tenantInfo?.tenant?.configuracoes?.logo_login_url
+    ? `/api/tenants/${subdomain}/logo/login`
+    : tenantInfo?.tenant?.configuracoes?.brasao_url
 
   if (tenantNotFound) {
     return (

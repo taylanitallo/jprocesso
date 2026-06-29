@@ -5,6 +5,7 @@ const {
   listTenants,
   getTenantById,
   getTenantInfo,
+  getTenantLogo,
   updateTenant,
   updateTenantConfiguracoes,
   deleteTenant,
@@ -18,6 +19,9 @@ const superAdmin = [authenticate, requireSuperAdmin];
 // ── Rotas PÚBLICAS ────────────────────────────────────────────────────────────
 // Info por subdomain — usada na tela de Login antes de qualquer autenticação
 router.get('/info', getTenantInfo);
+
+// Logo (login/interna) por subdomain — servida do bucket privado via proxy
+router.get('/:subdomain/logo/:tipo', getTenantLogo);
 
 // Lista pública de tenants ativos — usada no seletor de município
 router.get('/public', async (req, res) => {
