@@ -87,17 +87,25 @@ const createTenant = async (req, res) => {
       return res.status(400).json({ error: 'Dados do administrador são obrigatórios' });
     }
 
+    // Normalizar CNPJ: remover máscara (pontos, barra, traço) e manter só dígitos
+    const cnpjDigits = String(cnpj).replace(/\D/g, '');
+    if (cnpjDigits.length !== 14) {
+      return res.status(400).json({
+        error: `CNPJ inválido: deve conter 14 dígitos (recebido ${cnpjDigits.length}).`
+      });
+    }
+
     // Verificar se subdomínio já existe
-    const subdominioExistente = await Tenant.findOne({ 
-      where: { subdominio } 
+    const subdominioExistente = await Tenant.findOne({
+      where: { subdominio }
     });
-    
+
     if (subdominioExistente) {
       return res.status(400).json({ error: 'Subdomínio já está em uso' });
     }
 
     // Verificar se CNPJ já existe
-    const cnpjExistente = await Tenant.findOne({ where: { cnpj } });
+    const cnpjExistente = await Tenant.findOne({ where: { cnpj: cnpjDigits } });
     if (cnpjExistente) {
       return res.status(400).json({ error: 'CNPJ já cadastrado' });
     }
@@ -108,7 +116,7 @@ const createTenant = async (req, res) => {
     // Criar tenant no banco master
     const tenant = await Tenant.create({
       nome_municipio: nome,
-      cnpj,
+      cnpj: cnpjDigits,
       subdominio,
       schema,
       cidade,
@@ -130,10 +138,11 @@ const createTenant = async (req, res) => {
         senha: adminSenha
       });
     } catch (schemaError) {
-      console.error('Erro ao criar estrutura isolada');
+      console.error('Erro ao criar estrutura isolada:', schemaError);
       // Rollback: deletar tenant
       await tenant.destroy();
-      throw new Error('Erro ao criar banco de dados isolado');
+      const detalhe = schemaError?.message || 'erro desconhecido';
+      throw new Error(`Erro ao criar banco de dados isolado: ${detalhe}`);
     }
 
     res.status(201).json({
@@ -149,8 +158,28 @@ const createTenant = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Erro ao criar município');
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    console.error('Erro ao criar município:', error);
+
+    // Erro de unicidade (subdomínio/CNPJ/schema já existentes)
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      const campo = error.errors?.[0]?.path || 'campo único';
+      return res.status(400).json({ error: `Já existe um registro com esse ${campo}.` });
+    }
+
+    // Erro de validação do Sequelize
+    if (error.name === 'SequelizeValidationError') {
+      const msg = error.errors?.map(e => e.message).join('; ') || 'dados inválidos';
+      return res.status(400).json({ error: msg });
+    }
+
+    // Erro vindo do banco (ex: valor muito longo para a coluna)
+    if (error.name === 'SequelizeDatabaseError') {
+      return res.status(400).json({
+        error: `Erro no banco de dados: ${error.original?.message || error.message}`
+      });
+    }
+
+    res.status(500).json({ error: error.message || 'Erro interno do servidor' });
   }
 };
 

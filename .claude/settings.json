@@ -25,7 +25,18 @@
       "PowerShell(try { $r = Invoke-WebRequest -Uri 'http://localhost:3000' -TimeoutSec 5 -UseBasicParsing -ErrorAction Stop; \"Frontend OK\" } catch { \"Erro: $_\" })",
       "PowerShell($body = '{\"username\":\"admin\",\"password\":\"admin123\"}' ; try { Invoke-WebRequest -Uri 'http://localhost:5001' -TimeoutSec 3 -UseBasicParsing -ErrorAction Stop | Out-Null; \"Backend OK\" } catch { \"Backend erro: $_\" })",
       "PowerShell(Start-Sleep -Seconds 3 ; try { $r = Invoke-WebRequest -Uri 'http://localhost:3000' -TimeoutSec 5 -UseBasicParsing -ErrorAction Stop; \"Frontend OK: $\\($r.StatusCode\\)\" } catch { \"Erro: $_\" })",
-      "PowerShell(Start-Sleep -Seconds 3; try { $r = Invoke-WebRequest -Uri 'http://localhost:5001/health' -TimeoutSec 5 -UseBasicParsing -ErrorAction Stop; \"Backend OK\" } catch { try { Invoke-WebRequest -Uri 'http://localhost:5001' -TimeoutSec 5 -UseBasicParsing -ErrorAction Stop | Out-Null; \"Backend OK\" } catch { \"Backend erro: $_\" } })"
+      "PowerShell(Start-Sleep -Seconds 3; try { $r = Invoke-WebRequest -Uri 'http://localhost:5001/health' -TimeoutSec 5 -UseBasicParsing -ErrorAction Stop; \"Backend OK\" } catch { try { Invoke-WebRequest -Uri 'http://localhost:5001' -TimeoutSec 5 -UseBasicParsing -ErrorAction Stop | Out-Null; \"Backend OK\" } catch { \"Backend erro: $_\" } })",
+      "Read(//d//**)",
+      "Bash(ls client/)",
+      "Bash(cd /d/JEOS-Sistemas/jprocesso2)",
+      "Bash(ls package.json)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(p.scripts['dev:full']||'NO dev:full'\\)\")",
+      "Bash(netstat -ano)",
+      "Read(//d/JEOS-Sistemas/**)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\('dev:full =>', p.scripts['dev:full']||'AUSENTE'\\)\")",
+      "Bash(exit 0)",
+      "Bash(start \"\" \"http://localhost:3000\")",
+      "Bash(node -c server/controllers/tenantController.js)"
     ]
   }
 }
