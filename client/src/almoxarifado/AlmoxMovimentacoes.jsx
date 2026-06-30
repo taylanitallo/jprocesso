@@ -204,15 +204,15 @@ function MovimentacoesTab({ tipo }) {
           ? 'Registro de recebimentos e entradas no estoque'
           : 'Registro de saídas, consumo e distribuição de materiais'}
         actions={
-          <button
-            onClick={() => { setAbrirModal(true); setErro('') }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white ${
-              tipo === 'ENTRADA' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
-            }`}
-          >
-            <Plus className="h-4 w-4" />
-            {tipo === 'ENTRADA' ? 'Registrar Entrada' : 'Registrar Saída'}
-          </button>
+          tipo === 'ENTRADA' ? (
+            <button
+              onClick={() => { setAbrirModal(true); setErro('') }}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-green-600 hover:bg-green-700"
+            >
+              <Plus className="h-4 w-4" />
+              Registrar Entrada
+            </button>
+          ) : null
         }
       />
 

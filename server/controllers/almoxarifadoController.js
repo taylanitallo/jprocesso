@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const xml2js = require('xml2js');
 const nfseService = require('../services/nfseService');
 const { registrarLog } = require('../middleware/activityLogger');
-const { applyScopeToWhere } = require('../utils/scopeFilter');
+const { applyScopeToWhere, getScope, ensurePermissoes } = require('../utils/scopeFilter');
 
 // â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -609,9 +609,41 @@ const getOrdemByNumero = async (req, res) => {
 const getEstoque = async (req, res) => {
   try {
     await ensureTables(req);
-    const { AlmoxarifadoItem } = req.models;
+    const { AlmoxarifadoItem, Secretaria } = req.models;
     const where = { estoque_atual: { [Op.gt]: 0 }, ativo: true };
+
+    // Escopo por secretaria — a coluna `secretaria` é texto (nome).
+    // Usuários do almoxarifado/admin (scope 'todas') veem todas; usuários de
+    // secretaria veem apenas itens da própria secretaria.
+    const user = req.user;
+    if (user && user.tipo !== 'admin' && user.tipo !== 'jeos') {
+      await ensurePermissoes(req);
+      const { scope, secretarias } = getScope(user, 'almoxarifado', 'estoque', 'ver');
+
+      const resolverNomes = async (ids) => {
+        if (!ids.length || !Secretaria) return [];
+        const secs = await Secretaria.findAll({
+          where: { id: { [Op.in]: ids } }, attributes: ['nome'], raw: true,
+        });
+        return secs.map(s => s.nome).filter(Boolean);
+      };
+
+      if (scope === 'none') {
+        where.secretaria = { [Op.in]: [] };
+      } else if (scope === 'propria') {
+        const nomes = await resolverNomes(user.secretariaId ? [user.secretariaId] : []);
+        where.secretaria = nomes.length ? { [Op.in]: nomes } : { [Op.in]: [] };
+      } else if (scope === 'algumas') {
+        const nomes = await resolverNomes(secretarias);
+        where.secretaria = nomes.length ? { [Op.in]: nomes } : { [Op.in]: [] };
+      }
+      // scope 'todas': sem filtro
+    }
+
+    // Filtros opcionais vindos da query
     if (req.query.secretaria) where.secretaria = req.query.secretaria;
+    if (req.query.tipo_item)  where.tipo_item = req.query.tipo_item;
+
     const itens = await AlmoxarifadoItem.findAll({ where, order: [['nome', 'ASC']] });
     res.json(itens);
   } catch (error) {

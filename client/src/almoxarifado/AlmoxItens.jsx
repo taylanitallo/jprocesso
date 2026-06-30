@@ -185,7 +185,10 @@ function ItemModal({ item, onClose, onSave, saving, erro }) {
 // Mostra apenas itens que possuem entradas registradas (estoque_atual > 0)
 export default function AlmoxItens() {
   const [todosItens,  setTodosItens]  = useState([])
-  const [busca,       setBusca]       = useState('')
+  const [fCodigo,     setFCodigo]     = useState('')
+  const [fDescricao,  setFDescricao]  = useState('')
+  const [fSecretaria, setFSecretaria] = useState('')
+  const [fTipo,       setFTipo]       = useState('')
   const [editando,    setEditando]    = useState(null)
   const [loading,     setLoading]     = useState(true)
   const [saving,      setSaving]      = useState(false)
@@ -193,14 +196,38 @@ export default function AlmoxItens() {
   const [paginaAtual, setPaginaAtual] = useState(1)
   const itensPorPagina = 15
 
-  const itensFiltrados = busca
-    ? todosItens.filter(item =>
-        item.nome?.toLowerCase().includes(busca.toLowerCase()) ||
-        String(item.codigo || '').toLowerCase().includes(busca.toLowerCase()) ||
-        item.categoria?.toLowerCase().includes(busca.toLowerCase()) ||
-        item.secretaria?.toLowerCase().includes(busca.toLowerCase())
-      )
-    : todosItens
+  const temFiltro = fCodigo || fDescricao || fSecretaria || fTipo
+
+  const limparFiltros = () => {
+    setFCodigo(''); setFDescricao(''); setFSecretaria(''); setFTipo('')
+    setPaginaAtual(1)
+  }
+
+  const estoqueStatus = (item) => {
+    const atual = parseFloat(item.estoque_atual)
+    const min   = parseFloat(item.estoque_minimo)
+    if (min > 0 && atual <= min)       return 'critico'
+    if (min > 0 && atual <= min * 1.5) return 'atencao'
+    return 'ok'
+  }
+
+  // Secretarias presentes no estoque carregado (alimenta o filtro)
+  const secretariasDisponiveis = [...new Set(
+    todosItens.map(i => i.secretaria).filter(Boolean)
+  )].sort((a, b) => a.localeCompare(b))
+
+  const codigoLower    = fCodigo.toLowerCase()
+  const descricaoLower = fDescricao.toLowerCase()
+  const itensFiltrados = todosItens.filter(item => {
+    if (fCodigo && !String(item.codigo || '').toLowerCase().includes(codigoLower)) return false
+    if (fDescricao && !(
+      item.nome?.toLowerCase().includes(descricaoLower) ||
+      item.categoria?.toLowerCase().includes(descricaoLower)
+    )) return false
+    if (fSecretaria && item.secretaria !== fSecretaria) return false
+    if (fTipo && item.tipo_item !== fTipo) return false
+    return true
+  })
 
   const totalPaginas = Math.ceil(itensFiltrados.length / itensPorPagina)
   const inicio       = (paginaAtual - 1) * itensPorPagina
@@ -241,14 +268,6 @@ export default function AlmoxItens() {
     } finally { setSaving(false) }
   }
 
-  const estoqueStatus = (item) => {
-    const atual = parseFloat(item.estoque_atual)
-    const min   = parseFloat(item.estoque_minimo)
-    if (min > 0 && atual <= min)       return 'critico'
-    if (min > 0 && atual <= min * 1.5) return 'atencao'
-    return 'ok'
-  }
-
   return (
     <div>
       <PageHeader
@@ -267,15 +286,63 @@ export default function AlmoxItens() {
         }
       />
 
-      <FilterBar>
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+      <FilterBar
+        actions={
+          temFiltro ? (
+            <button
+              onClick={limparFiltros}
+              className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline"
+            >
+              Limpar filtros
+            </button>
+          ) : null
+        }
+      >
+        <div className="flex flex-col gap-1 w-full sm:w-40">
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Código</label>
           <input
-            value={busca}
-            onChange={e => { setBusca(e.target.value); setPaginaAtual(1) }}
-            placeholder="Buscar por nome, código, categoria ou secretaria..."
-            className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            value={fCodigo}
+            onChange={e => { setFCodigo(e.target.value); setPaginaAtual(1) }}
+            placeholder="Código do item"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
+        </div>
+
+        <div className="flex flex-col gap-1 flex-1 min-w-[12rem]">
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Descrição</label>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              value={fDescricao}
+              onChange={e => { setFDescricao(e.target.value); setPaginaAtual(1) }}
+              placeholder="Nome ou categoria"
+              className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1 w-full sm:w-52">
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Secretaria</label>
+          <select
+            value={fSecretaria}
+            onChange={e => { setFSecretaria(e.target.value); setPaginaAtual(1) }}
+            className="w-full py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">Todas</option>
+            {secretariasDisponiveis.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1 w-full sm:w-40">
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Tipo</label>
+          <select
+            value={fTipo}
+            onChange={e => { setFTipo(e.target.value); setPaginaAtual(1) }}
+            className="w-full py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">Todos</option>
+            {Object.entries(TIPO_ITEM).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+          </select>
         </div>
       </FilterBar>
 
@@ -314,7 +381,7 @@ export default function AlmoxItens() {
                       <EmptyState
                         icon={Search}
                         title="Nenhum item encontrado"
-                        description={`Nenhum resultado para "${busca}"`}
+                        description="Nenhum item corresponde aos filtros aplicados"
                       />
                     </td>
                   </tr>

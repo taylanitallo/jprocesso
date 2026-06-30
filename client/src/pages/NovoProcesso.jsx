@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import api from '../services/api'
 import {
   ArrowLeft, Save, FileText, ChevronRight, FilePlus2,
-  ClipboardList, FileCheck, Calendar, Send, AlertTriangle,
+  FileCheck, Calendar, Send, AlertTriangle,
 } from 'lucide-react'
 import { PageHeader, SectionTitle, ActionBar } from '../components/ui'
 
@@ -12,7 +12,6 @@ const TIPOS_PROCESSO = [
   { value: 'Despacho',   label: 'Despacho',   descricao: 'Ato administrativo de encaminhamento ou deliberações',         icon: Send,          cor: 'text-purple-500 dark:text-purple-400', iconBg: 'bg-purple-100 dark:bg-purple-900/40', borda: 'hover:border-purple-400 dark:hover:border-purple-500' },
   { value: 'Did',        label: 'DID',         descricao: 'Documento de Intenção de Despesas',                            icon: FileCheck,     cor: 'text-blue-500 dark:text-blue-400',   iconBg: 'bg-blue-100 dark:bg-blue-900/40',   borda: 'hover:border-blue-400 dark:hover:border-blue-500'   },
   { value: 'Pauta',      label: 'Pauta',       descricao: 'Solicitação de processo para contratação de bens ou serviços', icon: Calendar,      cor: 'text-green-500 dark:text-green-400', iconBg: 'bg-green-100 dark:bg-green-900/40', borda: 'hover:border-green-400 dark:hover:border-green-500' },
-  { value: 'Requisição', label: 'Requisição',  descricao: 'Solicitação de retirada de material do Almoxarifado',          icon: ClipboardList, cor: 'text-orange-500 dark:text-orange-400', iconBg: 'bg-orange-100 dark:bg-orange-900/40', borda: 'hover:border-orange-400 dark:hover:border-orange-500' },
 ]
 
 export default function NovoProcesso() {
@@ -62,7 +61,7 @@ export default function NovoProcesso() {
           }
         />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {TIPOS_PROCESSO.map((tipo) => {
             const Icon = tipo.icon
             return (

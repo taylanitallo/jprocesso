@@ -44,7 +44,17 @@
       "Bash(curl -s -o /dev/null -w \"logo interna: HTTP %{http_code}, type=%{content_type}\\\\n\" \"http://localhost:5001/api/tenants/itapaje/logo/interna\")",
       "Bash(curl -s -o /dev/null -w \"logo login: HTTP %{http_code}, type=%{content_type}\\\\n\" \"http://localhost:5001/api/tenants/itapaje/logo/login\")",
       "Bash(curl -s -o /dev/null -w \"frontend: HTTP %{http_code}\\\\n\" \"http://localhost:3000/\")",
-      "Bash(curl -s -o /dev/null -w \"logo itapaje login: HTTP %{http_code}, %{content_type}\\\\n\" \"http://localhost:5001/api/tenants/itapaje/logo/login\")"
+      "Bash(curl -s -o /dev/null -w \"logo itapaje login: HTTP %{http_code}, %{content_type}\\\\n\" \"http://localhost:5001/api/tenants/itapaje/logo/login\")",
+      "Bash(cd /d/JEOS-Sistemas/jprocesso2 && cat package.json | grep -A 20 '\"scripts\"')",
+      "Bash(tasklist)",
+      "Bash(start http://localhost:3000)",
+      "Bash(npx eslint *)",
+      "Bash(npx vite *)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\(p.scripts,null,2\\)\\)\")",
+      "Bash(taskkill //PID 7180 //F)",
+      "Bash(taskkill //PID 26856 //F)",
+      "Bash(sleep 5; netstat -ano | grep -E 'LISTENING' | grep -E ':\\(3000|5001\\)\\\\b'; echo \"--- log ---\"; tail -15 /tmp/jprocesso-dev.log)",
+      "Read(//tmp/**)"
     ]
   }
 }
