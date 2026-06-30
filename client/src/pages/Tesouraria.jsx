@@ -661,7 +661,13 @@ function TabReceitas() {
 <title>Extrato de Receitas</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-body{font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#1a1a1a;padding:24px;background:#fff}
+body{font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#1a1a1a;background:#fff}
+.layout{width:100%;border-collapse:collapse}
+.layout>thead>tr>td,.layout>tfoot>tr>td{border:0;padding:0}
+.layout>tbody>tr>td{border:0}
+.layout>thead>tr,.layout>tfoot>tr{background:transparent!important}
+.sp-top{height:${tenant?.configuracoes?.margens?.top??20}mm}.sp-bottom{height:${tenant?.configuracoes?.margens?.bottom??20}mm}
+.content{padding:0 ${tenant?.configuracoes?.margens?.right??14}mm 0 ${tenant?.configuracoes?.margens?.left??14}mm!important}
 .hdr{border-bottom:3px solid #16a34a;padding-bottom:12px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-end}
 .hdr h1{font-size:22px;font-weight:700;color:#166534;letter-spacing:-.3px}
 .hdr .sub{font-size:11px;color:#6b7280;margin-top:3px}
@@ -684,16 +690,21 @@ tfoot tr{background:#f0fdf4 !important}
 tfoot td{font-weight:700;font-size:13px;border-top:2px solid #16a34a;padding:10px}
 tfoot .val{font-size:15px;color:#15803d}
 .foot{margin-top:16px;text-align:right;color:#9ca3af;font-size:9.5px;border-top:1px solid #e5e7eb;padding-top:8px}
-@page{margin:0}
+@page{size:A4 portrait;margin:0}
 @media print{
-  body{padding:${tenant?.configuracoes?.margens?.top??20}mm ${tenant?.configuracoes?.margens?.right??14}mm ${tenant?.configuracoes?.margens?.bottom??20}mm ${tenant?.configuracoes?.margens?.left??14}mm}
   .meta{background:#f0fdf4 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   thead tr{background:#166534 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .layout>thead>tr{background:transparent !important}
   .ghdr td{background:#dcfce7 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   tfoot tr{background:#f0fdf4 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  ${tenant?.configuracoes?.timbrado ? `body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background-image:url("${tenant.configuracoes.timbrado}");background-size:100% 100%;background-repeat:no-repeat;opacity:.75;z-index:-1;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}` : ''}
+  .layout>tfoot>tr{background:transparent !important}
+  ${tenant?.configuracoes?.timbrado ? `body::before{content:'';position:fixed;top:0;left:0;width:210mm;height:297mm;background-image:url("${tenant.configuracoes.timbrado}");background-size:210mm 297mm;background-repeat:no-repeat;background-position:top left;opacity:.75;z-index:-1;pointer-events:none;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}` : ''}
 }
 </style></head><body>
+<table class="layout">
+<thead><tr><td><div class="sp-top"></div></td></tr></thead>
+<tfoot><tr><td><div class="sp-bottom"></div></td></tr></tfoot>
+<tbody><tr><td class="content">
 <div class="hdr">
   <div><h1>Extrato de Receitas</h1><div class="sub">Tesouraria Municipal</div></div>
   <div class="gen">Gerado em ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>
@@ -716,6 +727,8 @@ tfoot .val{font-size:15px;color:#15803d}
   </tr></tfoot>
 </table>
 <div class="foot">jProcesso &mdash; Sistema de Gestão Municipal &mdash; JEOS Sistemas</div>
+</td></tr></tbody>
+</table>
 </body></html>`;
 
     const w = window.open('', '_blank', 'width=920,height=700');
@@ -1422,12 +1435,18 @@ function TabRelatorios() {
 
   const _mg = tenant?.configuracoes?.margens;
   const PRINT_CSS = `
-    @page{margin:0}
+    @page{size:A4 portrait;margin:0}
     *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}
-    body{font-family:Arial,sans-serif;padding:${_mg?.top??20}mm ${_mg?.right??14}mm ${_mg?.bottom??20}mm ${_mg?.left??14}mm;color:#111;margin:0}
+    body{font-family:Arial,sans-serif;color:#111;margin:0}
+    .layout{width:100%;border-collapse:collapse}
+    .layout>thead>tr>td,.layout>tfoot>tr>td{border:0!important;padding:0!important}
+    .layout>tbody>tr>td{border:0!important}
+    .sp-top{height:${_mg?.top??20}mm}.sp-bottom{height:${_mg?.bottom??20}mm}
+    .content{padding:0 ${_mg?.right??14}mm 0 ${_mg?.left??14}mm!important}
     h2{margin:0 0 2px;font-size:17px}p{margin:2px 0;font-size:12px;color:#555}
-    table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px}
-    th,td{padding:7px 10px;border:1px solid #d1d5db}
+    table.data{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px}
+    table.data th,table.data td{padding:7px 10px;border:1px solid #d1d5db}
+    table.data thead{display:table-header-group}
     .th-blue{background:#1e40af!important;color:#fff!important}
     .th-green{background:#166534!important;color:#fff!important}
     .tf-blue{background:#dbeafe!important;font-weight:700}
@@ -1435,7 +1454,7 @@ function TabRelatorios() {
     .row-r{background:#f0fdf4!important}
     .v-pos{color:#16a34a;font-weight:700}.v-neg{color:#dc2626;font-weight:700}
     .v-g{color:#16a34a}.v-r{color:#dc2626}
-    ${tenant?.configuracoes?.timbrado ? `body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background-image:url("${tenant.configuracoes.timbrado}");background-size:100% 100%;background-repeat:no-repeat;opacity:.75;z-index:-1;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}` : ''}
+    ${tenant?.configuracoes?.timbrado ? `body::before{content:'';position:fixed;top:0;left:0;width:210mm;height:297mm;background-image:url("${tenant.configuracoes.timbrado}");background-size:210mm 297mm;background-repeat:no-repeat;background-position:top left;opacity:.75;z-index:-1;pointer-events:none;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}` : ''}
     @media print{
       .th-blue{background:#1e40af!important;color:#fff!important}
       .th-green{background:#166534!important;color:#fff!important}
@@ -1452,7 +1471,7 @@ function TabRelatorios() {
     if (resultado.tipo === 'saldo') {
       title = 'Saldo por Conta Bancária';
       body = `<h2>${title}</h2><p>Gerado em ${now}</p>
-        <table>
+        <table class="data">
           <thead><tr>
             <th class="th-blue" align="left">Conta</th>
             <th class="th-blue" align="left">Banco</th>
@@ -1476,7 +1495,7 @@ function TabRelatorios() {
     } else if (resultado.tipo === 'fluxo') {
       title = `Fluxo de Caixa Mensal — ${resultado.ano}`;
       body = `<h2>${title}</h2><p>Gerado em ${now}</p>
-        <table>
+        <table class="data">
           <thead><tr>
             <th class="th-blue" align="left">Mês</th>
             <th class="th-blue" align="right">Receitas</th>
@@ -1502,7 +1521,7 @@ function TabRelatorios() {
       body = `<h2>${title}</h2>
         <p>${c.banco_nome || ''}${c.conta ? ` | Conta: ${c.conta}${c.conta_digito ? '-' + c.conta_digito : ''}` : ''}</p>
         <p>Gerado em ${now}</p>
-        <table>
+        <table class="data">
           <thead><tr>
             <th class="th-green" align="left">Data</th>
             <th class="th-green" align="left">Descrição</th>
@@ -1528,7 +1547,11 @@ function TabRelatorios() {
 
     const win = window.open('', '_blank', 'width=940,height=720');
     win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title>
-      <style>${PRINT_CSS}</style></head><body>${body}</body></html>`);
+      <style>${PRINT_CSS}</style></head><body><table class="layout">
+      <thead><tr><td><div class="sp-top"></div></td></tr></thead>
+      <tfoot><tr><td><div class="sp-bottom"></div></td></tr></tfoot>
+      <tbody><tr><td class="content">${body}</td></tr></tbody>
+      </table></body></html>`);
     win.document.close();
     setTimeout(() => win.print(), 500);
   };

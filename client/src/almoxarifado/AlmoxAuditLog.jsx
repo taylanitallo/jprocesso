@@ -3,9 +3,10 @@ import {
   Shield, RefreshCw, Search, ChevronDown, ChevronRight,
   User, Calendar, Monitor, Package, FileText, AlertTriangle,
   CheckCircle, XCircle, Truck, ArrowDownCircle, ArrowUpCircle,
-  Settings, Key, ClipboardList, Filter, X
+  Settings, Key, ClipboardList, Filter, X, Printer
 } from 'lucide-react'
 import api from '../services/api'
+import { useAuth } from '../context/AuthContext'
 import LoadingBar from '../components/LoadingBar'
 
 // ─── Configuração de ações ────────────────────────────────────────────────────
@@ -265,6 +266,7 @@ function StatCard({ label, value, color, icon: Ic }) {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function AlmoxAuditLog() {
+  const { tenant, user } = useAuth()
   const [logs, setLogs]       = useState([])
   const [total, setTotal]     = useState(0)
   const [loading, setLoading] = useState(false)
@@ -334,6 +336,91 @@ export default function AlmoxAuditLog() {
     return Object.entries(map).sort((a, b) => b[1] - a[1])
   }, [logs])
 
+  const gerarPDF = () => {
+    if (!logs.length) return
+    const agora = new Date()
+    const dataGeracao = agora.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    const horaGeracao = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    const geradoPor = user?.nome || user?.email || '—'
+
+    const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+    const filtrosAtivos = []
+    if (filtTabela)  filtrosAtivos.push(`Tabela: ${TABELAS.find(t => t.value === filtTabela)?.label || filtTabela}`)
+    if (filtAcao)    filtrosAtivos.push(`Ação: ${ACAO_CFG[filtAcao]?.label || filtAcao}`)
+    if (filtUser)    filtrosAtivos.push(`Usuário: ${filtUser}`)
+    if (filtDataDe)  filtrosAtivos.push(`De: ${new Date(filtDataDe + 'T12:00:00').toLocaleDateString('pt-BR')}`)
+    if (filtDataAte) filtrosAtivos.push(`Até: ${new Date(filtDataAte + 'T12:00:00').toLocaleDateString('pt-BR')}`)
+
+    const linhas = logs.map(l => {
+      const dt   = new Date(l.created_at)
+      const data = dt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      const hora = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      const acaoLabel  = ACAO_CFG[l.acao]?.label || l.acao || '—'
+      const tabelaLabel = (l.tabela || '').replace(/^almox(arifado)?_/, '') || '—'
+      return `<tr>
+        <td style="white-space:nowrap">${data}<br><span style="color:#6b7280;font-size:11px">${hora}</span></td>
+        <td>${esc(acaoLabel)}</td>
+        <td class="mono">${esc(tabelaLabel)}</td>
+        <td>${esc(l.user_nome || '—')}</td>
+        <td>${esc(formatDesc(l.descricao, l.user_nome))}</td>
+        <td class="mono" style="white-space:nowrap">${esc(l.ip || '—')}</td>
+      </tr>`
+    }).join('')
+
+    const title = 'Trilha de Auditoria — Almoxarifado'
+    const _mg = tenant?.configuracoes?.margens
+    const mgTop = _mg?.top ?? 20, mgRight = _mg?.right ?? 14, mgBottom = _mg?.bottom ?? 20, mgLeft = _mg?.left ?? 14
+    const PRINT_CSS = `
+      @page{size:A4 portrait;margin:0}
+      *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}
+      body{font-family:Arial,sans-serif;color:#111;margin:0}
+      .layout{width:100%;border-collapse:collapse}
+      .layout>thead>tr>td,.layout>tfoot>tr>td{border:0;padding:0}
+      .layout>tbody>tr>td{border:0}
+      .sp-top{height:${mgTop}mm}.sp-bottom{height:${mgBottom}mm}
+      .content{padding:0 ${mgRight}mm 0 ${mgLeft}mm!important}
+      h2{margin:0 0 2px;font-size:17px}p{margin:2px 0;font-size:12px;color:#555}
+      .meta{margin:10px 0 4px;font-size:12px;color:#374151}
+      .meta strong{color:#111}
+      table.data{width:100%;border-collapse:collapse;font-size:12px;margin-top:12px}
+      table.data th,table.data td{padding:6px 9px;border:1px solid #d1d5db;text-align:left;vertical-align:top}
+      table.data thead{display:table-header-group}
+      table.data tr{page-break-inside:avoid}
+      .th-indigo{background:#3730a3!important;color:#fff!important}
+      .mono{font-family:'Courier New',monospace;font-size:11px}
+      table.data tbody tr:nth-child(even){background:#f9fafb!important}
+      ${tenant?.configuracoes?.timbrado ? `body::before{content:'';position:fixed;top:0;left:0;width:210mm;height:297mm;background-image:url("${tenant.configuracoes.timbrado}");background-size:210mm 297mm;background-repeat:no-repeat;background-position:top left;opacity:.75;z-index:-1;pointer-events:none;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}` : ''}
+      @media print{ .th-indigo{background:#3730a3!important;color:#fff!important} table.data tbody tr:nth-child(even){background:#f9fafb!important} }`
+
+    const body = `<table class="layout">
+      <thead><tr><td><div class="sp-top"></div></td></tr></thead>
+      <tfoot><tr><td><div class="sp-bottom"></div></td></tr></tfoot>
+      <tbody><tr><td class="content">
+        <h2>${title}</h2>
+        <p class="meta">Gerado em <strong>${dataGeracao}</strong> às <strong>${horaGeracao}</strong> por <strong>${esc(geradoPor)}</strong></p>
+        <p class="meta">${total} registro${total !== 1 ? 's' : ''} no total — exibindo ${logs.length} desta página${filtrosAtivos.length ? ` &nbsp;·&nbsp; Filtros: ${esc(filtrosAtivos.join(' | '))}` : ''}</p>
+        <table class="data">
+          <thead><tr>
+            <th class="th-indigo">Data / Hora</th>
+            <th class="th-indigo">Ação</th>
+            <th class="th-indigo">Tabela</th>
+            <th class="th-indigo">Usuário</th>
+            <th class="th-indigo">Descrição</th>
+            <th class="th-indigo">IP</th>
+          </tr></thead>
+          <tbody>${linhas}</tbody>
+        </table>
+      </td></tr></tbody>
+    </table>`
+
+    const win = window.open('', '_blank', 'width=940,height=720')
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title>
+      <style>${PRINT_CSS}</style></head><body>${body}</body></html>`)
+    win.document.close()
+    setTimeout(() => win.print(), 500)
+  }
+
   return (
     <div className="space-y-5">
 
@@ -350,14 +437,25 @@ export default function AlmoxAuditLog() {
             </span>
           )}
         </div>
-        <button
-          onClick={() => fetchLogs(page)}
-          disabled={loading}
-          className="btn-secondary flex items-center gap-1.5 text-sm"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          Atualizar
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={gerarPDF}
+            disabled={loading || logs.length === 0}
+            className="btn-secondary flex items-center gap-1.5 text-sm disabled:opacity-40"
+            title="Gerar PDF da página atual"
+          >
+            <Printer className="h-4 w-4" />
+            Gerar PDF
+          </button>
+          <button
+            onClick={() => fetchLogs(page)}
+            disabled={loading}
+            className="btn-secondary flex items-center gap-1.5 text-sm"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            Atualizar
+          </button>
+        </div>
       </div>
 
       {/* Filtros */}

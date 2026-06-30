@@ -10,6 +10,8 @@ import api from '../../services/api'
 import LoadingBar from '../../components/LoadingBar'
 import { salvarDocumentoGerado } from '../../utils/salvarDocumentoGerado'
 import { setPDFLoading } from '../../utils/pdfLoadingStore'
+import { applyTimbradoToPage } from '../../utils/timbradoStore'
+import { getMargens } from '../../utils/margensStore'
 import {
   SectionCard, PremiumInput, PremiumTextarea,
 } from './ContratosShared'
@@ -1086,7 +1088,10 @@ async function gerarPdf(ordemRaw, contratos = []) {
   setPDFLoading(true)
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const W = doc.internal.pageSize.getWidth()
-  const M = 15
+  const mg = getMargens()
+  const M  = mg.left
+  const MR = mg.right
+  const mTop = mg.top
 
   // Enriquece itens com lote do contrato quando não foi salvo no item da ordem
   const contratoItens = contratos.find(c => String(c.id) === String(ordemRaw.contrato_id))?.itens || []
@@ -1112,30 +1117,34 @@ async function gerarPdf(ordemRaw, contratos = []) {
   const CINZA = [120, 120, 120]
   const CLARO = [245, 247, 250]
 
-  // Cabeçalho colorido
-  doc.setFillColor(...AZUL)
-  doc.rect(0, 0, W, 28, 'F')
+  // Timbrado de fundo (marca d'água por página)
+  applyTimbradoToPage(doc)
+
+  // Cabeçalho (sem faixa de fundo — respeita margens e timbrado)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(16)
-  doc.setTextColor(255, 255, 255)
+  doc.setTextColor(...AZUL)
   const titulo = ordem.tipo === 'COMPRA' ? 'ORDEM DE COMPRA' : 'ORDEM DE SERVIÇO'
-  doc.text(titulo, M, 12)
+  doc.text(titulo, M, mTop + 2)
   doc.setFontSize(9)
   doc.setFont('helvetica', 'normal')
-  if (ordem.numero) doc.text(`N\u00ba ${ordem.numero}`, M, 19)
+  doc.setTextColor(60, 70, 90)
+  if (ordem.numero) doc.text(`N\u00ba ${ordem.numero}`, M, mTop + 9)
   doc.setFontSize(8)
   doc.setFont('helvetica', 'bold')
-  doc.text(ordem.status || '', W - M, 19, { align: 'right' })
+  doc.text(ordem.status || '', W - MR, mTop + 9, { align: 'right' })
+  doc.setDrawColor(...AZUL)
+  doc.line(M, mTop + 12, W - MR, mTop + 12)
 
   // Contrato
-  let y = 34
+  let y = mTop + 18
   const secTitle = (label) => {
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(8)
     doc.setTextColor(...AZUL)
     doc.text(label, M, y)
     doc.setDrawColor(...AZUL)
-    doc.line(M, y + 1, W - M, y + 1)
+    doc.line(M, y + 1, W - MR, y + 1)
     y += 5
   }
 
@@ -1148,14 +1157,14 @@ async function gerarPdf(ordemRaw, contratos = []) {
     doc.setFont('helvetica', 'bold')
     doc.text(contrato.numero_contrato || '—', M, y)
     doc.setFont('helvetica', 'normal')
-    const objLines = doc.splitTextToSize(contrato.objeto || '', W - M * 2 - 38)
+    const objLines = doc.splitTextToSize(contrato.objeto || '', W - M - MR - 38)
     doc.text(objLines, M + 36, y)
     y += Math.max(5, objLines.length * 4.5)
     if (contrato.credor?.razao_social) {
       doc.setTextColor(...CINZA)
       doc.setFontSize(8)
       doc.text(`Contratado: ${contrato.credor.razao_social}`, M, y)
-      if (contrato.credor.cnpj_cpf) doc.text(`CNPJ/CPF: ${contrato.credor.cnpj_cpf}`, W - M, y, { align: 'right' })
+      if (contrato.credor.cnpj_cpf) doc.text(`CNPJ/CPF: ${contrato.credor.cnpj_cpf}`, W - MR, y, { align: 'right' })
       y += 5
     }
   }
@@ -1178,7 +1187,7 @@ async function gerarPdf(ordemRaw, contratos = []) {
       2: { fontStyle: 'bold', textColor: CINZA, cellWidth: 45 },
       3: { cellWidth: 'auto' },
     },
-    margin: { left: M, right: M },
+    margin: { left: M, right: MR },
   })
   y = doc.lastAutoTable.finalY + 3
 
@@ -1190,7 +1199,7 @@ async function gerarPdf(ordemRaw, contratos = []) {
     doc.text(`${label}:`, M, y)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(30, 30, 30)
-    const lines = doc.splitTextToSize(value, W - M * 2 - label.length * 2 - 4)
+    const lines = doc.splitTextToSize(value, W - M - MR - label.length * 2 - 4)
     doc.text(lines, M + label.length * 2 + 4, y)
     y += Math.max(5, lines.length * 4)
   }
@@ -1259,7 +1268,7 @@ async function gerarPdf(ordemRaw, contratos = []) {
         4: { cellWidth: 30, halign: 'right' },
         5: { cellWidth: 30, halign: 'right' },
       },
-      margin: { left: M, right: M },
+      margin: { left: M, right: MR },
     })
     y = doc.lastAutoTable.finalY + (usarTablasSeparadas ? 5 : 6)
   })
@@ -1269,7 +1278,7 @@ async function gerarPdf(ordemRaw, contratos = []) {
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(9)
     doc.setTextColor(30, 30, 30)
-    doc.text(`TOTAL GERAL: ${fmtV(totalGeral)}`, W - M, y, { align: 'right' })
+    doc.text(`TOTAL GERAL: ${fmtV(totalGeral)}`, W - MR, y, { align: 'right' })
     y += 6
   }
 
@@ -1279,7 +1288,7 @@ async function gerarPdf(ordemRaw, contratos = []) {
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(8)
     doc.setTextColor(30, 30, 30)
-    const obsLines = doc.splitTextToSize(ordem.observacoes, W - M * 2)
+    const obsLines = doc.splitTextToSize(ordem.observacoes, W - M - MR)
     doc.text(obsLines, M, y)
     y += obsLines.length * 4 + 4
   }
@@ -1287,7 +1296,7 @@ async function gerarPdf(ordemRaw, contratos = []) {
   // Assinaturas
   const pageH = doc.internal.pageSize.getHeight()
   const sigY = Math.max(y + 10, pageH - 38)
-  const lineW = (W - M * 2) / 2 - 8
+  const lineW = (W - M - MR) / 2 - 8
   const col2 = W / 2 + 8
   doc.setDrawColor(80, 80, 80)
   doc.line(M, sigY, M + lineW, sigY)
@@ -1303,7 +1312,7 @@ async function gerarPdf(ordemRaw, contratos = []) {
   doc.setTextColor(180, 180, 180)
   const agora = new Date().toLocaleString('pt-BR')
   doc.text(`Gerado em ${agora}`, M, pageH - 5)
-  doc.text('P\u00e1gina 1', W - M, pageH - 5, { align: 'right' })
+  doc.text('P\u00e1gina 1', W - MR, pageH - 5, { align: 'right' })
 
   const nomeArqOrdem = `ordem_${(ordem.numero || 'sem_numero').replace(/\//g, '-')}.pdf`
   const blobOrdem = doc.output('blob')

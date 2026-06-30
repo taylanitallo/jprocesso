@@ -2201,21 +2201,32 @@ export default function Financeiro() {
                             ? ` — ${relFiltros.data_inicio ? fmtData(relFiltros.data_inicio) : '...'} até ${relFiltros.data_fim ? fmtData(relFiltros.data_fim) : '...'}`
                             : ''
                           win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Relatório DIDs</title><style>
-                            @page{margin:0}
+                            @page{size:A4 portrait;margin:0}
                             *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-                            body{font-family:Arial,sans-serif;font-size:11px;padding:${tenant?.configuracoes?.margens?.top??20}mm ${tenant?.configuracoes?.margens?.right??14}mm ${tenant?.configuracoes?.margens?.bottom??20}mm ${tenant?.configuracoes?.margens?.left??14}mm;color:#222;margin:0}
+                            body{font-family:Arial,sans-serif;font-size:11px;color:#222;margin:0}
+                            .layout{width:100%;border-collapse:collapse}
+                            .layout>thead>tr>td,.layout>tfoot>tr>td{border:0!important;padding:0!important;background:transparent!important}
+                            .layout>tbody>tr>td{border:0!important;background:transparent!important}
+                            .sp-top{height:${tenant?.configuracoes?.margens?.top??20}mm}.sp-bottom{height:${tenant?.configuracoes?.margens?.bottom??20}mm}
+                            .content{padding:0 ${tenant?.configuracoes?.margens?.right??14}mm 0 ${tenant?.configuracoes?.margens?.left??14}mm!important}
                             h2{font-size:15px;margin-bottom:4px}p{color:#666;margin-bottom:12px;font-size:11px}
-                            table{width:100%;border-collapse:collapse}
-                            th{background:#1e40af;color:#fff;padding:6px 8px;text-align:left;font-size:10px;font-weight:600}
-                            td{padding:5px 8px;border-bottom:1px solid #e5e7eb;font-size:10px}
-                            tr:nth-child(even) td{background:#f8fafc}
+                            table.data{width:100%;border-collapse:collapse}
+                            table.data thead{display:table-header-group}
+                            table.data th{background:#1e40af;color:#fff;padding:6px 8px;text-align:left;font-size:10px;font-weight:600}
+                            table.data td{padding:5px 8px;border-bottom:1px solid #e5e7eb;font-size:10px}
+                            table.data tbody tr:nth-child(even) td{background:#f8fafc}
                             .pago{color:#16a34a;font-weight:600}.pend{color:#d97706;font-weight:600}
-                            ${tenant?.configuracoes?.timbrado ? `body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background-image:url("${tenant.configuracoes.timbrado}");background-size:100% 100%;background-repeat:no-repeat;opacity:.75;z-index:-1;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}` : ''}
+                            ${tenant?.configuracoes?.timbrado ? `body::before{content:'';position:fixed;top:0;left:0;width:210mm;height:297mm;background-image:url("${tenant.configuracoes.timbrado}");background-size:210mm 297mm;background-repeat:no-repeat;background-position:top left;opacity:.75;z-index:-1;pointer-events:none;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}` : ''}
                           </style></head><body>
+                            <table class="layout">
+                            <thead><tr><td><div class="sp-top"></div></td></tr></thead>
+                            <tfoot><tr><td><div class="sp-bottom"></div></td></tr></tfoot>
+                            <tbody><tr><td class="content">
                             <h2>Tabela Analítica de DIDs${periodo}</h2>
                             <p>${relDidsOrdenados.length} DID${relDidsOrdenados.length !== 1 ? 's' : ''} — gerado em ${new Date().toLocaleString('pt-BR')}</p>
-                            <table><thead><tr><th>DID</th><th>Credor</th><th>Secretaria</th><th>Tipo</th><th>Data</th><th>Valor</th><th>Status</th></tr></thead>
+                            <table class="data"><thead><tr><th>DID</th><th>Credor</th><th>Secretaria</th><th>Tipo</th><th>Data</th><th>Valor</th><th>Status</th></tr></thead>
                             <tbody>${rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td><td>${r[5]}</td><td class="${r[6]==='Pago'?'pago':'pend'}">${r[6]}</td></tr>`).join('')}</tbody></table>
+                            </td></tr></tbody></table>
                             <script>window.onload=()=>{window.print();window.close()}</script></body></html>`)
                           win.document.close()
                         }}
