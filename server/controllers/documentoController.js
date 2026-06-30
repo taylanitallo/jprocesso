@@ -76,11 +76,11 @@ const downloadDocumento = async (req, res) => {
     const { id } = req.params;
     const { Documento, Processo } = req.models;
 
-    // A-2: join obrigatório com Processo garante que o documento
-    // pertence a um processo do tenant atual (schema isolado)
+    // Schema isolado por tenant já garante o pertencimento. LEFT JOIN para
+    // não excluir documentos gerados avulsos (sem processo_id), como ordens.
     const documento = await Documento.findOne({
       where: { id },
-      include: [{ model: Processo, as: 'processo', required: true, attributes: ['id'] }],
+      include: [{ model: Processo, as: 'processo', required: false, attributes: ['id'] }],
     });
 
     if (!documento) {
@@ -142,10 +142,11 @@ const deleteDocumento = async (req, res) => {
     const { id } = req.params;
     const { Documento, Processo } = req.models;
 
-    // A-2: join obrigatório garante pertencimento ao tenant atual
+    // A-2: schema isolado por tenant garante pertencimento. LEFT JOIN para
+    // permitir excluir documentos gerados avulsos (sem processo_id).
     const documento = await Documento.findOne({
       where: { id },
-      include: [{ model: Processo, as: 'processo', required: true, attributes: ['id'] }],
+      include: [{ model: Processo, as: 'processo', required: false, attributes: ['id'] }],
     });
 
     if (!documento) {
@@ -214,7 +215,7 @@ const viewDocumento = async (req, res) => {
 
     const documento = await Documento.findOne({
       where: { id },
-      include: [{ model: Processo, as: 'processo', required: true, attributes: ['id'] }],
+      include: [{ model: Processo, as: 'processo', required: false, attributes: ['id'] }],
     });
 
     if (!documento) {

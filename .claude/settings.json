@@ -54,7 +54,8 @@
       "Bash(taskkill //PID 7180 //F)",
       "Bash(taskkill //PID 26856 //F)",
       "Bash(sleep 5; netstat -ano | grep -E 'LISTENING' | grep -E ':\\(3000|5001\\)\\\\b'; echo \"--- log ---\"; tail -15 /tmp/jprocesso-dev.log)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(tail -40 /tmp/devfull.log 2>/dev/null | grep -i 'view\\\\|signed\\\\|storage\\\\|erro\\\\|error' | tail -20; echo \"=== fim ===\")"
     ]
   }
 }
