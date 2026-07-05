@@ -145,10 +145,10 @@ export default function Layout() {
       `}>
 
         {/* Logo */}
-        <div className="h-[70px] px-5 flex items-center justify-between border-b border-gray-200 dark:border-slate-700/50 flex-shrink-0">
+        <div className="h-[41px] p-[1mm] flex items-center justify-between border-b border-gray-200 dark:border-slate-700/50 flex-shrink-0">
           {tenant?.configuracoes?.logo_interna_url && tenant?.subdominio
-            ? <img src={`/api/tenants/${tenant.subdominio}/logo/interna`} alt="logo" className="h-9 object-contain" />
-            : <img src="/logo_jprocesso.png" alt="jProcesso" className="h-9 object-contain dark:brightness-0 dark:invert" />
+            ? <img src={`/api/tenants/${tenant.subdominio}/logo/interna`} alt="logo" className="h-full w-auto object-contain" />
+            : <img src="/logo_jprocesso.png" alt="jProcesso" className="h-full w-auto object-contain dark:brightness-0 dark:invert" />
           }
           <button
             onClick={() => setSidebarOpen(false)}
@@ -263,7 +263,7 @@ export default function Layout() {
         {/* Topbar */}
         <header className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700/50 sticky top-0 z-30 flex-shrink-0">
           <div className="px-4 sm:px-6">
-            <div className="flex items-center h-[58px] gap-4">
+            <div className="flex items-center h-[41px] gap-4">
 
               {/* Esquerda: hamburger + nome da entidade */}
               <div className="flex items-center gap-3 min-w-0">
