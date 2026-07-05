@@ -25,7 +25,6 @@ const DetalhesProcesso   = lazy(() => import('./pages/DetalhesProcesso'))
 const FormularioDid      = lazy(() => import('./pages/FormularioDid'))
 const Enviados           = lazy(() => import('./pages/Enviados'))
 const Secretarias        = lazy(() => import('./pages/Secretarias'))
-const Usuarios           = lazy(() => import('./pages/Usuarios'))
 const Almoxarifado       = lazy(() => import('./pages/Almoxarifado'))
 const Patrimonio         = lazy(() => import('./pages/Patrimonio'))
 const Financeiro         = lazy(() => import('./pages/Financeiro'))
@@ -97,9 +96,14 @@ function PrivateRoute({ children, requireAdmin = false }) {
   return children
 }
 
-function PermissionRoute({ children, permissao }) {
+function PermissionRoute({ children, permissao, anyOf }) {
   const { user } = useAuth()
   const subdomain = window.location.pathname.split('/')[1]
+  if (anyOf) {
+    const permitido = anyOf.some(p => hasPerm(user, ...p.split('.')))
+    if (!permitido) return <Navigate to={`/${subdomain}`} replace />
+    return children
+  }
   if (!permissao) return children
   const path = Array.isArray(permissao) ? permissao : permissao.split('.')
   if (!hasPerm(user, ...path)) return <Navigate to={`/${subdomain}`} replace />
@@ -135,6 +139,11 @@ function EnviadosRedirect() {
 function OrganizacaoRedirect() {
   const { subdomain } = useParams()
   return <Navigate to={`/${subdomain}/organizacao`} replace />
+}
+
+function UsuariosRedirect() {
+  const { subdomain } = useParams()
+  return <Navigate to={`/${subdomain}/organizacao/usuarios`} replace />
 }
 
 // ── App ───────────────────────────────────────────────────────────────────────
@@ -179,16 +188,16 @@ function App() {
                 <Route path="arquivo" element={<PermissionRoute permissao="arquivo.acessar"><Arquivo /></PermissionRoute>} />
 
                 {/* Organização */}
-                <Route path="organizacao"      element={<PermissionRoute permissao="administracao.gerenciar_secretarias"><Secretarias /></PermissionRoute>} />
-                <Route path="organizacao/:tab" element={<PermissionRoute permissao="administracao.gerenciar_secretarias"><Secretarias /></PermissionRoute>} />
+                <Route path="organizacao"      element={<PermissionRoute anyOf={['administracao.gerenciar_secretarias', 'administracao.gerenciar_usuarios']}><Secretarias /></PermissionRoute>} />
+                <Route path="organizacao/:tab" element={<PermissionRoute anyOf={['administracao.gerenciar_secretarias', 'administracao.gerenciar_usuarios']}><Secretarias /></PermissionRoute>} />
                 <Route path="secretarias"      element={<OrganizacaoRedirect />} />
 
                 {/* Tesouraria */}
                 <Route path="tesouraria"      element={<PermissionRoute permissao="tesouraria.acessar"><Tesouraria /></PermissionRoute>} />
                 <Route path="tesouraria/:tab" element={<PermissionRoute permissao="tesouraria.acessar"><Tesouraria /></PermissionRoute>} />
 
-                {/* Usuários */}
-                <Route path="usuarios" element={<PermissionRoute permissao="administracao.gerenciar_usuarios"><Usuarios /></PermissionRoute>} />
+                {/* Usuários (agora aba dentro de Organização) */}
+                <Route path="usuarios" element={<UsuariosRedirect />} />
 
                 {/* Almoxarifado */}
                 <Route path="almoxarifado"      element={<PermissionRoute permissao="almoxarifado.acessar"><Almoxarifado /></PermissionRoute>} />

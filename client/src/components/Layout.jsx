@@ -98,6 +98,8 @@ export default function Layout() {
     return hasPerm(user, ...path)
   }
 
+  const temAlgumaPermissao = (lista) => lista.some(p => hasPerm(user, ...p.split('.')))
+
   const menuItems = [
     { path: `/${subdomain}`,              icon: Home,        label: 'Dashboard',        exact: true },
     { path: `/${subdomain}/processos`,    icon: Inbox,       label: 'Processos',        modulo: 'processos' },
@@ -110,8 +112,7 @@ export default function Layout() {
   ]
 
   const adminMenuItems = [
-    { path: `/${subdomain}/organizacao`,   icon: Building2,    label: 'Organização',   permissao: 'administracao.gerenciar_secretarias' },
-    { path: `/${subdomain}/usuarios`,      icon: Users,        label: 'Usuários',      permissao: 'administracao.gerenciar_usuarios' },
+    { path: `/${subdomain}/organizacao`,   icon: Building2,    label: 'Organização',   permissaoAny: ['administracao.gerenciar_secretarias', 'administracao.gerenciar_usuarios'] },
     { path: `/${subdomain}/relatorios`,    icon: BarChart3,    label: 'Relatórios',    permissao: 'administracao.visualizar_relatorios' },
     { path: `/${subdomain}/configuracoes`, icon: Settings,     label: 'Configurações', permissao: 'administracao.gerenciar_configuracoes' },
     { path: `/${subdomain}/registros`,     icon: ClipboardList, label: 'Registros',   permissao: 'administracao.visualizar_registros' },
@@ -159,10 +160,9 @@ export default function Layout() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-6">
+        <nav className="flex-1 px-[1mm] py-4 overflow-y-auto space-y-6">
 
           {/* Menu principal */}
-          <p className="px-3 mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400 dark:text-slate-500">Principal</p>
           <div className="space-y-0.5">
             {menuItems.map((item) => {
               const active = isActive(item.path, item.exact)
@@ -220,7 +220,8 @@ export default function Layout() {
                 {adminMenuItems.map((item) => {
                   const active = isActive(item.path)
                   const Icon = item.icon
-                  if (!temPermissao(item.permissao)) return null
+                  const permitido = item.permissaoAny ? temAlgumaPermissao(item.permissaoAny) : temPermissao(item.permissao)
+                  if (!permitido) return null
                   return (
                     <Link
                       key={item.path}

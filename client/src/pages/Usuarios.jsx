@@ -3,7 +3,6 @@ import * as XLSX from 'xlsx';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import PermissoesEditor from '../components/PermissoesEditor';
-import PageHeader from '../components/ui/PageHeader';
 import LoadingBar from '../components/LoadingBar';
 import StatCard from '../components/ui/StatCard';
 import SectionTitle from '../components/ui/SectionTitle';
@@ -365,7 +364,7 @@ export default function Usuarios() {
 
 
   return (
-    <div className="max-w-7xl mx-auto space-y-5 animate-fade-in">
+    <div className="space-y-5">
       {/* Mensagem de Sucesso */}
       {successMessage && (
         <div className="p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 rounded-lg flex items-center gap-3">
@@ -375,12 +374,11 @@ export default function Usuarios() {
       )}
 
       {/* Header */}
-      <PageHeader
+      <SectionTitle
         icon={Users}
-        eyebrow="Administração"
         title="Gerenciamento de Usuários"
         subtitle="Gerencie usuários, permissões e acessos ao sistema"
-        actions={<>
+        action={<div className="flex items-center gap-2 flex-wrap">
             {/* Menu Importar / Exportar */}
             <div className="relative">
               <button
@@ -441,7 +439,7 @@ export default function Usuarios() {
               <UserPlus className="h-5 w-5" />
               Novo Usuário
             </button>
-        </>}
+        </div>}
       />
 
       {/* Filtros */}

@@ -1,10 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { hasPerm } from '../utils/permissions';
 import PageHeader from '../components/ui/PageHeader';
 import SectionTitle from '../components/ui/SectionTitle';
 import EmptyState from '../components/ui/EmptyState';
 import FilterBar from '../components/ui/FilterBar';
+import LoadingBar from '../components/LoadingBar';
+
+const Usuarios = lazy(() => import('./Usuarios'));
 import {
   Plus,
   Building2,
@@ -175,12 +180,17 @@ function StatusBadge({ status }) {
 export default function Secretarias() {
   const { subdomain, tab: tabParam } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
+
+  const podeSecretarias = hasPerm(user, 'administracao', 'gerenciar_secretarias')
+  const podeUsuarios     = hasPerm(user, 'administracao', 'gerenciar_usuarios')
 
   // Aba
-  const [activeTab, setActiveTab] = useState(tabParam || 'secretarias')
+  const [activeTab, setActiveTab] = useState(tabParam || (podeSecretarias ? 'secretarias' : 'usuarios'))
 
   useEffect(() => {
-    if (tabParam && tabParam !== activeTab) setActiveTab(tabParam)
+    if (!tabParam || tabParam === activeTab) return
+    if (tabParam === 'usuarios' ? podeUsuarios : podeSecretarias) setActiveTab(tabParam)
   }, [tabParam])
 
   // Secretarias
@@ -818,7 +828,7 @@ export default function Secretarias() {
         icon={Building2}
         eyebrow="Organização"
         title="Gestão de Organização"
-        subtitle="Gerencie secretarias, agentes e responsáveis do município"
+        subtitle="Gerencie secretarias, agentes, responsáveis e usuários do município"
       />
 
       {/* Abas do módulo */}
@@ -828,11 +838,12 @@ export default function Secretarias() {
       >
         <nav className="flex min-w-max">
           {[
-            { key: 'entidade',     label: 'Entidade',              Icon: Building2  },
-            { key: 'secretarias',  label: 'Secretarias e Setores', Icon: Network    },
-            { key: 'agentes',      label: 'Cadastro de Agentes',   Icon: Users      },
-            { key: 'responsaveis', label: 'Responsáveis',          Icon: UserCheck  },
-          ].map(tab => (
+            { key: 'entidade',     label: 'Entidade',              Icon: Building2, visivel: podeSecretarias },
+            { key: 'secretarias',  label: 'Secretarias e Setores', Icon: Network,   visivel: podeSecretarias },
+            { key: 'agentes',      label: 'Cadastro de Agentes',   Icon: Users,     visivel: podeSecretarias },
+            { key: 'responsaveis', label: 'Responsáveis',          Icon: UserCheck, visivel: podeSecretarias },
+            { key: 'usuarios',     label: 'Usuários',              Icon: UserCog,   visivel: podeUsuarios    },
+          ].filter(tab => tab.visivel).map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
               className={`flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-5 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab.key
@@ -1646,6 +1657,13 @@ export default function Secretarias() {
 
           </form>
         </div>
+      )}
+
+      {/* ── Tab: Usuários ── */}
+      {activeTab === 'usuarios' && podeUsuarios && (
+        <Suspense fallback={<LoadingBar label="Carregando usuários..." />}>
+          <Usuarios />
+        </Suspense>
       )}
 
       {/* Modal Importar do Portal de Irauçuba */}
