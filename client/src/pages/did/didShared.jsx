@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react'
-import { Pencil, Check, Loader2, RotateCcw, ChevronDown, AlertTriangle, X } from 'lucide-react'
+import { Pencil, Check, Loader2, RotateCcw, AlertTriangle, X } from 'lucide-react'
 import api from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 
@@ -181,57 +181,6 @@ export function alertarPendencias(pendencias, secaoLabel) {
   if (faltando.length === 0) return true
   alert(`Preencha os campos obrigatórios antes de salvar a ${secaoLabel}:\n\n• ${faltando.join('\n• ')}`)
   return false
-}
-
-// Multi-seleção de fontes de recurso — opções vêm do cadastro do contrato,
-// valor persistido como string única com os itens separados por vírgula.
-export function FonteRecursoSelect({ value, onChange, options, disabled }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef(null)
-
-  useEffect(() => {
-    if (!open) return
-    const onDocClick = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
-    document.addEventListener('mousedown', onDocClick)
-    return () => document.removeEventListener('mousedown', onDocClick)
-  }, [open])
-
-  const selecionadas = (value || '').split(',').map(s => s.trim()).filter(Boolean)
-
-  const toggle = (opt) => {
-    const jaSelecionada = selecionadas.includes(opt)
-    const novas = jaSelecionada ? selecionadas.filter(f => f !== opt) : [...selecionadas, opt]
-    onChange(novas.join(', '))
-  }
-
-  return (
-    <div className="relative" ref={ref}>
-      <button type="button" onClick={() => !disabled && setOpen(o => !o)} disabled={disabled}
-        className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-lg border text-left
-          border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
-          ${disabled ? ' opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800' : ''}`}>
-        <span className={`truncate ${selecionadas.length === 0 ? 'text-gray-400' : ''}`}>
-          {selecionadas.length > 0 ? selecionadas.join(', ') : 'Selecione uma ou mais fontes...'}
-        </span>
-        <ChevronDown className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-      </button>
-      {open && !disabled && (
-        <div className="absolute z-30 top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl max-h-52 overflow-y-auto">
-          {options.map((opt, i) => {
-            const checked = selecionadas.includes(opt)
-            return (
-              <label key={i}
-                className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-0">
-                <input type="checkbox" checked={checked} onChange={() => toggle(opt)}
-                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                <span className="text-gray-700 dark:text-gray-300">{opt}</span>
-              </label>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
 }
 
 export function Checkbox({ label, checked, onChange, disabled }) {

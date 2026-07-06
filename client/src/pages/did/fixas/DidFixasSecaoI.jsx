@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext, useMemo, useRef } from 'react'
 import { FileText, Plus, Trash2, Search, X, Check, CheckCircle, Pencil, Loader2, Lock, RotateCcw, ClipboardList, Paperclip, ExternalLink } from 'lucide-react'
-import { Field, Input, Textarea, SectionCard, DidReadOnlyContext, FonteRecursoSelect, alertarPendencias } from '../didShared'
+import { Field, Input, Textarea, SectionCard, DidReadOnlyContext, alertarPendencias } from '../didShared'
 import api from '../../../services/api'
 
 // ─── Modal de seleção de itens do contrato ────────────────────────────────────
@@ -984,8 +984,13 @@ export default function DidFixasSecaoI({
         </Field>
         <Field label="Fonte de Recurso" half>
           {contratoSel?.fontes_recurso?.filter(Boolean).length > 0 ? (
-            <FonteRecursoSelect value={form.fonte_recurso} onChange={v => set('fonte_recurso', v)}
-              options={contratoSel.fontes_recurso.filter(Boolean)} disabled={locked} />
+            <select value={form.fonte_recurso} onChange={inp('fonte_recurso')} disabled={locked}
+              className={`input-field text-sm${locked ? ' opacity-60 cursor-not-allowed' : ''}`}>
+              <option value="">Selecione...</option>
+              {contratoSel.fontes_recurso.filter(Boolean).map((f, i) => (
+                <option key={i} value={f}>{f}</option>
+              ))}
+            </select>
           ) : (
             <Input value={form.fonte_recurso} onChange={inp('fonte_recurso')}
               placeholder={contratoSel ? 'Nenhuma fonte cadastrada no contrato' : 'Selecione um contrato primeiro'}

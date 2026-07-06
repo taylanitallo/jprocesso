@@ -84,7 +84,9 @@ export default function DidFixasSecaoVI({ form, inp, chk, vliq, saving, didId, o
 
   const [editarBancoCredor, setEditarBancoCredor] = useState(false)
   const [confirmarBancoCredor, setConfirmarBancoCredor] = useState(false)
-  useEffect(() => { if (locked) setEditarBancoCredor(false) }, [locked])
+  const [editarFonte, setEditarFonte] = useState(false)
+  const [confirmarFonte, setConfirmarFonte] = useState(false)
+  useEffect(() => { if (locked) { setEditarBancoCredor(false); setEditarFonte(false) } }, [locked])
 
   const salvar = async () => {
     const completo = alertarPendencias([
@@ -171,6 +173,22 @@ export default function DidFixasSecaoVI({ form, inp, chk, vliq, saving, didId, o
             <Input value={form.cc_fornecedor} onChange={inp('cc_fornecedor')} disabled={locked || !editarBancoCredor} />
           </div>
         </div>
+      </div>
+
+      {/* Fonte de Recurso — definida na Seção I, alterável mediante confirmação */}
+      <div className="col-span-2">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            Fonte de Recurso <span className="normal-case font-normal text-gray-400">(definida na Seção I)</span>
+          </p>
+          {!locked && !editarFonte && (
+            <button type="button" onClick={() => setConfirmarFonte(true)}
+              className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 font-semibold">
+              <Pencil className="w-3 h-3" /> Alterar
+            </button>
+          )}
+        </div>
+        <Input value={form.fonte_recurso} onChange={inp('fonte_recurso')} disabled={locked || !editarFonte} />
       </div>
 
       {/* Certidões Tesouraria */}
@@ -279,6 +297,16 @@ export default function DidFixasSecaoVI({ form, inp, chk, vliq, saving, didId, o
         confirmLabel="Sim, liberar edição"
         onConfirm={() => { setEditarBancoCredor(true); setConfirmarBancoCredor(false) }}
         onClose={() => setConfirmarBancoCredor(false)}
+      />
+    )}
+
+    {confirmarFonte && (
+      <ConfirmModal
+        title="Alterar a Fonte de Recurso?"
+        message="Este campo é o mesmo da Seção I — ao alterar aqui, a Seção I e os painéis/relatórios financeiros também vão refletir a nova fonte. Confirme apenas se a fonte de recurso realmente mudou."
+        confirmLabel="Sim, liberar edição"
+        onConfirm={() => { setEditarFonte(true); setConfirmarFonte(false) }}
+        onClose={() => setConfirmarFonte(false)}
       />
     )}
     </>
