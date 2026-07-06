@@ -17,9 +17,19 @@ async function ensureTables(req) {
 // "Liquidado" mora em colunas diferentes conforme o tipo do DID:
 // Contas Fixas usa contabil_liquidado, Contas Variáveis usa contabil_pc_liquidado.
 // ============================================================
-const NAO_PAGO   = { [Op.or]: [{ pago: 'nao' }, { pago: null }] };
-const LIQUIDADO  = { [Op.or]: [{ contabil_liquidado: 'sim' }, { contabil_pc_liquidado: 'sim' }] };
-const EMPENHADO  = { contabil_empenhado: 'sim' };
+// IMPORTANTE: nunca usar Op.not sobre uma coluna que pode ser NULL — em SQL,
+// NOT(NULL) é NULL (não TRUE), então a linha some da query silenciosamente.
+// Por isso toda negação abaixo é escrita como OR explícito cobrindo NULL.
+const NAO_PAGO       = { [Op.or]: [{ pago: 'nao' }, { pago: null }] };
+const LIQUIDADO      = { [Op.or]: [{ contabil_liquidado: 'sim' }, { contabil_pc_liquidado: 'sim' }] };
+const NAO_LIQUIDADO  = {
+  [Op.and]: [
+    { [Op.or]: [{ contabil_liquidado: { [Op.ne]: 'sim' } }, { contabil_liquidado: null }] },
+    { [Op.or]: [{ contabil_pc_liquidado: { [Op.ne]: 'sim' } }, { contabil_pc_liquidado: null }] },
+  ]
+};
+const EMPENHADO      = { contabil_empenhado: 'sim' };
+const NAO_EMPENHADO  = { [Op.or]: [{ contabil_empenhado: { [Op.ne]: 'sim' } }, { contabil_empenhado: null }] };
 
 // Retorna o fragmento de `where` (para o model Did) correspondente à situação,
 // ou null se a situação não for reconhecida (sem filtro extra aplicado).
@@ -30,12 +40,25 @@ function situacaoDidWhere(situacao) {
     case 'liquidado_pagar':
       return { [Op.and]: [NAO_PAGO, LIQUIDADO] };
     case 'empenhado_pagar':
-      return { [Op.and]: [NAO_PAGO, { [Op.not]: LIQUIDADO }, EMPENHADO] };
+      return { [Op.and]: [NAO_PAGO, NAO_LIQUIDADO, EMPENHADO] };
     case 'pendente':
-      return { [Op.and]: [NAO_PAGO, { [Op.not]: LIQUIDADO }, { [Op.not]: EMPENHADO }] };
+      return { [Op.and]: [NAO_PAGO, NAO_LIQUIDADO, NAO_EMPENHADO] };
     default:
       return null;
   }
+}
+
+// Igual a situacaoDidWhere, mas aceita múltiplas situações (separadas por vírgula
+// ou já em array) e combina com OR — necessário pois o filtro "Status" do painel
+// é multi-seleção.
+function situacaoDidWhereList(situacoesRaw) {
+  if (!situacoesRaw) return null;
+  const lista = (Array.isArray(situacoesRaw) ? situacoesRaw : String(situacoesRaw).split(','))
+    .map(s => s.trim()).filter(Boolean);
+  const fragments = lista.map(situacaoDidWhere).filter(Boolean);
+  if (fragments.length === 0) return null;
+  if (fragments.length === 1) return fragments[0];
+  return { [Op.or]: fragments };
 }
 
 // ============================================================
@@ -51,7 +74,7 @@ const getDashboard = async (req, res) => {
       meses_ref,      // ex: '01,03' ou ['01','03']
       data_inicio,    // data pagamento início
       data_fim,       // data pagamento fim
-      status,         // 'pago' | 'pendente' | 'todos'
+      status,         // 'pago' | 'liquidado_pagar' | 'empenhado_pagar' | 'pendente' — aceita múltiplos, separados por vírgula
       secretarias,    // ex: 'Sec. Educação,Sec. Saúde'
       credores,
       fontes,
@@ -89,7 +112,7 @@ const getDashboard = async (req, res) => {
     }
 
     // Situação financeira: pago | liquidado_pagar | empenhado_pagar | pendente
-    const situFiltro = situacaoDidWhere(status);
+    const situFiltro = situacaoDidWhereList(status);
     if (situFiltro) Object.assign(didFiltro, situFiltro);
 
     // Secretaria
@@ -558,7 +581,7 @@ const getProcessosDid = async (req, res) => {
       if (data_inicio) didWhere.data_did[Op.gte] = data_inicio;
       if (data_fim)    didWhere.data_did[Op.lte] = data_fim;
     }
-    const situFiltroDid = situacaoDidWhere(status_pago);
+    const situFiltroDid = situacaoDidWhereList(status_pago);
     if (situFiltroDid) Object.assign(didWhere, situFiltroDid);
     if (tipo_did) {
       const tipos = tipo_did.split(',').map(t => t.trim()).filter(Boolean);
@@ -596,7 +619,9 @@ const getProcessosDid = async (req, res) => {
         {
           model: Did, as: 'did',
           required: true,  // só processos que têm DID preenchido
-          where: Object.keys(didWhere).length > 0 ? didWhere : undefined,
+          // Reflect.ownKeys (não Object.keys) — o filtro de situação usa Op.and/Op.or,
+          // que são chaves Symbol e não aparecem em Object.keys().
+          where: Reflect.ownKeys(didWhere).length > 0 ? didWhere : undefined,
           attributes: ['id', 'numero_did', 'tipo_did', 'credor_sec1', 'secretaria_sec1',
                        'valor_bruto', 'pago', 'data_did', 'empenho_numero', 'mes_referencia',
                        'contabil_empenhado', 'contabil_liquidado', 'contabil_pc_liquidado',
