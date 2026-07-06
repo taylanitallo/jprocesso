@@ -1,6 +1,6 @@
 import { Banknote } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { Field, Input, UserSelect, Checkbox, SectionCard, SecaoBotoes } from '../didShared'
+import { Field, Input, UserSelect, Checkbox, SectionCard, SecaoBotoes, alertarPendencias } from '../didShared'
 import { BANCOS } from '../bancosBrasil'
 import api from '../../../services/api'
 
@@ -83,6 +83,12 @@ export default function DidFixasSecaoVI({ form, inp, chk, vliq, saving, didId, o
   useEffect(() => { if (didId) setLocked(true) }, [didId])
 
   const salvar = async () => {
+    const completo = alertarPendencias([
+      { ok: !!form.tesouraria_recebido_em, label: 'Recebido em' },
+      { ok: !!form.tesouraria_responsavel, label: 'Responsável' },
+      { ok: !!form.conta_pagamento_id, label: 'Conta de Pagamento' },
+    ], 'Seção VI')
+    if (!completo) return
     const ok = await onSave?.()
     if (ok !== false) setLocked(true)
   }

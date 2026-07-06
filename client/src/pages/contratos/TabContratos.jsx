@@ -6,7 +6,7 @@ import {
   BarChart2, Check, AlertTriangle, ChevronUp, ChevronDown, Loader2,
   CheckCircle2, XCircle, Download, RefreshCw, ChevronLeft, ChevronRight,
   ChevronsLeft, ChevronsRight, DollarSign, Building2, Award, Tag, Activity,
-  List, PackageOpen
+  List, PackageOpen, Landmark
 } from 'lucide-react'
 import api from '../../services/api'
 import {
@@ -393,6 +393,9 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
     data_assinatura:  contrato?.data_assinatura  || '',
     secretaria:       contrato?.secretaria       || '',
     fiscal:           contrato?.fiscal           || '',
+    banco:            contrato?.banco            || '',
+    agencia:          contrato?.agencia          || '',
+    conta:            contrato?.conta            || '',
     observacoes:      contrato?.observacoes      || '',
     status:           contrato?.status           || 'ATIVO',
     dias_alerta:      contrato?.dias_alerta      ?? 30,
@@ -789,46 +792,67 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
               {/* SectionCard — Credor */}
               <SectionCard icon={User} title="Credor" subtitle="Empresa ou pessoa física contratada">
                 {readonly ? (
-                  <ViewField label="Credor" value={credorSel ? `${credorSel.razao_social} · ${credorSel.cnpj_cpf}` : form.credor_id ? `ID: ${form.credor_id}` : '—'} />
+                  <div className="grid grid-cols-12 gap-4">
+                    <div className="col-span-12">
+                      <ViewField label="Credor" value={credorSel ? `${credorSel.razao_social} · ${credorSel.cnpj_cpf}` : form.credor_id ? `ID: ${form.credor_id}` : '—'} />
+                    </div>
+                    <div className="col-span-4"><ViewField label="Banco" value={form.banco || '—'} /></div>
+                    <div className="col-span-4"><ViewField label="Agência" value={form.agencia || '—'} mono /></div>
+                    <div className="col-span-4"><ViewField label="Conta" value={form.conta || '—'} mono /></div>
+                  </div>
                 ) : (
-                  <div className="relative w-full">
-                    {credorSel ? (
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-11 px-3 rounded-xl border border-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-700 flex items-center gap-2 text-sm">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                          <span className="font-medium text-gray-800 dark:text-slate-100 truncate">{credorSel.razao_social}</span>
-                          <span className="text-gray-400 font-mono text-xs shrink-0">{credorSel.cnpj_cpf}</span>
+                  <div className="space-y-4">
+                    <div className="relative w-full">
+                      {credorSel ? (
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-11 px-3 rounded-xl border border-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-700 flex items-center gap-2 text-sm">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                            <span className="font-medium text-gray-800 dark:text-slate-100 truncate">{credorSel.razao_social}</span>
+                            <span className="text-gray-400 font-mono text-xs shrink-0">{credorSel.cnpj_cpf}</span>
+                          </div>
+                          <button type="button" onClick={limparCredor} className="p-2 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                            <X className="w-4 h-4" />
+                          </button>
                         </div>
-                        <button type="button" onClick={limparCredor} className="p-2 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                          <X className="w-4 h-4" />
-                        </button>
+                      ) : (
+                        <div className="relative" ref={credorAnchorRef}>
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <PremiumInput
+                            value={buscaCredor}
+                            onChange={e => { setBuscaCredor(e.target.value); setDropdownCredor(true) }}
+                            onFocus={() => setDropdownCredor(true)}
+                            onBlur={() => setTimeout(() => setDropdownCredor(false), 150)}
+                            className="pl-10" placeholder="Buscar credor por nome ou CNPJ/CPF..."
+                          />
+                          <PortalDropdown anchorRef={credorAnchorRef} open={dropdownCredor}>
+                            {credoresFiltradosModal.length === 0 ? (
+                              <p className="px-4 py-3 text-sm text-gray-400">Nenhum credor encontrado.</p>
+                            ) : credoresFiltradosModal.map(c => (
+                              <button key={c.id} type="button" onMouseDown={() => selecionarCredor(c)}
+                                className="w-full text-left px-4 py-3 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-3 border-b border-gray-100 dark:border-slate-700/50 last:border-0">
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-gray-800 dark:text-slate-200 truncate">{c.razao_social}</p>
+                                  <p className="text-xs text-gray-400 mt-0.5 font-mono">{c.cnpj_cpf}</p>
+                                </div>
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.status === 'ATIVO' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>{c.status}</span>
+                              </button>
+                            ))}
+                          </PortalDropdown>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Dados bancários do credor (para pagamento deste contrato) */}
+                    <div>
+                      <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">
+                        <Landmark className="w-3.5 h-3.5" /> Dados Bancários <span className="font-normal text-gray-400">(opcional)</span>
+                      </label>
+                      <div className="grid grid-cols-3 gap-4">
+                        <PremiumInput value={form.banco} onChange={e => set('banco', e.target.value)} placeholder="Banco" />
+                        <PremiumInput value={form.agencia} onChange={e => set('agencia', e.target.value)} placeholder="Agência" />
+                        <PremiumInput value={form.conta} onChange={e => set('conta', e.target.value)} placeholder="Conta" />
                       </div>
-                    ) : (
-                      <div className="relative" ref={credorAnchorRef}>
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <PremiumInput
-                          value={buscaCredor}
-                          onChange={e => { setBuscaCredor(e.target.value); setDropdownCredor(true) }}
-                          onFocus={() => setDropdownCredor(true)}
-                          onBlur={() => setTimeout(() => setDropdownCredor(false), 150)}
-                          className="pl-10" placeholder="Buscar credor por nome ou CNPJ/CPF..."
-                        />
-                        <PortalDropdown anchorRef={credorAnchorRef} open={dropdownCredor}>
-                          {credoresFiltradosModal.length === 0 ? (
-                            <p className="px-4 py-3 text-sm text-gray-400">Nenhum credor encontrado.</p>
-                          ) : credoresFiltradosModal.map(c => (
-                            <button key={c.id} type="button" onMouseDown={() => selecionarCredor(c)}
-                              className="w-full text-left px-4 py-3 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-3 border-b border-gray-100 dark:border-slate-700/50 last:border-0">
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-gray-800 dark:text-slate-200 truncate">{c.razao_social}</p>
-                                <p className="text-xs text-gray-400 mt-0.5 font-mono">{c.cnpj_cpf}</p>
-                              </div>
-                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.status === 'ATIVO' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>{c.status}</span>
-                            </button>
-                          ))}
-                        </PortalDropdown>
-                      </div>
-                    )}
+                    </div>
                   </div>
                 )}
               </SectionCard>

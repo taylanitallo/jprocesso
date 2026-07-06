@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext, useMemo } from 'react'
 import { FileText, Plus, Trash2, Search, X, Check, CheckCircle, Pencil, Loader2, ListPlus, Lock, ClipboardList, RotateCcw } from 'lucide-react'
-import { Field, Input, Textarea, SectionCard, DidReadOnlyContext } from '../didShared'
+import { Field, Input, Textarea, SectionCard, DidReadOnlyContext, FonteRecursoSelect, alertarPendencias } from '../didShared'
 import api from '../../../services/api'
 
 // ─── Modal de seleção de Ordem de Compra disponível para DID ─────────────────
@@ -474,12 +474,19 @@ export default function DidVariaveisSecaoI({
     set('objeto', c.objeto || form.objeto)
     set('secretaria_sec1', c.secretaria || '')
     set('secretario_nome', gestor)
+    // Pré-preenche dados bancários do credor a partir do contrato (editável)
+    set('banco_fornecedor', c.banco || '')
+    set('ag_fornecedor', c.agencia || '')
+    set('cc_fornecedor', c.conta || '')
   }
 
   const limparContrato = () => {
     setContratoSel(null)
     setBuscaContrato('')
     set('contrato_ref', '')
+    set('banco_fornecedor', '')
+    set('ag_fornecedor', '')
+    set('cc_fornecedor', '')
   }
 
   // ── Seleção de Ordem de Compra ────────────────────────────────────────────
@@ -508,6 +515,10 @@ export default function DidVariaveisSecaoI({
       set('contrato_ref', contrato.numero_contrato || '')
       set('nro_licitacao_sec1', contrato.numero_licitacao || '')
       set('tipo_licitacao_sec1', contrato.modalidade || '')
+      // Pré-preenche dados bancários do credor a partir do contrato (editável)
+      set('banco_fornecedor', contrato.banco || '')
+      set('ag_fornecedor', contrato.agencia || '')
+      set('cc_fornecedor', contrato.conta || '')
     }
 
     // Preenche objeto
@@ -556,6 +567,9 @@ export default function DidVariaveisSecaoI({
     set('objeto', '')
     set('secretaria_sec1', '')
     set('secretario_nome', '')
+    set('banco_fornecedor', '')
+    set('ag_fornecedor', '')
+    set('cc_fornecedor', '')
     setItensDid([{ _id: Date.now(), descricao: '', unidade: '', quantidade: '', valor_unitario: '', valor_total: '' }])
 
     // Persiste a remoção do vínculo da ordem no banco imediatamente
@@ -638,7 +652,17 @@ export default function DidVariaveisSecaoI({
 
   const handleSalvarSecaoI = async () => {
     setTentouSalvar(true)
-    if (!secaoICompleta) return
+    const completo = alertarPendencias([
+      { ok: !!form.credor_sec1, label: 'Credor' },
+      { ok: !!form.cnpj_cpf_credor_sec1, label: 'CNPJ/CPF do Credor' },
+      { ok: !!form.secretaria_sec1, label: 'Secretaria' },
+      { ok: !!form.secretario_nome, label: 'Secretário Responsável' },
+      { ok: !!form.data_did, label: 'Data' },
+      { ok: !!form.mes_referencia, label: 'Mês de Referência' },
+      { ok: !!form.objeto, label: 'Objeto' },
+      { ok: temItensPreenchidos, label: 'Itens do DID (adicione ao menos um item com valor)' },
+    ], 'Seção I')
+    if (!completo) return
     if (!onSaveSecaoI) { setLocked(true); return }
     const ok = await onSaveSecaoI()
     if (ok !== false) setLocked(true)
@@ -656,6 +680,7 @@ export default function DidVariaveisSecaoI({
       credor_sec1: '', cnpj_cpf_credor_sec1: '', contrato_ref: '',
       nro_licitacao_sec1: '', tipo_licitacao_sec1: '',
       objeto: '', secretaria_sec1: '', secretario_nome: '',
+      banco_fornecedor: '', ag_fornecedor: '', cc_fornecedor: '',
       data_did: '', mes_referencia: '', fonte_recurso: 'PRÓPRIO',
       nf_sec1: '', valor_did: '',
       cert_sec1_municipal: false, cert_sec1_trabalhista: false,
@@ -855,6 +880,24 @@ export default function DidVariaveisSecaoI({
         )}
       </Field>
 
+      {/* ── Dados Bancários do Credor (pré-preenchidos pelo contrato/ordem, editáveis) ── */}
+      <div className="col-span-2 grid grid-cols-3 gap-4">
+        <div>
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+            Banco <span className="font-normal text-gray-400 dark:text-slate-500">(dados do credor)</span>
+          </label>
+          <Input value={form.banco_fornecedor} onChange={inp('banco_fornecedor')} placeholder="Banco" disabled={locked} />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Agência</label>
+          <Input value={form.ag_fornecedor} onChange={inp('ag_fornecedor')} placeholder="Agência" disabled={locked} />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Conta</label>
+          <Input value={form.cc_fornecedor} onChange={inp('cc_fornecedor')} placeholder="Conta" disabled={locked} />
+        </div>
+      </div>
+
       {/* ── Linha 3: Secretaria | Secretário ── */}
       <Field label="Secretaria" half error={tentouSalvar && !form.secretaria_sec1 ? 'Campo obrigatório' : ''}>
         <div className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600
@@ -893,13 +936,8 @@ export default function DidVariaveisSecaoI({
       </Field>
       <Field label="Fonte de Recurso" half>
         {contratoSel?.fontes_recurso?.filter(Boolean).length > 0 ? (
-          <select value={form.fonte_recurso} onChange={inp('fonte_recurso')} disabled={locked}
-            className={`input-field text-sm${locked ? ' opacity-60 cursor-not-allowed' : ''}`}>
-            <option value="">Selecione...</option>
-            {contratoSel.fontes_recurso.filter(Boolean).map((f, i) => (
-              <option key={i} value={f}>{f}</option>
-            ))}
-          </select>
+          <FonteRecursoSelect value={form.fonte_recurso} onChange={v => set('fonte_recurso', v)}
+            options={contratoSel.fontes_recurso.filter(Boolean)} disabled={locked} />
         ) : (
           <Input value={form.fonte_recurso} onChange={inp('fonte_recurso')}
             placeholder="Fonte de recurso / rubrica..."

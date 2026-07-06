@@ -1,12 +1,18 @@
 import { ShoppingCart } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { Field, Input, UserSelect, SectionCard, SecaoBotoes } from '../didShared'
+import { Field, Input, UserSelect, SectionCard, SecaoBotoes, alertarPendencias } from '../didShared'
 
 export default function DidVariaveisSecaoVIII({ form, inp, set, saving, didId, onSave, onLimpar }) {
   const [locked, setLocked] = useState(false)
   useEffect(() => { if (didId) setLocked(true) }, [didId])
 
   const salvar = async () => {
+    const completo = alertarPendencias([
+      { ok: !!form.compras3_recebido_em, label: 'Recebido em' },
+      { ok: !!form.compras3_responsavel, label: 'Responsável' },
+      { ok: !!form.compras3_local_entrega, label: 'Data de envio para liquidação' },
+    ], 'Seção VIII')
+    if (!completo) return
     const ok = await onSave?.()
     if (ok !== false) setLocked(true)
   }

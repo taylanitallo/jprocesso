@@ -678,6 +678,22 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
   // Contratos — coluna tipo_objeto
   await run(`ALTER TABLE contratos ADD COLUMN IF NOT EXISTS tipo_objeto VARCHAR(100)`);
 
+  // Contratos — dados bancários do credor para este contrato
+  await run(`
+    ALTER TABLE contratos
+      ADD COLUMN IF NOT EXISTS banco   VARCHAR(200),
+      ADD COLUMN IF NOT EXISTS agencia VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS conta   VARCHAR(50)
+  `);
+
+  // DID — indicadores "está empenhado?" / "está liquidado?" das seções de Contabilidade
+  await run(`
+    ALTER TABLE dids
+      ADD COLUMN IF NOT EXISTS contabil_empenhado    VARCHAR(10),
+      ADD COLUMN IF NOT EXISTS contabil_liquidado     VARCHAR(10),
+      ADD COLUMN IF NOT EXISTS contabil_pc_liquidado  VARCHAR(10)
+  `);
+
   // Itens — colunas extras
   await run(`ALTER TABLE contratos_itens ADD COLUMN IF NOT EXISTS codigo_item VARCHAR(100)`);
   await run(`ALTER TABLE contratos_itens ADD COLUMN IF NOT EXISTS lote VARCHAR(50)`);

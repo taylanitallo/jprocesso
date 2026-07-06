@@ -1,6 +1,6 @@
 import { BookCheck } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { Field, SectionCard, SecaoBotoes } from '../didShared'
+import { Field, SectionCard, SecaoBotoes, alertarPendencias } from '../didShared'
 
 function SimNao({ value, onChange, disabled }) {
   return (
@@ -22,6 +22,11 @@ export default function DidVariaveisSecaoXII({ form, inp, saving, didId, onSave,
   useEffect(() => { if (didId) setLocked(true) }, [didId])
 
   const salvar = async () => {
+    const completo = alertarPendencias([
+      { ok: !!form.contab_fech_finalizado, label: 'Processo Finalizado' },
+      { ok: !!form.contab_fech_tce, label: 'Enviado para o TCE/SIM' },
+    ], 'Seção XII')
+    if (!completo) return
     const ok = await onSave?.()
     if (ok !== false) setLocked(true)
   }

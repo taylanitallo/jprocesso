@@ -409,7 +409,7 @@ const listOrdemDisponivelDid = async (req, res) => {
         {
           model: Contrato,
           as: 'contrato',
-          attributes: ['id', 'numero_contrato', 'objeto', 'valor', 'status', 'modalidade', 'numero_licitacao'],
+          attributes: ['id', 'numero_contrato', 'objeto', 'valor', 'status', 'modalidade', 'numero_licitacao', 'banco', 'agencia', 'conta', 'fontes_recurso'],
           include: [{ model: Credor, as: 'credor', attributes: ['id', 'razao_social', 'cnpj_cpf'] }],
         },
         { model: ContratoOrdemItem, as: 'itens' },

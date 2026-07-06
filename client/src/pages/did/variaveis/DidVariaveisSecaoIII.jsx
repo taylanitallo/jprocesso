@@ -1,12 +1,17 @@
 import { Landmark } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { Field, Input, UserSelect, SectionCard, SecaoBotoes } from '../didShared'
+import { Field, Input, UserSelect, SectionCard, SecaoBotoes, alertarPendencias } from '../didShared'
 
 export default function DidVariaveisSecaoIII({ form, inp, saving, didId, onSave, onLimpar }) {
   const [locked, setLocked] = useState(false)
   useEffect(() => { if (didId) setLocked(true) }, [didId])
 
   const salvar = async () => {
+    const completo = alertarPendencias([
+      { ok: !!form.financas_recebido_em, label: 'Recebido em' },
+      { ok: !!form.financas_responsavel, label: 'Responsável' },
+    ], 'Seção III')
+    if (!completo) return
     const ok = await onSave?.()
     if (ok !== false) setLocked(true)
   }
