@@ -6,7 +6,7 @@ import {
   Calendar, FolderOpen, Tag, Building2, Landmark, DollarSign,
   Search, X, RefreshCw, FileDown, Eye,
   CheckCircle2, Clock3, AlertCircle,
-  Loader2, AlertTriangle, TrendingUp, ChevronDown,
+  Loader2, AlertTriangle, TrendingUp, ChevronDown, ClipboardCheck,
 } from 'lucide-react'
 import api from '../services/api'
 import {
@@ -28,6 +28,34 @@ const fmtData = (d) => {
   if (!d) return '—'
   const [y, m, dia] = (d.split('T')[0]).split('-')
   return `${dia}/${m}/${y}`
+}
+
+// Situação financeira granular do DID: pago > liquidado a pagar > empenhado a pagar > pendente.
+// "Liquidado" mora em colunas diferentes conforme o tipo (Fixas: contabil_liquidado / Variáveis: contabil_pc_liquidado).
+const situacaoDid = (d) => {
+  if (!d) return null
+  if (d.pago === 'sim') {
+    return { label: 'Pago', cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', Icon: CheckCircle2 }
+  }
+  const liquidado = d.contabil_liquidado === 'sim' || d.contabil_pc_liquidado === 'sim'
+  if (liquidado) {
+    return { label: 'Liquidado a pagar', cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', Icon: ClipboardCheck }
+  }
+  if (d.contabil_empenhado === 'sim') {
+    return { label: 'Empenhado a pagar', cls: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400', Icon: FileText }
+  }
+  return { label: 'Pendente', cls: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400', Icon: Clock3 }
+}
+
+function SituacaoDidBadge({ d }) {
+  const s = situacaoDid(d)
+  if (!s) return '—'
+  const { label, cls, Icon } = s
+  return (
+    <span className={'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ' + cls}>
+      <Icon className="w-3 h-3" /> {label}
+    </span>
+  )
 }
 
 // Converte valor em formato BRL para número (ex: "R$ 1.000,50" → 1000.50)
@@ -89,6 +117,8 @@ function MetricCard({ Icon, emoji, label, value, sub, color = 'blue' }) {
     yellow: 'from-yellow-400 to-orange-500',
     red:    'from-red-500    to-rose-600',
     purple: 'from-purple-500 to-violet-600',
+    orange: 'from-orange-500 to-amber-600',
+    indigo: 'from-indigo-500 to-blue-700',
   }
   const IconComponent = Icon || null
   const str = String(value ?? '')
@@ -669,7 +699,7 @@ export default function Financeiro() {
     meses_ref:   [],
     data_inicio: '',
     data_fim:    '',
-    status:      [],  // 'pago' | 'pendente'
+    status:      [],  // 'pago' | 'liquidado_pagar' | 'empenhado_pagar' | 'pendente'
     secretarias: [],
     credores:    [],
     fontes:      [],
@@ -841,7 +871,8 @@ export default function Financeiro() {
   const mesesData = buildMesesData()
   const mesesMax = Math.max(...mesesData, 1)
   const totalDIDs = (painel?.dids?.totalFixas || 0) + (painel?.dids?.totalVariaveis || 0)
-  const pendentesQtd = painel?.dids?.totalPendentes ?? painel?.dids?.pendentes?.length ?? 0
+  // "Não pago" = soma das 3 situações que ainda aguardam pagamento (pendente + empenhado a pagar + liquidado a pagar)
+  const pendentesQtd = (painel?.dids?.totalPendentes || 0) + (painel?.dids?.totalEmpenhadosPagar || 0) + (painel?.dids?.totalLiquidadosPagar || 0)
   const taxaInad = totalDIDs > 0 ? Math.round((pendentesQtd / totalDIDs) * 100) : 0
   const ticketMedio = totalDIDs > 0 ? parseFloat(painel?.dids?.valorBrutoTotal || 0) / totalDIDs : 0
   const pctPago = totalDIDs > 0 ? Math.round(((totalDIDs - pendentesQtd) / totalDIDs) * 100) : 0
@@ -883,6 +914,15 @@ export default function Financeiro() {
   const relPctPago  = relTotal > 0 ? Math.min(100, Math.round((relPago    / relTotal) * 100)) : 0
   const relInad     = relTotal > 0 ? Math.min(100, Math.round((relPendente / relTotal) * 100)) : 0
   const relInadColor = relInad > 30 ? 'red' : relInad > 15 ? 'yellow' : 'green'
+
+  // Situação financeira granular (pago / liquidado a pagar / empenhado a pagar / pendente)
+  const relSituMap = (relatorio?.porSituacao || []).reduce((acc, s) => { acc[s.situacao] = s; return acc }, {})
+  const relLiquidadoPagar    = parseFloat(relSituMap.liquidado_pagar?.total || 0)
+  const relQtdLiquidadoPagar = parseInt(relSituMap.liquidado_pagar?.qtd || 0)
+  const relEmpenhadoPagar    = parseFloat(relSituMap.empenhado_pagar?.total || 0)
+  const relQtdEmpenhadoPagar = parseInt(relSituMap.empenhado_pagar?.qtd || 0)
+  const relPendenteEstrito    = parseFloat(relSituMap.pendente?.total || 0)
+  const relQtdPendenteEstrito = parseInt(relSituMap.pendente?.qtd || 0)
 
   // ─── Tabela Analítica de DIDs — sort + filtro client-side ─────────────────
   const relDidsToggleSort = (col) => {
@@ -1033,7 +1073,12 @@ export default function Financeiro() {
               <MultiSelect
                 label="Status"
                 placeholder="Todos os status"
-                options={[{ v: 'pago', l: '✅ Pago' }, { v: 'pendente', l: '⏳ Pendente' }]}
+                options={[
+                  { v: 'pago',             l: '✅ Pago' },
+                  { v: 'liquidado_pagar',  l: '📋 Liquidado a pagar' },
+                  { v: 'empenhado_pagar',  l: '📄 Empenhado a pagar' },
+                  { v: 'pendente',         l: '⏳ Pendente' },
+                ]}
                 selected={painelFiltros.status}
                 onChange={v => setPainelFiltros(f => ({ ...f, status: v }))}
               />
@@ -1152,13 +1197,19 @@ export default function Financeiro() {
             <>
               {/* ── Cards de métricas DID ─────────────────────────── */}
               {painel.dids && (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
-                  <MetricCard Icon={DollarSign}   label="Valor Bruto Total"  value={fmtMoeda(painel.dids.valorBrutoTotal)}  color="blue"   />
-                  <MetricCard Icon={CheckCircle2} label="Total Pago"         value={fmtMoeda(painel.dids.valorPago)}        color="green"  />
-                  <MetricCard Icon={Clock3}       label="Total Pendente"     value={fmtMoeda(painel.dids.valorPendente)}    color="yellow" />
-                  <MetricCard Icon={FileText}     label="Total DIDs"         value={totalDIDs}                              color="blue"   />
-                  <MetricCard Icon={AlertCircle}  label="Inadimplência"      value={inadValue} sub={inadSub}               color={inadColor} />
-                </div>
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <MetricCard Icon={DollarSign}   label="Valor Bruto Total"  value={fmtMoeda(painel.dids.valorBrutoTotal)}  color="blue"   />
+                    <MetricCard Icon={FileText}     label="Total DIDs"         value={totalDIDs}                              color="blue"   />
+                    <MetricCard Icon={AlertCircle}  label="Inadimplência"      value={inadValue} sub={inadSub}               color={inadColor} />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <MetricCard Icon={CheckCircle2}     label="Pago"                value={fmtMoeda(painel.dids.valorPago)}             color="green"  />
+                    <MetricCard Icon={ClipboardCheck}   label="Liquidado a pagar"   value={fmtMoeda(painel.dids.valorLiquidadoPagar)}   sub={`${painel.dids.totalLiquidadosPagar || 0} processo(s)`}   color="indigo" />
+                    <MetricCard Icon={FileText}         label="Empenhado a pagar"   value={fmtMoeda(painel.dids.valorEmpenhadoPagar)}   sub={`${painel.dids.totalEmpenhadosPagar || 0} processo(s)`}   color="orange" />
+                    <MetricCard Icon={Clock3}           label="Pendente"            value={fmtMoeda(painel.dids.valorPendente)}         sub={`${painel.dids.totalPendentes || 0} processo(s)`}         color="yellow" />
+                  </div>
+                </>
               )}
 
               {/* ── Relação de DIDs (lista completa filtrada) ───────────── */}
@@ -1220,11 +1271,7 @@ export default function Financeiro() {
                                 {d?.valor_bruto ? fmtMoeda(d.valor_bruto) : <span className="text-gray-400 text-xs">—</span>}
                               </td>
                               <td className="py-2.5 px-3 text-center">
-                                {d ? (
-                                  d.pago === 'sim'
-                                    ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"><CheckCircle2 className="w-3 h-3" /> Pago</span>
-                                    : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"><Clock3 className="w-3 h-3" /> Pendente</span>
-                                ) : '—'}
+                                <SituacaoDidBadge d={d} />
                               </td>
                               <td className="py-2.5 px-3 text-center">
                                 <button
@@ -1679,12 +1726,7 @@ export default function Financeiro() {
                               : <span className="text-gray-400 text-xs">—</span>}
                           </td>
                           <td className="py-3 px-4 text-center">
-                            {did
-                              ? did.pago === 'sim'
-                                ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"><CheckCircle2 className="w-3 h-3" /> Pago</span>
-                                : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"><Clock3 className="w-3 h-3" /> Pendente</span>
-                              : '—'
-                            }
+                            <SituacaoDidBadge d={did} />
                           </td>
                           <td className="py-3 px-4 text-right">
                             {p.lancamentos?.length > 0
@@ -1833,6 +1875,13 @@ export default function Financeiro() {
                 <MetricCard Icon={FileText}     color="blue"   label="Qtd. DIDs"        value={String(relQtdTotal)} />
               </div>
 
+              {/* ── KPI Cards — linha 1b: situação financeira granular ────── */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <MetricCard Icon={ClipboardCheck} color="indigo" label="Liquidado a pagar" value={fmtMoeda(relLiquidadoPagar)} sub={`${relQtdLiquidadoPagar} DID(s)`} />
+                <MetricCard Icon={FileText}       color="orange" label="Empenhado a pagar" value={fmtMoeda(relEmpenhadoPagar)} sub={`${relQtdEmpenhadoPagar} DID(s)`} />
+                <MetricCard Icon={Clock3}         color="yellow" label="Pendente"          value={fmtMoeda(relPendenteEstrito)} sub={`${relQtdPendenteEstrito} DID(s)`} />
+              </div>
+
               {/* ── KPI Cards — linha 2: 3 secundários ────────────────────── */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <MetricCard Icon={TrendingUp}   color="purple"       label="Ticket Médio"  value={fmtMoeda(relTicket)} />
@@ -1853,7 +1902,9 @@ export default function Financeiro() {
                     ? 'Nenhum DID encontrado para o período e filtros selecionados.'
                     : `No período analisado, foram registrados ${relQtdTotal} DID${relQtdTotal !== 1 ? 's' : ''}, totalizando ${fmtMoeda(relTotal)} em valor bruto. `}
                   {relPago > 0 && `Do total, ${fmtMoeda(relPago)} (${relPctPago}%) já foi pago${relQtdPago > 0 ? ` em ${relQtdPago} DID${relQtdPago !== 1 ? 's' : ''}` : ''}. `}
-                  {relPendente > 0 && `Há ${fmtMoeda(relPendente)} (${relInad}%) de valor pendente de pagamento. `}
+                  {relLiquidadoPagar > 0 && `${fmtMoeda(relLiquidadoPagar)} está liquidado e aguardando pagamento (${relQtdLiquidadoPagar} DID${relQtdLiquidadoPagar !== 1 ? 's' : ''}). `}
+                  {relEmpenhadoPagar > 0 && `${fmtMoeda(relEmpenhadoPagar)} está empenhado e aguardando liquidação/pagamento (${relQtdEmpenhadoPagar} DID${relQtdEmpenhadoPagar !== 1 ? 's' : ''}). `}
+                  {relPendente > 0 && `Há ${fmtMoeda(relPendente)} (${relInad}%) de valor ainda não pago no total. `}
                   {relTicket > 0 && `O ticket médio por DID é de ${fmtMoeda(relTicket)}. `}
                   {relatorio.porSecretaria?.length > 0 && `A secretaria com maior volume é "${secSigla(relatorio.porSecretaria[0].secretaria) || 'não informada'}", com ${fmtMoeda(relatorio.porSecretaria[0].total)}. `}
                   {relatorio.porCredor?.length > 0 && `O principal credor é "${relatorio.porCredor[0].credor || 'não informado'}", com ${fmtMoeda(relatorio.porCredor[0].total)}.`}
@@ -1918,8 +1969,10 @@ export default function Financeiro() {
                   <SectionTitle icon={CheckCircle2} title="Status de Pagamento" />
                   {relQtdTotal > 0 ? (() => {
                     const donutData = [
-                      { name: 'Pago',     value: relPago,     fill: '#22c55e' },
-                      { name: 'Pendente', value: relPendente, fill: '#facc15' },
+                      { name: 'Pago',             value: relPago,             fill: '#22c55e' },
+                      { name: 'Liquidado a pagar', value: relLiquidadoPagar,   fill: '#6366f1' },
+                      { name: 'Empenhado a pagar', value: relEmpenhadoPagar,   fill: '#f97316' },
+                      { name: 'Pendente',         value: relPendenteEstrito,  fill: '#facc15' },
                     ].filter(d => d.value > 0)
                     return (
                       <div className="flex flex-col sm:flex-row items-center gap-4 mt-3">
@@ -1933,8 +1986,10 @@ export default function Financeiro() {
                         </ResponsiveContainer>
                         <div className="flex-1 space-y-2 w-full">
                           {[
-                            { label: 'Pago',     value: relPago,     qtd: relQtdPago,              color: 'bg-green-500',  text: 'text-green-700 dark:text-green-400'  },
-                            { label: 'Pendente', value: relPendente, qtd: relQtdTotal - relQtdPago, color: 'bg-yellow-400', text: 'text-yellow-700 dark:text-yellow-400' },
+                            { label: 'Pago',             value: relPago,            qtd: relQtdPago,            color: 'bg-green-500',  text: 'text-green-700 dark:text-green-400'  },
+                            { label: 'Liquidado a pagar', value: relLiquidadoPagar, qtd: relQtdLiquidadoPagar,  color: 'bg-indigo-500', text: 'text-indigo-700 dark:text-indigo-400' },
+                            { label: 'Empenhado a pagar', value: relEmpenhadoPagar, qtd: relQtdEmpenhadoPagar,  color: 'bg-orange-500', text: 'text-orange-700 dark:text-orange-400' },
+                            { label: 'Pendente',         value: relPendenteEstrito, qtd: relQtdPendenteEstrito, color: 'bg-yellow-400', text: 'text-yellow-700 dark:text-yellow-400' },
                           ].map(item => {
                             const pct = relTotal > 0 ? Math.min(100, Math.round((item.value / relTotal) * 100)) : 0
                             return (

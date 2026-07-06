@@ -13,6 +13,32 @@ async function ensureTables(req) {
 }
 
 // ============================================================
+// SITUAÇÃO FINANCEIRA DO DID — empenhado / liquidado / pago
+// "Liquidado" mora em colunas diferentes conforme o tipo do DID:
+// Contas Fixas usa contabil_liquidado, Contas Variáveis usa contabil_pc_liquidado.
+// ============================================================
+const NAO_PAGO   = { [Op.or]: [{ pago: 'nao' }, { pago: null }] };
+const LIQUIDADO  = { [Op.or]: [{ contabil_liquidado: 'sim' }, { contabil_pc_liquidado: 'sim' }] };
+const EMPENHADO  = { contabil_empenhado: 'sim' };
+
+// Retorna o fragmento de `where` (para o model Did) correspondente à situação,
+// ou null se a situação não for reconhecida (sem filtro extra aplicado).
+function situacaoDidWhere(situacao) {
+  switch (situacao) {
+    case 'pago':
+      return { pago: 'sim' };
+    case 'liquidado_pagar':
+      return { [Op.and]: [NAO_PAGO, LIQUIDADO] };
+    case 'empenhado_pagar':
+      return { [Op.and]: [NAO_PAGO, { [Op.not]: LIQUIDADO }, EMPENHADO] };
+    case 'pendente':
+      return { [Op.and]: [NAO_PAGO, { [Op.not]: LIQUIDADO }, { [Op.not]: EMPENHADO }] };
+    default:
+      return null;
+  }
+}
+
+// ============================================================
 // DASHBOARD / PAINEL
 // ============================================================
 const getDashboard = async (req, res) => {
@@ -62,10 +88,9 @@ const getDashboard = async (req, res) => {
       didFiltro.mes_referencia = { [Op.in]: mesesRefList };
     }
 
-    // Status de pagamento
-    if (status && status !== 'todos') {
-      didFiltro.pago = status === 'pago' ? 'sim' : { [Op.or]: ['nao', null] };
-    }
+    // Situação financeira: pago | liquidado_pagar | empenhado_pagar | pendente
+    const situFiltro = situacaoDidWhere(status);
+    if (situFiltro) Object.assign(didFiltro, situFiltro);
 
     // Secretaria
     if (secretariaList.length > 0) {
@@ -122,9 +147,18 @@ const getDashboard = async (req, res) => {
 
     // ── Estatísticas dos DIDs (com filtro completo) ───────────────────────
     const didFiltroAno = didFiltro;
-    const filtroPendente = { ...didFiltroAno, [Op.or]: [{ pago: 'nao' }, { pago: null }] };
+    // Lista de alerta (aba "Pendentes") continua ampla: tudo que ainda não foi pago.
+    const filtroPendente        = { ...didFiltroAno, [Op.or]: [{ pago: 'nao' }, { pago: null }] };
+    // Situações granulares — mutuamente exclusivas, para os cards e filtros do painel.
+    const filtroEmpenhadoPagar  = { ...didFiltroAno, ...situacaoDidWhere('empenhado_pagar') };
+    const filtroLiquidadoPagar  = { ...didFiltroAno, ...situacaoDidWhere('liquidado_pagar') };
+    const filtroNadaFeito       = { ...didFiltroAno, ...situacaoDidWhere('pendente') };
 
-    const [porTipoDid, somaDidBruto, somaDidPago, somaDidPendente, totalPendentesCount, ultimosDids] = await Promise.all([
+    const [
+      porTipoDid, somaDidBruto, somaDidPago, somaDidPendente, totalPendentesCount,
+      somaDidEmpenhadoPagar, qtdEmpenhadoPagar, somaDidLiquidadoPagar, qtdLiquidadoPagar,
+      ultimosDids
+    ] = await Promise.all([
       // Contagem e soma por tipo_did (substitui filtroFixas/filtroVariaveis bugados)
       Did.findAll({
         attributes: [
@@ -138,9 +172,13 @@ const getDashboard = async (req, res) => {
       }),
       Did.sum('valor_bruto', { where: didFiltroAno }),
       Did.sum('valor_bruto', { where: { ...didFiltroAno, pago: 'sim' } }),
-      Did.sum('valor_bruto', { where: filtroPendente }),
-      // Contagem real de pendentes (não limitada a 10)
-      Did.count({ where: filtroPendente }),
+      Did.sum('valor_bruto', { where: filtroNadaFeito }),
+      // Contagem real de pendentes — nada feito ainda (não limitada a 10)
+      Did.count({ where: filtroNadaFeito }),
+      Did.sum('valor_bruto', { where: filtroEmpenhadoPagar }),
+      Did.count({ where: filtroEmpenhadoPagar }),
+      Did.sum('valor_bruto', { where: filtroLiquidadoPagar }),
+      Did.count({ where: filtroLiquidadoPagar }),
       Did.findAll({
         where: didFiltroAno,
         include: [{ model: Processo, as: 'processo', attributes: ['numero', 'status', 'id'] }],
@@ -249,9 +287,13 @@ const getDashboard = async (req, res) => {
         totalFixas: totalDidsFixas || 0,
         totalVariaveis: totalDidsVariaveis || 0,
         totalPendentes: totalPendentesCount || 0,
+        totalEmpenhadosPagar: qtdEmpenhadoPagar || 0,
+        totalLiquidadosPagar: qtdLiquidadoPagar || 0,
         valorBrutoTotal: parseFloat(somaDidBruto || 0).toFixed(2),
         valorPago: parseFloat(somaDidPago || 0).toFixed(2),
         valorPendente: parseFloat(somaDidPendente || 0).toFixed(2),
+        valorEmpenhadoPagar: parseFloat(somaDidEmpenhadoPagar || 0).toFixed(2),
+        valorLiquidadoPagar: parseFloat(somaDidLiquidadoPagar || 0).toFixed(2),
         ultimos: ultimosDids,
         porMes: porMesDid,
         porTipo: porTipoDid,
@@ -516,7 +558,8 @@ const getProcessosDid = async (req, res) => {
       if (data_inicio) didWhere.data_did[Op.gte] = data_inicio;
       if (data_fim)    didWhere.data_did[Op.lte] = data_fim;
     }
-    if (status_pago) didWhere.pago = status_pago === 'pago' ? 'sim' : { [Op.or]: ['nao', null] };
+    const situFiltroDid = situacaoDidWhere(status_pago);
+    if (situFiltroDid) Object.assign(didWhere, situFiltroDid);
     if (tipo_did) {
       const tipos = tipo_did.split(',').map(t => t.trim()).filter(Boolean);
       if (tipos.length === 1) didWhere.tipo_did = tipos[0];
@@ -555,7 +598,9 @@ const getProcessosDid = async (req, res) => {
           required: true,  // só processos que têm DID preenchido
           where: Object.keys(didWhere).length > 0 ? didWhere : undefined,
           attributes: ['id', 'numero_did', 'tipo_did', 'credor_sec1', 'secretaria_sec1',
-                       'valor_bruto', 'pago', 'data_did', 'empenho_numero', 'mes_referencia']
+                       'valor_bruto', 'pago', 'data_did', 'empenho_numero', 'mes_referencia',
+                       'contabil_empenhado', 'contabil_liquidado', 'contabil_pc_liquidado',
+                       'liquidacao_numero', 'contabil_pc_liquidacao_numero']
         }
       ],
       order: [['data_abertura', 'DESC']],
@@ -599,11 +644,26 @@ const getRelatorio = async (req, res) => {
       if (list.length) where.fonte_recurso = { [Op.in]: list };
     }
 
-    const [porStatus, porTipo, porSecretaria, porCredor, porFonte, porMes, valorTotal] = await Promise.all([
+    // Situação financeira granular (mesma regra usada no Painel — ver situacaoDidWhere)
+    const situacaoCaseSQL = `CASE
+      WHEN "pago" = 'sim' THEN 'pago'
+      WHEN "contabil_liquidado" = 'sim' OR "contabil_pc_liquidado" = 'sim' THEN 'liquidado_pagar'
+      WHEN "contabil_empenhado" = 'sim' THEN 'empenhado_pagar'
+      ELSE 'pendente'
+    END`;
+
+    const [porStatus, porSituacao, porTipo, porSecretaria, porCredor, porFonte, porMes, valorTotal] = await Promise.all([
       Did.findAll({
         attributes: ['pago', [fn('SUM', col('valor_bruto')), 'total'], [fn('COUNT', col('id')), 'qtd']],
         where,
         group: ['pago'],
+        order: [[literal('total'), 'DESC']],
+        raw: true
+      }),
+      Did.findAll({
+        attributes: [[literal(situacaoCaseSQL), 'situacao'], [fn('SUM', col('valor_bruto')), 'total'], [fn('COUNT', col('id')), 'qtd']],
+        where,
+        group: [literal(situacaoCaseSQL)],
         order: [[literal('total'), 'DESC']],
         raw: true
       }),
@@ -669,6 +729,7 @@ const getRelatorio = async (req, res) => {
     res.json({
       valorTotal: parseFloat(valorTotal || 0).toFixed(2),
       porStatus,
+      porSituacao,
       porTipo,
       porSecretaria,
       porCredor,
