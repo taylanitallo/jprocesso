@@ -249,6 +249,8 @@ function SelecionarItemModal({ contrato_id, itensBase = [], onSelect, onClose })
   const [uso, setUso] = useState({})  // { [vinculo_id]: { qtd_usada, qtd_disponivel, percentual_uso, esgotado } }
   const [carregando, setCarregando] = useState(true)
   const [busca, setBusca] = useState('')
+  const [itemQtd, setItemQtd] = useState(null) // item aguardando confirmação de quantidade
+  const [qtd, setQtd] = useState('')
 
   useEffect(() => {
     // Busca dados de uso via endpoint; mesmo se falhar, mostra os itens base
@@ -289,6 +291,15 @@ function SelecionarItemModal({ contrato_id, itensBase = [], onSelect, onClose })
     !busca || it.descricao.toLowerCase().includes(busca.toLowerCase())
   )
 
+  const abrirQtd = (it) => { setItemQtd(it); setQtd('1') }
+  const qtdNum = parseFloat(String(qtd).replace(',', '.')) || 0
+  const qtdInvalida = itemQtd && (qtdNum <= 0 || qtdNum > itemQtd.qtd_disponivel)
+
+  const confirmarQtd = () => {
+    if (qtdInvalida) return
+    onSelect({ ...itemQtd, quantidade: qtdNum })
+  }
+
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4">
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full flex flex-col" style={{ maxWidth: '680px', maxHeight: '82vh' }}>
@@ -297,8 +308,10 @@ function SelecionarItemModal({ contrato_id, itensBase = [], onSelect, onClose })
         <div className="flex items-center justify-between bg-slate-900 px-5 py-3.5 rounded-t-2xl shrink-0">
           <div className="flex items-center gap-3">
             <PackageOpen className="w-4 h-4 text-white/80" />
-            <span className="text-sm font-semibold text-white">Itens do Contrato</span>
-            {!carregando && (
+            <span className="text-sm font-semibold text-white">
+              {itemQtd ? 'Informe a Quantidade' : 'Itens do Contrato'}
+            </span>
+            {!carregando && !itemQtd && (
               <span className="text-[10px] text-white/40">{filtrados.length} item(ns)</span>
             )}
           </div>
@@ -307,6 +320,49 @@ function SelecionarItemModal({ contrato_id, itensBase = [], onSelect, onClose })
           </button>
         </div>
 
+        {itemQtd ? (
+          <>
+            {/* Tela de confirmação de quantidade */}
+            <div className="px-5 py-5 flex-1 overflow-y-auto">
+              <p className="text-sm font-medium text-gray-800 dark:text-slate-200 leading-tight">{itemQtd.descricao}</p>
+              <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                {itemQtd.lote && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 font-medium">
+                    Lote {itemQtd.lote}
+                  </span>
+                )}
+                <span className="text-[10px] text-gray-500 dark:text-slate-400">{itemQtd.unidade || '—'}</span>
+                <span className="text-[10px] text-gray-500 dark:text-slate-400">{fmtBRL(itemQtd.valor_unitario)}/un.</span>
+                <span className="text-[10px] text-emerald-600 font-semibold">
+                  {itemQtd.qtd_disponivel % 1 === 0 ? itemQtd.qtd_disponivel : itemQtd.qtd_disponivel.toFixed(2)} disponível
+                </span>
+              </div>
+
+              <div className="mt-4">
+                <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1 block">Quantidade</label>
+                <MaskedInput value={qtd} onChange={setQtd} placeholder="0,00"
+                  className="input-field text-sm w-full font-mono" />
+                {qtdInvalida && (
+                  <p className="text-[11px] text-red-500 mt-1.5">
+                    {qtdNum <= 0 ? 'Informe uma quantidade maior que zero.' : `Quantidade maior que o disponível (${itemQtd.qtd_disponivel}).`}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-4 py-2.5 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between shrink-0">
+              <button onClick={() => setItemQtd(null)} className="px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700">
+                Voltar
+              </button>
+              <button onClick={confirmarQtd} disabled={qtdInvalida}
+                className="px-3 py-1.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold">
+                Adicionar à Ordem
+              </button>
+            </div>
+          </>
+        ) : (
+        <>
         {/* Busca */}
         <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 shrink-0">
           <div className="relative">
@@ -348,7 +404,7 @@ function SelecionarItemModal({ contrato_id, itensBase = [], onSelect, onClose })
 
             return (
               <button key={idx}
-                onClick={() => !it.esgotado && onSelect(it)}
+                onClick={() => !it.esgotado && abrirQtd(it)}
                 disabled={it.esgotado}
                 className={`w-full text-left grid grid-cols-12 gap-2 px-4 py-3 transition-colors items-center
                   ${it.esgotado
@@ -406,11 +462,13 @@ function SelecionarItemModal({ contrato_id, itensBase = [], onSelect, onClose })
 
         {/* Footer */}
         <div className="px-4 py-2.5 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between shrink-0">
-          <span className="text-xs text-gray-400">Clique no item para adicioná-lo à ordem</span>
+          <span className="text-xs text-gray-400">Clique no item para informar a quantidade</span>
           <button onClick={onClose} className="px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700">
             Fechar
           </button>
         </div>
+        </>
+        )}
       </div>
     </div>
   )
@@ -1044,7 +1102,7 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
                   codigo_item: item.codigo_item || '',
                   descricao: item.descricao,
                   unidade: item.unidade,
-                  quantidade: 1,
+                  quantidade: item.quantidade || 1,
                   valor_unitario: item.valor_unitario || 0,
                 }])
                 setModalItens(false)
