@@ -522,10 +522,21 @@ async function calcularItensComSaldo(ordem, AlmoxarifadoItem, AlmoxLote) {
 }
 
 /** Lista ordens de compra disponíveis para entrada no almoxarifado */
+/** Helper: IDs de ordens cujo DID vinculado já foi marcado como "recebido" na Seção de Recebimento (Almoxarifado) */
+async function idsOrdensRecebidasNoDid(Did, ordemIds) {
+  if (!Did || ordemIds.length === 0) return new Set();
+  const dids = await Did.findAll({
+    where: { ordem_compra_id: { [Op.in]: ordemIds }, receb_ordem_recebida: 'sim' },
+    attributes: ['ordem_compra_id'],
+    raw: true,
+  });
+  return new Set(dids.map(d => d.ordem_compra_id));
+}
+
 const listOrdensCompraDisponiveis = async (req, res) => {
   try {
     await ensureTables(req);
-    const { ContratoOrdem, ContratoOrdemItem, Contrato, Credor, AlmoxarifadoItem, AlmoxLote } = req.models;
+    const { ContratoOrdem, ContratoOrdemItem, Contrato, Credor, AlmoxarifadoItem, AlmoxLote, Did } = req.models;
     if (!ContratoOrdem) return res.status(503).json({ error: 'Módulo de contratos não disponível' });
 
     const { q } = req.query;
@@ -552,8 +563,12 @@ const listOrdensCompraDisponiveis = async (req, res) => {
       limit: 100
     });
 
+    // Só entram ordens cujo DID vinculado teve o recebimento confirmado (Seção de Recebimento)
+    const recebidas = await idsOrdensRecebidasNoDid(Did, ordens.map(o => o.id));
+
     const result = [];
     for (const ordem of ordens) {
+      if (!recebidas.has(ordem.id)) continue;
       const itensComSaldo = await calcularItensComSaldo(ordem, AlmoxarifadoItem, AlmoxLote);
       if (itensComSaldo.length > 0) {
         result.push({ ...ordem.toJSON(), itens: itensComSaldo });
@@ -571,7 +586,7 @@ const listOrdensCompraDisponiveis = async (req, res) => {
 const getOrdemByNumero = async (req, res) => {
   try {
     await ensureTables(req);
-    const { ContratoOrdem, ContratoOrdemItem, Contrato, Credor, AlmoxarifadoItem, AlmoxLote } = req.models;
+    const { ContratoOrdem, ContratoOrdemItem, Contrato, Credor, AlmoxarifadoItem, AlmoxLote, Did } = req.models;
     if (!ContratoOrdem) return res.status(503).json({ error: 'Módulo de contratos não disponível' });
 
     const numero = decodeURIComponent(req.params.numero).trim();
@@ -591,6 +606,11 @@ const getOrdemByNumero = async (req, res) => {
 
     if (!ordem) {
       return res.status(404).json({ error: `Ordem de compra "${numero}" não encontrada, cancelada ou já atendida` });
+    }
+
+    const recebidas = await idsOrdensRecebidasNoDid(Did, [ordem.id]);
+    if (!recebidas.has(ordem.id)) {
+      return res.status(404).json({ error: 'Esta ordem ainda não foi confirmada como recebida no DID (Seção de Recebimento)' });
     }
 
     const itensComSaldo = await calcularItensComSaldo(ordem, AlmoxarifadoItem, AlmoxLote);

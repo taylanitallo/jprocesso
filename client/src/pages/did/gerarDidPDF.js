@@ -120,10 +120,10 @@ function gridRow(doc, y, cols, pageH) {
 }
 
 // ─── Campo objeto — texto completo com wrap ───────────────────────────────────
-function campoObjeto(doc, y, valor, pageH) {
+function campoObjeto(doc, y, valor, pageH, label = 'OBJETO') {
   if (y > pageH - 16) { doc.addPage(); applyTimbradoToPage(doc); y = mTop + 4 }
   norm(doc, 5.5, C.muted)
-  doc.text('OBJETO', M + 1, y + 1.5)
+  doc.text(label.toUpperCase(), M + 1, y + 1.5)
   bold(doc, 7.5, C.ink)
   const linhas = doc.splitTextToSize(fmt(valor), UW - 2)
   doc.text(linhas, M + 1, y + 5.8)
@@ -292,6 +292,12 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
     { label: 'Credor',       value: form.credor_sec1,                   w: 2.5 },
     { label: 'CNPJ/CPF',     value: fmtCNPJ(form.cnpj_cpf_credor_sec1), w: 2   },
   ], pageH)
+  // Linha 3b — Dados bancários do credor
+  y = gridRow(doc, y, [
+    { label: 'Banco', value: form.banco_fornecedor, w: 2   },
+    { label: 'Ag.',   value: form.ag_fornecedor,    w: 1   },
+    { label: 'C/C',   value: form.cc_fornecedor,    w: 1.5 },
+  ], pageH)
   // Linha 4 — Licitação | Modalidade | Fonte | Valor DID
   y = gridRow(doc, y, [
     { label: 'Nº Licitação',     value: form.nro_licitacao_sec1,  w: 1.5 },
@@ -302,11 +308,12 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
 
   y = campoObjeto(doc, y, form.objeto, pageH)
   y = checkRow(doc, y, 'Certidões', [
-    { label: 'Municipal',   value: form.cert_sec1_municipal },
-    { label: 'Trabalhista', value: form.cert_sec1_trabalhista },
-    { label: 'FGTS',        value: form.cert_sec1_fgts },
-    { label: 'Estadual',    value: form.cert_sec1_estadual },
-    { label: 'Federal',     value: form.cert_sec1_federal },
+    { label: 'Municipal',        value: form.cert_sec1_municipal },
+    { label: 'Trabalhista',      value: form.cert_sec1_trabalhista },
+    { label: 'FGTS',             value: form.cert_sec1_fgts },
+    { label: 'Estadual',         value: form.cert_sec1_estadual },
+    { label: 'Federal',          value: form.cert_sec1_federal },
+    { label: 'Simples Nacional', value: form.cert_sec1_simples_nac },
   ], pageH)
   y += 3
 
@@ -359,7 +366,7 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
     { label: 'Recebido em', value: fmtData(form.ci_recebido_em), w: 1.5 },
     { label: 'Responsável', value: form.ci_responsavel,          w: 3   },
   ], pageH)
-  y = campoObjeto(doc, y, form.despacho_ci, pageH)
+  y = campoObjeto(doc, y, form.despacho_ci, pageH, 'Despacho via C.I.')
   y += 1
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -387,9 +394,10 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
     // ── V — Contabilidade (Empenho) ───────────────────────────────────────
     y = divSecao(doc, y, 'V', 'Contabilidade (Empenho)', C.purple, pageH)
     y = gridRow(doc, y, [
-      { label: 'Recebido em', value: fmtData(form.contabil_recebido_em), w: 1.3 },
-      { label: 'Responsável', value: form.contabil_responsavel,          w: 2   },
-      { label: 'Auditor',     value: form.contabil_auditor,              w: 2   },
+      { label: 'Recebido em',       value: fmtData(form.contabil_recebido_em), w: 1.3 },
+      { label: 'Responsável',       value: form.contabil_responsavel,          w: 2   },
+      { label: 'Auditor',           value: form.contabil_auditor,              w: 1.7 },
+      { label: 'Está empenhado?',   value: simNao(form.contabil_empenhado),    w: 1.3 },
     ], pageH)
     y = gridRow(doc, y, [
       { label: 'Empenho Nº',   value: form.empenho_numero,        w: 1.5 },
@@ -411,6 +419,9 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
     // ── VII — Almoxarifado (Recebimento) ───────────────────────────────────
     y = divSecao(doc, y, 'VII', 'Almoxarifado (Recebimento)', C.navy, pageH)
     y = gridRow(doc, y, [
+      { label: 'Ordem Recebida?', value: simNao(form.receb_ordem_recebida), w: 1.3 },
+    ], pageH)
+    y = gridRow(doc, y, [
       { label: 'Data Recebimento',    value: fmtData(form.receb_data),               w: 1.5 },
       { label: 'Data NF',             value: fmtData(form.receb_nf_data),            w: 1.5 },
       { label: 'Enviado NF p/ Compras', value: fmtData(form.receb_nf_enviado_compras), w: 1.5 },
@@ -424,7 +435,7 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
       { label: 'Qtd. conferida',       value: form.receb_qtd_conferida },
       { label: 'Especificações ok',    value: form.receb_esp_conforme },
     ], pageH)
-    if (form.receb_obs) y = campoObjeto(doc, y, form.receb_obs, pageH)
+    if (form.receb_obs) y = campoObjeto(doc, y, form.receb_obs, pageH, 'Observações do Recebimento')
     y += 1
 
     // ── VIII — Setor de Compras (Ateste de NF) ────────────────────────────
@@ -439,9 +450,10 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
     // ── IX — Contabilidade (Liquidação) ────────────────────────────────────
     y = divSecao(doc, y, 'IX', 'Contabilidade (Liquidação)', C.purple, pageH)
     y = gridRow(doc, y, [
-      { label: 'Recebido em', value: fmtData(form.contabil_pc_recebido_em), w: 1.3 },
-      { label: 'Responsável', value: form.contabil_pc_responsavel,          w: 2   },
-      { label: 'Auditor',     value: form.contabil_pc_auditor,              w: 2   },
+      { label: 'Recebido em',      value: fmtData(form.contabil_pc_recebido_em), w: 1.3 },
+      { label: 'Responsável',      value: form.contabil_pc_responsavel,          w: 2   },
+      { label: 'Auditor',          value: form.contabil_pc_auditor,              w: 1.7 },
+      { label: 'Está liquidado?',  value: simNao(form.contabil_pc_liquidado),    w: 1.3 },
     ], pageH)
     y = gridRow(doc, y, [
       { label: 'Liquidação Nº',    value: form.contabil_pc_liquidacao_numero,        w: 2 },
@@ -463,7 +475,16 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
     y = gridRow(doc, y, [
       { label: 'Recebido em', value: fmtData(form.tesouraria_recebido_em), w: 1.5 },
       { label: 'Responsável', value: form.tesouraria_responsavel,          w: 2   },
-      { label: 'Banco',       value: form.banco_pagador,                   w: 2   },
+    ], pageH)
+    y = gridRow(doc, y, [
+      { label: 'Banco (pagador)', value: form.banco_pagador, w: 2   },
+      { label: 'Ag.',             value: form.ag_pagador,    w: 1   },
+      { label: 'C/C',             value: form.cc_pagador,    w: 1.5 },
+    ], pageH)
+    y = gridRow(doc, y, [
+      { label: 'Banco (credor)', value: form.banco_fornecedor, w: 2   },
+      { label: 'Ag.',            value: form.ag_fornecedor,    w: 1   },
+      { label: 'C/C',            value: form.cc_fornecedor,    w: 1.5 },
     ], pageH)
     y = checkRow(doc, y, 'Certidões', [
       { label: 'Unificada',   value: form.cert_teso_cnd },
@@ -558,11 +579,15 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
       { label: 'Doc. Caixa',  value: form.doc_caixa,                     w: 1   },
     ], pageH)
     y = gridRow(doc, y, [
-      { label: 'Empenho Nº',       value: form.empenho_numero,           w: 1.2 },
-      { label: 'Tipo',             value: form.tipo_empenho,             w: 1.5 },
-      { label: 'Data Empenho',     value: fmtData(form.data_empenho),    w: 1.3 },
-      { label: 'Liquidação Nº',    value: form.liquidacao_numero,        w: 1.2 },
-      { label: 'Data Liquidação',  value: fmtData(form.data_liquidacao), w: 1.3 },
+      { label: 'Está empenhado?', value: simNao(form.contabil_empenhado), w: 1.5 },
+      { label: 'Empenho Nº',      value: form.empenho_numero,             w: 1.2 },
+      { label: 'Tipo',            value: form.tipo_empenho,               w: 1.5 },
+      { label: 'Data Empenho',    value: fmtData(form.data_empenho),      w: 1.3 },
+    ], pageH)
+    y = gridRow(doc, y, [
+      { label: 'Está liquidado?',  value: simNao(form.contabil_liquidado), w: 1.5 },
+      { label: 'Liquidação Nº',    value: form.liquidacao_numero,          w: 1.2 },
+      { label: 'Data Liquidação',  value: fmtData(form.data_liquidacao),   w: 1.3 },
     ], pageH)
     y += 1
 
@@ -580,16 +605,24 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
     y = gridRow(doc, y, [
       { label: 'Recebido em', value: fmtData(form.tesouraria_recebido_em), w: 1.5 },
       { label: 'Responsável', value: form.tesouraria_responsavel,          w: 2   },
-      { label: 'Banco',       value: form.banco_pagador,                   w: 2   },
-      { label: 'Ag.',         value: form.ag_pagador,                      w: 1   },
-      { label: 'C/C',         value: form.cc_pagador,                      w: 1.5 },
+    ], pageH)
+    y = gridRow(doc, y, [
+      { label: 'Banco (pagador)', value: form.banco_pagador, w: 2   },
+      { label: 'Ag.',             value: form.ag_pagador,    w: 1   },
+      { label: 'C/C',             value: form.cc_pagador,    w: 1.5 },
+    ], pageH)
+    y = gridRow(doc, y, [
+      { label: 'Banco (credor)', value: form.banco_fornecedor, w: 2   },
+      { label: 'Ag.',            value: form.ag_fornecedor,    w: 1   },
+      { label: 'C/C',            value: form.cc_fornecedor,    w: 1.5 },
     ], pageH)
     y = checkRow(doc, y, 'Certidões', [
-      { label: 'Unificada',   value: form.cert_teso_cnd },
-      { label: 'FGTS',        value: form.cert_teso_fgts },
-      { label: 'Estadual',    value: form.cert_teso_estadual },
-      { label: 'Trabalhista', value: form.cert_teso_trabalhista },
-      { label: 'Municipal',   value: form.cert_teso_municipal },
+      { label: 'Municipal',        value: form.cert_teso_municipal },
+      { label: 'Trabalhista',      value: form.cert_teso_trabalhista },
+      { label: 'FGTS',             value: form.cert_teso_fgts },
+      { label: 'Estadual',         value: form.cert_teso_estadual },
+      { label: 'Federal',          value: form.cert_teso_federal },
+      { label: 'Simples Nacional', value: form.cert_teso_simples_nac },
     ], pageH)
     y += 3
 

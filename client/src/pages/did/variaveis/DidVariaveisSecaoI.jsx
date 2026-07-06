@@ -1,5 +1,5 @@
-import { useState, useEffect, useContext, useMemo } from 'react'
-import { FileText, Plus, Trash2, Search, X, Check, CheckCircle, Pencil, Loader2, ListPlus, Lock, ClipboardList, RotateCcw } from 'lucide-react'
+import { useState, useEffect, useContext, useMemo, useRef } from 'react'
+import { FileText, Plus, Trash2, Search, X, Check, CheckCircle, Pencil, Loader2, ListPlus, Lock, ClipboardList, RotateCcw, Paperclip, ExternalLink } from 'lucide-react'
 import { Field, Input, Textarea, SectionCard, DidReadOnlyContext, FonteRecursoSelect, alertarPendencias } from '../didShared'
 import api from '../../../services/api'
 
@@ -416,8 +416,43 @@ export default function DidVariaveisSecaoI({
   const [stockData, setStockData] = useState({})
   const [almStockData, setAlmStockData] = useState({})
   const [loadingStock, setLoadingStock] = useState(false)
+  const [certUploading, setCertUploading] = useState({})
+  const certFileRefs = useRef({})
   useEffect(() => { if (didId) setLocked(true) }, [didId])
   const readOnly = useContext(DidReadOnlyContext)
+
+  const certArquivos = form.cert_sec1_arquivos || {}
+
+  const uploadCertidao = async (certKey, file) => {
+    if (!processoId || processoId === 'novo') { alert('Salve o DID antes de anexar arquivos.'); return }
+    setCertUploading(p => ({ ...p, [certKey]: true }))
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const { data } = await api.post(
+        `/did/processo/${processoId}/certidao/${certKey}`,
+        fd,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      )
+      set('cert_sec1_arquivos', data.cert_sec1_arquivos)
+    } catch { alert('Erro ao fazer upload do arquivo.') }
+    finally { setCertUploading(p => ({ ...p, [certKey]: false })) }
+  }
+
+  const verCertidao = async (certKey) => {
+    try {
+      const { data } = await api.get(`/did/processo/${processoId}/certidao/${certKey}/url`)
+      window.open(data.url, '_blank')
+    } catch { alert('Erro ao abrir arquivo.') }
+  }
+
+  const removerCertidao = async (certKey) => {
+    if (!window.confirm('Remover o arquivo desta certidão?')) return
+    try {
+      const { data } = await api.delete(`/did/processo/${processoId}/certidao/${certKey}`)
+      set('cert_sec1_arquivos', data.cert_sec1_arquivos)
+    } catch { alert('Erro ao remover arquivo.') }
+  }
 
   // Quando há uma ordem de compra vinculada, credor/contrato/secretaria/secretário ficam bloqueados
   const ordemVinculada = !!(ordemSel || form.ordem_ref)
@@ -1064,6 +1099,84 @@ export default function DidVariaveisSecaoI({
             ))}
           </select>
           {tentouSalvar && !form.mes_referencia && <p className="mt-1 text-xs text-red-500 dark:text-red-400">Selecione o mês de referência</p>}
+        </div>
+      </div>
+
+      {/* Certidões */}
+      <div className="col-span-2">
+        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Certidões</label>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {[
+            { key: 'cert_sec1_municipal',    certKey: 'municipal',    label: 'Municipal' },
+            { key: 'cert_sec1_trabalhista',  certKey: 'trabalhista',  label: 'Trabalhista' },
+            { key: 'cert_sec1_fgts',         certKey: 'fgts',         label: 'FGTS' },
+            { key: 'cert_sec1_estadual',     certKey: 'estadual',     label: 'Estadual' },
+            { key: 'cert_sec1_federal',      certKey: 'federal',      label: 'Federal' },
+            { key: 'cert_sec1_simples_nac',  certKey: 'simples_nac',  label: 'Simples Nacional' },
+          ].map(({ key, certKey, label }) => {
+            const arq = certArquivos[certKey]
+            const uploading = certUploading[certKey]
+            return (
+              <div key={key} className={`rounded-lg border p-2.5 transition-colors ${
+                form[key]
+                  ? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/15'
+                  : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800/50'
+              }`}>
+                {/* Linha do checkbox */}
+                <label className={`flex items-center gap-2 text-sm select-none mb-2
+                  ${locked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
+                  ${form[key] ? 'text-green-700 dark:text-green-400 font-semibold' : 'text-gray-700 dark:text-gray-300'}`}>
+                  <input type="checkbox" checked={!!form[key]}
+                    onChange={e => set(key, e.target.checked)} disabled={locked}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-60" />
+                  {label}
+                </label>
+
+                {/* Área de arquivo */}
+                {arq ? (
+                  <div className="flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                    <span className="text-xs text-gray-600 dark:text-gray-300 truncate flex-1 min-w-0" title={arq.nome}>
+                      {arq.nome}
+                    </span>
+                    <button type="button" onClick={() => verCertidao(certKey)} title="Ver arquivo"
+                      className="p-1 rounded text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 shrink-0">
+                      <ExternalLink className="w-3 h-3" />
+                    </button>
+                    {!locked && (
+                      <button type="button" onClick={() => removerCertidao(certKey)} title="Remover arquivo"
+                        className="p-1 rounded text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 shrink-0">
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      ref={el => { certFileRefs.current[certKey] = el }}
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      className="hidden"
+                      onChange={e => {
+                        const file = e.target.files?.[0]
+                        if (file) { uploadCertidao(certKey, file); e.target.value = '' }
+                      }}
+                    />
+                    <button type="button"
+                      disabled={locked || uploading}
+                      onClick={() => certFileRefs.current[certKey]?.click()}
+                      className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                      {uploading
+                        ? <Loader2 className="w-3 h-3 animate-spin" />
+                        : <Paperclip className="w-3 h-3" />
+                      }
+                      {uploading ? 'Enviando...' : 'Anexar arquivo'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
 

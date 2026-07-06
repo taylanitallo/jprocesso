@@ -1,6 +1,6 @@
-import { Banknote } from 'lucide-react'
+import { Banknote, Pencil } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { Field, Input, UserSelect, Checkbox, SectionCard, SecaoBotoes, alertarPendencias } from '../didShared'
+import { Field, Input, UserSelect, Checkbox, SectionCard, SecaoBotoes, alertarPendencias, ConfirmModal } from '../didShared'
 import { BANCOS } from '../bancosBrasil'
 import api from '../../../services/api'
 
@@ -82,6 +82,10 @@ export default function DidVariaveisSecaoXI({ form, inp, chk, vliq, saving, didI
   const [locked, setLocked] = useState(false)
   useEffect(() => { if (didId) setLocked(true) }, [didId])
 
+  const [editarBancoCredor, setEditarBancoCredor] = useState(false)
+  const [confirmarBancoCredor, setConfirmarBancoCredor] = useState(false)
+  useEffect(() => { if (locked) setEditarBancoCredor(false) }, [locked])
+
   const salvar = async () => {
     const completo = alertarPendencias([
       { ok: !!form.tesouraria_recebido_em, label: 'Recebido em' },
@@ -97,6 +101,7 @@ export default function DidVariaveisSecaoXI({ form, inp, chk, vliq, saving, didI
   const limpar = () => { setLocked(false); onLimpar?.() }
 
   return (
+    <>
     <SectionCard icon={Banknote} title="Seção XI - Tesouraria"
       color="bg-green-700 text-white dark:bg-green-900">
 
@@ -136,6 +141,35 @@ export default function DidVariaveisSecaoXI({ form, inp, chk, vliq, saving, didI
           <div>
             <label className="block text-xs text-gray-500 mb-1">C/C</label>
             <Input value={form.cc_pagador} onChange={inp('cc_pagador')} disabled />
+          </div>
+        </div>
+      </div>
+
+      {/* Dados bancários do credor — informados na Seção I, alteráveis mediante confirmação */}
+      <div className="col-span-2">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            Dados Bancários do Credor <span className="normal-case font-normal text-gray-400">(informados na Seção I)</span>
+          </p>
+          {!locked && !editarBancoCredor && (
+            <button type="button" onClick={() => setConfirmarBancoCredor(true)}
+              className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 font-semibold">
+              <Pencil className="w-3 h-3" /> Alterar
+            </button>
+          )}
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Banco</label>
+            <Input value={form.banco_fornecedor} onChange={inp('banco_fornecedor')} disabled={locked || !editarBancoCredor} />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Ag.</label>
+            <Input value={form.ag_fornecedor} onChange={inp('ag_fornecedor')} disabled={locked || !editarBancoCredor} />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">C/C</label>
+            <Input value={form.cc_fornecedor} onChange={inp('cc_fornecedor')} disabled={locked || !editarBancoCredor} />
           </div>
         </div>
       </div>
@@ -247,5 +281,16 @@ export default function DidVariaveisSecaoXI({ form, inp, chk, vliq, saving, didI
 
       <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção Tesouraria" onLimpar={limpar} />
     </SectionCard>
+
+    {confirmarBancoCredor && (
+      <ConfirmModal
+        title="Alterar dados bancários do credor?"
+        message="Esses dados definem para qual conta o pagamento será enviado. Eles foram preenchidos a partir da Seção I — confirme apenas se o credor realmente informou uma conta diferente."
+        confirmLabel="Sim, liberar edição"
+        onConfirm={() => { setEditarBancoCredor(true); setConfirmarBancoCredor(false) }}
+        onClose={() => setConfirmarBancoCredor(false)}
+      />
+    )}
+    </>
   )
 }

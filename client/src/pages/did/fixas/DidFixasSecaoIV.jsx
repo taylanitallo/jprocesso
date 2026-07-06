@@ -52,7 +52,7 @@ export default function DidFixasSecaoIV({ form, inp, saving, didId, onSave, onLi
         <UserSelect value={form.contabil_responsavel} onChange={inp('contabil_responsavel')} disabled={locked} secretaria="contabil" />
       </Field>
       <Field label="Auditor">
-        <Input value={form.contabil_auditor} onChange={inp('contabil_auditor')} disabled={locked} />
+        <UserSelect value={form.contabil_auditor} onChange={inp('contabil_auditor')} disabled={locked} secretaria="contabil" />
       </Field>
       <Field label="Está empenhado?">
         <SimNao value={form.contabil_empenhado} onChange={inp('contabil_empenhado')} disabled={locked} />

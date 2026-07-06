@@ -45,7 +45,7 @@ export default function DidVariaveisSecaoIX({ form, inp, saving, didId, onSave, 
         <UserSelect value={form.contabil_pc_responsavel} onChange={inp('contabil_pc_responsavel')} disabled={locked} secretaria="contabil" />
       </Field>
       <Field label="Auditor">
-        <Input value={form.contabil_pc_auditor} onChange={inp('contabil_pc_auditor')} disabled={locked} />
+        <UserSelect value={form.contabil_pc_auditor} onChange={inp('contabil_pc_auditor')} disabled={locked} secretaria="contabil" />
       </Field>
       <Field label="Está liquidado?">
         <SimNao value={form.contabil_pc_liquidado} onChange={inp('contabil_pc_liquidado')} disabled={locked} />

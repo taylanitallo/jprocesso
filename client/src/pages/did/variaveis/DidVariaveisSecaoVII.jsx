@@ -8,6 +8,7 @@ export default function DidVariaveisSecaoVII({ form, inp, chk, saving, didId, on
 
   const salvar = async () => {
     const completo = alertarPendencias([
+      { ok: !!form.receb_ordem_recebida, label: 'A ordem foi recebida? (Sim/Não)' },
       { ok: !!form.receb_data, label: 'Data de Recebimento' },
       { ok: !!form.receb_nf_data, label: 'Data da Nota Fiscal' },
       { ok: !!form.receb_responsavel, label: 'Fiscal do Contrato / Responsável' },
@@ -35,6 +36,46 @@ export default function DidVariaveisSecaoVII({ form, inp, chk, saving, didId, on
         <span className="text-xs text-gray-500 dark:text-gray-400">
           Fiscal do contrato atesta o recebimento dos itens
         </span>
+      </div>
+
+      {/* Ordem recebida? — controla a liberação da ordem na aba Entrada do Almoxarifado */}
+      <div className="col-span-2 flex flex-col items-center gap-3 py-3 border-b border-gray-200 dark:border-gray-600 mb-2">
+        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
+          A ordem de compra foi recebida?
+        </p>
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            disabled={locked}
+            onClick={() => inp('receb_ordem_recebida')({ target: { value: 'sim' } })}
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-semibold border-2 transition-colors shadow-sm
+              ${ form.receb_ordem_recebida === 'sim'
+                ? 'bg-green-600 border-green-600 text-white'
+                : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-green-500 hover:text-green-600'
+              }
+              ${ locked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer' }`}
+          >
+            ✓ Sim — Recebida
+          </button>
+          <button
+            type="button"
+            disabled={locked}
+            onClick={() => inp('receb_ordem_recebida')({ target: { value: 'nao' } })}
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-semibold border-2 transition-colors shadow-sm
+              ${ form.receb_ordem_recebida === 'nao'
+                ? 'bg-orange-500 border-orange-500 text-white'
+                : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-orange-400 hover:text-orange-500'
+              }
+              ${ locked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer' }`}
+          >
+            ⏳ Não recebida
+          </button>
+        </div>
+        <p className="text-[11px] text-gray-400 dark:text-gray-500 text-center max-w-md">
+          {form.receb_ordem_recebida === 'sim'
+            ? '✓ Esta ordem ficará disponível na busca da aba Entrada do Almoxarifado.'
+            : 'Enquanto não marcada como recebida, esta ordem não aparece na busca da aba Entrada do Almoxarifado.'}
+        </p>
       </div>
 
       {/* Data de Recebimento | Data da NF */}

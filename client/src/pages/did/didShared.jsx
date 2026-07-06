@@ -1,8 +1,42 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react'
-import { Pencil, Check, Loader2, RotateCcw, ChevronDown } from 'lucide-react'
+import { Pencil, Check, Loader2, RotateCcw, ChevronDown, AlertTriangle, X } from 'lucide-react'
 import api from '../../services/api'
+import { useAuth } from '../../context/AuthContext'
 
 export const DidReadOnlyContext = createContext(false)
+
+// Modal de confirmação genérico — usado antes de liberar edição de campos sensíveis
+// (ex: dados bancários do credor na Tesouraria).
+export function ConfirmModal({ title, message, confirmLabel = 'Confirmar', onConfirm, onClose }) {
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <div className="px-5 py-4 flex items-start gap-3">
+          <div className="w-9 h-9 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+            <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-gray-800 dark:text-gray-100">{title}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{message}</p>
+          </div>
+          <button onClick={onClose} className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 shrink-0">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="px-5 py-3 bg-gray-50 dark:bg-gray-900/40 flex justify-end gap-2">
+          <button type="button" onClick={onClose}
+            className="px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 font-semibold">
+            Cancelar
+          </button>
+          <button type="button" onClick={onConfirm}
+            className="px-3 py-1.5 text-xs rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-semibold shadow-sm">
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // ─── Constante de estado vazio do DID ────────────────────────────────────────
 export const EMPTY = {
@@ -47,6 +81,7 @@ export const EMPTY = {
   tesouraria_recebido_em: '', tesouraria_responsavel: '',
   banco_pagador: '', ag_pagador: '', cc_pagador: '',
   // Seção de Recebimento (DID Contas Variáveis)
+  receb_ordem_recebida: '',
   receb_data: '', receb_nf_data: '', receb_nf_enviado_compras: '', receb_responsavel: '', receb_cargo: '',
   receb_nf_conferida: false, receb_qtd_conferida: false, receb_esp_conforme: false, receb_obs: '',
   // Tesouraria
@@ -89,6 +124,7 @@ export function Input({ value, onChange, type = 'text', placeholder, disabled, .
 const _userCache = {}
 
 export function UserSelect({ value, onChange, disabled, secretaria }) {
+  const { user } = useAuth()
   const [users, setUsers] = useState(null)
 
   useEffect(() => {
@@ -98,6 +134,13 @@ export function UserSelect({ value, onChange, disabled, secretaria }) {
       .then(({ data }) => { _userCache[secretaria] = data.users || []; setUsers(data.users || []) })
       .catch(() => { _userCache[secretaria] = []; setUsers([]) })
   }, [secretaria])
+
+  // Pré-preenche com o usuário logado (quem está preenchendo agora), só quando o campo
+  // ainda está vazio — não sobrescreve um valor já salvo/escolhido.
+  useEffect(() => {
+    if (disabled || value || !users?.length || !user?.nome) return
+    if (users.some(u => u.nome === user.nome)) onChange({ target: { value: user.nome } })
+  }, [users])
 
   const cls = `input-field text-sm${disabled ? ' opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800' : ''}`
 

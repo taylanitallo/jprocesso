@@ -694,6 +694,9 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
       ADD COLUMN IF NOT EXISTS contabil_pc_liquidado  VARCHAR(10)
   `);
 
+  // DID — indicador "ordem recebida?" da Seção de Recebimento (Almoxarifado, Contas Variáveis)
+  await run(`ALTER TABLE dids ADD COLUMN IF NOT EXISTS receb_ordem_recebida VARCHAR(10)`);
+
   // Itens — colunas extras
   await run(`ALTER TABLE contratos_itens ADD COLUMN IF NOT EXISTS codigo_item VARCHAR(100)`);
   await run(`ALTER TABLE contratos_itens ADD COLUMN IF NOT EXISTS lote VARCHAR(50)`);

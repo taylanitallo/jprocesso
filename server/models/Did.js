@@ -159,6 +159,7 @@ const defineDidModel = (sequelize) => {
     contabil_pc_doc_caixa: { type: DataTypes.STRING },
 
     // ── Seção de Recebimento (DID Contas Variáveis) ───────────────────────
+    receb_ordem_recebida: { type: DataTypes.STRING(10) },
     receb_data: { type: DataTypes.DATEONLY },
     receb_nf_data: { type: DataTypes.DATEONLY },
     receb_nf_enviado_compras: { type: DataTypes.DATEONLY },
