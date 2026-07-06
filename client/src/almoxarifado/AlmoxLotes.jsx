@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   Plus, Package, RefreshCw, ChevronLeft, ChevronRight,
-  Calendar, FileText, Truck, AlertTriangle, X, Upload, CheckCircle2,
-  QrCode, Key, ShieldAlert, MapPin, Building2, Search, ClipboardList
+  Calendar, FileText, Truck, AlertTriangle, X, CheckCircle2,
+  MapPin, Building2, Search, ClipboardList
 } from 'lucide-react'
 import api from '../services/api'
 import LoadingBar from '../components/LoadingBar'
@@ -203,83 +203,15 @@ function NovaEntradaModal({ itens, onClose, onSave, saving, erro }) {
     setForm(emptyForm)
   }
 
-  const [importando, setImportando] = useState(false)
-  const [msgImport, setMsgImport]   = useState('')
-  const fileRef = useRef(null)
-
-  // ── NFS-e ─────────────────────────────────────────────────────────────────
-  const [nfseInput,     setNfseInput]     = useState('')
-  const [nfseLoading,   setNfseLoading]   = useState(false)
-  const [nfseErro,      setNfseErro]      = useState('')   // '' | mensagem de erro (incluindo TOMADOR_INVALIDO)
-  const [nfseAviso,     setNfseAviso]     = useState('')
-  const [nfseOk,        setNfseOk]        = useState(false)
-
-  const consultarNFSe = async () => {
-    if (!nfseInput.trim()) return
-    setNfseLoading(true); setNfseErro(''); setNfseAviso(''); setNfseOk(false)
-    try {
-      const payload = nfseInput.includes('http') || nfseInput.includes('://')
-        ? { qrcode_url: nfseInput.trim() }
-        : { chave: nfseInput.trim() }
-      const { data } = await api.post('/almoxarifado/nfse/consultar', payload)
-
-      // Preenche campos do formulario com os dados mapeados
-      setForm(f => ({
-        ...f,
-        fornecedor_cnpj:  data.fornecedor_cnpj_fmt || data.fornecedor_cnpj || f.fornecedor_cnpj,
-        fornecedor_nome:  data.fornecedor_nome     || f.fornecedor_nome,
-        data_entrada:     data.data_emissao        || f.data_entrada,
-        chave_nfse:       data.chave_nfse          || data.chave           || f.chave_nfse,
-        numero_nfse:      data.numero_nfse         || f.numero_nfse,
-        valor_unitario:   data.valor_total > 0 ? String(data.valor_total) : f.valor_unitario,
-        observacao:       data.descricao_servico   || f.observacao,
-      }))
-
-      if (data._aviso) setNfseAviso(data._aviso)
-      setNfseOk(true)
-    } catch (err) {
-      const code = err?.response?.data?.code
-      const apiMsg = err?.response?.data?.error || err.message || 'Erro ao consultar NFS-e'
-      if (code === 'NFSE_AUTH_REQUIRED') {
-        setNfseErro('A API NFS-e Nacional requer autenticação.\nConfigure NFSE_API_TOKEN no servidor (server/.env) com o token OAuth2 obtido em nfse.gov.br')
-      } else {
-        setNfseErro(apiMsg)
-      }
-    } finally {
-      setNfseLoading(false)
-    }
-  }
-
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   const itemSelecionado = itens.find(i => i.id === form.item_id)
-
-  const handleXmlFile = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setImportando(true); setMsgImport('')
-    try {
-      const xmlContent = await file.text()
-      const { data } = await api.post('/almoxarifado/nfe/importar', { xmlContent })
-      setForm(f => ({
-        ...f,
-        numero_nf:       data.numero_nf      || f.numero_nf,
-        chave_nfe:       data.chave_nfe      || f.chave_nfe,
-        fornecedor_nome: data.fornecedor_nome || f.fornecedor_nome,
-        fornecedor_cnpj: data.fornecedor_cnpj || f.fornecedor_cnpj,
-        valor_unitario:  data.itens?.[0]?.valor_unitario || f.valor_unitario,
-      }))
-      setMsgImport(`NF-e ${data.numero_nf || ''} importada com ${data.itens?.length || 0} item(ns)`)
-    } catch (err) {
-      setMsgImport('Erro ao importar XML: ' + (err?.response?.data?.error || err.message))
-    } finally { setImportando(false) }
-  }
 
   const itemOC  = ordemData?.itens?.find(i => String(i.id) === String(ordemItemSel))
   const podeEntrar = (form.item_id || form.ordem_item_id) && form.quantidade && form.data_entrada
 
   return (
-    <AlmoxModal title="Registrar Entrada de Material" onClose={onClose} wide>
+    <AlmoxModal title="Registrar Entrada de Material" onClose={onClose} fullscreen>
       <div className="space-y-4">
 
         {/* ── Ordem de Compra ────────────────────────────────────────────── */}
@@ -353,73 +285,6 @@ function NovaEntradaModal({ itens, onClose, onSave, saving, erro }) {
                 )}
               </div>
             </div>
-          )}
-        </div>
-
-        {/* Importar XML NF-e */}
-        <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
-          <Upload className="h-4 w-4 text-blue-500 flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-blue-700 dark:text-blue-300">Importar XML de NF-e (preenche campos automaticamente)</p>
-            {msgImport && <p className="text-xs mt-0.5 text-blue-600 dark:text-blue-400">{msgImport}</p>}
-          </div>
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={importando}
-            className="px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 disabled:opacity-50"
-          >
-            {importando ? 'Lendo...' : 'Escolher XML'}
-          </button>
-          <input ref={fileRef} type="file" accept=".xml" className="hidden" onChange={handleXmlFile} />
-        </div>
-
-        {/* Consultar NFS-e por Chave ou QR Code */}
-        <div className={`p-3 border rounded-lg space-y-2 ${
-          nfseErro
-            ? 'bg-red-50 dark:bg-red-900/10 border-red-300 dark:border-red-700'
-            : nfseOk
-            ? 'bg-green-50 dark:bg-green-900/10 border-green-300 dark:border-green-700'
-            : 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-700'
-        }`}>
-          <div className="flex items-center gap-2">
-            <QrCode className={`h-4 w-4 flex-shrink-0 ${nfseErro ? 'text-red-500' : nfseOk ? 'text-green-500' : 'text-violet-500'}`} />
-            <p className={`text-xs font-medium ${nfseErro ? 'text-red-700 dark:text-red-300' : nfseOk ? 'text-green-700 dark:text-green-300' : 'text-violet-700 dark:text-violet-300'}`}>
-              Consultar NFS-e por Chave de Acesso ou QR Code
-            </p>
-            {nfseOk && <CheckCircle2 className="h-4 w-4 text-green-500 ml-auto" />}
-          </div>
-
-          <div className="flex gap-2">
-            <input
-              value={nfseInput}
-              onChange={e => { setNfseInput(e.target.value); setNfseErro(''); setNfseOk(false) }}
-              onKeyDown={e => e.key === 'Enter' && consultarNFSe()}
-              placeholder="Cole a URL do QR Code ou a chave de acesso numerica..."
-              className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-violet-500 font-mono"
-            />
-            <button
-              type="button"
-              onClick={consultarNFSe}
-              disabled={nfseLoading || !nfseInput.trim()}
-              className="px-3 py-1.5 bg-violet-600 text-white rounded-lg text-xs font-medium hover:bg-violet-700 disabled:opacity-50 flex items-center gap-1"
-            >
-              <Key className="h-3 w-3" />
-              {nfseLoading ? 'Consultando...' : 'Consultar'}
-            </button>
-          </div>
-
-          {/* Erro de tomador invalido — destaque especial */}
-          {nfseErro && (
-            <div className="flex items-start gap-2 mt-1">
-              <ShieldAlert className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-red-700 dark:text-red-400 whitespace-pre-line font-medium">{nfseErro}</p>
-            </div>
-          )}
-
-          {/* Aviso de modo demo */}
-          {nfseAviso && !nfseErro && (
-            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">{nfseAviso}</p>
           )}
         </div>
 
