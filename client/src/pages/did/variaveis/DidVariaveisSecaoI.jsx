@@ -464,6 +464,15 @@ export default function DidVariaveisSecaoI({
     }
   }, [form.contrato_ref, contratos])
 
+  // Preenche os dados bancários do credor a partir do contrato sempre que estiverem
+  // vazios (ex.: DID salvo antes deste recurso existir, ou contrato editado depois).
+  useEffect(() => {
+    if (!contratoSel) return
+    if (!form.banco_fornecedor && contratoSel.banco)   set('banco_fornecedor', contratoSel.banco)
+    if (!form.ag_fornecedor && contratoSel.agencia)     set('ag_fornecedor', contratoSel.agencia)
+    if (!form.cc_fornecedor && contratoSel.conta)       set('cc_fornecedor', contratoSel.conta)
+  }, [contratoSel])
+
   // Filtra contratos pelo credor selecionado (se houver)
   const contratosFiltrados = (() => {
     const q = buscaContrato.trim().toLowerCase()
