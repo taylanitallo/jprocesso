@@ -4,6 +4,7 @@ import JSZip from 'jszip';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import PermissoesEditor from '../components/PermissoesEditor';
+import { ConfirmModal } from '../components/ui';
 import {
   Plus, Building, Edit2, Trash2, Globe, MapPin, CheckCircle, XCircle,
   Database, Shield, BarChart3, LogOut, Upload, UserPlus, AlertTriangle,
@@ -503,6 +504,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
   const [logoLoginFile, setLogoLoginFile]         = useState(null);
   const [logoInternaFile, setLogoInternaFile]     = useState(null);
   const [logoTimbradoFile, setLogoTimbradoFile]   = useState(null);
+  const [confirmRemoveLogo, setConfirmRemoveLogo] = useState(null); // { tipo, isTimbrado }
   const [timbradoPreviewUrl, setTimbradoPreviewUrl] = useState(null);
   const [localPreview, setLocalPreview]           = useState({}); // { login: objectUrl, interna: objectUrl }
   const [logoVersion, setLogoVersion]             = useState(Date.now()); // cache-busting após upload/remoção
@@ -2091,7 +2093,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                                   Enviar
                                 </button>
                                 {(currentUrl || timbradoPreviewUrl) && (
-                                  <button onClick={() => { handleRemoveLogo(tipo); setTimbradoPreviewUrl(null); }}
+                                  <button onClick={() => setConfirmRemoveLogo({ tipo, label, isTimbrado: true })}
                                     className="flex items-center gap-1 text-xs bg-red-50 text-red-600 border border-red-200 px-2 py-1 rounded hover:bg-red-100">
                                     <Trash2 className="h-3 w-3" /> Remover
                                   </button>
@@ -2122,7 +2124,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                                   Enviar
                                 </button>
                                 {currentUrl && (
-                                  <button onClick={() => handleRemoveLogo(tipo)}
+                                  <button onClick={() => setConfirmRemoveLogo({ tipo, label, isTimbrado: false })}
                                     className="flex items-center gap-1 text-xs bg-red-50 text-red-600 border border-red-200 px-2 py-1 rounded hover:bg-red-100">
                                     <Trash2 className="h-3 w-3" /> Remover
                                   </button>
@@ -2136,6 +2138,20 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                   })}
                 </div>
               </div>
+
+              {confirmRemoveLogo && (
+                <ConfirmModal
+                  title={`Remover ${confirmRemoveLogo.label}?`}
+                  message="Esta imagem será removida imediatamente. Você pode enviar outra depois, mas a atual será perdida."
+                  confirmLabel="Remover"
+                  onConfirm={async () => {
+                    await handleRemoveLogo(confirmRemoveLogo.tipo);
+                    if (confirmRemoveLogo.isTimbrado) setTimbradoPreviewUrl(null);
+                    setConfirmRemoveLogo(null);
+                  }}
+                  onClose={() => setConfirmRemoveLogo(null)}
+                />
+              )}
 
               {/* Config geral */}
               <div>

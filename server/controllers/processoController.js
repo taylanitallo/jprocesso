@@ -1142,7 +1142,10 @@ const deleteProcesso = async (req, res) => {
 
   const transaction = await req.tenantDb.transaction();
   try {
-    const { Processo, Tramitacao, Documento, Did } = req.models;
+    const {
+      Processo, Tramitacao, Documento, Did, ContratoOrdem,
+      AlmoxarifadoItem, AlmoxarifadoMovimentacao, AlmoxLote
+    } = req.models;
     const { id } = req.params;
 
     const processo = await Processo.findByPk(id, { transaction });
@@ -1151,8 +1154,65 @@ const deleteProcesso = async (req, res) => {
       return res.status(404).json({ error: 'Processo não encontrado' });
     }
 
-    // Remove DID vinculado (se existir)
+    // Remove DID vinculado (se existir) — antes, desfaz tudo que ele gerou no
+    // almoxarifado e libera a Ordem de Compra vinculada.
     if (Did) {
+      const did = await Did.findOne({ where: { processo_id: id }, transaction });
+
+      if (did) {
+        // 1) Reverte saídas de material que este DID gerou no almoxarifado
+        //    (consumo próprio, registrado por número de referência "DID-{numero}").
+        if (AlmoxarifadoMovimentacao && AlmoxarifadoItem) {
+          const docRef = `DID-${did.numero_did}`;
+          const movs = await AlmoxarifadoMovimentacao.findAll({
+            where: { documento_referencia: docRef, tipo: 'SAIDA' },
+            transaction
+          });
+          for (const mov of movs) {
+            const item = await AlmoxarifadoItem.findByPk(mov.item_id, { transaction });
+            if (item) {
+              await item.update(
+                { estoque_atual: Math.max(0, parseFloat(item.estoque_atual) + parseFloat(mov.quantidade)) },
+                { transaction }
+              );
+            }
+            await mov.destroy({ transaction });
+          }
+        }
+
+        // 2) Se a Ordem de Compra vinculada não estiver em uso por outro DID,
+        //    libera o status e zera os lotes de entrada recebidos por causa dela.
+        if (did.ordem_compra_id && ContratoOrdem) {
+          const outroVinculo = await Did.count({
+            where: { ordem_compra_id: did.ordem_compra_id, id: { [Op.ne]: did.id } },
+            transaction
+          });
+          if (outroVinculo === 0) {
+            await ContratoOrdem.update(
+              { status: 'EMITIDA' },
+              { where: { id: did.ordem_compra_id, status: 'ATENDIDA' }, transaction }
+            );
+
+            if (AlmoxLote && AlmoxarifadoItem) {
+              const lotes = await AlmoxLote.findAll({
+                where: { ordem_id: did.ordem_compra_id, ativo: true },
+                transaction
+              });
+              for (const lote of lotes) {
+                const item = await AlmoxarifadoItem.findByPk(lote.item_id, { transaction });
+                if (item) {
+                  await item.update(
+                    { estoque_atual: Math.max(0, parseFloat(item.estoque_atual) - parseFloat(lote.quantidade_atual)) },
+                    { transaction }
+                  );
+                }
+                await lote.update({ quantidade_atual: 0, ativo: false }, { transaction });
+              }
+            }
+          }
+        }
+      }
+
       await Did.destroy({ where: { processo_id: id }, transaction });
     }
 

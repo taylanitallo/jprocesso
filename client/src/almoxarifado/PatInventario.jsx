@@ -6,6 +6,7 @@ import PageHeader from '../components/ui/PageHeader'
 import SectionTitle from '../components/ui/SectionTitle'
 import EmptyState from '../components/ui/EmptyState'
 import ActionBar from '../components/ui/ActionBar'
+import ConfirmModal from '../components/ui/ConfirmModal'
 
 const fmtDate = (d) => d ? new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') : '–'
 
@@ -29,6 +30,7 @@ export default function PatInventario({ userRole }) {
   const [criando, setCriando]         = useState(false)
   const [busca, setBusca]             = useState('')
   const [conferIndicador, setConf]    = useState({})
+  const [confirmarConcluir, setConfirmarConcluir] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -80,13 +82,13 @@ export default function PatInventario({ userRole }) {
   }
 
   const concluir = async (inventarioId) => {
-    if (!window.confirm('Confirma a conclusão do inventário?')) return
     try {
       const { data } = await api.put(`/patrimonio/inventarios/${inventarioId}/concluir`)
       alert(data.message)
       await load()
       setSelected(null)
       setInvDetail(null)
+      setConfirmarConcluir(false)
     } catch (err) {
       alert(err.response?.data?.error || 'Erro')
     }
@@ -223,7 +225,7 @@ export default function PatInventario({ userRole }) {
               </div>
               <div className="flex items-center gap-2">
                 {invDetail && selected.status === 'EM_ANDAMENTO' && podeEditar && (
-                  <button onClick={() => concluir(selected.id)}
+                  <button onClick={() => setConfirmarConcluir(true)}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">
                     Concluir Inventário
                   </button>
@@ -335,6 +337,15 @@ export default function PatInventario({ userRole }) {
             ) : null}
           </div>
         </div>
+      )}
+      {confirmarConcluir && (
+        <ConfirmModal
+          title="Concluir inventário?"
+          message="Esta ação não pode ser desfeita."
+          confirmLabel="Concluir"
+          onConfirm={() => concluir(selected.id)}
+          onClose={() => setConfirmarConcluir(false)}
+        />
       )}
     </div>
   )

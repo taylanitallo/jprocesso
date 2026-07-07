@@ -15,7 +15,7 @@ import {
   ClipboardList, FileDown, Trash2, QrCode, Shield, Zap, ChevronRight,
   Plus, X, Upload, ExternalLink, Archive, FilePlus2, GripVertical, Inbox,
 } from 'lucide-react'
-import { PageHeader, SectionTitle, EmptyState } from '../components/ui'
+import { PageHeader, SectionTitle, EmptyState, ConfirmModal } from '../components/ui'
 
 /* ── helpers de cor por tipo de tramitação ──────────────────────────────── */
 const TIPO_CONFIG = {
@@ -54,6 +54,7 @@ export default function DetalhesProcesso() {
   const [showConcluir,      setShowConcluir]       = useState(false)
   const [showDespacho,      setShowDespacho]       = useState(false)
   const [showConfirmDelete, setShowConfirmDelete]  = useState(false)
+  const [confirmarExcluirDoc, setConfirmarExcluirDoc] = useState(null)
   const [deletando,         setDeletando]          = useState(false)
   const [successMessage,    setSuccessMessage]     = useState('')
   const [recebendo,         setRecebendo]          = useState(false)
@@ -219,9 +220,9 @@ export default function DetalhesProcesso() {
   }
 
   const handleDeleteDocumento = async (docId) => {
-    if (!window.confirm('Deseja excluir este documento permanentemente?')) return
     try {
       await api.delete(`/documentos/${docId}`)
+      setConfirmarExcluirDoc(null)
       refetch()
     } catch (err) {
       alert('Erro ao excluir documento: ' + (err.response?.data?.error || err.message))
@@ -590,7 +591,7 @@ export default function DetalhesProcesso() {
                       </button>
                       {currentUser?.tipo === 'admin' && (
                         <button
-                          onClick={() => handleDeleteDocumento(doc.id)}
+                          onClick={() => setConfirmarExcluirDoc(doc.id)}
                           className="p-1.5 rounded-lg text-gray-400 dark:text-slate-500
                                      hover:bg-red-50 dark:hover:bg-red-900/20
                                      hover:text-red-600 dark:hover:text-red-400 transition-all"
@@ -1078,6 +1079,16 @@ export default function DetalhesProcesso() {
             </div>
           </div>
         </div>
+      )}
+
+      {confirmarExcluirDoc && (
+        <ConfirmModal
+          title="Excluir este documento?"
+          message="O documento será removido permanentemente do processo."
+          confirmLabel="Excluir"
+          onConfirm={() => handleDeleteDocumento(confirmarExcluirDoc)}
+          onClose={() => setConfirmarExcluirDoc(null)}
+        />
       )}
     </div>
   )

@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, Save, Loader2, CheckCircle, AlertCircle, FileCheck, FileDown, Eye } from 'lucide-react'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
-import { EMPTY, DidReadOnlyContext } from './did/didShared'
+import { EMPTY, DidReadOnlyContext, ConfirmModal } from './did/didShared'
 import { gerarDidPDF } from './did/gerarDidPDF'
 import DidFixasSecaoI from './did/fixas/DidFixasSecaoI'
 import DidFixasSecaoII from './did/fixas/DidFixasSecaoII'
@@ -260,6 +260,7 @@ export default function FormularioDid() {
   // DID existente → definido em loadDid (todas as seções)
   const [maxSecaoVisivel, setMaxSecaoVisivel] = useState(1)
   const [alterandoTipo, setAlterandoTipo] = useState(false)
+  const [confirmarTrocarTipo, setConfirmarTrocarTipo] = useState(false)
 
   const addItemDid = () => setItensDid(p => [...p, { _id: Date.now(), descricao: '', quantidade: '', valor_unitario: '', valor_total: '' }])
   const removeItemDid = idx => setItensDid(p => p.filter((_, i) => i !== idx))
@@ -624,13 +625,11 @@ export default function FormularioDid() {
 
   const handleLimparParaTrocar = () => {
     const novoTipo = tipoDid === 'fixas' ? 'variaveis' : 'fixas'
-    if (!window.confirm(
-      `Trocar para "DID Contas ${novoTipo === 'fixas' ? 'Fixas' : 'Variáveis'}"?\n\nTodos os dados preenchidos serão apagados.`
-    )) return
     setForm(EMPTY)
     setItensDid([{ _id: 1, descricao: '', quantidade: '', valor_unitario: '', valor_total: '' }])
     setTipoDid(novoTipo)
     setMaxSecaoVisivel(1)
+    setConfirmarTrocarTipo(false)
   }
 
   // Sincroniza valor_bruto: prefere total da ordem vinculada, senão usa itens DID
@@ -748,7 +747,7 @@ export default function FormularioDid() {
             {!tipoBloqueado && hasAnyData && (
               <button
                 type="button"
-                onClick={handleLimparParaTrocar}
+                onClick={() => setConfirmarTrocarTipo(true)}
                 className="text-xs text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300
                   flex items-center gap-1 px-2.5 py-1 rounded-lg border border-amber-200 dark:border-amber-700
                   hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
@@ -908,6 +907,15 @@ export default function FormularioDid() {
         )}
       </div>
     </div>
+    {confirmarTrocarTipo && (
+      <ConfirmModal
+        title={`Trocar para "DID Contas ${tipoDid === 'fixas' ? 'Variáveis' : 'Fixas'}"?`}
+        message="Todos os dados preenchidos serão apagados."
+        confirmLabel="Trocar"
+        onConfirm={handleLimparParaTrocar}
+        onClose={() => setConfirmarTrocarTipo(false)}
+      />
+    )}
     </DidReadOnlyContext.Provider>
   )
 }

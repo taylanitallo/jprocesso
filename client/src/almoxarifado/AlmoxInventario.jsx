@@ -6,6 +6,7 @@ import {
 import api from '../services/api'
 import LoadingBar from '../components/LoadingBar'
 import AlmoxModal from './AlmoxModal'
+import ConfirmModal from '../components/ui/ConfirmModal'
 import { fmt, fmtMoney, STATUS_INVENTARIO } from './almoxConstants'
 
 // ─── Badge de status ──────────────────────────────────────────────────────────
@@ -23,6 +24,7 @@ function InventarioDetalheModal({ inventario, onClose, onRefresh }) {
   const [salvando, setSalvando] = useState(null)
   const [concluindo, setConcluindo] = useState(false)
   const [busca, setBusca] = useState('')
+  const [confirmarConcluir, setConfirmarConcluir] = useState(false)
 
   const carregar = useCallback(async () => {
     setLoading(true)
@@ -49,13 +51,12 @@ function InventarioDetalheModal({ inventario, onClose, onRefresh }) {
   }
 
   const handleConcluir = async () => {
-    if (!window.confirm('Concluir inventario? Esta acao nao pode ser desfeita.')) return
     setConcluindo(true)
     try {
       await api.put(`/almoxarifado/inventarios/${inventario.id}/concluir`)
       onRefresh()
       onClose()
-    } catch { } finally { setConcluindo(false) }
+    } catch { } finally { setConcluindo(false); setConfirmarConcluir(false) }
   }
 
   const itensFiltrados = busca
@@ -162,7 +163,7 @@ function InventarioDetalheModal({ inventario, onClose, onRefresh }) {
           <button onClick={onClose} className="btn-secondary text-sm">Fechar</button>
           {podeConcluir && (
             <button
-              onClick={handleConcluir}
+              onClick={() => setConfirmarConcluir(true)}
               disabled={concluindo || totalContados === 0}
               className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
             >
@@ -171,6 +172,15 @@ function InventarioDetalheModal({ inventario, onClose, onRefresh }) {
           )}
         </div>
       </div>
+      {confirmarConcluir && (
+        <ConfirmModal
+          title="Concluir inventário?"
+          message="Esta ação não pode ser desfeita."
+          confirmLabel="Concluir"
+          onConfirm={handleConcluir}
+          onClose={() => setConfirmarConcluir(false)}
+        />
+      )}
     </AlmoxModal>
   )
 }

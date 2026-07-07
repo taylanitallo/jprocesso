@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Search, Edit2, RefreshCw, Package, MapPin, AlertTriangle, Building2 } from 'lucide-react'
+import { Search, Edit2, RefreshCw, Package, MapPin, AlertTriangle, Building2, Trash2 } from 'lucide-react'
 import api from '../services/api'
+import { useAuth } from '../context/AuthContext'
 import LoadingBar from '../components/LoadingBar'
 import AlmoxModal from './AlmoxModal'
 import { fmt, fmtMoney, TIPO_ITEM } from './almoxConstants'
@@ -9,6 +10,7 @@ import FilterBar from '../components/ui/FilterBar'
 import SectionTitle from '../components/ui/SectionTitle'
 import EmptyState from '../components/ui/EmptyState'
 import ActionBar from '../components/ui/ActionBar'
+import ConfirmModal from '../components/ui/ConfirmModal'
 
 // ─── Modal: Editar localização e config do item em estoque ───────────────────
 function ItemModal({ item, onClose, onSave, saving, erro }) {
@@ -184,6 +186,23 @@ function ItemModal({ item, onClose, onSave, saving, erro }) {
 // ─── Tab: Estoque ─────────────────────────────────────────────────────────────
 // Mostra apenas itens que possuem entradas registradas (estoque_atual > 0)
 export default function AlmoxItens() {
+  const { user } = useAuth()
+  const isAdmin = user?.tipo === 'admin' || user?.tipo === 'jeos'
+  const [secMap, setSecMap] = useState({})
+  useEffect(() => {
+    api.get('/organizacao/secretarias')
+      .then(({ data }) => {
+        const list = data.secretarias || data || []
+        const m = {}
+        list.forEach(s => { if (s.nome && s.sigla) m[s.nome.trim().toLowerCase()] = s.sigla })
+        setSecMap(m)
+      })
+      .catch(() => {})
+  }, [])
+  const secSigla = (nome) => {
+    if (!nome) return '—'
+    return secMap[nome.trim().toLowerCase()] || nome
+  }
   const [todosItens,  setTodosItens]  = useState([])
   const [fCodigo,     setFCodigo]     = useState('')
   const [fDescricao,  setFDescricao]  = useState('')
@@ -268,6 +287,18 @@ export default function AlmoxItens() {
     } finally { setSaving(false) }
   }
 
+  const [confirmarExcluir, setConfirmarExcluir] = useState(null)
+
+  const handleDelete = async (item) => {
+    try {
+      await api.delete(`/almoxarifado/itens/${item.id}`)
+      setConfirmarExcluir(null)
+      load()
+    } catch (e) {
+      alert(e.response?.data?.error || 'Erro ao excluir item')
+    }
+  }
+
   return (
     <div>
       <PageHeader
@@ -329,7 +360,7 @@ export default function AlmoxItens() {
             className="w-full py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="">Todas</option>
-            {secretariasDisponiveis.map(s => <option key={s} value={s}>{s}</option>)}
+            {secretariasDisponiveis.map(s => <option key={s} value={s}>{secSigla(s)}</option>)}
           </select>
         </div>
 
@@ -422,11 +453,14 @@ export default function AlmoxItens() {
                           <span className="text-gray-400 text-xs">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 max-w-[160px]">
                         {item.secretaria ? (
-                          <span className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
-                            <Building2 className="h-3 w-3 text-blue-500" />
-                            {item.secretaria}
+                          <span
+                            className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 truncate"
+                            title={item.secretaria}
+                          >
+                            <Building2 className="h-3 w-3 text-blue-500 shrink-0" />
+                            <span className="truncate">{secSigla(item.secretaria)}</span>
                           </span>
                         ) : (
                           <span className="text-gray-400 text-xs">—</span>
@@ -441,6 +475,15 @@ export default function AlmoxItens() {
                           >
                             <Edit2 className="h-3.5 w-3.5" />
                           </button>
+                          {isAdmin && (
+                            <button
+                              onClick={() => setConfirmarExcluir(item)}
+                              className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"
+                              title="Excluir item do estoque"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                         </ActionBar>
                       </td>
                     </tr>
@@ -516,6 +559,16 @@ export default function AlmoxItens() {
           onSave={handleSave}
           saving={saving}
           erro={erro}
+        />
+      )}
+
+      {confirmarExcluir && (
+        <ConfirmModal
+          title={`Excluir "${confirmarExcluir.nome}"?`}
+          message="O item será removido do estoque. Esta ação não pode ser desfeita."
+          confirmLabel="Excluir"
+          onConfirm={() => handleDelete(confirmarExcluir)}
+          onClose={() => setConfirmarExcluir(null)}
         />
       )}
     </div>

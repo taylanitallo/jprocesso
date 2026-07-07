@@ -6,6 +6,7 @@ import api from '../services/api';
 import PageHeader from '../components/ui/PageHeader';
 import SectionTitle from '../components/ui/SectionTitle';
 import FilterBar from '../components/ui/FilterBar';
+import ConfirmModal from '../components/ui/ConfirmModal';
 import {
   Landmark, Plus, Edit2, Trash2, Save, X,
   TrendingUp, TrendingDown, BarChart2,
@@ -242,6 +243,7 @@ function TabContas({ secretarias }) {
   const [saving, setSaving] = useState(false);
   const [filtroSec, setFiltroSec] = useState('');
   const [bancos, setBancos] = useState([]);
+  const [confirmarExcluir, setConfirmarExcluir] = useState(null);
 
   const load = () => {
     setLoading(true);
@@ -293,8 +295,8 @@ function TabContas({ secretarias }) {
   };
 
   const excluir = async (c) => {
-    if (!window.confirm(`Excluir a conta "${c.nome}"?`)) return;
     await api.delete(`/organizacao/contas-bancarias/${c.id}`);
+    setConfirmarExcluir(null);
     load();
   };
 
@@ -375,7 +377,7 @@ function TabContas({ secretarias }) {
                         <button onClick={() => openEdit(c)} className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors">
                           <Edit2 className="h-3.5 w-3.5" />
                         </button>
-                        <button onClick={() => excluir(c)} className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors">
+                        <button onClick={() => setConfirmarExcluir(c)} className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors">
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
@@ -512,6 +514,15 @@ function TabContas({ secretarias }) {
           </div>
         </div>
       )}
+      {confirmarExcluir && (
+        <ConfirmModal
+          title={`Excluir a conta "${confirmarExcluir.nome}"?`}
+          message="Esta conta bancária será removida permanentemente."
+          confirmLabel="Excluir"
+          onConfirm={() => excluir(confirmarExcluir)}
+          onClose={() => setConfirmarExcluir(null)}
+        />
+      )}
     </div>
   );
 }
@@ -528,6 +539,7 @@ function TabReceitas() {
   const [form, setForm] = useState({ conta_id: '', data: '', descricao: '', valor: '', observacao: '' });
   const [saving, setSaving] = useState(false);
   const [filtros, setFiltros] = useState({ conta_id: '', data_de: '', data_ate: '', busca: '', banco: '', num_conta: '' });
+  const [confirmarExcluir, setConfirmarExcluir] = useState(null);
 
   const fmt = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const fmtDate = d => {
@@ -610,9 +622,9 @@ function TabReceitas() {
   };
 
   const excluir = async (r) => {
-    if (!window.confirm(`Excluir "${r.descricao}"?`)) return;
     try {
       await api.delete(`/tesouraria/receitas/${r.id}`);
+      setConfirmarExcluir(null);
       load();
     } catch { alert('Erro ao excluir'); }
   };
@@ -884,7 +896,7 @@ tfoot .val{font-size:15px;color:#15803d}
                                 <Edit2 className="h-3.5 w-3.5" />
                               </button>
                               <button
-                                onClick={() => excluir(r)}
+                                onClick={() => setConfirmarExcluir(r)}
                                 className="p-1.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -988,6 +1000,15 @@ tfoot .val{font-size:15px;color:#15803d}
             </div>
           </div>
         </div>
+      )}
+      {confirmarExcluir && (
+        <ConfirmModal
+          title={`Excluir "${confirmarExcluir.descricao}"?`}
+          message="Esta receita será removida permanentemente."
+          confirmLabel="Excluir"
+          onConfirm={() => excluir(confirmarExcluir)}
+          onClose={() => setConfirmarExcluir(null)}
+        />
       )}
     </div>
   );

@@ -7,6 +7,7 @@ import PageHeader from '../components/ui/PageHeader';
 import SectionTitle from '../components/ui/SectionTitle';
 import EmptyState from '../components/ui/EmptyState';
 import FilterBar from '../components/ui/FilterBar';
+import ConfirmModal from '../components/ui/ConfirmModal';
 import LoadingBar from '../components/LoadingBar';
 
 const Usuarios = lazy(() => import('./Usuarios'));
@@ -324,6 +325,8 @@ export default function Secretarias() {
   const [showDotacoesPanel, setShowDotacoesPanel] = useState(false);
   const [dotacoesList, setDotacoesList] = useState([]);
   const [selectedDotacao, setSelectedDotacao] = useState(null);
+  const [confirmarExcluirDotacao, setConfirmarExcluirDotacao] = useState(false);
+  const [confirmarExcluirResp, setConfirmarExcluirResp] = useState(null);
   const [showFormDotacao, setShowFormDotacao] = useState(false);
   const [editingDotacao, setEditingDotacao] = useState(null);
   const [formDotacao, setFormDotacao] = useState({ codigo: '', descricao: '', elemento_despesa: '', fonte_recurso: '', valor_previsto: '' });
@@ -367,10 +370,10 @@ export default function Secretarias() {
 
   const deleteDotacao = () => {
     if (!selectedDotacao) return;
-    if (!window.confirm(`Excluir a dotação "${selectedDotacao.codigo || selectedDotacao.descricao}"?`)) return;
     const nova = dotacoesList.filter(d => d.id !== selectedDotacao.id);
     saveDotacoes(nova);
     setSelectedDotacao(null);
+    setConfirmarExcluirDotacao(false);
   };
 
   const formatBRL = (v) => {
@@ -764,7 +767,6 @@ export default function Secretarias() {
   };
 
   const deleteResponsavel = async (resp) => {
-    if (!window.confirm(`Remover "${resp.nome}" como responsável de ${resp._secSigla}?`)) return;
     try {
       const sec = secretarias.find(s => s.id === resp._secId);
       if (!sec) return;
@@ -773,6 +775,7 @@ export default function Secretarias() {
         nome: sec.nome, sigla: sec.sigla, descricao: sec.descricao, ativo: sec.ativo, responsaveis
       });
       await fetchSecretarias();
+      setConfirmarExcluirResp(null);
       setSuccessMessage('Responsável removido com sucesso.');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch {
@@ -1393,7 +1396,7 @@ export default function Secretarias() {
                   <Edit2 className="h-4 w-4" /> Alterar
                 </button>
                 <button
-                  onClick={() => selectedResp && deleteResponsavel(selectedResp)}
+                  onClick={() => selectedResp && setConfirmarExcluirResp(selectedResp)}
                   disabled={!selectedResp}
                   className="btn-danger flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
@@ -2419,13 +2422,33 @@ export default function Secretarias() {
                 <button onClick={() => { if(!selectedDotacao) return; setEditingDotacao(selectedDotacao); setFormDotacao({ codigo: selectedDotacao.codigo||'', descricao: selectedDotacao.descricao||'', elemento_despesa: selectedDotacao.elemento_despesa||'', fonte_recurso: selectedDotacao.fonte_recurso||'', valor_previsto: selectedDotacao.valor_previsto||'' }); setShowFormDotacao(true); }} disabled={!selectedDotacao} className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
                   <Edit2 className="h-4 w-4" /> Alterar
                 </button>
-                <button onClick={() => selectedDotacao && deleteDotacao(selectedDotacao.id)} disabled={!selectedDotacao} className="btn-danger flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+                <button onClick={() => selectedDotacao && setConfirmarExcluirDotacao(true)} disabled={!selectedDotacao} className="btn-danger flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
                   <Trash2 className="h-4 w-4" /> Excluir
                 </button>
               </div>
             </div>
           </div>
         </div>
+      )}
+
+      {confirmarExcluirDotacao && selectedDotacao && (
+        <ConfirmModal
+          title={`Excluir a dotação "${selectedDotacao.codigo || selectedDotacao.descricao}"?`}
+          message="Esta dotação será removida permanentemente."
+          confirmLabel="Excluir"
+          onConfirm={deleteDotacao}
+          onClose={() => setConfirmarExcluirDotacao(false)}
+        />
+      )}
+
+      {confirmarExcluirResp && (
+        <ConfirmModal
+          title={`Remover "${confirmarExcluirResp.nome}" como responsável?`}
+          message={`Esta pessoa será removida como responsável de ${confirmarExcluirResp._secSigla}.`}
+          confirmLabel="Remover"
+          onConfirm={() => deleteResponsavel(confirmarExcluirResp)}
+          onClose={() => setConfirmarExcluirResp(null)}
+        />
       )}
 
         </div>

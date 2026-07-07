@@ -1,6 +1,7 @@
 import { useState, useEffect, useContext, useMemo, useRef } from 'react'
 import { FileText, Plus, Trash2, Search, X, Check, CheckCircle, Pencil, Loader2, Lock, RotateCcw, ClipboardList, Paperclip, ExternalLink } from 'lucide-react'
 import { Field, Input, Textarea, SectionCard, DidReadOnlyContext, alertarPendencias } from '../didShared'
+import { ConfirmModal } from '../../../components/ui'
 import api from '../../../services/api'
 
 // ─── Modal de seleção de itens do contrato ────────────────────────────────────
@@ -436,6 +437,8 @@ export default function DidFixasSecaoI({
   const [locked, setLocked] = useState(false)
   const [tentouSalvar, setTentouSalvar] = useState(false)
   const [certUploading, setCertUploading] = useState({})
+  const [confirmarRemoverCertidao, setConfirmarRemoverCertidao] = useState(null)
+  const [confirmarLimparSecao, setConfirmarLimparSecao] = useState(false)
   const certFileRefs = useRef({})
   useEffect(() => { if (didId) setLocked(true) }, [didId])
 
@@ -465,10 +468,10 @@ export default function DidFixasSecaoI({
   }
 
   const removerCertidao = async (certKey) => {
-    if (!window.confirm('Remover o arquivo desta certidão?')) return
     try {
       const { data } = await api.delete(`/did/processo/${processoId}/certidao/${certKey}`)
       set('cert_sec1_arquivos', data.cert_sec1_arquivos)
+      setConfirmarRemoverCertidao(null)
     } catch { alert('Erro ao remover arquivo.') }
   }
   const readOnly = useContext(DidReadOnlyContext)
@@ -687,7 +690,6 @@ export default function DidFixasSecaoI({
   }
 
   const handleLimparSecaoI = async () => {
-    if (!window.confirm('Limpar todos os campos da Seção I? Os dados serão apagados imediatamente do banco.')) return
     // Limpa estado local do autocomplete
     setCredorSel(null); setBuscaCredor('')
     setContratoSel(null); setBuscaContrato('')
@@ -1145,7 +1147,7 @@ export default function DidFixasSecaoI({
                         <ExternalLink className="w-3 h-3" />
                       </button>
                       {!locked && (
-                        <button type="button" onClick={() => removerCertidao(certKey)} title="Remover arquivo"
+                        <button type="button" onClick={() => setConfirmarRemoverCertidao(certKey)} title="Remover arquivo"
                           className="p-1 rounded text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 shrink-0">
                           <X className="w-3 h-3" />
                         </button>
@@ -1184,7 +1186,7 @@ export default function DidFixasSecaoI({
         {/* Botões */}
         <div className="col-span-2 flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700 mt-1">
           {!readOnly && (
-            <button type="button" onClick={handleLimparSecaoI}
+            <button type="button" onClick={() => setConfirmarLimparSecao(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-700 rounded-lg text-sm font-semibold transition-colors">
               <RotateCcw className="w-3.5 h-3.5" /> Limpar Seção
             </button>
@@ -1221,6 +1223,26 @@ export default function DidFixasSecaoI({
         <ModalOrdemServico
           onConfirm={selecionarOrdemServico}
           onClose={() => setModalOrdemServico(false)}
+        />
+      )}
+
+      {confirmarRemoverCertidao && (
+        <ConfirmModal
+          title="Remover arquivo da certidão?"
+          message="O arquivo anexado será removido permanentemente."
+          confirmLabel="Remover"
+          onConfirm={() => removerCertidao(confirmarRemoverCertidao)}
+          onClose={() => setConfirmarRemoverCertidao(null)}
+        />
+      )}
+
+      {confirmarLimparSecao && (
+        <ConfirmModal
+          title="Limpar Seção I?"
+          message="Todos os campos preenchidos nesta seção serão apagados imediatamente do banco."
+          confirmLabel="Limpar"
+          onConfirm={async () => { await handleLimparSecaoI(); setConfirmarLimparSecao(false) }}
+          onClose={() => setConfirmarLimparSecao(false)}
         />
       )}
     </>

@@ -4,6 +4,7 @@ import api from '../services/api'
 import LoadingBar from '../components/LoadingBar'
 import AlmoxModal from './AlmoxModal'
 import { fmt } from './almoxConstants'
+import { ConfirmModal } from '../components/ui'
 
 // Normaliza resposta da API para garantir array
 const toArray = (res, keys = []) => {
@@ -130,6 +131,7 @@ export default function AlmoxCotas() {
   const [erro,        setErro]        = useState('')
   const [filtroSetor, setFiltroSetor] = useState('')
   const [filtroMes,   setFiltroMes]   = useState(new Date().toISOString().slice(0, 7))
+  const [confirmarExcluir, setConfirmarExcluir] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -161,9 +163,9 @@ export default function AlmoxCotas() {
   }
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Remover esta cota?')) return
     try {
       await api.delete(`/almoxarifado/cotas/${id}`)
+      setConfirmarExcluir(null)
       load()
     } catch { }
   }
@@ -248,7 +250,7 @@ export default function AlmoxCotas() {
                     </td>
                     <td className="px-4 py-3">
                       <button
-                        onClick={() => handleDelete(c.id)}
+                        onClick={() => setConfirmarExcluir(c.id)}
                         className="p-1.5 rounded hover:bg-red-50 text-red-400"
                         title="Remover cota"
                       >
@@ -271,6 +273,16 @@ export default function AlmoxCotas() {
           onSave={handleSave}
           saving={saving}
           erro={erro}
+        />
+      )}
+
+      {confirmarExcluir && (
+        <ConfirmModal
+          title="Remover esta cota?"
+          message="A cota mensal definida para este item/setor será removida."
+          confirmLabel="Remover"
+          onConfirm={() => handleDelete(confirmarExcluir)}
+          onClose={() => setConfirmarExcluir(null)}
         />
       )}
     </div>

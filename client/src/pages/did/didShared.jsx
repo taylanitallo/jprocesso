@@ -209,18 +209,13 @@ export function SectionCard({ icon: Icon, title, color, children }) {
 
 export function SecaoBotoes({ locked, onAlterar, onSalvar, saving, label, onLimpar }) {
   const readOnly = useContext(DidReadOnlyContext)
+  const [confirmarLimpar, setConfirmarLimpar] = useState(false)
   if (readOnly) return null
-
-  const handleLimpar = () => {
-    if (window.confirm('Limpar todos os campos desta seção? Os dados salvos serão apagados ao salvar o formulário.')) {
-      onLimpar?.()
-    }
-  }
 
   return (
     <div className="col-span-2 flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700 mt-1">
       {onLimpar ? (
-        <button type="button" onClick={handleLimpar}
+        <button type="button" onClick={() => setConfirmarLimpar(true)}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-700 rounded-lg text-sm font-semibold transition-colors">
           <RotateCcw className="w-3.5 h-3.5" /> Limpar Seção
         </button>
@@ -238,6 +233,16 @@ export function SecaoBotoes({ locked, onAlterar, onSalvar, saving, label, onLimp
           </button>
         )}
       </div>
+
+      {confirmarLimpar && (
+        <ConfirmModal
+          title="Limpar Seção?"
+          message="Todos os campos preenchidos nesta seção serão apagados ao salvar o formulário."
+          confirmLabel="Limpar"
+          onConfirm={() => { onLimpar?.(); setConfirmarLimpar(false) }}
+          onClose={() => setConfirmarLimpar(false)}
+        />
+      )}
     </div>
   )
 }

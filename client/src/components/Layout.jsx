@@ -4,7 +4,7 @@ import { useTheme } from '../context/ThemeContext'
 import { hasPerm } from '../utils/permissions'
 import {
   Home, Building2, LogOut, Menu, X, Inbox, BarChart3, Settings,
-  Users, Package, Sun, Moon, ChevronRight, DollarSign, ScrollText,
+  Users, Package, Sun, Moon, ChevronRight, ChevronLeft, DollarSign, ScrollText,
   Lock, Landmark, ClipboardList, Archive,
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
@@ -18,6 +18,8 @@ export default function Layout() {
   const location = useLocation()
   const { subdomain } = useParams()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === 'true')
+  useEffect(() => { localStorage.setItem('sidebarCollapsed', String(sidebarCollapsed)) }, [sidebarCollapsed])
   const [now, setNow] = useState(new Date())
   const [nomeEntidade, setNomeEntidade] = useState('')
   const [moduloBloqueado, setModuloBloqueado] = useState(null)
@@ -140,17 +142,31 @@ export default function Layout() {
       <aside className={`
         fixed top-0 bottom-8 left-0 z-50 w-[260px] bg-white dark:bg-slate-900
         border-r border-gray-200 dark:border-slate-700/50
-        flex flex-col transform transition-transform duration-300 ease-in-out
+        flex flex-col transform transition-all duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0
+        ${sidebarCollapsed ? 'lg:w-[72px]' : 'lg:w-[260px]'}
       `}>
 
+        {/* Botão recolher/expandir — somente desktop */}
+        <button
+          onClick={() => setSidebarCollapsed(v => !v)}
+          className="hidden lg:flex absolute -right-3 top-16 z-10 w-6 h-6 items-center justify-center rounded-full
+            bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-md
+            text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300
+            transition-colors"
+          title={sidebarCollapsed ? 'Expandir menu' : 'Recolher menu'}
+        >
+          {sidebarCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
+        </button>
+
         {/* Logo */}
-        <div className="h-[41px] p-[1mm] flex items-center justify-between border-b border-gray-200 dark:border-slate-700/50 flex-shrink-0">
-          {tenant?.configuracoes?.logo_interna_url && tenant?.subdominio
-            ? <img src={`/api/tenants/${tenant.subdominio}/logo/interna`} alt="logo" className="h-full w-auto object-contain" />
-            : <img src="/logo_jprocesso.png" alt="jProcesso" className="h-full w-auto object-contain dark:brightness-0 dark:invert" />
-          }
+        <div className="h-[41px] p-[1mm] flex items-center justify-between border-b border-gray-200 dark:border-slate-700/50 flex-shrink-0 overflow-hidden">
+          {!sidebarCollapsed && (
+            tenant?.configuracoes?.logo_interna_url && tenant?.subdominio
+              ? <img src={`/api/tenants/${tenant.subdominio}/logo/interna`} alt="logo" className="h-full w-auto max-w-full object-contain" />
+              : <img src="/logo_jprocesso.png" alt="jProcesso" className="h-full w-auto max-w-full object-contain dark:brightness-0 dark:invert" />
+          )}
           <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700/50"
@@ -175,14 +191,15 @@ export default function Layout() {
                   <button
                     key={item.path}
                     type="button"
+                    title={sidebarCollapsed ? item.label : undefined}
                     onClick={() => { setSidebarOpen(false); setModuloBloqueado({ label: item.label }) }}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-gray-400 dark:text-slate-600 hover:bg-gray-50 dark:hover:bg-white/5"
+                    className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium text-gray-400 dark:text-slate-600 hover:bg-gray-50 dark:hover:bg-white/5 ${sidebarCollapsed ? 'lg:justify-center' : 'justify-between'}`}
                   >
                     <div className="flex items-center gap-3">
                       <Icon className="h-4 w-4 flex-shrink-0 opacity-50" />
-                      <span className="opacity-60">{item.label}</span>
+                      <span className={`opacity-60 ${sidebarCollapsed ? 'lg:hidden' : ''}`}>{item.label}</span>
                     </div>
-                    <Lock className="h-3.5 w-3.5 flex-shrink-0" />
+                    <Lock className={`h-3.5 w-3.5 flex-shrink-0 ${sidebarCollapsed ? 'lg:hidden' : ''}`} />
                   </button>
                 )
               }
@@ -191,9 +208,11 @@ export default function Layout() {
                 <Link
                   key={item.path}
                   to={item.path}
+                  title={sidebarCollapsed ? item.label : undefined}
                   onClick={() => setSidebarOpen(false)}
                   className={`
-                    flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                    flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                    ${sidebarCollapsed ? 'lg:justify-center' : 'justify-between'}
                     ${active
                       ? 'bg-blue-500/10 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 ring-1 ring-inset ring-blue-500/20'
                       : 'text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-slate-200'
@@ -202,9 +221,9 @@ export default function Layout() {
                 >
                   <div className="flex items-center gap-3">
                     <Icon className={`h-4 w-4 flex-shrink-0 ${active ? 'text-blue-500 dark:text-blue-400' : 'opacity-70'}`} />
-                    <span>{item.label}</span>
+                    <span className={sidebarCollapsed ? 'lg:hidden' : ''}>{item.label}</span>
                   </div>
-                  {active && <ChevronRight className="h-3.5 w-3.5 text-blue-400 dark:text-blue-500 flex-shrink-0" />}
+                  {active && <ChevronRight className={`h-3.5 w-3.5 text-blue-400 dark:text-blue-500 flex-shrink-0 ${sidebarCollapsed ? 'lg:hidden' : ''}`} />}
                 </Link>
               )
             })}
@@ -213,7 +232,7 @@ export default function Layout() {
           {/* Menu administração */}
           {(user?.tipo === 'admin' || user?.tipo === 'gestor') && (
             <div>
-              <p className="px-3 mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400 dark:text-slate-500">
+              <p className={`px-3 mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400 dark:text-slate-500 ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
                 Administração
               </p>
               <div className="space-y-0.5">
@@ -226,9 +245,11 @@ export default function Layout() {
                     <Link
                       key={item.path}
                       to={item.path}
+                      title={sidebarCollapsed ? item.label : undefined}
                       onClick={() => setSidebarOpen(false)}
                       className={`
-                        flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                        flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                        ${sidebarCollapsed ? 'lg:justify-center' : 'justify-between'}
                         ${active
                           ? 'bg-blue-500/10 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 ring-1 ring-inset ring-blue-500/20'
                           : 'text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-slate-200'
@@ -237,9 +258,9 @@ export default function Layout() {
                     >
                       <div className="flex items-center gap-3">
                         <Icon className={`h-4 w-4 flex-shrink-0 ${active ? 'text-blue-500 dark:text-blue-400' : 'opacity-70'}`} />
-                        <span>{item.label}</span>
+                        <span className={sidebarCollapsed ? 'lg:hidden' : ''}>{item.label}</span>
                       </div>
-                      {active && <ChevronRight className="h-3.5 w-3.5 text-blue-400 dark:text-blue-500 flex-shrink-0" />}
+                      {active && <ChevronRight className={`h-3.5 w-3.5 text-blue-400 dark:text-blue-500 flex-shrink-0 ${sidebarCollapsed ? 'lg:hidden' : ''}`} />}
                     </Link>
                   )
                 })}
@@ -259,7 +280,7 @@ export default function Layout() {
       )}
 
       {/* â"€â"€â"€ Ãrea principal â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
-      <div className="lg:pl-[260px] flex flex-col min-h-screen pb-8">
+      <div className={`flex flex-col min-h-screen pb-8 transition-[padding] duration-300 ease-in-out ${sidebarCollapsed ? 'lg:pl-[72px]' : 'lg:pl-[260px]'}`}>
 
         {/* Topbar */}
         <header className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700/50 sticky top-0 z-30 flex-shrink-0">

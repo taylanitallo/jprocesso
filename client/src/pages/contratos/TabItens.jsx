@@ -939,6 +939,7 @@ function TabItens() {
 
   // ── Filtros ──────────────────────────────────────────────────────────────
   const f = filtrosAtivos
+  const itensNaoExcluidos = itens.filter(i => (i.status || '').toUpperCase() !== 'EXCLUÍDO')
   const itensFiltrados = itens
     .filter(item => {
       const st = (item.status || '').toUpperCase()
@@ -1018,10 +1019,10 @@ function TabItens() {
       {/* ── Mini KPIs ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Total Itens',  value: itens.length,                                              icon: PackageOpen,  color: 'from-blue-500 to-indigo-600'  },
-          { label: 'Ativos',       value: itens.filter(i => (i.status || '').toUpperCase() === 'ATIVO').length,            icon: CheckCircle2, color: 'from-green-500 to-emerald-600' },
+          { label: 'Total Itens',  value: itensNaoExcluidos.length,                                              icon: PackageOpen,  color: 'from-blue-500 to-indigo-600'  },
+          { label: 'Ativos',       value: itensNaoExcluidos.filter(i => (i.status || '').toUpperCase() === 'ATIVO').length,            icon: CheckCircle2, color: 'from-green-500 to-emerald-600' },
           { label: 'Filtrados',    value: itensFiltrados.length,                                     icon: Search,       color: 'from-purple-500 to-violet-600' },
-          { label: 'Categorias',   value: new Set(itens.map(i => i.categoria).filter(Boolean)).size, icon: Tag,          color: 'from-teal-500 to-cyan-600'    },
+          { label: 'Categorias',   value: new Set(itensNaoExcluidos.map(i => i.categoria).filter(Boolean)).size, icon: Tag,          color: 'from-teal-500 to-cyan-600'    },
         ].map((k, i) => (
           <div key={i} className="bg-white dark:bg-slate-900/70 border border-gray-100 dark:border-slate-700/50 rounded-2xl p-4 flex items-center gap-3 shadow-sm hover:shadow-md transition-all">
             <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${k.color} flex items-center justify-center shadow-sm flex-shrink-0`}>

@@ -22,6 +22,7 @@ const {
 
 const mid = [tenantMiddleware, requireTenant, authenticate];
 const midGestor = [tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor')];
+const midAdmin = [tenantMiddleware, requireTenant, authenticate, authorize('admin')];
 
 // Dashboard
 router.get('/dashboard', mid, getDashboard);
@@ -37,7 +38,7 @@ router.get('/ordem-compra/:numero',      mid, getOrdemByNumero);
 router.get('/itens',        mid, listItens);
 router.post('/itens',       mid, createItem);
 router.put('/itens/:id',    mid, updateItem);
-router.delete('/itens/:id', mid, deleteItem);
+router.delete('/itens/:id', midAdmin, deleteItem);
 router.get('/categorias',   mid, getCategorias);
 
 // Movimentações (legado)

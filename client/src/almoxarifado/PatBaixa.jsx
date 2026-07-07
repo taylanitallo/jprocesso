@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { RefreshCw, PackageX } from 'lucide-react'
 import api from '../services/api'
 import ActionBar from '../components/ui/ActionBar'
+import ConfirmModal from '../components/ui/ConfirmModal'
 
 const base = 'w-full border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-300'
 
@@ -28,16 +29,21 @@ export default function PatBaixa({ bem, onSuccess, onCancel }) {
     autorizado_por: '',
     observacoes: ''
   })
+  const [confirmarBaixa, setConfirmarBaixa] = useState(false)
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
-  const submit = async (e) => {
+  const submit = (e) => {
     e.preventDefault()
     if (!form.motivo || !form.data_baixa) {
       alert('Preencha o motivo e a data da baixa.')
       return
     }
-    if (!window.confirm(`Confirma a BAIXA do bem "${bem.numero_tombamento} – ${bem.descricao}"?\n\nEsta ação não pode ser desfeita.`)) return
+    setConfirmarBaixa(true)
+  }
+
+  const confirmarESubmeter = async () => {
+    setConfirmarBaixa(false)
     setLoading(true)
     try {
       const { data } = await api.post(`/patrimonio/bens/${bem.id}/baixar`, form)
@@ -53,6 +59,7 @@ export default function PatBaixa({ bem, onSuccess, onCancel }) {
   if (!bem) return null
 
   return (
+    <>
     <form onSubmit={submit} className="space-y-5">
       {/* Identificação */}
       <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
@@ -127,5 +134,15 @@ export default function PatBaixa({ bem, onSuccess, onCancel }) {
         </ActionBar>
       </div>
     </form>
+    {confirmarBaixa && (
+      <ConfirmModal
+        title="Confirmar baixa do bem?"
+        message={`"${bem.numero_tombamento} – ${bem.descricao}" será baixado do patrimônio. Esta ação não pode ser desfeita.`}
+        confirmLabel="Confirmar Baixa"
+        onConfirm={confirmarESubmeter}
+        onClose={() => setConfirmarBaixa(false)}
+      />
+    )}
+    </>
   )
 }
