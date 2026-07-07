@@ -1,4 +1,5 @@
 const { Op, fn, col, literal } = require('sequelize');
+const { registrarLog } = require('../middleware/activityLogger');
 
 const notFound = (res, entity) => res.status(404).json({ error: `${entity} não encontrado(a)` });
 
@@ -198,6 +199,15 @@ const createOrdem = async (req, res) => {
     const ordemCompleta = await ContratoOrdem.findByPk(ordem.id, {
       include: [{ model: ContratoOrdemItem, as: 'itens' }],
     });
+
+    await registrarLog(req, {
+      acao: 'criar_ordem',
+      modulo: 'contratos',
+      descricao: `Fez uma ordem de ${ordem.tipo === 'COMPRA' ? 'compra' : 'serviço'} (${numero}) — contrato ${contrato.numero_contrato || contrato.id}`,
+      referencia_id: ordem.id,
+      referencia_numero: numero
+    });
+
     res.status(201).json(ordemCompleta);
   } catch (err) {
     console.error('createOrdem:', err);
@@ -271,9 +281,27 @@ const updateOrdem = async (req, res) => {
 
 const deleteOrdem = async (req, res) => {
   try {
-    const { ContratoOrdem } = req.models;
+    const { ContratoOrdem, Did, AlmoxLote } = req.models;
     const ordem = await ContratoOrdem.findByPk(req.params.id);
     if (!ordem) return notFound(res, 'Ordem');
+
+    if (Did) {
+      const totalDids = await Did.count({ where: { ordem_compra_id: ordem.id } });
+      if (totalDids > 0) {
+        return res.status(409).json({
+          error: `Esta ordem está vinculada a ${totalDids} DID(s). Exclua o(s) DID(s) primeiro.`
+        });
+      }
+    }
+    if (AlmoxLote) {
+      const totalLotes = await AlmoxLote.count({ where: { ordem_id: ordem.id, ativo: true } });
+      if (totalLotes > 0) {
+        return res.status(409).json({
+          error: 'Esta ordem já possui material recebido no almoxarifado. Reverta a entrada de estoque antes de cancelar.'
+        });
+      }
+    }
+
     await ordem.update({ status: 'CANCELADA' });
     res.json({ success: true });
   } catch (err) {

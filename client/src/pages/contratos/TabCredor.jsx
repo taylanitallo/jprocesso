@@ -579,7 +579,9 @@ function TabCredor() {
       setCredores(prev => prev.map(c => c.id === selecionado ? { ...c, status: 'EXCLUÍDO' } : c))
       setSelecionado(null)
       setModal(null)
-    } catch { alert('Erro ao excluir credor.') }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao excluir credor.')
+    }
   }
 
   const syncDids = async () => {

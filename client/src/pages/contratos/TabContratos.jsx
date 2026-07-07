@@ -1373,7 +1373,9 @@ function TabContratos() {
       setContratos(prev => prev.filter(c => c.id !== selecionado))
       setSelecionado(null)
       setModal(null)
-    } catch { alert('Erro ao excluir contrato.') }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao excluir contrato.')
+    }
   }
 
   const fmtData = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR') : '—'

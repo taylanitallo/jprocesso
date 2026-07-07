@@ -1464,7 +1464,9 @@ function TabOrdens() {
       setModal(null)
       setSelecionada(null)
       carregar()
-    } catch { alert('Erro ao cancelar ordem') }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao cancelar ordem')
+    }
   }
 
   const statusCor = (s) => {

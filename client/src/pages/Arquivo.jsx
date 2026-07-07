@@ -3,9 +3,10 @@ import { useQuery, useQueryClient } from 'react-query'
 import api from '../services/api'
 import {
   Archive, Folder, FolderOpen, FileText, ExternalLink,
-  ChevronRight, ChevronDown, Download, FolderInput, X, Zap,
+  ChevronRight, ChevronDown, Download, FolderInput, X, Zap, Trash2,
 } from 'lucide-react'
-import { PageHeader } from '../components/ui'
+import { PageHeader, ConfirmModal } from '../components/ui'
+import { useAuth } from '../context/AuthContext'
 import LoadingBar from '../components/LoadingBar'
 
 const TIPO_LABEL = {
@@ -435,11 +436,14 @@ function ProcessoNode({ processo, depth, onView, onDownloadZip, onMove }) {
 
 // ── Página principal ──────────────────────────────────────────────────────────
 export default function Arquivo() {
+  const { user } = useAuth()
+  const isAdmin = user?.tipo === 'admin' || user?.tipo === 'jeos'
   const queryClient   = useQueryClient()
   const [moveModal,   setMoveModal]   = useState(null)
   const [moveLoading, setMoveLoading] = useState(false)
   const [feedback,    setFeedback]    = useState('')
   const [aba,         setAba]         = useState('processos') // 'processos' | 'gerados'
+  const [confirmarExcluirDoc, setConfirmarExcluirDoc] = useState(null)
 
   const { data, isLoading } = useQuery(
     'arquivo-processos',
@@ -472,6 +476,17 @@ export default function Arquivo() {
       const { data } = await api.get(`/documentos/view/${doc.id}`)
       window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
     } catch { alert('Não foi possível abrir o arquivo.') }
+  }
+
+  const handleDeleteDoc = async (doc) => {
+    try {
+      await api.delete(`/documentos/${doc.id}`)
+      queryClient.invalidateQueries('documentos-gerados')
+      setConfirmarExcluirDoc(null)
+      showFeedback('Documento excluído com sucesso')
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao excluir documento.')
+    }
   }
 
   const handleDownloadZip = async (processoId, numero) => {
@@ -598,12 +613,29 @@ export default function Arquivo() {
                       className="h-3.5 w-3.5 text-gray-300 dark:text-slate-600 group-hover:text-blue-400 transition-colors cursor-pointer shrink-0"
                       onClick={() => handleViewDoc(doc)}
                     />
+                    {isAdmin && (
+                      <Trash2
+                        className="h-3.5 w-3.5 text-gray-300 dark:text-slate-600 hover:text-red-500 transition-colors cursor-pointer shrink-0"
+                        title="Excluir documento"
+                        onClick={() => setConfirmarExcluirDoc(doc)}
+                      />
+                    )}
                   </div>
                 )
               })}
             </div>
           )}
         </div>
+      )}
+
+      {confirmarExcluirDoc && (
+        <ConfirmModal
+          title="Excluir documento gerado?"
+          message={`"${confirmarExcluirDoc.nome_arquivo}" será removido permanentemente do arquivo.`}
+          confirmLabel="Excluir"
+          onConfirm={() => handleDeleteDoc(confirmarExcluirDoc)}
+          onClose={() => setConfirmarExcluirDoc(null)}
+        />
       )}
 
       {/* ── ABA: Processos Concluídos ── */}

@@ -11,7 +11,7 @@ const moduloConfig = {
   almoxarifado:  { cor: 'orange', label: 'Almoxarifado' },
   patrimonio:    { cor: 'yellow', label: 'Patrimônio' },
   contratos:     { cor: 'purple', label: 'Contratos' },
-  autenticacao:  { cor: 'gray',   label: 'Autenticação' },
+  sessao:        { cor: 'gray',   label: 'Sessão' },
   sistema:       { cor: 'gray',   label: 'Sistema' },
 }
 
@@ -28,6 +28,26 @@ const tipoUsuarioLabel = {
   admin:       '👑 Admin',
   gestor:      '🎯 Gestor',
   operacional: '👤 Operacional',
+}
+
+// Rótulo objetivo de fallback, usado apenas quando não há descrição detalhada
+const acaoLabel = {
+  login:                    'Entrou no sistema',
+  logout:                   'Saiu do sistema',
+  criar_processo:           'Abriu um processo',
+  tramitar_processo:        'Tramitou um processo',
+  devolver_processo:        'Devolveu um processo',
+  concluir_processo:        'Concluiu um processo',
+  excluir_processo:         'Excluiu um processo',
+  criar_item_almoxarifado:  'Adicionou um item ao almoxarifado',
+  criar_requisicao:         'Fez uma requisição de material',
+  autorizar_requisicao:     'Autorizou uma requisição de material',
+  atender_requisicao:       'Atendeu uma requisição de material',
+  registrar_entrada_estoque:'Registrou entrada de estoque',
+  criar_ordem:              'Fez uma ordem de compra/serviço',
+  criar_contrato:           'Cadastrou um contrato',
+  criar_lancamento:         'Registrou um lançamento financeiro',
+  excluir_lancamento:       'Excluiu um lançamento financeiro',
 }
 
 function formatarData(str) {
@@ -409,7 +429,6 @@ export default function Registros() {
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider hidden md:table-cell">Secretaria / Setor</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Módulo</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Ação / Descrição</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider hidden lg:table-cell">Referência</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
@@ -455,18 +474,10 @@ export default function Registros() {
                         </td>
 
                         {/* Ação / Descrição */}
-                        <td className="px-4 py-3 max-w-xs">
-                          <p className="text-xs font-mono text-gray-600 dark:text-slate-400 mb-0.5">{log.acao}</p>
-                          {log.descricao && (
-                            <p className="text-sm text-gray-700 dark:text-slate-300 truncate" title={log.descricao}>{log.descricao}</p>
-                          )}
-                        </td>
-
-                        {/* Referência */}
-                        <td className="px-4 py-3 hidden lg:table-cell">
-                          {log.referencia_numero || log.referencia_id
-                            ? <span className="text-xs font-mono text-gray-500 dark:text-slate-400">{log.referencia_numero || log.referencia_id}</span>
-                            : <span className="text-gray-300 dark:text-slate-600">—</span>}
+                        <td className="px-4 py-3">
+                          <p className="text-sm font-medium text-gray-800 dark:text-slate-200">
+                            {log.descricao || acaoLabel[log.acao] || log.acao}
+                          </p>
                         </td>
                       </tr>
                     )

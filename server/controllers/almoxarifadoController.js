@@ -302,7 +302,7 @@ const createItem = async (req, res) => {
     await registrarLog(req, {
       acao: 'criar_item_almoxarifado',
       modulo: 'almoxarifado',
-      descricao: `Item de almoxarifado criado: ${nome}`,
+      descricao: `Adicionou o item "${nome}" ao catálogo do almoxarifado`,
       referencia_id: item.id
     });
   } catch (error) {
@@ -820,6 +820,14 @@ const registrarEntradaLote = async (req, res) => {
       ip: req.ip
     });
 
+    await registrarLog(req, {
+      acao: 'registrar_entrada_estoque',
+      modulo: 'almoxarifado',
+      descricao: `Registrou entrada de ${qtd} ${item.unidade} de "${item.nome}" no estoque`,
+      referencia_id: lote.id,
+      referencia_numero: item.codigo || null
+    });
+
     res.status(201).json({ lote, movimentacao: mov, estoque_atual: novoEstoque });
   } catch (error) {
     console.error('Erro registrarEntradaLote:', error);
@@ -949,6 +957,14 @@ const createRequisicao = async (req, res) => {
       depois: requisicao.toJSON(), user: req.user, ip: req.ip
     });
 
+    await registrarLog(req, {
+      acao: 'criar_requisicao',
+      modulo: 'almoxarifado',
+      descricao: `Fez uma requisição de material (${numero}) — ${itens.length} item(ns)`,
+      referencia_id: requisicao.id,
+      referencia_numero: numero
+    });
+
     res.status(201).json(requisicao);
   } catch (error) {
     console.error('Erro createRequisicao:', error);
@@ -1023,6 +1039,14 @@ const autorizarRequisicao = async (req, res) => {
       descricao: `${req.user.nome || req.user.id} autorizou ${requisicao.numero}`,
       antes, depois: { status: 'AUTORIZADA', hash_assinatura },
       user: req.user, ip: req.ip
+    });
+
+    await registrarLog(req, {
+      acao: 'autorizar_requisicao',
+      modulo: 'almoxarifado',
+      descricao: `Autorizou a requisição de material ${requisicao.numero}`,
+      referencia_id: requisicao.id,
+      referencia_numero: requisicao.numero
     });
 
     res.json({ message: 'Requisição autorizada', hash_assinatura });
@@ -1245,6 +1269,16 @@ const atenderRequisicao = async (req, res) => {
       data_entrega: novoStatus === 'ENTREGUE' ? new Date() : null,
       usuario_atendente_id: req.user.id,
       observacao: observacao || requisicao.observacao
+    });
+
+    await registrarLog(req, {
+      acao: 'atender_requisicao',
+      modulo: 'almoxarifado',
+      descricao: novoStatus === 'ENTREGUE'
+        ? `Entregou a requisição de material ${requisicao.numero}`
+        : `Atendeu parcialmente a requisição de material ${requisicao.numero}`,
+      referencia_id: requisicao.id,
+      referencia_numero: requisicao.numero
     });
 
     res.json({ message: 'RequisiÃ§Ã£o processada', status: novoStatus });

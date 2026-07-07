@@ -153,11 +153,20 @@ const deleteDocumento = async (req, res) => {
       return res.status(404).json({ error: 'Documento não encontrado' });
     }
 
-    // A-2: apenas admin, gestor ou o próprio uploader podem excluir
-    const papel      = req.user?.tipo;
-    const isUploader = documento.upload_por_id === req.user?.id;
-    if (papel !== 'admin' && papel !== 'gestor' && !isUploader) {
-      return res.status(403).json({ error: 'Sem permissão para excluir este documento' });
+    const papel = req.user?.tipo;
+
+    // Documentos gerados (DID, despacho, ofício, ordem, etc. — mesmo filtro da aba
+    // "Documentos Gerados") só podem ser excluídos por administradores.
+    if (documento.tipo_origem && documento.tipo_origem !== 'anexo') {
+      if (papel !== 'admin') {
+        return res.status(403).json({ error: 'Apenas administradores podem excluir documentos gerados' });
+      }
+    } else {
+      // Anexo comum de processo: admin, gestor ou o próprio uploader podem excluir
+      const isUploader = documento.upload_por_id === req.user?.id;
+      if (papel !== 'admin' && papel !== 'gestor' && !isUploader) {
+        return res.status(403).json({ error: 'Sem permissão para excluir este documento' });
+      }
     }
 
     if (storage.isLocalPath(documento.url_arquivo)) {

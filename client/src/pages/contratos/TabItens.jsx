@@ -992,7 +992,9 @@ function TabItens() {
       setItens(prev => prev.map(i => i.id === selecionado ? { ...i, status: 'EXCLUÍDO' } : i))
       setSelecionado(null)
       setModal(null)
-    } catch { alert('Erro ao excluir item.') }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao excluir item.')
+    }
   }
 
   const abrirEditar = () => { if (itemSelecionado) setModal('editar') }
