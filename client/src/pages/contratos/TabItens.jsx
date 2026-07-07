@@ -544,8 +544,10 @@ function ConfirmModal({ item, onConfirm, onClose }) {
   useEffect(() => {
     api.get(`/contratos/itens/${item.id}/dna`)
       .then(r => {
-        setVinculosContrato(r.data.vinculosContrato || [])
-        setVinculosOrdem(r.data.vinculosOrdem || [])
+        // Só considera vínculos com contratos/ordens ainda ativos — contrato já
+        // excluído ou ordem cancelada/excluída não bloqueia a exclusão do item.
+        setVinculosContrato((r.data.vinculosContrato || []).filter(v => v.contrato?.status !== 'EXCLUÍDO'))
+        setVinculosOrdem((r.data.vinculosOrdem || []).filter(v => !['CANCELADA', 'EXCLUÍDA'].includes(v.ordemPai?.status)))
       })
       .catch(() => setErro('Não foi possível verificar os vínculos deste item.'))
       .finally(() => setLoading(false))

@@ -1249,29 +1249,76 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
 }
 
 function ConfirmModalContrato({ contrato, onConfirm, onClose }) {
+  const [loading, setLoading] = useState(true)
+  const [ordens, setOrdens] = useState([])
+  const [erro, setErro] = useState(null)
+
+  useEffect(() => {
+    api.get('/contratos/ordens', { params: { contrato_id: contrato.id } })
+      .then(r => setOrdens((r.data || []).filter(o => o.status !== 'CANCELADA')))
+      .catch(() => setErro('Não foi possível verificar as ordens vinculadas.'))
+      .finally(() => setLoading(false))
+  }, [contrato.id])
+
+  const temVinculo = ordens.length > 0
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md">
         <div className="p-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center shrink-0">
-              <AlertTriangle className="w-5 h-5 text-red-600" />
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${temVinculo ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
+              <AlertTriangle className={`w-5 h-5 ${temVinculo ? 'text-amber-600' : 'text-red-600'}`} />
             </div>
             <div>
-              <h3 className="font-bold text-gray-800 dark:text-slate-100">Excluir Contrato</h3>
-              <p className="text-sm text-gray-500">Esta ação não pode ser desfeita.</p>
+              <h3 className="font-bold text-gray-800 dark:text-slate-100">
+                {loading ? 'Excluir Contrato' : temVinculo ? 'Contrato Vinculado — Não é possível excluir' : 'Excluir Contrato'}
+              </h3>
+              <p className="text-sm text-gray-500">
+                {loading ? 'Verificando vínculos...' : temVinculo ? 'Exclua as ordens abaixo antes de excluir o contrato.' : 'Esta ação não pode ser desfeita.'}
+              </p>
             </div>
           </div>
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-3 mb-5">
+
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-3 mb-4">
             <p className="text-sm text-red-700 dark:text-red-300 font-medium">{contrato.numero_contrato}</p>
             <p className="text-xs text-red-500 mt-1 truncate">{contrato.objeto}</p>
           </div>
+
+          {loading ? (
+            <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-slate-500 py-2 mb-2">
+              <span className="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
+              Verificando ordens vinculadas...
+            </div>
+          ) : erro ? (
+            <p className="text-sm text-red-500 mb-2">{erro}</p>
+          ) : temVinculo && (
+            <div className="mb-4 max-h-56 overflow-y-auto">
+              <p className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">
+                Ordens de Compra/Serviço ({ordens.length})
+              </p>
+              <div className="space-y-1">
+                {ordens.map((o, i) => (
+                  <div key={i} className="text-xs bg-gray-50 dark:bg-slate-700/50 rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2">
+                    <span className="font-semibold text-purple-600 dark:text-purple-400">{o.numero}</span>
+                    <span className="text-gray-500 dark:text-slate-400 truncate">{o.tipo === 'COMPRA' ? 'Compra' : 'Serviço'}</span>
+                    <span className="text-gray-400 dark:text-slate-500 shrink-0">{o.status}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-end gap-3">
-            <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
-            <button onClick={onConfirm}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-colors">
-              Sim, Excluir
+            <button onClick={onClose} className="btn-secondary text-sm">
+              {temVinculo ? 'Fechar' : 'Cancelar'}
             </button>
+            {!loading && !temVinculo && (
+              <button onClick={onConfirm}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-colors">
+                Sim, Excluir
+              </button>
+            )}
           </div>
         </div>
       </div>

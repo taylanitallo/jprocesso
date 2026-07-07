@@ -106,10 +106,22 @@ const updateConta = async (req, res) => {
 
 const deleteConta = async (req, res) => {
   try {
-    const { ContaBancaria } = req.models;
+    const { ContaBancaria, TesReceita, TesDespesa } = req.models;
     const { id } = req.params;
     const conta = await ContaBancaria.findByPk(id);
     if (!conta) return res.status(404).json({ error: 'Conta não encontrada' });
+
+    const totalReceitas = TesReceita ? await TesReceita.count({ where: { conta_id: id } }) : 0;
+    const totalDespesas = TesDespesa ? await TesDespesa.count({ where: { conta_id: id } }) : 0;
+    if (totalReceitas > 0 || totalDespesas > 0) {
+      const partes = [];
+      if (totalReceitas > 0) partes.push(`${totalReceitas} receita(s)`);
+      if (totalDespesas > 0) partes.push(`${totalDespesas} despesa(s)/pagamento(s)`);
+      return res.status(409).json({
+        error: `Esta conta possui ${partes.join(' e ')} lançada(s). Remova esses lançamentos primeiro.`
+      });
+    }
+
     await conta.destroy();
     res.json({ ok: true });
   } catch (err) {

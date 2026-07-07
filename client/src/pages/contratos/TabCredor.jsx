@@ -576,7 +576,7 @@ function TabCredor() {
   const excluir = async () => {
     try {
       await api.delete(`/contratos/credores/${selecionado}`)
-      setCredores(prev => prev.map(c => c.id === selecionado ? { ...c, status: 'EXCLUÍDO' } : c))
+      setCredores(prev => prev.filter(c => c.id !== selecionado))
       setSelecionado(null)
       setModal(null)
     } catch (err) {

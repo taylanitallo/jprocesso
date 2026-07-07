@@ -291,9 +291,13 @@ function TabContas({ secretarias }) {
   };
 
   const excluir = async (c) => {
-    await api.delete(`/organizacao/contas-bancarias/${c.id}`);
-    setConfirmarExcluir(null);
-    load();
+    try {
+      await api.delete(`/organizacao/contas-bancarias/${c.id}`);
+      setConfirmarExcluir(null);
+      load();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao excluir conta.');
+    }
   };
 
   const inp = k => e => setForm(p => ({ ...p, [k]: e.target.value }));

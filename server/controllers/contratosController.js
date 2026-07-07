@@ -17,7 +17,7 @@ const listCredores = async (req, res) => {
     const { status, q } = req.query;
 
     const where = {};
-    if (status) where.status = status;
+    where.status = status || { [Op.ne]: 'EXCLUÍDO' };
     if (q) where.razao_social = { [Op.iLike]: `%${q}%` };
 
     const credores = await Credor.findAll({ where, order: [['razao_social', 'ASC']] });
@@ -61,13 +61,15 @@ const deleteCredor = async (req, res) => {
     const credor = await Credor.findByPk(req.params.id);
     if (!credor) return notFound(res, 'Credor');
     if (Contrato) {
-      const totalContratos = await Contrato.count({ where: { credor_id: credor.id } });
+      const totalContratos = await Contrato.count({
+        where: { credor_id: credor.id, status: { [Op.ne]: 'EXCLUÍDO' } }
+      });
       if (totalContratos > 0) {
         return res.status(409).json({ error: `Este credor esta vinculado a ${totalContratos} contrato(s). Exclua ou desvincule os contratos primeiro.` });
       }
     }
 
-    await credor.update({ status: 'EXCLUÃDO' });
+    await credor.update({ status: 'EXCLUÍDO' });
     res.json({ success: true });
   } catch (err) {
     console.error('deleteCredor:', err);
@@ -146,12 +148,20 @@ const updateItem = async (req, res) => {
 
 const deleteItem = async (req, res) => {
   try {
-    const { ContratoItem, ContratoItemVinculo, ContratoOrdemItem } = req.models;
+    const { ContratoItem, ContratoItemVinculo, ContratoOrdemItem, Contrato, ContratoOrdem } = req.models;
     const item = await ContratoItem.findByPk(req.params.id);
     if (!item) return notFound(res, 'Item');
 
-    const totalVinculos = ContratoItemVinculo ? await ContratoItemVinculo.count({ where: { item_id: item.id } }) : 0;
-    const totalOrdens = ContratoOrdemItem ? await ContratoOrdemItem.count({ where: { item_id: item.id } }) : 0;
+    // Só conta vínculos com contratos/ordens ainda ativos (contrato/ordem já
+    // excluído ou ordem cancelada não deve bloquear a exclusão do item).
+    const totalVinculos = (ContratoItemVinculo && Contrato) ? await ContratoItemVinculo.count({
+      where: { item_id: item.id },
+      include: [{ model: Contrato, as: 'contrato', where: { status: { [Op.ne]: 'EXCLUÍDO' } }, attributes: [] }]
+    }) : 0;
+    const totalOrdens = (ContratoOrdemItem && ContratoOrdem) ? await ContratoOrdemItem.count({
+      where: { item_id: item.id },
+      include: [{ model: ContratoOrdem, as: 'ordemPai', where: { status: { [Op.notIn]: ['CANCELADA', 'EXCLUÍDA'] } }, attributes: [] }]
+    }) : 0;
     if (totalVinculos > 0 || totalOrdens > 0) {
       const partes = [];
       if (totalVinculos > 0) partes.push(`${totalVinculos} contrato(s)`);
@@ -225,7 +235,7 @@ const listContratos = async (req, res) => {
     const { status, q } = req.query;
 
     const where = {};
-    if (status) where.status = status;
+    where.status = status || { [Op.ne]: 'EXCLUÍDO' };
     if (q) {
       where[Op.or] = [
         { numero_contrato: { [Op.iLike]: `%${q}%` } },
@@ -339,13 +349,15 @@ const deleteContrato = async (req, res) => {
     const contrato = await Contrato.findByPk(req.params.id);
     if (!contrato) return notFound(res, 'Contrato');
     if (ContratoOrdem) {
-      const totalOrdens = await ContratoOrdem.count({ where: { contrato_id: contrato.id } });
+      const totalOrdens = await ContratoOrdem.count({
+        where: { contrato_id: contrato.id, status: { [Op.notIn]: ['CANCELADA', 'EXCLUÍDA'] } }
+      });
       if (totalOrdens > 0) {
         return res.status(409).json({ error: `Este contrato possui ${totalOrdens} ordem(ns) de compra/servico vinculada(s). Exclua as ordens primeiro.` });
       }
     }
 
-    await contrato.update({ status: 'EXCLUÃDO' });
+    await contrato.update({ status: 'EXCLUÍDO' });
     res.json({ success: true });
   } catch (err) {
     console.error('deleteContrato:', err);

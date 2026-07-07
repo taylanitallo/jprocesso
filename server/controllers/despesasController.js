@@ -16,6 +16,7 @@ const listDespesas = async (req, res) => {
     const { tipo, pago, data_de, data_ate, busca, secretaria, processo } = req.query;
 
     const where = {};
+    where.status = { [Op.notIn]: ['CANCELADA', 'EXCLUÍDA'] };
     if (tipo && tipo !== 'TODOS') where.tipo = tipo;
     if (secretaria) {
       where.secretaria = { [Op.iLike]: `%${secretaria}%` };
