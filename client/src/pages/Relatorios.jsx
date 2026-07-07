@@ -543,7 +543,6 @@ export default function Relatorios() {
       {/* Cabeçalho */}
       <PageHeader
         icon={BarChart3}
-        eyebrow="Administração"
         title="Relatórios e Estatísticas"
         subtitle="Visualize e exporte relatórios sobre a tramitação de processos"
       />

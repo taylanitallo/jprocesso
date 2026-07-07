@@ -158,7 +158,7 @@ const getDashboard = async (req, res) => {
     await ensureTables(req);
     const { AlmoxarifadoItem, AlmoxarifadoMovimentacao, AlmoxarifadoRequisicao, AlmoxLote } = req.models;
 
-    const totalItens = await AlmoxarifadoItem.count({ where: { ativo: true } });
+    const totalItens = await AlmoxarifadoItem.count({ where: { ativo: true, estoque_atual: { [Op.gt]: 0 } } });
 
     // Itens no estoque crítico (abaixo do mínimo)
     const itensCriticos = await AlmoxarifadoItem.findAll({

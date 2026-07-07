@@ -829,7 +829,6 @@ export default function Secretarias() {
       {/* Header */}
       <PageHeader
         icon={Building2}
-        eyebrow="Organização"
         title="Gestão de Organização"
         subtitle="Gerencie secretarias, agentes, responsáveis e usuários do município"
       />

@@ -163,7 +163,6 @@ export default function Registros() {
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <PageHeader
           icon={ClipboardList}
-          eyebrow="Sistema"
           title="Registros de Atividade"
           subtitle="Histórico completo de ações realizadas no sistema"
         />

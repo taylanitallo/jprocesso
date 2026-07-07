@@ -68,40 +68,36 @@ export default function Tesouraria() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] dark:bg-[#020617]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+    <div className="space-y-5 animate-fade-in">
+      <PageHeader
+        icon={Landmark}
+        title="Tesouraria"
+        subtitle="Gestão financeira e controle de pagamentos do município"
+      />
 
-        <PageHeader
-          icon={Landmark}
-          iconBg="from-green-500 to-emerald-600"
-          title="Tesouraria"
-          subtitle="Gestão financeira e controle de pagamentos do município"
-        />
-
-        {/* Tabs */}
-        <div className="flex gap-1 border-b border-gray-200 dark:border-slate-700/50">
-          {visibleTabsTes.map(({ key, label, Icon }) => (
-            <button
-              key={key}
-              onClick={() => handleTab(key)}
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px
-                ${activeTab === key
-                  ? 'border-green-500 text-green-600 dark:text-green-400'
-                  : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'
-                }`}
-            >
-              <Icon className="h-4 w-4" />
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Conteúdo das abas */}
-        {activeTab === 'contas'     && <TabContas secretarias={secretarias} />}
-        {activeTab === 'receitas'   && <TabReceitas />}
-        {activeTab === 'despesas'   && <TabDespesas />}
-        {activeTab === 'relatorios' && <TabRelatorios />}
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-gray-200 dark:border-slate-700/50">
+        {visibleTabsTes.map(({ key, label, Icon }) => (
+          <button
+            key={key}
+            onClick={() => handleTab(key)}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px
+              ${activeTab === key
+                ? 'border-green-500 text-green-600 dark:text-green-400'
+                : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'
+              }`}
+          >
+            <Icon className="h-4 w-4" />
+            {label}
+          </button>
+        ))}
       </div>
+
+      {/* Conteúdo das abas */}
+      {activeTab === 'contas'     && <TabContas secretarias={secretarias} />}
+      {activeTab === 'receitas'   && <TabReceitas />}
+      {activeTab === 'despesas'   && <TabDespesas />}
+      {activeTab === 'relatorios' && <TabRelatorios />}
     </div>
   );
 }

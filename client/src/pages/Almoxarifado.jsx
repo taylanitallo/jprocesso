@@ -67,7 +67,6 @@ export default function Almoxarifado() {
     <div className="space-y-5 animate-fade-in">
       <PageHeader
         icon={Package}
-        eyebrow="Módulo"
         title="Almoxarifado"
         subtitle="Controle de estoque e materiais"
       />

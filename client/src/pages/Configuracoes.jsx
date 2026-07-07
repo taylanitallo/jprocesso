@@ -314,10 +314,9 @@ export default function Configuracoes() {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-5 animate-fade-in">
+    <div className="space-y-5 animate-fade-in">
       <PageHeader
         icon={Settings}
-        eyebrow="Sistema"
         title="Configurações"
         subtitle="Gerencie suas preferências e informações pessoais"
       />
