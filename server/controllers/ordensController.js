@@ -45,7 +45,7 @@ const listOrdens = async (req, res) => {
 
     const where = {};
     if (tipo)        where.tipo = tipo;
-    if (status)      where.status = status;
+    where.status = status || { [Op.ne]: 'EXCLUÍDA' };
     if (contrato_id) where.contrato_id = contrato_id;
     if (q) {
       where[Op.or] = [
@@ -310,6 +310,67 @@ const deleteOrdem = async (req, res) => {
   }
 };
 
+// ── EXCLUIR DEFINITIVAMENTE (apenas ordens já canceladas, apenas admin) ───────
+
+const excluirOrdemDefinitivo = async (req, res) => {
+  try {
+    if (req.user?.tipo !== 'admin' && req.user?.tipo !== 'jeos') {
+      return res.status(403).json({ error: 'Apenas administradores podem excluir definitivamente uma ordem.' });
+    }
+
+    const { ContratoOrdem, ContratoOrdemItem, Did, AlmoxLote, TesDespesa } = req.models;
+    const ordem = await ContratoOrdem.findByPk(req.params.id);
+    if (!ordem) return notFound(res, 'Ordem');
+
+    if (ordem.status !== 'CANCELADA') {
+      return res.status(400).json({ error: 'Apenas ordens já canceladas podem ser excluídas definitivamente.' });
+    }
+
+    if (Did) {
+      const totalDids = await Did.count({ where: { ordem_compra_id: ordem.id } });
+      if (totalDids > 0) {
+        return res.status(409).json({
+          error: `Esta ordem está vinculada a ${totalDids} DID(s). Exclua o(s) DID(s) primeiro.`
+        });
+      }
+    }
+    if (AlmoxLote) {
+      const totalLotes = await AlmoxLote.count({ where: { ordem_id: ordem.id, ativo: true } });
+      if (totalLotes > 0) {
+        return res.status(409).json({
+          error: 'Esta ordem já possui material recebido no almoxarifado. Reverta a entrada de estoque primeiro.'
+        });
+      }
+    }
+    if (TesDespesa) {
+      const totalPagamentos = await TesDespesa.count({ where: { ordem_id: ordem.id } });
+      if (totalPagamentos > 0) {
+        return res.status(409).json({
+          error: 'Esta ordem possui um pagamento vinculado na Tesouraria. Remova o pagamento primeiro.'
+        });
+      }
+    }
+
+    if (ContratoOrdemItem) {
+      await ContratoOrdemItem.destroy({ where: { ordem_id: ordem.id } });
+    }
+    await ordem.update({ status: 'EXCLUÍDA' });
+
+    await registrarLog(req, {
+      acao: 'excluir_ordem',
+      modulo: 'contratos',
+      descricao: `Excluiu definitivamente a ordem cancelada ${ordem.numero}`,
+      referencia_id: ordem.id,
+      referencia_numero: ordem.numero
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('excluirOrdemDefinitivo:', err);
+    res.status(500).json({ error: 'Erro ao excluir ordem' });
+  }
+};
+
 // ── ITENS DO CONTRATO com uso ─────────────────────────────────────────────────
 
 const getItensContrato = async (req, res) => {
@@ -452,4 +513,4 @@ const listOrdemDisponivelDid = async (req, res) => {
   }
 };
 
-module.exports = { listOrdens, listOrdemDisponivelDid, getSaldoContrato, getItensContrato, createOrdem, updateOrdem, deleteOrdem };
+module.exports = { listOrdens, listOrdemDisponivelDid, getSaldoContrato, getItensContrato, createOrdem, updateOrdem, deleteOrdem, excluirOrdemDefinitivo };

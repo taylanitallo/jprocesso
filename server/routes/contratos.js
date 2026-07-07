@@ -9,6 +9,7 @@ const {
 } = require('../controllers/contratosController');
 const {
   listOrdens, listOrdemDisponivelDid, getSaldoContrato, getItensContrato, createOrdem, updateOrdem, deleteOrdem,
+  excluirOrdemDefinitivo,
 } = require('../controllers/ordensController');
 const { authenticate, tenantMiddleware, requireTenant, authorize } = require('../middleware/auth');
 
@@ -41,6 +42,7 @@ router.get('/ordens/itens-contrato/:contrato_id',  getItensContrato);
 router.post('/ordens',                             createOrdem);
 router.put('/ordens/:id',                          updateOrdem);
 router.delete('/ordens/:id',                       deleteOrdem);
+router.delete('/ordens/:id/definitivo',            authorize('admin', 'jeos'), excluirOrdemDefinitivo);
 
 // Contratos // SSE â€” deve vir antes de /:id
 router.get('/',       listContratos);

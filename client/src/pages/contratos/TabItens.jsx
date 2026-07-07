@@ -536,29 +536,102 @@ function ListagemModal({ item, onClose }) {
 //  MODAL: CONFIRMAR EXCLUSÃO
 // ══════════════════════════════════════════════════════════════════════════════
 function ConfirmModal({ item, onConfirm, onClose }) {
+  const [loading, setLoading] = useState(true)
+  const [vinculosContrato, setVinculosContrato] = useState([])
+  const [vinculosOrdem, setVinculosOrdem] = useState([])
+  const [erro, setErro] = useState(null)
+
+  useEffect(() => {
+    api.get(`/contratos/itens/${item.id}/dna`)
+      .then(r => {
+        setVinculosContrato(r.data.vinculosContrato || [])
+        setVinculosOrdem(r.data.vinculosOrdem || [])
+      })
+      .catch(() => setErro('Não foi possível verificar os vínculos deste item.'))
+      .finally(() => setLoading(false))
+  }, [item.id])
+
+  const temVinculo = vinculosContrato.length > 0 || vinculosOrdem.length > 0
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md">
         <div className="p-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center shrink-0">
-              <AlertTriangle className="w-5 h-5 text-red-600" />
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${temVinculo ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
+              <AlertTriangle className={`w-5 h-5 ${temVinculo ? 'text-amber-600' : 'text-red-600'}`} />
             </div>
             <div>
-              <h3 className="font-bold text-gray-800 dark:text-slate-100">Excluir Item</h3>
-              <p className="text-sm text-gray-500">Esta ação marcará o item como excluído.</p>
+              <h3 className="font-bold text-gray-800 dark:text-slate-100">
+                {loading ? 'Excluir Item' : temVinculo ? 'Item Vinculado — Não é possível excluir' : 'Excluir Item'}
+              </h3>
+              <p className="text-sm text-gray-500">
+                {loading ? 'Verificando vínculos...' : temVinculo ? 'Remova os vínculos abaixo antes de excluir.' : 'Esta ação marcará o item como excluído.'}
+              </p>
             </div>
           </div>
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-3 mb-5">
+
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-3 mb-4">
             <p className="text-sm text-red-700 dark:text-red-300 font-medium">{item.descricao}</p>
             <p className="text-xs text-red-500 mt-1">Código: {item.codigo || '—'}</p>
           </div>
+
+          {loading ? (
+            <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-slate-500 py-2 mb-2">
+              <span className="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
+              Verificando contratos e ordens vinculados...
+            </div>
+          ) : erro ? (
+            <p className="text-sm text-red-500 mb-2">{erro}</p>
+          ) : temVinculo && (
+            <div className="space-y-3 mb-4 max-h-56 overflow-y-auto">
+              {vinculosContrato.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">
+                    Contratos ({vinculosContrato.length})
+                  </p>
+                  <div className="space-y-1">
+                    {vinculosContrato.map((v, i) => (
+                      <div key={i} className="text-xs bg-gray-50 dark:bg-slate-700/50 rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2">
+                        <span className="font-semibold text-blue-600 dark:text-blue-400">{v.contrato?.numero_contrato || '—'}</span>
+                        <span className="text-gray-500 dark:text-slate-400 truncate">
+                          {v.contrato?.credor?.nome_fantasia || v.contrato?.credor?.razao_social || '—'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {vinculosOrdem.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">
+                    Ordens de Compra/Serviço ({vinculosOrdem.length})
+                  </p>
+                  <div className="space-y-1">
+                    {vinculosOrdem.map((v, i) => (
+                      <div key={i} className="text-xs bg-gray-50 dark:bg-slate-700/50 rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2">
+                        <span className="font-semibold text-purple-600 dark:text-purple-400">{v.ordemPai?.numero || '—'}</span>
+                        <span className="text-gray-500 dark:text-slate-400 truncate">
+                          {v.ordemPai?.contrato?.numero_contrato || '—'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex justify-end gap-3">
-            <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
-            <button onClick={onConfirm}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-colors">
-              Sim, Excluir
+            <button onClick={onClose} className="btn-secondary text-sm">
+              {temVinculo ? 'Fechar' : 'Cancelar'}
             </button>
+            {!loading && !temVinculo && (
+              <button onClick={onConfirm}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-colors">
+                Sim, Excluir
+              </button>
+            )}
           </div>
         </div>
       </div>

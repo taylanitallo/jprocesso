@@ -8,6 +8,7 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import api from '../../services/api'
 import LoadingBar from '../../components/LoadingBar'
+import { useAuth } from '../../context/AuthContext'
 import { salvarDocumentoGerado } from '../../utils/salvarDocumentoGerado'
 import { setPDFLoading } from '../../utils/pdfLoadingStore'
 import { applyTimbradoToPage } from '../../utils/timbradoStore'
@@ -1405,8 +1406,33 @@ function ConfirmModal({ numero, onConfirm, onClose }) {
   )
 }
 
+// ── Modal Confirmar Exclusão Definitiva (somente admin, ordem já cancelada) ────
+function ConfirmExcluirModal({ numero, onConfirm, onClose }) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center">
+        <Trash2 className="w-12 h-12 text-red-500 mx-auto mb-3" />
+        <h3 className="text-base font-bold text-gray-900 dark:text-white mb-1">Excluir Ordem Definitivamente?</h3>
+        <p className="text-sm text-gray-500 dark:text-slate-400 mb-5">
+          A ordem <strong>{numero}</strong> será removida da listagem permanentemente. Esta ação não pode ser desfeita.
+        </p>
+        <div className="flex gap-3 justify-center">
+          <button onClick={onClose} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 text-sm text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700">
+            Cancelar
+          </button>
+          <button onClick={onConfirm} className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold">
+            Sim, excluir
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Tab Principal ──────────────────────────────────────────────────────────────
 function TabOrdens() {
+  const { user } = useAuth()
+  const isAdmin = user?.tipo === 'admin' || user?.tipo === 'jeos'
   const [ordens, setOrdens] = useState([])
   const [contratos, setContratos] = useState([])
   const [catalogoItens, setCatalogoItens] = useState([])
@@ -1466,6 +1492,17 @@ function TabOrdens() {
       carregar()
     } catch (err) {
       alert(err.response?.data?.error || 'Erro ao cancelar ordem')
+    }
+  }
+
+  const excluirDefinitivo = async () => {
+    try {
+      await api.delete(`/contratos/ordens/${ordemSel.id}/definitivo`)
+      setModal(null)
+      setSelecionada(null)
+      carregar()
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao excluir ordem')
     }
   }
 
@@ -1639,6 +1676,14 @@ function TabOrdens() {
           className="flex items-center gap-1.5 px-4 py-2 text-xs rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-sm transition-colors">
           <Trash2 className="w-3.5 h-3.5" /> Cancelar
         </button>
+        {isAdmin && (
+          <button onClick={() => ordemSel && ordemSel.status === 'CANCELADA' && setModal('excluir')}
+            disabled={!selecionada || ordemSel?.status !== 'CANCELADA'}
+            title="Excluir definitivamente (somente ordens já canceladas)"
+            className="flex items-center gap-1.5 px-4 py-2 text-xs rounded-xl bg-red-800 hover:bg-red-900 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-sm transition-colors">
+            <Trash2 className="w-3.5 h-3.5" /> Excluir
+          </button>
+        )}
         <button onClick={() => ordemSel && setModal('visualizar')}
           disabled={!selecionada}
           className="flex items-center gap-1.5 px-4 py-2 text-xs rounded-xl bg-slate-600 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-sm transition-colors">
@@ -1666,6 +1711,13 @@ function TabOrdens() {
         <ConfirmModal
           numero={ordemSel?.numero}
           onConfirm={cancelar}
+          onClose={() => setModal(null)}
+        />
+      )}
+      {modal === 'excluir' && (
+        <ConfirmExcluirModal
+          numero={ordemSel?.numero}
+          onConfirm={excluirDefinitivo}
           onClose={() => setModal(null)}
         />
       )}

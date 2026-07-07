@@ -149,17 +149,17 @@ const deleteItem = async (req, res) => {
     const { ContratoItem, ContratoItemVinculo, ContratoOrdemItem } = req.models;
     const item = await ContratoItem.findByPk(req.params.id);
     if (!item) return notFound(res, 'Item');
-    if (ContratoItemVinculo) {
-      const totalVinculos = await ContratoItemVinculo.count({ where: { item_id: item.id } });
-      if (totalVinculos > 0) {
-        return res.status(409).json({ error: `Este item esta vinculado a ${totalVinculos} contrato(s). Remova o item do(s) contrato(s) primeiro.` });
-      }
-    }
-    if (ContratoOrdemItem) {
-      const totalOrdens = await ContratoOrdemItem.count({ where: { item_id: item.id } });
-      if (totalOrdens > 0) {
-        return res.status(409).json({ error: `Este item esta vinculado a ${totalOrdens} ordem(ns) de compra/servico. Exclua ou desvincule as ordens primeiro.` });
-      }
+
+    const totalVinculos = ContratoItemVinculo ? await ContratoItemVinculo.count({ where: { item_id: item.id } }) : 0;
+    const totalOrdens = ContratoOrdemItem ? await ContratoOrdemItem.count({ where: { item_id: item.id } }) : 0;
+    if (totalVinculos > 0 || totalOrdens > 0) {
+      const partes = [];
+      if (totalVinculos > 0) partes.push(`${totalVinculos} contrato(s)`);
+      if (totalOrdens > 0) partes.push(`${totalOrdens} ordem(ns) de compra/servico`);
+      return res.status(409).json({
+        error: `Este item esta vinculado a ${partes.join(' e ')}. Remova esses vinculos primeiro.`,
+        vinculos: { contratos: totalVinculos, ordens: totalOrdens }
+      });
     }
 
     await item.update({ status: 'EXCLUÍDO' });
