@@ -228,7 +228,7 @@ export default function FormularioDid() {
   const { id: processoId, subdomain } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const { tenant } = useAuth()
+  const { tenant, user } = useAuth()
   // Modo somente leitura: ativado quando o processo está em outro setor/secretaria
   const readOnly = location.state?.readOnly === true
 
@@ -368,11 +368,12 @@ export default function FormularioDid() {
 
   useEffect(() => {
     if (processoId === 'novo') {
-      api.get('/did/proximo-numero')
-        .then(r => setProximoNumero(r.data.proximo))
+      const params = user?.secretariaId ? `?secretariaId=${user.secretariaId}` : ''
+      api.get(`/did/proximo-numero${params}`)
+        .then(r => setProximoNumero(r.data.formatado || r.data.proximo))
         .catch(() => {})
     }
-  }, [])
+  }, [user])
 
   // Calcula quantas seções devem estar visíveis baseado nos dados já salvos no banco.
   // Uma seção N+1 aparece somente quando a seção N tem pelo menos um campo preenchido.
@@ -574,9 +575,14 @@ export default function FormularioDid() {
   const refDateDid = new Date(dataRefDid + 'T00:00:00')
   const siglaDidSec = secDidObj?.sigla || secretariaSigla || ''
   const numBase = form.numero_did || did?.numero_did || proximoNumero
-  const numeroDIDFmt = numBase
-    ? `DID ${String(numBase).padStart(3, '0')}${siglaDidSec ? ` - ${siglaDidSec}` : ''}`
-    : 'Carregando...'
+  // Números novos já vêm formatados por secretaria (ex: "SEJUV-001") — exibe direto.
+  // Números antigos são só o sequencial global — mantém o formato legado com a sigla ao lado.
+  const numeroJaFormatado = /^[A-Za-z]+-\d+$/.test(String(numBase || ''))
+  const numeroDIDFmt = !numBase
+    ? 'Carregando...'
+    : numeroJaFormatado
+      ? `DID ${numBase}`
+      : `DID ${String(numBase).padStart(3, '0')}${siglaDidSec ? ` - ${siglaDidSec}` : ''}`
   const responsaveisDid = (secDidObj?.responsaveis || []).map(r => {
     const ini = r.data_inicio ? new Date(r.data_inicio + 'T00:00:00') : null
     const fim = r.data_fim    ? new Date(r.data_fim    + 'T00:00:00') : null

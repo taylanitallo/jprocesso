@@ -30,6 +30,14 @@ const fmtData = (d) => {
   return `${dia}/${m}/${y}`
 }
 
+// Números novos já vêm formatados por secretaria (ex: "SEJUV-001"); números
+// antigos são só o sequencial global e recebem o zero-padding legado.
+const fmtNumeroDid = (numeroDid) => {
+  if (!numeroDid) return '—'
+  const str = String(numeroDid)
+  return /^[A-Za-z]+-\d+$/.test(str) ? str : `DID-${str.padStart(3, '0')}`
+}
+
 // Situação financeira granular do DID: pago > liquidado a pagar > empenhado a pagar > pendente.
 // "Liquidado" mora em colunas diferentes conforme o tipo (Fixas: contabil_liquidado / Variáveis: contabil_pc_liquidado).
 const situacaoDid = (d) => {
@@ -327,7 +335,7 @@ function ModalVerDid({ processoId, tenant, onClose }) {
             {did && (
               <>
                 <span className="font-mono font-bold text-white text-base">
-                  DID-{String(did.numero_did || '').padStart(3, '0')}
+                  {fmtNumeroDid(did.numero_did)}
                 </span>
                 <span className={'px-2 py-0.5 rounded-full text-xs font-semibold ' + (
                   isVar ? 'bg-purple-500/30 text-purple-200' : 'bg-blue-500/30 text-blue-200'
@@ -1247,7 +1255,7 @@ export default function Financeiro() {
                           return (
                             <tr key={proc.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                               <td className="py-2.5 px-3 font-mono font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap">
-                                {d ? `DID-${String(d.numero_did).padStart(3, '0')}` : '—'}
+                                {d ? fmtNumeroDid(d.numero_did) : '—'}
                               </td>
                               <td className="py-2.5 px-3">
                                 {d ? (
@@ -1510,7 +1518,7 @@ export default function Financeiro() {
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
                               <span className="font-mono text-xs font-semibold text-blue-600 dark:text-blue-400">
-                                DID-{String(d.numero_did).padStart(3,'0')}
+                                {fmtNumeroDid(d.numero_did)}
                               </span>
                               <span className={'inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold ' + (
                                 d.tipo_did === 'variaveis'
@@ -1703,7 +1711,7 @@ export default function Financeiro() {
                         <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                           <td className="py-3 px-4">
                             <p className="font-mono text-blue-600 dark:text-blue-400 font-semibold whitespace-nowrap">{p.numero}</p>
-                            {did?.numero_did && <p className="text-xs text-gray-400">DID-{String(did.numero_did).padStart(3,'0')}</p>}
+                            {did?.numero_did && <p className="text-xs text-gray-400">{fmtNumeroDid(did.numero_did)}</p>}
                           </td>
                           <td className="py-3 px-4">
                             {did ? (
@@ -2241,7 +2249,7 @@ export default function Financeiro() {
                           const rows = relDidsOrdenados.map(p => {
                             const d = p.did
                             return [
-                              d ? `DID-${String(d.numero_did).padStart(3,'0')}` : p.numero || '—',
+                              d ? fmtNumeroDid(d.numero_did) : p.numero || '—',
                               d?.credor_sec1 || p.interessado_nome || '—',
                               d?.secretaria_sec1 || '—',
                               d?.tipo_did === 'variaveis' ? 'Variável' : d?.tipo_did === 'fixas' ? 'Fixa' : '—',
@@ -2341,7 +2349,7 @@ export default function Financeiro() {
                             return (
                               <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                 <td className="py-2.5 px-3 font-mono font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap">
-                                  {did ? `DID-${String(did.numero_did).padStart(3,'0')}` : p.numero || '—'}
+                                  {did ? fmtNumeroDid(did.numero_did) : p.numero || '—'}
                                 </td>
                                 <td className="py-2.5 px-3 text-gray-700 dark:text-slate-300 max-w-[200px] truncate" title={did?.credor_sec1 || p.interessado_nome || ''}>
                                   {did?.credor_sec1 || p.interessado_nome || <span className="text-gray-400">—</span>}

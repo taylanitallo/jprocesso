@@ -4,6 +4,14 @@ import { applyTimbradoToPage } from '../../utils/timbradoStore'
 import { getMargens } from '../../utils/margensStore'
 import { setPDFLoading } from '../../utils/pdfLoadingStore'
 
+// Números novos já vêm formatados por secretaria (ex: "SEJUV-001"); números
+// antigos são só o sequencial global e recebem o zero-padding legado.
+const fmtNumeroDid = (numeroDid) => {
+  if (!numeroDid) return '—'
+  const str = String(numeroDid)
+  return /^[A-Za-z]+-\d+$/.test(str) ? str : `DID-${str.padStart(3, '0')}`
+}
+
 // ─── Margens dinâmicas (atualizadas antes de cada geração) ────────────────────
 let M       = 12
 let UW      = 186
@@ -523,7 +531,7 @@ export function gerarPainelPDF({ painel, filtros, ano, orgNome }) {
     y = drawTable(doc, {
       head: ['No. DID', 'Tipo', 'Credor', 'Secretaria', 'Referencia', 'Data', 'Valor Bruto'],
       body: painel.dids.pendentes.map(d => [
-        `DID-${String(d.numero_did).padStart(3, '0')}`,
+        fmtNumeroDid(d.numero_did),
         fmtTipo(d.tipo_did),
         fmt(d.credor_sec1),
         fmt(d.secretaria_sec1),
@@ -558,7 +566,7 @@ export function gerarPainelPDF({ painel, filtros, ano, orgNome }) {
       margin: { left: M, right: M, top: 14, bottom: 14 },
       head: [['No. DID', 'Tipo', 'Credor', 'Secretaria', 'Data', 'Valor Bruto', 'Status']],
       body: painel.dids.ultimos.map(d => [
-        `DID-${String(d.numero_did).padStart(3, '0')}`,
+        fmtNumeroDid(d.numero_did),
         fmtTipo(d.tipo_did),
         fmt(d.credor_sec1),
         fmt(d.secretaria_sec1),

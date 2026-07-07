@@ -1,7 +1,8 @@
-﻿import { useState } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import api from '../services/api'
+import { useAuth } from '../context/AuthContext'
 import {
   ArrowLeft, Save, FileText, ChevronRight, FilePlus2,
   FileCheck, Calendar, Send, AlertTriangle,
@@ -16,11 +17,24 @@ const TIPOS_PROCESSO = [
 
 export default function NovoProcesso() {
   const { subdomain } = useParams()
-  const { register, handleSubmit, formState: { errors } } = useForm()
+  const { user } = useAuth()
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [tipoSelecionado, setTipoSelecionado] = useState(null)
+  const [carregandoNumeroDid, setCarregandoNumeroDid] = useState(false)
   const navigate = useNavigate()
+
+  // Pré-preenche o próximo número sequencial de DID (por secretaria) ao escolher esse tipo
+  useEffect(() => {
+    if (tipoSelecionado !== 'Did') return
+    setCarregandoNumeroDid(true)
+    const params = user?.secretariaId ? `?secretariaId=${user.secretariaId}` : ''
+    api.get(`/did/proximo-numero${params}`)
+      .then(({ data }) => setValue('did_numero', data.formatado || String(data.proximo)))
+      .catch(() => {})
+      .finally(() => setCarregandoNumeroDid(false))
+  }, [tipoSelecionado, setValue, user])
 
   const onSubmit = async (data) => {
     setLoading(true)
@@ -128,15 +142,15 @@ export default function NovoProcesso() {
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1.5">N° DID *</label>
               <input
-                {...register('did_numero', {
-                  required: tipoSelecionado === 'Did' ? 'N° DID é obrigatório' : false,
-                  pattern: { value: /^[0-9]+$/, message: 'Somente números são permitidos' }
-                })}
+                {...register('did_numero', { required: 'N° DID é obrigatório' })}
                 type="text"
-                inputMode="numeric"
-                className="input"
-                placeholder="Ex: 123"
+                disabled
+                className="input bg-gray-50 dark:bg-slate-800 opacity-75 cursor-not-allowed"
+                placeholder={carregandoNumeroDid ? 'Carregando número...' : 'Ex: SEJUV-001'}
               />
+              <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">
+                Número sequencial gerado automaticamente pela secretaria.
+              </p>
               {errors.did_numero && <p className="text-red-500 text-xs mt-1">{errors.did_numero.message}</p>}
             </div>
           )}

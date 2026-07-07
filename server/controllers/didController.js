@@ -112,9 +112,13 @@ const createOrUpdate = async (req, res) => {
     let did = await Did.findOne({ where: { processo_id: processoId } });
 
     if (!did) {
-      const count = await Did.count();
-      // Usa o numero_did fornecido (digitado no início do processo) ou auto-incrementa
-      const numeroDid = body.numero_did ? String(body.numero_did).trim() : String(count + 1);
+      // Usa o numero_did fornecido (gerado no início do processo) ou calcula
+      // a partir da sequência própria da secretaria do processo.
+      let numeroDid = body.numero_did ? String(body.numero_did).trim() : '';
+      if (!numeroDid) {
+        const { formatado } = await resolverProximoNumeroDid(req, { processoId });
+        numeroDid = formatado;
+      }
       did = await Did.create({
         ...body,
         processo_id: processoId,
@@ -283,11 +287,45 @@ async function getEstoque(req, res) {
   }
 }
 
+// ─── Numeração de DID por secretaria ──────────────────────────────────────
+// Cada secretaria tem sua própria sequência (ex: SEJUV-001, SEAD-001, ...),
+// contando apenas os DIDs já registrados com aquela secretaria.
+async function resolverProximoNumeroDid(req, { secretariaId, secretariaNomeOuSigla, processoId } = {}) {
+  const { Did, Secretaria, Processo, Setor } = req.models;
+  let sigla = '';
+  let nomeFiltro = null;
+
+  if (secretariaId && Secretaria) {
+    const sec = await Secretaria.findByPk(secretariaId);
+    if (sec) { sigla = sec.sigla || ''; nomeFiltro = sec.nome; }
+  }
+  if (!nomeFiltro && secretariaNomeOuSigla && Secretaria) {
+    const sec = await Secretaria.findOne({
+      where: { [Op.or]: [{ nome: secretariaNomeOuSigla }, { sigla: secretariaNomeOuSigla }] }
+    });
+    if (sec) { sigla = sec.sigla || ''; nomeFiltro = sec.nome; }
+    else nomeFiltro = secretariaNomeOuSigla;
+  }
+  if (!nomeFiltro && processoId && processoId !== 'novo' && Processo && Setor && Secretaria) {
+    const processo = await Processo.findByPk(processoId, {
+      include: [{ model: Setor, as: 'setorAtual', include: [{ model: Secretaria, as: 'secretaria' }] }]
+    });
+    const sec = processo?.setorAtual?.secretaria;
+    if (sec) { sigla = sec.sigla || ''; nomeFiltro = sec.nome; }
+  }
+
+  const where = nomeFiltro ? { secretaria_sec1: nomeFiltro } : {};
+  const count = await Did.count({ where });
+  const proximo = count + 1;
+  const formatado = sigla ? `${sigla}-${String(proximo).padStart(3, '0')}` : String(proximo);
+  return { proximo, sigla, formatado };
+}
+
 async function getProximoNumero(req, res) {
   try {
-    const { Did } = req.models;
-    const count = await Did.count();
-    res.json({ proximo: count + 1 });
+    const { secretariaId, secretaria } = req.query;
+    const resultado = await resolverProximoNumeroDid(req, { secretariaId, secretariaNomeOuSigla: secretaria });
+    res.json(resultado);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
