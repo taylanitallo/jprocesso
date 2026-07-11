@@ -66,8 +66,9 @@ export default function AuthProvider({ children }) {
     return () => { clearTimeout(safetyTimer); clearTimeout(timeout) }
   }, [])
 
-  const login = async (cpf, senha, subdomain) => {
-    const { data } = await api.post('/auth/login', { cpf, senha, subdomain })
+  // Aceita CPF (fluxo direto /{subdomain}/login) ou e-mail (fluxo por e-mail na tela inicial)
+  const login = async ({ cpf, email, senha, subdomain }) => {
+    const { data } = await api.post('/auth/login', { cpf, email, senha, subdomain })
 
     // M-3: access token em memória — nunca no localStorage
     setAccessToken(data.token)

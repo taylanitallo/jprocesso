@@ -92,6 +92,59 @@ const setRefreshTokenCookie = (res, token) =>
 const clearRefreshTokenCookie = (res) =>
   res.clearCookie('refreshToken', { ...REFRESH_COOKIE_OPTS, maxAge: 0 });
 
+// ── Busca de municípios por e-mail ──────────────────────────────────────────
+// Usuários vivem em {schema}.usuarios (um schema por município) — o e-mail só
+// é único dentro de cada schema. Para descobrir em quais municípios um e-mail
+// tem conta ativa, iteramos os tenants ativos e consultamos cada schema.
+const qi = () => masterDb.getQueryInterface();
+
+const buscarMunicipiosPorEmail = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email || typeof email !== 'string' || !email.includes('@')) {
+      return res.status(400).json({ error: 'E-mail válido é obrigatório' });
+    }
+    const emailNormalizado = email.trim().toLowerCase();
+
+    const tenants = await Tenant.findAll({
+      where: { ativo: true },
+      attributes: ['nome_municipio', 'subdominio', 'cidade', 'estado', 'schema', 'configuracoes'],
+    });
+
+    const resultados = await Promise.all(
+      tenants.map(async (tenant) => {
+        try {
+          const schemaQ = qi().quoteIdentifier(tenant.schema);
+          const rows = await masterDb.query(
+            `SELECT 1 FROM ${schemaQ}.usuarios WHERE LOWER(email) = :email AND ativo = true LIMIT 1`,
+            { replacements: { email: emailNormalizado }, type: QueryTypes.SELECT }
+          );
+          return rows.length > 0 ? tenant : null;
+        } catch {
+          // Schema sem tabela usuarios/coluna esperada — ignora silenciosamente
+          return null;
+        }
+      })
+    );
+
+    const municipios = resultados
+      .filter(Boolean)
+      .map(t => ({
+        nome_municipio: t.nome_municipio,
+        subdominio: t.subdominio,
+        cidade: t.cidade,
+        estado: t.estado,
+        configuracoes: t.configuracoes || {},
+      }))
+      .sort((a, b) => a.nome_municipio.localeCompare(b.nome_municipio));
+
+    res.json({ municipios });
+  } catch (error) {
+    console.error('Erro ao buscar municípios por e-mail:', error);
+    res.status(500).json({ error: 'Erro ao buscar municípios' });
+  }
+};
+
 const register = async (req, res) => {
   try {
     const { nome, nomeReduzido, email, senha, cpf, telefone, tipo, secretariaId, setorId, permissoes } = req.body;
@@ -229,6 +282,10 @@ const login = async (req, res) => {
       });
     }
     
+    if (!cpf && !email) {
+      return res.status(400).json({ error: 'CPF ou e-mail é obrigatório' });
+    }
+
     const tenant = await Tenant.findOne({ where: { subdominio: subdomain, ativo: true } });
     if (!tenant) {
       return res.status(404).json({ error: 'Cliente não encontrado' });
@@ -238,8 +295,11 @@ const login = async (req, res) => {
     const models = initTenantModels(tenantDb);
     const { User } = models;
 
-    const user = await User.findOne({ 
-      where: { cpf, ativo: true },
+    const { Op, fn, col, where: sqlWhere } = require('sequelize');
+    const user = await User.findOne({
+      where: email
+        ? { [Op.and]: [sqlWhere(fn('LOWER', col('User.email')), email.trim().toLowerCase()), { ativo: true }] }
+        : { cpf, ativo: true },
       include: [
         { model: models.Secretaria, as: 'secretaria' },
         { model: models.Setor, as: 'setor' }
@@ -621,6 +681,7 @@ const logoutUser = async (req, res) => {
 };
 
 module.exports = {
+  buscarMunicipiosPorEmail,
   register,
   login,
   getProfile,

@@ -58,6 +58,24 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
     // 0. Usuários — coluna nome_reduzido
     run(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS nome_reduzido VARCHAR(60)`),
 
+    // 0e. Usuários — CHECK de tipo precisa aceitar 'jeos' (Administrador Jeos)
+    run(`
+      ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS usuarios_tipo_check;
+      ALTER TABLE usuarios ADD CONSTRAINT usuarios_tipo_check
+        CHECK (tipo IN ('admin', 'gestor', 'operacional', 'jeos'));
+    `),
+
+    // 0f. Usuários — CPF/e-mail únicos só entre usuários não-'jeos'. Administrador
+    // Jeos (equipe JEOS) reutiliza o mesmo CPF/e-mail em todos os municípios.
+    run(`
+      ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS usuarios_cpf_key;
+      ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS usuarios_email_key;
+      CREATE UNIQUE INDEX IF NOT EXISTS usuarios_cpf_unico_idx
+        ON usuarios (cpf) WHERE tipo <> 'jeos';
+      CREATE UNIQUE INDEX IF NOT EXISTS usuarios_email_unico_idx
+        ON usuarios (email) WHERE tipo <> 'jeos';
+    `),
+
     // 0a. Processos — colunas opcionais adicionadas após criação inicial
     run(`
       ALTER TABLE processos

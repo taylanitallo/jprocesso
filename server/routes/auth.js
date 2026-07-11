@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { login, register, getProfile, getUsersBySecretaria, listUsers, updateUser, deleteUser, refreshToken, logoutUser } = require('../controllers/authController');
+const { login, register, getProfile, getUsersBySecretaria, listUsers, updateUser, deleteUser, refreshToken, logoutUser, buscarMunicipiosPorEmail } = require('../controllers/authController');
 const { authenticate, tenantMiddleware, requireTenant, authorize } = require('../middleware/auth');
 
 // M-4: em produção, valida Origin nos endpoints que recebem o cookie cross-site
@@ -25,6 +25,7 @@ const validateRefreshOrigin = (req, res, next) => {
 };
 
 // ── Autenticação ──────────────────────────────────────────────────────────────
+router.post('/buscar-municipios', buscarMunicipiosPorEmail); // pública — passo 1 do login por e-mail
 router.post('/login',   login);
 router.post('/refresh', validateRefreshOrigin, refreshToken);  // lê cookie httpOnly
 router.post('/logout',  validateRefreshOrigin, logoutUser);    // revoga refresh + limpa cookie

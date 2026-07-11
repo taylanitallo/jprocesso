@@ -924,12 +924,12 @@ async function criarEstruturaIsolada(schema, tenant, usuarioAdmin) {
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         nome VARCHAR(255) NOT NULL,
         nome_reduzido VARCHAR(60),
-        email VARCHAR(255) UNIQUE,
-        cpf VARCHAR(11) NOT NULL UNIQUE,
+        email VARCHAR(255),
+        cpf VARCHAR(11) NOT NULL,
         senha VARCHAR(255) NOT NULL,
         telefone VARCHAR(11),
         tipo VARCHAR(20) NOT NULL DEFAULT 'operacional'
-          CHECK (tipo IN ('admin', 'gestor', 'operacional')),
+          CHECK (tipo IN ('admin', 'gestor', 'operacional', 'jeos')),
         ativo BOOLEAN DEFAULT TRUE,
         secretaria_id UUID REFERENCES ${schema}.secretarias(id),
         setor_id UUID REFERENCES ${schema}.setores(id),
@@ -940,6 +940,14 @@ async function criarEstruturaIsolada(schema, tenant, usuarioAdmin) {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      -- CPF/e-mail únicos apenas entre usuários "normais" — Administrador Jeos (tipo='jeos')
+      -- fica de fora, pois é a mesma pessoa (equipe JEOS) logando em todos os municípios
+      -- com o mesmo CPF/e-mail.
+      CREATE UNIQUE INDEX IF NOT EXISTS usuarios_cpf_unico_idx
+        ON ${schema}.usuarios (cpf) WHERE tipo <> 'jeos';
+      CREATE UNIQUE INDEX IF NOT EXISTS usuarios_email_unico_idx
+        ON ${schema}.usuarios (email) WHERE tipo <> 'jeos';
 
       -- Processos
       CREATE TABLE IF NOT EXISTS ${schema}.processos (

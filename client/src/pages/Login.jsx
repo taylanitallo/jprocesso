@@ -40,7 +40,7 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
-      await login(cpf, senha, subdomain)
+      await login({ cpf, senha, subdomain })
       navigate(`/${subdomain}`)
     } catch (err) {
       setError(err.response?.data?.error || 'CPF ou senha inválidos. Tente novamente.')
