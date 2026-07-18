@@ -76,6 +76,14 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
         ON usuarios (email) WHERE tipo <> 'jeos';
     `),
 
+    // 0g. Tramitações — CHECK de tipo_acao precisa aceitar 'recebimento'
+    // (schemas antigos foram criados sem esse valor e quebram o "Receber processo")
+    run(`
+      ALTER TABLE tramitacoes DROP CONSTRAINT IF EXISTS tramitacoes_tipo_acao_check;
+      ALTER TABLE tramitacoes ADD CONSTRAINT tramitacoes_tipo_acao_check
+        CHECK (tipo_acao IN ('abertura', 'tramite', 'devolucao', 'conclusao', 'arquivamento', 'recebimento'));
+    `),
+
     // 0a. Processos — colunas opcionais adicionadas após criação inicial
     run(`
       ALTER TABLE processos
@@ -691,6 +699,13 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
   await run(`
     ALTER TABLE dids
       ADD COLUMN IF NOT EXISTS conta_pagamento_id UUID
+  `);
+
+  // DID — numero_did como VARCHAR(30) (schemas antigos usavam INTEGER;
+  // o modelo grava strings tipo "SEMAD-001"). Idempotente: varchar→varchar é no-op.
+  await run(`
+    ALTER TABLE dids
+      ALTER COLUMN numero_did TYPE VARCHAR(30) USING numero_did::text
   `);
 
   // Contratos — coluna tipo_objeto
