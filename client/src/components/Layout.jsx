@@ -120,6 +120,10 @@ export default function Layout() {
     { path: `/${subdomain}/registros`,     icon: ClipboardList, label: 'Registros',   permissao: 'administracao.visualizar_registros' },
   ]
 
+  const visibleAdminMenuItems = adminMenuItems.filter((item) => (
+    item.permissaoAny ? temAlgumaPermissao(item.permissaoAny) : temPermissao(item.permissao)
+  ))
+
   const isActive = (path, exact = false) => {
     if (exact) return location.pathname === path
     return location.pathname.startsWith(path)
@@ -230,17 +234,15 @@ export default function Layout() {
           </div>
 
           {/* Menu administração */}
-          {(user?.tipo === 'admin' || user?.tipo === 'gestor') && (
+          {visibleAdminMenuItems.length > 0 && (
             <div>
               <p className={`px-3 mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400 dark:text-slate-500 ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
                 Administração
               </p>
               <div className="space-y-0.5">
-                {adminMenuItems.map((item) => {
+                {visibleAdminMenuItems.map((item) => {
                   const active = isActive(item.path)
                   const Icon = item.icon
-                  const permitido = item.permissaoAny ? temAlgumaPermissao(item.permissaoAny) : temPermissao(item.permissao)
-                  if (!permitido) return null
                   return (
                     <Link
                       key={item.path}
