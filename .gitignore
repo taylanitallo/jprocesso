@@ -65,3 +65,6 @@ README.md
 SYSTEM_PROMPT.md
 
 *.sql
+
+.vercel
+.env*
