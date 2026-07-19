@@ -90,6 +90,13 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
         ADD COLUMN IF NOT EXISTS tipo_processo VARCHAR(50)
     `),
 
+    // 0a-bis. Anexos — colunas adicionadas após criação inicial (tenants antigos)
+    run(`
+      ALTER TABLE anexos
+        ADD COLUMN IF NOT EXISTS tipo_origem VARCHAR(30) DEFAULT 'anexo',
+        ADD COLUMN IF NOT EXISTS ordem       INTEGER     DEFAULT 0
+    `),
+
     // 0d. Refresh tokens persistidos por tenant (substitui Map em memória)
     run(`
       CREATE TABLE IF NOT EXISTS refresh_tokens (

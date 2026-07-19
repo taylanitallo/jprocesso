@@ -12,6 +12,8 @@ import { subscribePDFLoading } from './utils/pdfLoadingStore'
 import Layout from './components/Layout'
 import GlobalProgressBar from './components/GlobalProgressBar'
 import LoadingBar from './components/LoadingBar'
+import SessionActivityGuard from './components/SessionActivityGuard'
+import UpdateNotifier from './components/UpdateNotifier'
 import Login from './pages/Login'
 import LoginAdmin from './pages/LoginAdmin'
 import MunicipioSelector from './pages/MunicipioSelector'
@@ -156,6 +158,8 @@ function App() {
         <TimbradoSync />
         <MargensSync />
         <PDFLoadingOverlay />
+        <SessionActivityGuard />
+        <UpdateNotifier />
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<MunicipioSelector />} />
