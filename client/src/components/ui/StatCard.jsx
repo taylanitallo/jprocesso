@@ -10,6 +10,8 @@
  *   trend   – { value: string, up: boolean } — indicador de tendência (opcional)
  */
 
+import AutoFitValue from './AutoFitValue'
+
 const TONES = {
   blue:   {
     icon:  'bg-blue-50   dark:bg-blue-900/30   text-blue-600   dark:text-blue-400',
@@ -54,7 +56,7 @@ export default function StatCard({ icon: Icon, label, value, hint, tone = 'blue'
 
   return (
     <div className={`
-      flex items-center gap-5 px-5 py-5 min-h-[104px]
+      flex items-center gap-4 px-4 py-5 min-h-[104px]
       bg-white dark:bg-slate-800/70
       rounded-2xl border ${t.border}
       shadow-sm hover:shadow-md hover:-translate-y-0.5
@@ -69,21 +71,26 @@ export default function StatCard({ icon: Icon, label, value, hint, tone = 'blue'
 
       {/* Textos */}
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 leading-tight mb-1 uppercase tracking-wide">
+        <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 leading-tight mb-1 uppercase tracking-wide truncate">
           {label}
         </p>
-        <p className={`text-3xl font-bold leading-none ${t.value}`}>
+        <AutoFitValue
+          className={`font-bold leading-none ${t.value}`}
+          title={value != null ? String(value) : undefined}
+          max={30}
+          min={16}
+        >
           {value ?? '—'}
-        </p>
+        </AutoFitValue>
         {(hint || trend) && (
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex items-center gap-2 mt-1.5">
             {hint && (
               <span className="text-xs text-gray-400 dark:text-slate-500 truncate">
                 {hint}
               </span>
             )}
             {trend && (
-              <span className={`text-xs font-semibold ${trend.up ? t.trend.up : t.trend.down}`}>
+              <span className={`shrink-0 text-xs font-semibold ${trend.up ? t.trend.up : t.trend.down}`}>
                 {trend.up ? '↑' : '↓'} {trend.value}
               </span>
             )}

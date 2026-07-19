@@ -129,13 +129,25 @@ const buscarMunicipiosPorEmail = async (req, res) => {
 
     const municipios = resultados
       .filter(Boolean)
-      .map(t => ({
-        nome_municipio: t.nome_municipio,
-        subdominio: t.subdominio,
-        cidade: t.cidade,
-        estado: t.estado,
-        configuracoes: t.configuracoes || {},
-      }))
+      .map(t => {
+        // Enviar apenas os campos de logo usados na tela de seleção.
+        // Nunca incluir o timbrado (imagem base64 pesada) nem margens — isso
+        // inflava a resposta para vários MB e travava/atrasava o login.
+        const c = t.configuracoes || {};
+        return {
+          nome_municipio: t.nome_municipio,
+          subdominio: t.subdominio,
+          cidade: t.cidade,
+          estado: t.estado,
+          configuracoes: {
+            logo_login_url:   c.logo_login_url   ?? null,
+            logo_interna_url: c.logo_interna_url ?? null,
+            logo_url:         c.logo_url         ?? null,
+            brasao_url:       c.brasao_url       ?? null,
+            imagem_url:       c.imagem_url       ?? null,
+          },
+        };
+      })
       .sort((a, b) => a.nome_municipio.localeCompare(b.nome_municipio));
 
     res.json({ municipios });
