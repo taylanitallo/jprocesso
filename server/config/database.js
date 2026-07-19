@@ -836,6 +836,22 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
   `);
   await run(`CREATE INDEX IF NOT EXISTS idx_tes_despesas_ordem ON tes_despesas(ordem_id)`);
   await run(`CREATE INDEX IF NOT EXISTS idx_tes_despesas_conta ON tes_despesas(conta_id)`);
+
+  // Grupos de contas do relatório "Saldo por Conta" — privados por usuário
+  await run(`
+    CREATE TABLE IF NOT EXISTS tes_grupos_contas (
+      id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+      usuario_id  UUID         NOT NULL,
+      nome        VARCHAR(80)  NOT NULL,
+      descricao   TEXT,
+      contas_ids  JSONB        NOT NULL DEFAULT '[]'::jsonb,
+      ordem       INTEGER      NOT NULL DEFAULT 0,
+      ativo       BOOLEAN      NOT NULL DEFAULT TRUE,
+      created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+      updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run(`CREATE INDEX IF NOT EXISTS idx_tes_grupos_contas_usuario ON tes_grupos_contas(usuario_id)`);
 };
 
 const getTenantConnection = async (tenantSchema) => {

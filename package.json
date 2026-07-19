@@ -9,7 +9,14 @@
     "build": "cd client && npm install && npm run build",
     "client": "cd client && npm run dev",
     "dev:full": "concurrently \"npm run dev\" \"npm run client\"",
-    "create-admin": "node server/scripts/createAdmin.js"
+    "create-admin": "node server/scripts/createAdmin.js",
+    "demo:seed": "node server/scripts/seed_demo_modelo.js",
+    "demo:reset": "node server/scripts/seed_demo_modelo.js --reset",
+    "demo:tensao": "node server/scripts/seed_demo_tensao.js --aplicar",
+    "demo:tensao:simular": "node server/scripts/seed_demo_tensao.js",
+    "demo:tensao:desfazer": "node server/scripts/seed_demo_tensao.js --restaurar",
+    "demo:preparar": "npm run demo:reset && npm run demo:tensao",
+    "apresentacao:telas": "node apresentacao/scripts/capturar-telas.js"
   },
   "keywords": [
     "workflow",
@@ -43,6 +50,7 @@
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
-    "nodemon": "^3.0.2"
+    "nodemon": "^3.0.2",
+    "playwright": "^1.62.0"
   }
 }

@@ -11,6 +11,7 @@ import {
   Landmark, Plus, Edit2, Trash2, Save, X,
   TrendingUp, TrendingDown, BarChart2,
   Printer, Search, CheckCircle2, Clock, RotateCcw, CreditCard, ShoppingCart,
+  Layers, Settings2, ChevronDown, ChevronUp, Check, AlertTriangle,
 } from 'lucide-react';
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
@@ -102,16 +103,19 @@ export default function Tesouraria() {
   );
 }
 
+// Rótulo padrão de uma conta bancária: "12345-6 — Nome da Conta"
+const contaLabel = (c) => {
+  const num = c.conta ? `${c.conta}${c.conta_digito ? `-${c.conta_digito}` : ''}` : null;
+  return num ? `${num} — ${c.nome}` : c.nome;
+};
+
 // ─── Combobox de busca de conta bancária ────────────────────────────────────────
 function ContaSelectInput({ value, contas, onChange }) {
   const [inputText, setInputText] = useState('');
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
-  const getLabel = (c) => {
-    const num = c.conta ? `${c.conta}${c.conta_digito ? `-${c.conta_digito}` : ''}` : null;
-    return num ? `${num} — ${c.nome}` : c.nome;
-  };
+  const getLabel = contaLabel;
 
   useEffect(() => {
     if (!value) { setInputText(''); return; }
@@ -1389,6 +1393,297 @@ function TabDespesas() {
   );
 }
 
+// Compara duas listas de ids ignorando a ordem
+const mesmasContas = (a = [], b = []) =>
+  a.length === b.length && [...a].sort().join() === [...b].sort().join();
+
+// ─── Seleção múltipla de contas (checkboxes + busca) ────────────────────────────
+function ContasMultiSelect({ contas, value, onAplicar, sinalAbrir = 0 }) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const [q, setQ] = useState('');
+  const ref = useRef(null);
+
+  // Ressincroniza o rascunho quando a seleção muda por fora (clique num chip de grupo)
+  useEffect(() => { setDraft(value); }, [value]);
+
+  // Permite que outro ponto da tela (ex: estado vazio do gerenciador) abra o painel
+  useEffect(() => { if (sinalAbrir) setOpen(true); }, [sinalAbrir]);
+
+  useEffect(() => {
+    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, []);
+
+  const termo = q.trim().toLowerCase();
+  const visiveis = termo
+    ? contas.filter(c =>
+        c.nome.toLowerCase().includes(termo) ||
+        (c.conta || '').includes(termo) ||
+        (c.banco_nome || '').toLowerCase().includes(termo)
+      )
+    : contas;
+
+  const toggle = (id) => setDraft(d => d.includes(id) ? d.filter(x => x !== id) : [...d, id]);
+  const marcarVisiveis = () => setDraft(d => [...new Set([...d, ...visiveis.map(c => c.id)])]);
+
+  const aplicar = () => { onAplicar(draft); setOpen(false); };
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="input-field text-sm flex items-center justify-between gap-2 min-w-[13rem]"
+      >
+        <span className={value.length ? 'text-gray-800 dark:text-slate-200' : 'text-gray-400'}>
+          {value.length ? `${value.length} conta${value.length > 1 ? 's' : ''} selecionada${value.length > 1 ? 's' : ''}` : 'Selecionar contas'}
+        </span>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-80 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl shadow-xl overflow-hidden">
+          <div className="p-2 border-b border-gray-100 dark:border-slate-700">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+              <input
+                value={q}
+                onChange={e => setQ(e.target.value)}
+                placeholder="Buscar conta..."
+                className="input-field text-xs pl-8"
+                autoFocus
+              />
+            </div>
+          </div>
+
+          <div className="max-h-64 overflow-y-auto">
+            {visiveis.length === 0 && (
+              <p className="px-3 py-6 text-center text-xs text-gray-400">Nenhuma conta encontrada</p>
+            )}
+            {visiveis.map(c => {
+              const marcada = draft.includes(c.id);
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => toggle(c.id)}
+                  className="w-full flex items-start gap-2.5 text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700/60 transition-colors border-b border-gray-100 dark:border-slate-700/40 last:border-0"
+                >
+                  <span className={`mt-0.5 h-4 w-4 shrink-0 rounded border flex items-center justify-center transition-colors ${marcada ? 'bg-blue-600 border-blue-600' : 'border-gray-300 dark:border-slate-500'}`}>
+                    {marcada && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-xs font-medium text-gray-800 dark:text-slate-200 truncate">{contaLabel(c)}</span>
+                    {c.banco_nome && <span className="block text-[11px] text-gray-500 dark:text-slate-400 truncate">{c.banco_nome}</span>}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/40">
+            <div className="flex gap-2 text-[11px]">
+              <button type="button" onClick={marcarVisiveis} className="text-blue-600 dark:text-blue-400 hover:underline">
+                {termo ? 'Marcar filtradas' : 'Marcar todas'}
+              </button>
+              <span className="text-gray-300 dark:text-slate-600">|</span>
+              <button type="button" onClick={() => setDraft([])} className="text-gray-500 dark:text-slate-400 hover:underline">Limpar</button>
+            </div>
+            <span className="text-[11px] text-gray-500 dark:text-slate-400">{draft.length} marcada{draft.length !== 1 ? 's' : ''}</span>
+          </div>
+
+          <div className="px-3 py-2 border-t border-gray-100 dark:border-slate-700">
+            <button type="button" onClick={aplicar} className="btn-primary w-full text-xs py-1.5">Aplicar</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Modal: nomear um novo grupo de contas ──────────────────────────────────────
+function NomearGrupoModal({ qtdContas, onSalvar, onCancel }) {
+  const [nome, setNome] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const salvar = async () => {
+    if (!nome.trim() || saving) return;
+    setSaving(true);
+    const ok = await onSalvar(nome.trim());
+    if (!ok) setSaving(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm">
+        <div className="px-4 py-3 border-b border-gray-100 dark:border-slate-700 flex items-center gap-2">
+          <Layers className="h-4 w-4 text-blue-600" />
+          <h3 className="text-sm font-semibold text-gray-800 dark:text-slate-200">Salvar grupo de contas</h3>
+        </div>
+        <div className="p-4 space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Nome do grupo *</label>
+            <input
+              value={nome}
+              onChange={e => setNome(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && salvar()}
+              maxLength={80}
+              placeholder="Ex: Contas de Recurso Saúde"
+              className="input-field text-sm"
+              autoFocus
+            />
+          </div>
+          <p className="text-xs text-gray-500 dark:text-slate-400">
+            {qtdContas} conta{qtdContas !== 1 ? 's' : ''} será{qtdContas !== 1 ? 'ão' : ''} salva{qtdContas !== 1 ? 's' : ''} neste grupo. O grupo é seu — outros usuários não o enxergam.
+          </p>
+        </div>
+        <div className="px-4 py-3 border-t border-gray-100 dark:border-slate-700 flex justify-end gap-2">
+          <button onClick={onCancel} className="btn-secondary text-sm px-4 py-2">Cancelar</button>
+          <button onClick={salvar} disabled={!nome.trim() || saving} className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5 disabled:opacity-40">
+            <Save className="h-4 w-4" /> {saving ? 'Salvando...' : 'Salvar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Modal: gerenciar grupos salvos ─────────────────────────────────────────────
+function GerenciarGruposModal({ grupos, contas, onRenomear, onExcluir, onReordenar, onEditarContas, onCriarGrupo, onClose }) {
+  const [editando, setEditando] = useState(null);   // { id, nome }
+  const [confirmando, setConfirmando] = useState(null);
+
+  const salvarNome = async () => {
+    const alvo = editando;
+    setEditando(null);
+    if (alvo && alvo.nome.trim()) await onRenomear(alvo.id, alvo.nome.trim());
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
+        <div className="px-4 py-3 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Settings2 className="h-4 w-4 text-blue-600" />
+            <h3 className="text-sm font-semibold text-gray-800 dark:text-slate-200">Gerenciar grupos de contas</h3>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-200">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {grupos.length === 0 && (
+            <div className="py-8 text-center space-y-3">
+              <p className="text-sm text-gray-500 dark:text-slate-400">Nenhum grupo salvo ainda.</p>
+              <p className="text-xs text-gray-400 dark:text-slate-500 max-w-xs mx-auto leading-relaxed">
+                Um grupo é um conjunto de contas que você salva para consultar de novo com um clique.
+                Marque as contas primeiro; o botão de salvar aparece logo abaixo dos chips.
+              </p>
+              <button onClick={onCriarGrupo} className="btn-primary text-xs px-4 py-2 inline-flex items-center gap-1.5">
+                <Plus className="h-3.5 w-3.5" /> Selecionar contas
+              </button>
+            </div>
+          )}
+
+          {grupos.map((g, i) => {
+            const validas = (g.contas_ids || []).filter(id => contas.some(c => c.id === id));
+            const orfas = (g.contas_ids || []).length - validas.length;
+            return (
+              <div key={g.id} className="border border-gray-200 dark:border-slate-600 rounded-lg p-3 flex items-start gap-3">
+                {grupos.length > 1 && (
+                  <div className="flex flex-col gap-0.5 pt-0.5">
+                    <button
+                      onClick={() => onReordenar(i, i - 1)}
+                      disabled={i === 0}
+                      className="text-gray-400 hover:text-gray-700 dark:hover:text-slate-200 disabled:opacity-20"
+                      title="Mover para cima"
+                    >
+                      <ChevronUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => onReordenar(i, i + 1)}
+                      disabled={i === grupos.length - 1}
+                      className="text-gray-400 hover:text-gray-700 dark:hover:text-slate-200 disabled:opacity-20"
+                      title="Mover para baixo"
+                    >
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex-1 min-w-0">
+                  {editando?.id === g.id ? (
+                    <input
+                      value={editando.nome}
+                      onChange={e => setEditando({ id: g.id, nome: e.target.value })}
+                      onBlur={salvarNome}
+                      onKeyDown={e => { if (e.key === 'Enter') salvarNome(); if (e.key === 'Escape') setEditando(null); }}
+                      maxLength={80}
+                      className="input-field text-sm py-1"
+                      autoFocus
+                    />
+                  ) : (
+                    <button
+                      onClick={() => setEditando({ id: g.id, nome: g.nome })}
+                      className="text-sm font-medium text-gray-800 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 text-left"
+                      title="Clique para renomear"
+                    >
+                      {g.nome}
+                    </button>
+                  )}
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+                    {validas.length} conta{validas.length !== 1 ? 's' : ''}
+                    {orfas > 0 && (
+                      <span className="text-amber-600 dark:text-amber-400 ml-1.5 inline-flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3" />
+                        {orfas} conta{orfas > 1 ? 's' : ''} não existe{orfas > 1 ? 'm' : ''} mais
+                      </span>
+                    )}
+                  </p>
+                </div>
+
+                <div className="flex gap-1 shrink-0">
+                  <button
+                    onClick={() => onEditarContas(g)}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-700"
+                    title="Editar contas do grupo"
+                  >
+                    <Edit2 className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setConfirmando(g)}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-slate-700"
+                    title="Excluir grupo"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="px-4 py-3 border-t border-gray-100 dark:border-slate-700 flex justify-end">
+          <button onClick={onClose} className="btn-secondary text-sm px-4 py-2">Fechar</button>
+        </div>
+      </div>
+
+      {confirmando && (
+        <ConfirmModal
+          title="Excluir grupo"
+          message={`Excluir o grupo "${confirmando.nome}"? As contas bancárias não são afetadas.`}
+          confirmLabel="Excluir"
+          onConfirm={async () => { await onExcluir(confirmando.id); setConfirmando(null); }}
+          onClose={() => setConfirmando(null)}
+        />
+      )}
+    </div>
+  );
+}
+
 // ─── Tab: Relatórios ─────────────────────────────────────────────────────────────
 function TabRelatorios() {
   const { tenant } = useAuth();
@@ -1398,12 +1693,36 @@ function TabRelatorios() {
   const [resultado, setResultado] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const loadSaldo = async (f = {}) => {
+  // ── Grupos de contas do "Saldo por Conta" ───────────────────────────────────
+  const [grupos, setGrupos] = useState([]);
+  const [grupoAtivo, setGrupoAtivo] = useState(null);   // id do grupo em uso; null = seleção livre
+  const [selecao, setSelecao] = useState([]);           // ids das contas; [] = todas
+  const [modalNomear, setModalNomear] = useState(false);
+  const [modalGerenciar, setModalGerenciar] = useState(false);
+  const [sinalAbrir, setSinalAbrir] = useState(0);   // incrementar abre o painel de contas
+
+  // Grupo ativo cujas contas foram mexidas na mão e ainda não salvas
+  const grupoObj = grupos.find(g => g.id === grupoAtivo) || null;
+  const grupoModificado = !!grupoObj && !mesmasContas(grupoObj.contas_ids || [], selecao);
+
+  const carregarGrupos = async () => {
+    try {
+      const r = await api.get('/tesouraria/grupos-contas');
+      setGrupos(r.data.grupos || []);
+      return r.data.grupos || [];
+    } catch { return []; }
+  };
+
+  // `sel`/`gid` são passados explicitamente porque o estado do React ainda não
+  // reflete a mudança no mesmo tick em que o chip/aplicar dispara a consulta.
+  const loadSaldo = async (f = {}, sel = selecao, gid = grupoAtivo, gModificado = grupoModificado) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (f.data_de) params.append('data_de', f.data_de);
       if (f.data_ate) params.append('data_ate', f.data_ate);
+      if (gid && !gModificado) params.append('grupo_id', gid);
+      else if (sel.length) params.append('contas_ids', sel.join(','));
       const r = await api.get(`/tesouraria/relatorios/saldo-contas?${params}`);
       setResultado({ tipo: 'saldo', ...r.data });
     } catch (err) {
@@ -1415,8 +1734,97 @@ function TabRelatorios() {
 
   useEffect(() => {
     api.get('/organizacao/contas-bancarias').then(r => setContas(r.data.contas || [])).catch(() => {});
+    carregarGrupos();
     loadSaldo();
   }, []);
+
+  // Se a listagem de contas não vier (erro/permissão), aproveita as contas que o
+  // próprio relatório sem filtro já devolveu — senão o seletor fica vazio sem explicação.
+  useEffect(() => {
+    if (!contas.length && resultado?.tipo === 'saldo' && !resultado.filtro) {
+      setContas(resultado.contas || []);
+    }
+  }, [contas.length, resultado]);
+
+  // Chip "Todas as contas"
+  const usarTodas = () => {
+    setGrupoAtivo(null);
+    setSelecao([]);
+    loadSaldo(filtros, [], null, false);
+  };
+
+  // Chip de um grupo salvo
+  const usarGrupo = (g) => {
+    const ids = g.contas_ids || [];
+    setGrupoAtivo(g.id);
+    setSelecao(ids);
+    loadSaldo(filtros, ids, g.id, false);
+  };
+
+  // "Aplicar" da seleção manual — mantém o grupo ativo marcado como modificado.
+  // Seleção vazia equivale a "todas as contas", então também solta o grupo ativo.
+  const aplicarSelecao = (ids) => {
+    if (!ids.length) return usarTodas();
+    setSelecao(ids);
+    const aindaNoGrupo = grupoObj && mesmasContas(grupoObj.contas_ids || [], ids);
+    loadSaldo(filtros, ids, grupoAtivo, !aindaNoGrupo);
+  };
+
+  const salvarNovoGrupo = async (nome) => {
+    try {
+      const r = await api.post('/tesouraria/grupos-contas', { nome, contas_ids: selecao });
+      await carregarGrupos();
+      setGrupoAtivo(r.data.grupo.id);
+      setModalNomear(false);
+      loadSaldo(filtros, selecao, r.data.grupo.id, false);
+      return true;
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao salvar grupo');
+      return false;
+    }
+  };
+
+  const atualizarGrupoAtivo = async () => {
+    try {
+      await api.put(`/tesouraria/grupos-contas/${grupoAtivo}`, { contas_ids: selecao });
+      await carregarGrupos();
+      loadSaldo(filtros, selecao, grupoAtivo, false);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao atualizar grupo');
+    }
+  };
+
+  const renomearGrupo = async (id, nome) => {
+    try {
+      await api.put(`/tesouraria/grupos-contas/${id}`, { nome });
+      await carregarGrupos();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao renomear grupo');
+    }
+  };
+
+  const excluirGrupo = async (id) => {
+    try {
+      await api.delete(`/tesouraria/grupos-contas/${id}`);
+      await carregarGrupos();
+      if (grupoAtivo === id) usarTodas();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao excluir grupo');
+    }
+  };
+
+  const reordenarGrupos = async (de, para) => {
+    if (para < 0 || para >= grupos.length) return;
+    const nova = [...grupos];
+    const [mov] = nova.splice(de, 1);
+    nova.splice(para, 0, mov);
+    setGrupos(nova);   // reflete na hora; persiste em seguida
+    try {
+      await Promise.all(nova.map((g, i) => api.put(`/tesouraria/grupos-contas/${g.id}`, { ordem: i })));
+    } catch {
+      carregarGrupos();   // desfaz o otimismo se o servidor recusar
+    }
+  };
 
   const inpF = k => e => setFiltros(p => ({ ...p, [k]: e.target.value }));
   const fmtVal = v => v != null ? parseFloat(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—';
@@ -1490,8 +1898,14 @@ function TabRelatorios() {
     let title = '', body = '';
 
     if (resultado.tipo === 'saldo') {
-      title = 'Saldo por Conta Bancária';
-      body = `<h2>${title}</h2><p>Gerado em ${now}</p>
+      // Sem o nome do grupo no cabeçalho, um relatório filtrado impresso fica
+      // indistinguível de um relatório de todas as contas.
+      const nomeGrupo = resultado.filtro?.grupo_nome;
+      title = nomeGrupo ? `Saldo por Conta Bancária — ${nomeGrupo}` : 'Saldo por Conta Bancária';
+      const escopo = resultado.filtro
+        ? `${resultado.contas.length} conta${resultado.contas.length !== 1 ? 's' : ''} selecionada${resultado.contas.length !== 1 ? 's' : ''}`
+        : 'Todas as contas ativas';
+      body = `<h2>${title}</h2><p>${escopo} | Gerado em ${now}</p>
         <table class="data">
           <thead><tr>
             <th class="th-blue" align="left">Conta</th>
@@ -1596,9 +2010,67 @@ function TabRelatorios() {
             </button>
           ))}
         </div>
+        {/* Grupos de contas — atalhos salvos + seleção manual */}
+        {tipo === 'saldo' && (
+          <div className="space-y-2 pb-1 border-b border-gray-100 dark:border-slate-700">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs font-medium text-gray-500 dark:text-slate-400 mr-1">Grupo:</span>
+              <button
+                onClick={usarTodas}
+                className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${!grupoAtivo && !selecao.length ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600'}`}
+              >
+                Todas as contas
+              </button>
+              {grupos.map(g => (
+                <button
+                  key={g.id}
+                  onClick={() => usarGrupo(g)}
+                  className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors flex items-center gap-1.5 ${grupoAtivo === g.id ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600'}`}
+                  title={`${(g.contas_ids || []).length} conta(s)`}
+                >
+                  <Layers className="h-3 w-3" />
+                  {g.nome}
+                  {grupoAtivo === g.id && grupoModificado && <span className="opacity-75">(modificado)</span>}
+                </button>
+              ))}
+              {!grupoAtivo && selecao.length > 0 && (
+                <span className="text-xs px-3 py-1.5 rounded-full font-medium bg-blue-600 text-white">
+                  Seleção manual ({selecao.length})
+                </span>
+              )}
+              <button
+                onClick={() => setModalGerenciar(true)}
+                className="text-xs px-3 py-1.5 rounded-full font-medium text-gray-500 dark:text-slate-400 border border-dashed border-gray-300 dark:border-slate-600 hover:text-blue-600 hover:border-blue-400 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"
+                title="Renomear, editar contas ou excluir grupos"
+              >
+                <Settings2 className="h-3.5 w-3.5" />
+                {grupos.length ? 'Editar grupos' : 'Criar grupo'}
+              </button>
+            </div>
+
+            {/* Ações de gravação da seleção corrente */}
+            {selecao.length > 0 && (grupoModificado || !grupoAtivo) && (
+              <div className="flex flex-wrap items-center gap-2">
+                {grupoModificado && (
+                  <button onClick={atualizarGrupoAtivo} className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+                    <Save className="h-3 w-3" /> Atualizar "{grupoObj.nome}" com esta seleção
+                  </button>
+                )}
+                <button onClick={() => setModalNomear(true)} className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+                  <Plus className="h-3 w-3" /> Salvar como {grupoModificado ? 'novo ' : ''}grupo
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex flex-wrap items-end gap-3">
           {tipo === 'saldo' && (
             <>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Contas</label>
+                <ContasMultiSelect contas={contas} value={selecao} onAplicar={aplicarSelecao} sinalAbrir={sinalAbrir} />
+              </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">De</label>
                 <input type="date" value={filtros.data_de} onChange={inpF('data_de')} className="input-field text-sm" />
@@ -1664,7 +2136,21 @@ function TabRelatorios() {
           {resultado.tipo === 'saldo' && (
             <>
               <div className="px-4 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700">
-                <h3 className="text-sm font-semibold text-gray-800 dark:text-slate-200">Saldo por Conta Bancária</h3>
+                <h3 className="text-sm font-semibold text-gray-800 dark:text-slate-200">
+                  Saldo por Conta Bancária
+                  {resultado.filtro?.grupo_nome && <span className="text-blue-600 dark:text-blue-400"> — {resultado.filtro.grupo_nome}</span>}
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+                  {resultado.filtro
+                    ? `${resultado.contas.length} conta${resultado.contas.length !== 1 ? 's' : ''} selecionada${resultado.contas.length !== 1 ? 's' : ''}`
+                    : 'Todas as contas ativas'}
+                  {resultado.filtro?.indisponiveis > 0 && (
+                    <span className="text-amber-600 dark:text-amber-400 ml-2 inline-flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      {resultado.filtro.indisponiveis} conta{resultado.filtro.indisponiveis > 1 ? 's' : ''} do grupo não está{resultado.filtro.indisponiveis > 1 ? 'ão' : ''} mais disponível{resultado.filtro.indisponiveis > 1 ? 'eis' : ''}
+                    </span>
+                  )}
+                </p>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -1787,6 +2273,27 @@ function TabRelatorios() {
             </>
           )}
         </div>
+      )}
+
+      {modalNomear && (
+        <NomearGrupoModal
+          qtdContas={selecao.length}
+          onSalvar={salvarNovoGrupo}
+          onCancel={() => setModalNomear(false)}
+        />
+      )}
+
+      {modalGerenciar && (
+        <GerenciarGruposModal
+          grupos={grupos}
+          contas={contas}
+          onRenomear={renomearGrupo}
+          onExcluir={excluirGrupo}
+          onReordenar={reordenarGrupos}
+          onEditarContas={(g) => { setModalGerenciar(false); usarGrupo(g); setSinalAbrir(n => n + 1); }}
+          onCriarGrupo={() => { setModalGerenciar(false); setSinalAbrir(n => n + 1); }}
+          onClose={() => setModalGerenciar(false)}
+        />
       )}
     </div>
   );

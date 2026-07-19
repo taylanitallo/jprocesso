@@ -1,9 +1,36 @@
 const { Op, fn, col } = require('sequelize');
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Normaliza uma lista de UUIDs vinda do cliente (CSV ou array), descartando lixo.
+// Evita que um id malformado derrube a query com erro de cast do Postgres.
+const parseUuidList = (v) => {
+  const raw = Array.isArray(v) ? v : String(v || '').split(',');
+  return [...new Set(raw.map(s => String(s).trim()).filter(s => UUID_RE.test(s)))];
+};
+
 const saldoContas = async (req, res) => {
   try {
-    const { ContaBancaria, TesReceita, TesDespesa, Did } = req.models;
-    const { data_de, data_ate } = req.query;
+    const { ContaBancaria, TesReceita, TesDespesa, Did, TesGrupoConta } = req.models;
+    const { data_de, data_ate, contas_ids, grupo_id } = req.query;
+
+    // Filtro de contas: grupo salvo tem precedência sobre a seleção manual.
+    // Sem nenhum dos dois, o relatório sai com todas as contas ativas (comportamento padrão).
+    let filtroContasIds = null;
+    let grupo = null;
+
+    if (grupo_id && UUID_RE.test(grupo_id)) {
+      grupo = await TesGrupoConta.findOne({
+        where: { id: grupo_id, usuario_id: req.user.id, ativo: true },
+      });
+      if (!grupo) return res.status(404).json({ error: 'Grupo de contas não encontrado' });
+      filtroContasIds = parseUuidList(grupo.contas_ids);
+    } else if (contas_ids) {
+      filtroContasIds = parseUuidList(contas_ids);
+    }
+
+    const contaWhere = { ativo: true };
+    if (filtroContasIds) contaWhere.id = { [Op.in]: filtroContasIds };
 
     const receitaWhere = {};
     if (data_de || data_ate) {
@@ -26,8 +53,15 @@ const saldoContas = async (req, res) => {
       if (data_ate) didWhere.tesouraria_recebido_em[Op.lte] = data_ate;
     }
 
+    // Restringe também as agregações às contas filtradas (Op.in de UUIDs já implica NOT NULL)
+    if (filtroContasIds) {
+      receitaWhere.conta_id = { [Op.in]: filtroContasIds };
+      despesaWhere.conta_id = { [Op.in]: filtroContasIds };
+      didWhere.conta_pagamento_id = { [Op.in]: filtroContasIds };
+    }
+
     const [contas, receitas, despesas, didDespesas] = await Promise.all([
-      ContaBancaria.findAll({ where: { ativo: true }, order: [['nome', 'ASC']] }),
+      ContaBancaria.findAll({ where: contaWhere, order: [['nome', 'ASC']] }),
       TesReceita.findAll({
         attributes: ['conta_id', [fn('SUM', col('valor')), 'total']],
         where: receitaWhere,
@@ -62,7 +96,18 @@ const saldoContas = async (req, res) => {
       saldo:    result.reduce((s, c) => s + c.saldo, 0),
     };
 
-    res.json({ contas: result, totais });
+    // Contas do grupo que não voltaram na consulta (excluídas ou desativadas depois
+    // que o grupo foi salvo) — o front avisa o usuário sem quebrar o relatório.
+    const filtro = filtroContasIds
+      ? {
+          grupo_id: grupo?.id || null,
+          grupo_nome: grupo?.nome || null,
+          solicitadas: filtroContasIds.length,
+          indisponiveis: filtroContasIds.length - result.length,
+        }
+      : null;
+
+    res.json({ contas: result, totais, filtro });
   } catch (err) {
     console.error('saldoContas:', err);
     res.status(500).json({ error: 'Erro ao calcular saldo das contas' });

@@ -189,8 +189,11 @@ const getDashboard = async (req, res) => {
       limit: 10
     });
 
+    // 'PENDENTE' é status legado e NÃO existe no enum do banco. Incluí-lo aqui fazia o
+    // Postgres rejeitar a comparação inteira (22P02), derrubando o painel com erro 500 —
+    // e zerando os cartões de estoque crítico e requisições no Dashboard.
     const requisicoesPendentes = await AlmoxarifadoRequisicao.count({
-      where: { status: { [Op.in]: ['PENDENTE', 'PENDENTE_AUTORIZACAO'] } }
+      where: { status: 'PENDENTE_AUTORIZACAO' }
     });
 
     const itensParaValor = await AlmoxarifadoItem.findAll({

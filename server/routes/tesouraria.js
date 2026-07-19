@@ -3,6 +3,7 @@ const router = express.Router();
 const { listReceitas, createReceita, updateReceita, deleteReceita } = require('../controllers/receitasController');
 const { listDespesas, registrarPagamento, updatePagamento, estornarPagamento } = require('../controllers/despesasController');
 const { saldoContas, fluxoMensal, extratoConta } = require('../controllers/relatoriosController');
+const { listGrupos, createGrupo, updateGrupo, deleteGrupo } = require('../controllers/gruposContasController');
 const { authenticate, tenantMiddleware, requireTenant, authorize } = require('../middleware/auth');
 
 // ── Receitas ──────────────────────────────────────────────────────────────────
@@ -21,5 +22,11 @@ router.delete('/despesas/pagamento/:id',  tenantMiddleware, requireTenant, authe
 router.get('/relatorios/saldo-contas', tenantMiddleware, requireTenant, authenticate, saldoContas);
 router.get('/relatorios/fluxo-mensal', tenantMiddleware, requireTenant, authenticate, fluxoMensal);
 router.get('/relatorios/extrato',      tenantMiddleware, requireTenant, authenticate, extratoConta);
+
+// ── Grupos de contas do "Saldo por Conta" (privados por usuário) ──────────────
+router.get('/grupos-contas',        tenantMiddleware, requireTenant, authenticate, listGrupos);
+router.post('/grupos-contas',       tenantMiddleware, requireTenant, authenticate, createGrupo);
+router.put('/grupos-contas/:id',    tenantMiddleware, requireTenant, authenticate, updateGrupo);
+router.delete('/grupos-contas/:id', tenantMiddleware, requireTenant, authenticate, deleteGrupo);
 
 module.exports = router;

@@ -136,13 +136,15 @@ export default function Dashboard() {
     },
     itensCriticos.length > 0 && {
       icon: Package, tone: 'orange',
-      title: `${itensCriticos.length} item${itensCriticos.length > 1 ? 'ns' : ''} em estoque crítico`,
+      // "item" + "ns" gerava "itemns"; o plural troca a palavra inteira.
+      title: `${itensCriticos.length} ${itensCriticos.length > 1 ? 'itens' : 'item'} em estoque crítico`,
       desc: itensCriticos[0]?.nome || 'Abaixo do mínimo definido',
       link: `/${subdomain}/almoxarifado/itens`,
     },
     (reqPendentes > 0) && {
       icon: ClipboardList, tone: 'blue',
-      title: `${reqPendentes} requisição${reqPendentes > 1 ? 'ões' : ''} pendente${reqPendentes > 1 ? 's' : ''}`,
+      // "requisição" + "ões" gerava "requisiçãoões"; o plural substitui o "ção" por "ções".
+      title: `${reqPendentes} ${reqPendentes > 1 ? 'requisições pendentes' : 'requisição pendente'}`,
       desc: 'Aguardando autorização ou atendimento',
       link: `/${subdomain}/almoxarifado/requisicoes`,
     },

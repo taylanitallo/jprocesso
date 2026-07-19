@@ -31,6 +31,7 @@ const definePatInventarioItemModel = require('./PatInventarioItem');
 const defineContaBancariaModel = require('./ContaBancaria');
 const defineTesReceitaModel = require('./TesReceita');
 const defineTesDespesaModel = require('./TesDespesa');
+const defineTesGrupoContaModel = require('./TesGrupoConta');
 const defineLogModel = require('./Log');
 
 const initTenantModels = (sequelize) => {
@@ -67,6 +68,7 @@ const initTenantModels = (sequelize) => {
   const ContaBancaria = defineContaBancariaModel(sequelize);
   const TesReceita = defineTesReceitaModel(sequelize);
   const TesDespesa = defineTesDespesaModel(sequelize);
+  const TesGrupoConta = defineTesGrupoContaModel(sequelize);
   const Log = defineLogModel(sequelize);
 
   // Contrato → Credor
@@ -237,6 +239,7 @@ const initTenantModels = (sequelize) => {
     ContaBancaria,
     TesReceita,
     TesDespesa,
+    TesGrupoConta,
     Log,
   };
 };
