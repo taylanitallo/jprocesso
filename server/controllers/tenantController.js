@@ -565,6 +565,8 @@ async function migrarSchemaUsuarios(schema, pool) {
       data_upload   TIMESTAMP     DEFAULT NOW(),
       descricao     TEXT,
       versao        INTEGER       DEFAULT 1,
+      tipo_origem   VARCHAR(30)   DEFAULT 'anexo',
+      ordem         INTEGER       DEFAULT 0,
       created_at    TIMESTAMP     DEFAULT NOW(),
       updated_at    TIMESTAMP     DEFAULT NOW()
     );
@@ -579,6 +581,8 @@ async function migrarSchemaUsuarios(schema, pool) {
       ADD COLUMN IF NOT EXISTS data_upload   TIMESTAMP             DEFAULT NOW(),
       ADD COLUMN IF NOT EXISTS descricao     TEXT,
       ADD COLUMN IF NOT EXISTS versao        INTEGER               DEFAULT 1,
+      ADD COLUMN IF NOT EXISTS tipo_origem   VARCHAR(30)           DEFAULT 'anexo',
+      ADD COLUMN IF NOT EXISTS ordem         INTEGER               DEFAULT 0,
       ADD COLUMN IF NOT EXISTS created_at    TIMESTAMP             DEFAULT NOW(),
       ADD COLUMN IF NOT EXISTS updated_at    TIMESTAMP             DEFAULT NOW();
     -- Colunas legadas (schemas antigos): só ajustar default se existirem
