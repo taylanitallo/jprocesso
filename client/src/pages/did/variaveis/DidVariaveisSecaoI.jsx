@@ -12,7 +12,7 @@ function ModalOrdemCompra({ onConfirm, onClose }) {
 
   useEffect(() => {
     setLoading(true)
-    api.get('/contratos/ordens/disponiveis-did')
+    api.get('/contratos/ordens/disponiveis-did', { params: { destino: 'variaveis' } })
       .then(r => setOrdens(Array.isArray(r.data) ? r.data : []))
       .catch(() => setOrdens([]))
       .finally(() => setLoading(false))

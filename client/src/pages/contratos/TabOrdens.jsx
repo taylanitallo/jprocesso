@@ -661,6 +661,7 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
 
   const FORM_VAZIO = {
     tipo: '',
+    destino_did: '',
     contrato_id: '',
     data_emissao: new Date().toISOString().slice(0, 10),
     data_entrega_prevista: '',
@@ -675,6 +676,7 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
 
   const [form, setForm] = useState(() => ordem ? {
     tipo:                  ordem.tipo || '',
+    destino_did:           ordem.destino_did || '',
     contrato_id:           ordem.contrato_id || '',
     data_emissao:          ordem.data_emissao || new Date().toISOString().slice(0, 10),
     data_entrega_prevista: ordem.data_entrega_prevista || '',
@@ -790,12 +792,17 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
 
   const salvar = () => {
     if (!form.tipo)         { alert('Selecione o tipo de ordem.'); return }
+    if (form.tipo === 'SERVICO' && !form.destino_did) {
+      alert('Selecione o destino da ordem: Conta Fixa ou Conta Variável.'); return
+    }
     if (!form.contrato_id)  { alert('Selecione o contrato.'); return }
     if (!form.objeto.trim()){ alert('Informe o objeto/descrição da ordem.'); return }
     if (!form.data_emissao) { alert('Informe a data de emissão.'); return }
     if (itens.length === 0) { alert('Adicione ao menos um item.'); return }
     if (saldo?.sem_saldo)   { alert('Saldo insuficiente no contrato!'); return }
-    onSave({ ...form, itens, valor_total: valorTotal })
+    // OC é sempre conta variável — não carrega destino
+    const destino_did = form.tipo === 'SERVICO' ? form.destino_did : null
+    onSave({ ...form, destino_did, itens, valor_total: valorTotal })
   }
 
   const contratoSel = contratos.find(c => String(c.id) === String(form.contrato_id))
@@ -842,30 +849,69 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
           {/* Tipo de Ordem */}
           <SectionCard icon={ClipboardList} title="Tipo de Ordem" subtitle="Selecione o tipo antes de preencher os demais campos">
             {readonly
-              ? <p className="text-sm font-semibold text-gray-800 dark:text-slate-200">
-                  {form.tipo === 'COMPRA' ? '🛒 Ordem de Compra' : '🔧 Ordem de Serviço'}
-                </p>
+              ? <div className="space-y-1">
+                  <p className="text-sm font-semibold text-gray-800 dark:text-slate-200">
+                    {form.tipo === 'COMPRA' ? '🛒 Ordem de Compra' : '🔧 Ordem de Serviço'}
+                  </p>
+                  {form.tipo === 'SERVICO' && (
+                    <p className="text-xs text-gray-500 dark:text-slate-400">
+                      Destino: {form.destino_did === 'FIXA' ? 'DID Contas Fixas' : form.destino_did === 'VARIAVEL' ? 'DID Contas Variáveis' : 'Não definido (aparece nos dois DIDs)'}
+                    </p>
+                  )}
+                </div>
               : (
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { value: 'COMPRA',  label: 'Ordem de Compra',  icon: ShoppingCart, cor: 'blue'   },
-                    { value: 'SERVICO', label: 'Ordem de Serviço', icon: Wrench,       cor: 'orange' },
-                  ].map(({ value, label, icon: Icon, cor }) => (
-                    <button
-                      key={value}
-                      onClick={() => set('tipo', value)}
-                      className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
-                        form.tipo === value
-                          ? cor === 'blue'
-                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                            : 'border-amber-500 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300'
-                          : 'border-gray-200 dark:border-slate-600 hover:border-gray-300 dark:hover:border-slate-500 text-gray-600 dark:text-slate-400'
-                      }`}
-                    >
-                      <Icon className="w-5 h-5 shrink-0" />
-                      <span className="font-semibold text-sm">{label}</span>
-                    </button>
-                  ))}
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { value: 'COMPRA',  label: 'Ordem de Compra',  icon: ShoppingCart, cor: 'blue'   },
+                      { value: 'SERVICO', label: 'Ordem de Serviço', icon: Wrench,       cor: 'orange' },
+                    ].map(({ value, label, icon: Icon, cor }) => (
+                      <button
+                        key={value}
+                        onClick={() => set('tipo', value)}
+                        className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
+                          form.tipo === value
+                            ? cor === 'blue'
+                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                              : 'border-amber-500 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300'
+                            : 'border-gray-200 dark:border-slate-600 hover:border-gray-300 dark:hover:border-slate-500 text-gray-600 dark:text-slate-400'
+                        }`}
+                      >
+                        <Icon className="w-5 h-5 shrink-0" />
+                        <span className="font-semibold text-sm">{label}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Destino do DID — só para Ordem de Serviço (OC é sempre conta variável) */}
+                  {form.tipo === 'SERVICO' && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">
+                        Destino da Ordem — em qual DID esta ordem vai aparecer?
+                      </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {[
+                          { value: 'FIXA',     label: 'Conta Fixa',     desc: 'DID Contas Fixas',     cor: 'purple' },
+                          { value: 'VARIAVEL', label: 'Conta Variável', desc: 'DID Contas Variáveis', cor: 'emerald' },
+                        ].map(({ value, label, desc, cor }) => (
+                          <button
+                            key={value}
+                            onClick={() => set('destino_did', value)}
+                            className={`flex flex-col items-start gap-0.5 p-3 rounded-xl border-2 transition-all text-left ${
+                              form.destino_did === value
+                                ? cor === 'purple'
+                                  ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300'
+                                  : 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300'
+                                : 'border-gray-200 dark:border-slate-600 hover:border-gray-300 dark:hover:border-slate-500 text-gray-600 dark:text-slate-400'
+                            }`}
+                          >
+                            <span className="font-semibold text-sm">{label}</span>
+                            <span className="text-[10px] opacity-70">{desc}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
           </SectionCard>
@@ -1606,12 +1652,23 @@ function TabOrdens() {
                   >
                     <td className="px-3 py-2 font-mono font-semibold text-blue-600 dark:text-blue-400">{o.numero}</td>
                     <td className="px-3 py-2">
-                      <span className={`flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md w-fit ${
-                        o.tipo === 'COMPRA' ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'
-                      }`}>
-                        {o.tipo === 'COMPRA' ? <ShoppingCart className="w-3 h-3" /> : <Wrench className="w-3 h-3" />}
-                        {o.tipo === 'COMPRA' ? 'Compra' : 'Serviço'}
-                      </span>
+                      <div className="flex flex-col gap-1 w-fit">
+                        <span className={`flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md w-fit ${
+                          o.tipo === 'COMPRA' ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'
+                        }`}>
+                          {o.tipo === 'COMPRA' ? <ShoppingCart className="w-3 h-3" /> : <Wrench className="w-3 h-3" />}
+                          {o.tipo === 'COMPRA' ? 'Compra' : 'Serviço'}
+                        </span>
+                        {o.tipo === 'SERVICO' && o.destino_did && (
+                          <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-md w-fit ${
+                            o.destino_did === 'FIXA'
+                              ? 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400'
+                              : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400'
+                          }`}>
+                            {o.destino_did === 'FIXA' ? 'Fixa' : 'Variável'}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap font-medium">{o.contrato?.numero_contrato || '—'}</td>
                     <td className="px-3 py-2 max-w-[220px] truncate">{o.objeto}</td>

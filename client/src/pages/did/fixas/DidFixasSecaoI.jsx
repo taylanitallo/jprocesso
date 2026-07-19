@@ -200,7 +200,7 @@ function ModalOrdemServico({ onConfirm, onClose }) {
 
   useEffect(() => {
     setLoading(true)
-    api.get('/contratos/ordens/disponiveis-did')
+    api.get('/contratos/ordens/disponiveis-did', { params: { destino: 'fixas' } })
       .then(r => setOrdens(Array.isArray(r.data) ? r.data.filter(o => o.tipo === 'SERVICO') : []))
       .catch(() => setOrdens([]))
       .finally(() => setLoading(false))

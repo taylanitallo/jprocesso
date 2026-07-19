@@ -436,7 +436,7 @@ const getItensContrato = async (req, res) => {
 const listOrdemDisponivelDid = async (req, res) => {
   try {
     const { ContratoOrdem, ContratoOrdemItem, Contrato, Credor, Did, Secretaria } = req.models;
-    const { q } = req.query;
+    const { q, destino } = req.query;
 
     // IDs de ordens já vinculadas a algum DID (coluna pode não existir em bancos antigos)
     let idsVinculados = [];
@@ -454,6 +454,27 @@ const listOrdemDisponivelDid = async (req, res) => {
       where.id = { [Op.notIn]: idsVinculados };
     }
 
+    // Condições combinadas com AND (destino, secretaria, busca)
+    const andConds = [];
+
+    // Filtro por destino do DID (Opção A: OS legadas sem destino aparecem nos dois)
+    // - fixas:     só Ordens de Serviço marcadas como FIXA (ou sem marcação)
+    // - variaveis: todas as OCs + OSs marcadas como VARIAVEL (ou sem marcação)
+    if (destino === 'fixas') {
+      andConds.push({ tipo: 'SERVICO' });
+      andConds.push({ [Op.or]: [{ destino_did: 'FIXA' }, { destino_did: { [Op.is]: null } }] });
+    } else if (destino === 'variaveis') {
+      andConds.push({
+        [Op.or]: [
+          { tipo: 'COMPRA' },
+          {
+            tipo: 'SERVICO',
+            [Op.or]: [{ destino_did: 'VARIAVEL' }, { destino_did: { [Op.is]: null } }],
+          },
+        ],
+      });
+    }
+
     // Usuários não-admin/jeos só veem ordens da própria secretaria
     const userTipo = req.user?.tipo;
     if (userTipo !== 'admin' && userTipo !== 'jeos') {
@@ -466,7 +487,7 @@ const listOrdemDisponivelDid = async (req, res) => {
           if (sec.nome)  filtros.push({ secretaria: { [Op.iLike]: `%${sec.nome}%`  } });
           if (sec.sigla) filtros.push({ secretaria: { [Op.iLike]: `%${sec.sigla}%` } });
           if (filtros.length > 0) {
-            where[Op.or] = filtros;
+            andConds.push({ [Op.or]: filtros });
           }
         }
       } else if (req.user?.secretariaNome) {
@@ -477,20 +498,10 @@ const listOrdemDisponivelDid = async (req, res) => {
 
     if (q) {
       const qLike = `%${q}%`;
-      // Só substitui o Op.or se não houver filtro de secretaria (senão usa Op.and)
-      if (where[Op.or]) {
-        where[Op.and] = [
-          { [Op.or]: where[Op.or] },
-          { [Op.or]: [{ numero: { [Op.iLike]: qLike } }, { objeto: { [Op.iLike]: qLike } }] },
-        ];
-        delete where[Op.or];
-      } else {
-        where[Op.or] = [
-          { numero: { [Op.iLike]: qLike } },
-          { objeto:  { [Op.iLike]: qLike } },
-        ];
-      }
+      andConds.push({ [Op.or]: [{ numero: { [Op.iLike]: qLike } }, { objeto: { [Op.iLike]: qLike } }] });
     }
+
+    if (andConds.length > 0) where[Op.and] = andConds;
 
     const ordens = await ContratoOrdem.findAll({
       where,

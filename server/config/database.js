@@ -758,6 +758,7 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
   await run(`CREATE INDEX IF NOT EXISTS idx_contratos_ordens_contrato ON contratos_ordens(contrato_id)`);
   await run(`CREATE INDEX IF NOT EXISTS idx_contratos_ordens_status   ON contratos_ordens(status)`);
   await run(`ALTER TABLE contratos_ordens ADD COLUMN IF NOT EXISTS justificativa TEXT`);
+  await run(`ALTER TABLE contratos_ordens ADD COLUMN IF NOT EXISTS destino_did VARCHAR(10)`);
 
   await run(`
     CREATE TABLE IF NOT EXISTS contratos_ordens_itens (
