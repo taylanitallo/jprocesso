@@ -76,7 +76,7 @@ const _revokeRefreshToken = (db, isAdmin, jti) =>
 // M-2: TTL curto — 15 min. Sessões longas são mantidas pelo refresh token (30d).
 const generateAccessToken = (payload) =>
   jwt.sign(payload, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE || '15m',
+    expiresIn: process.env.JWT_EXPIRE || '30m',
   });
 const REFRESH_COOKIE_OPTS = {
   httpOnly: true,
@@ -193,14 +193,15 @@ const register = async (req, res) => {
     });
 
     const token = jwt.sign(
-      { 
-        id: user.id, 
-        email: user.email, 
+      {
+        id: user.id,
+        email: user.email,
         tipo: user.tipo,
-        tenantId: req.tenant.id
+        tenantId: req.tenant.id,
+        subdomain: req.tenant.subdominio
       },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRE || '7d' }
+      { expiresIn: process.env.JWT_EXPIRE || '30m' }
     );
 
     res.status(201).json({
@@ -260,7 +261,7 @@ const login = async (req, res) => {
           isAdmin: true
         },
         process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRE || '7d' }
+        { expiresIn: process.env.JWT_EXPIRE || '30m' }
       );
 
       // Setar refresh token em cookie httpOnly (aditivo — não altera resposta existente)
@@ -329,7 +330,7 @@ const login = async (req, res) => {
         setorId: user.setorId || null
       },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRE || '7d' }
+      { expiresIn: process.env.JWT_EXPIRE || '30m' }
     );
 
     // Setar refresh token em cookie httpOnly (aditivo — não altera resposta existente)

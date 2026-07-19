@@ -29,10 +29,16 @@ const authenticate = async (req, res, next) => {
     // C-3: algoritmo fixado para prevenir ataques de confusão de algoritmo
     const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
 
-    // C-1: se o token pertence a um tenant específico, garantir que corresponde
-    // ao tenant resolvido pelo tenantMiddleware nesta requisição
-    if (decoded.subdomain && req.tenant) {
-      if (decoded.subdomain !== req.tenant.subdominio) {
+    // C-1 / SEC: binding token↔tenant. Um token emitido para um município jamais
+    // pode operar sobre outro. Enforçado sempre que a rota resolveu um tenant
+    // (req.tenant) e o token não é do admin global (isAdmin usa requireSuperAdmin).
+    // Verifica subdomain E tenantId — assim tokens sem subdomain (ex.: emitidos no
+    // /register) também ficam presos ao seu município de origem.
+    if (req.tenant && !decoded.isAdmin) {
+      if (decoded.subdomain && decoded.subdomain !== req.tenant.subdominio) {
+        return res.status(403).json({ error: 'Token não autorizado para este município' });
+      }
+      if (decoded.tenantId != null && String(decoded.tenantId) !== String(req.tenant.id)) {
         return res.status(403).json({ error: 'Token não autorizado para este município' });
       }
     }

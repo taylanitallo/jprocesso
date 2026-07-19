@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { authenticate, tenantMiddleware, requireTenant } = require('../middleware/auth');
 const { listLogs, listModulos } = require('../controllers/logController');
+// SEGURANÇA: tenantMiddleware DEVE rodar antes de authenticate para que o binding
+// token↔tenant (em authenticate) seja aplicado. Caso contrário req.tenant fica
+// indefinido e um token válido de outro município passaria sem verificação.
 
 // Verifica se o usuário tem acesso ao módulo de registros
 const checkRegistrosPermissao = async (req, res, next) => {
@@ -26,8 +29,9 @@ const checkRegistrosPermissao = async (req, res, next) => {
   }
 };
 
-router.use(authenticate);
 router.use(tenantMiddleware);
+router.use(requireTenant);
+router.use(authenticate);
 router.use(checkRegistrosPermissao);
 
 router.get('/',        listLogs);
