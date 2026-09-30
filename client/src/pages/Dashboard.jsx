@@ -26,32 +26,32 @@ const fmtMoney = (v) =>
 
 const STATUS_LABEL = { aberto: 'Aberto', em_analise: 'Em Análise', pendente: 'Pendente', devolvido: 'Devolvido', concluido: 'Concluído', arquivado: 'Arquivado' }
 const STATUS_CLS   = { aberto: 'status-aberto', em_analise: 'status-em_analise', pendente: 'status-pendente', devolvido: 'status-devolvido', concluido: 'status-concluido', arquivado: 'status-arquivado' }
-const PRIO_CLS     = { urgente: 'bg-red-500', alta: 'bg-orange-400', normal: 'bg-blue-400', baixa: 'bg-gray-300 dark:bg-slate-600' }
+const PRIO_CLS     = { urgente: 'bg-danger-500', alta: 'bg-orange-400', normal: 'bg-info-400', baixa: 'bg-ink-300' }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 function Skeleton({ className = '' }) {
-  return <div className={`bg-gray-100 dark:bg-slate-800 rounded-xl animate-pulse ${className}`} />
+  return <div className={`bg-ink-100 rounded-xl animate-pulse ${className}`} />
 }
 
 function AlertItem({ icon: Icon, title, desc, tone, link }) {
   const cls = {
-    red:    'bg-red-50 dark:bg-red-900/15 border-red-200 dark:border-red-800/40 text-red-700 dark:text-red-300',
+    red:    'bg-danger-50 dark:bg-danger-900/15 border-danger-200 dark:border-danger-800/40 text-danger-700 dark:text-danger-300',
     amber:  'bg-amber-50 dark:bg-amber-900/15 border-amber-200 dark:border-amber-800/40 text-amber-700 dark:text-amber-300',
-    blue:   'bg-blue-50 dark:bg-blue-900/15 border-blue-200 dark:border-blue-800/40 text-blue-700 dark:text-blue-300',
+    blue:   'bg-info-50 dark:bg-info-900/15 border-info-200 dark:border-info-800/40 text-brand-700 dark:text-info-300',
     orange: 'bg-orange-50 dark:bg-orange-900/15 border-orange-200 dark:border-orange-800/40 text-orange-700 dark:text-orange-300',
   }[tone] || ''
 
   const iconCls = {
-    red: 'text-red-500', amber: 'text-amber-500',
-    blue: 'text-blue-500', orange: 'text-orange-500',
-  }[tone] || 'text-gray-400'
+    red: 'text-danger-500', amber: 'text-amber-500',
+    blue: 'text-info-500', orange: 'text-orange-500',
+  }[tone] || 'text-ink-400'
 
   const inner = (
     <div className={`flex items-start gap-3 p-3 rounded-xl border transition-all hover:shadow-sm ${cls}`}>
-      <Icon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${iconCls}`} />
+      <Icon className={`w-4 h-4 shrink-0 mt-0.5 ${iconCls}`} />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold leading-snug">{title}</p>
-        <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 leading-snug">{desc}</p>
+        <p className="text-xs text-ink-500 mt-0.5 leading-snug">{desc}</p>
       </div>
     </div>
   )
@@ -152,7 +152,7 @@ export default function Dashboard() {
 
   // ── Ações rápidas ─────────────────────────────────────────────────────────
   const acoes = [
-    { to: `/${subdomain}/processos/novo`,             icon: FilePlus2,   label: 'Novo Processo',   color: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 border-blue-100 dark:border-blue-900/30' },
+    { to: `/${subdomain}/processos/novo`,             icon: FilePlus2,   label: 'Novo Processo',   color: 'text-brand-600 dark:text-info-400 bg-info-50 dark:bg-info-900/20 hover:bg-info-100 dark:hover:bg-info-900/40 border-info-100 dark:border-info-900/30' },
     { to: `/${subdomain}/contratos`,                  icon: FileText,    label: 'Contratos',        color: 'text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/20 hover:bg-violet-100 dark:hover:bg-violet-900/40 border-violet-100 dark:border-violet-900/30' },
     { to: `/${subdomain}/financeiro`,                 icon: TrendingUp,  label: 'Financeiro',       color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border-emerald-100 dark:border-emerald-900/30' },
     { to: `/${subdomain}/almoxarifado/requisicoes`,   icon: ClipboardList, label: 'Requisição',    color: 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/40 border-orange-100 dark:border-orange-900/30' },
@@ -167,9 +167,9 @@ export default function Dashboard() {
         title={`${greeting()}, ${user?.nomeReduzido || user?.nome?.split(' ')[0]}`}
         subtitle={
           <span className="flex items-center gap-2 flex-wrap">
-            <Building2 className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+            <Building2 className="h-3.5 w-3.5 text-ink-400 shrink-0" />
             <span>{user?.secretaria?.nome || 'Secretaria'}</span>
-            <span className="text-gray-300 dark:text-slate-600">·</span>
+            <span className="text-ink-300">·</span>
             <span>{user?.setor?.nome || 'Setor'}</span>
           </span>
         }
@@ -177,14 +177,14 @@ export default function Dashboard() {
           <>
             <div className="flex items-center gap-2">
               {lastUpdatedLabel && (
-                <span className="text-xs text-gray-400 dark:text-slate-500 hidden sm:inline">
+                <span className="text-xs text-ink-400 hidden sm:inline">
                   Atualizado {lastUpdatedLabel}
                 </span>
               )}
               <button
                 onClick={refetchAll}
                 disabled={isFetching}
-                className="inline-flex items-center justify-center p-2 rounded-lg border border-gray-200 dark:border-slate-700/50 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors disabled:opacity-50"
+                className="inline-flex items-center justify-center p-2 rounded-lg border border-ink-200 text-ink-500 hover:bg-ink-100 dark:hover:bg-surface/5 transition-colors disabled:opacity-50"
                 title="Atualizar dashboard"
               >
                 <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
@@ -200,8 +200,8 @@ export default function Dashboard() {
 
       {/* ── Faixa de erro ──────────────────────────────────────────────── */}
       {isError && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-sm">
-          <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-danger-200 dark:border-danger-800 bg-danger-50 dark:bg-danger-900/20 text-danger-700 dark:text-danger-300 text-sm">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
           <span>Erro ao carregar dados do dashboard.</span>
           <button onClick={() => refetch()} className="underline ml-1 font-medium hover:no-underline">
             Tentar novamente
@@ -211,7 +211,7 @@ export default function Dashboard() {
 
       {/* ── KPI Row 1 — Processos ───────────────────────────────────────── */}
       <div>
-        <p className="text-[11px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest mb-3 px-0.5">
+        <p className="text-[11px] font-bold text-ink-400 uppercase tracking-widest mb-3 px-0.5">
           Processos
         </p>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -248,7 +248,7 @@ export default function Dashboard() {
 
       {/* ── KPI Row 2 — Operações ───────────────────────────────────────── */}
       <div>
-        <p className="text-[11px] font-bold text-gray-400 dark:text-slate-500 uppercase tracking-widest mb-3 px-0.5">
+        <p className="text-[11px] font-bold text-ink-400 uppercase tracking-widest mb-3 px-0.5">
           Operações
         </p>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -291,7 +291,7 @@ export default function Dashboard() {
 
           {/* Gráfico de status */}
           <div className="card overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 dark:border-slate-700/50">
+            <div className="px-5 py-4 border-b border-ink-100">
               <SectionTitle icon={BarChart3} title="Visão Geral — Processos" />
             </div>
             <div className="p-5">
@@ -307,13 +307,13 @@ export default function Dashboard() {
 
           {/* Minha Caixa */}
           <div className="card overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 dark:border-slate-700/50">
+            <div className="px-5 py-4 border-b border-ink-100">
               <div className="-mb-4">
                 <SectionTitle
                   icon={Inbox}
                   title="Minha Caixa de Entrada"
                   action={
-                    <Link to={`/${subdomain}/processos`} className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium flex items-center gap-1">
+                    <Link to={`/${subdomain}/processos`} className="text-xs text-brand-600 dark:text-info-400 hover:underline font-medium flex items-center gap-1">
                       Ver todos <ArrowRight className="h-3.5 w-3.5" />
                     </Link>
                   }
@@ -331,17 +331,17 @@ export default function Dashboard() {
                     <Link
                       key={p.id}
                       to={`/${subdomain}/processos/${p.id}`}
-                      className="group flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-slate-700/50 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all"
+                      className="group flex items-center gap-3 p-3 rounded-xl border border-ink-100 hover:border-info-300 dark:hover:border-brand-600 hover:bg-info-50/50 dark:hover:bg-info-900/10 transition-all"
                     >
-                      <div className={`w-1 self-stretch rounded-full flex-shrink-0 ${PRIO_CLS[p.prioridade] || 'bg-gray-300 dark:bg-slate-600'}`} />
+                      <div className={`w-1 self-stretch rounded-full shrink-0 ${PRIO_CLS[p.prioridade] || 'bg-ink-300'}`} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{p.numero}</span>
+                          <span className="font-semibold text-ink-900 text-sm">{p.numero}</span>
                           <span className={`badge ${STATUS_CLS[p.status] || ''}`}>{STATUS_LABEL[p.status] || p.status}</span>
                         </div>
-                        <p className="text-sm text-gray-500 dark:text-slate-400 truncate mt-0.5">{p.assunto}</p>
+                        <p className="text-sm text-ink-500 truncate mt-0.5">{p.assunto}</p>
                       </div>
-                      <ArrowRight className="h-4 w-4 text-gray-300 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+                      <ArrowRight className="h-4 w-4 text-ink-300 group-hover:text-info-500 group-hover:translate-x-0.5 transition-all shrink-0" />
                     </Link>
                   ))}
                 </div>
@@ -358,7 +358,7 @@ export default function Dashboard() {
 
           {/* Alertas executivos */}
           <div className="card overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 dark:border-slate-700/50">
+            <div className="px-5 py-4 border-b border-ink-100">
               <SectionTitle icon={Bell} title="Alertas Executivos" />
             </div>
             <div className="p-4">
@@ -379,13 +379,13 @@ export default function Dashboard() {
           {/* Processos urgentes */}
           {!isLoading && urgentesLista.length > 0 && (
             <div className="card overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-100 dark:border-slate-700/50">
+              <div className="px-5 py-4 border-b border-ink-100">
                 <div className="-mb-4">
                   <SectionTitle
                     icon={Zap}
                     title="Processos Urgentes"
                     action={
-                      <Link to={`/${subdomain}/processos?prioridade=urgente`} className="text-xs text-red-600 dark:text-red-400 hover:underline font-medium flex items-center gap-1">
+                      <Link to={`/${subdomain}/processos?prioridade=urgente`} className="text-xs text-danger-600 dark:text-danger-400 hover:underline font-medium flex items-center gap-1">
                         Ver todos <ArrowRight className="h-3.5 w-3.5" />
                       </Link>
                     }
@@ -397,20 +397,20 @@ export default function Dashboard() {
                   <Link
                     key={p.id}
                     to={`/${subdomain}/processos/${p.id}`}
-                    className="group flex items-center gap-3 p-3 rounded-xl border border-red-100 dark:border-red-900/30 bg-red-50/50 dark:bg-red-900/10 hover:border-red-300 dark:hover:border-red-600 hover:shadow-sm transition-all"
+                    className="group flex items-center gap-3 p-3 rounded-xl border border-danger-100 dark:border-danger-900/30 bg-danger-50/50 dark:bg-danger-900/10 hover:border-danger-300 dark:hover:border-danger-600 hover:shadow-sm transition-all"
                   >
-                    <div className="w-1 self-stretch bg-red-500 rounded-full flex-shrink-0" />
+                    <div className="w-1 self-stretch bg-danger-500 rounded-full shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <span className="font-semibold text-gray-900 dark:text-slate-100 text-sm">{p.numero}</span>
-                      <p className="text-xs text-gray-500 dark:text-slate-400 truncate mt-0.5">{p.assunto}</p>
+                      <span className="font-semibold text-ink-900 text-sm">{p.numero}</span>
+                      <p className="text-xs text-ink-500 truncate mt-0.5">{p.assunto}</p>
                       {p.setorAtual && (
-                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5 flex items-center gap-1">
-                          <MapPin className="h-3 w-3 flex-shrink-0" />
+                        <p className="text-xs text-ink-400 mt-0.5 flex items-center gap-1">
+                          <MapPin className="h-3 w-3 shrink-0" />
                           {p.setorAtual.sigla || p.setorAtual.nome}
                         </p>
                       )}
                     </div>
-                    <ArrowRight className="h-4 w-4 text-red-300 group-hover:text-red-500 flex-shrink-0" />
+                    <ArrowRight className="h-4 w-4 text-danger-300 group-hover:text-danger-500 shrink-0" />
                   </Link>
                 ))}
               </div>
@@ -419,7 +419,7 @@ export default function Dashboard() {
 
           {/* Ações rápidas */}
           <div className="card overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 dark:border-slate-700/50">
+            <div className="px-5 py-4 border-b border-ink-100">
               <SectionTitle icon={Activity} title="Ações Rápidas" />
             </div>
             <div className="p-4 grid grid-cols-2 gap-2">
@@ -442,40 +442,40 @@ export default function Dashboard() {
       {/* ── Atividades Recentes (timeline) ─────────────────────────────── */}
       {!isLoading && minhaCaixaLista.length > 0 && (
         <div className="card overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100 dark:border-slate-700/50">
+          <div className="px-5 py-4 border-b border-ink-100">
             <SectionTitle icon={CircleDot} title="Atividades Recentes" />
           </div>
           <div className="p-5">
             <div className="relative">
-              <div className="absolute left-4 top-2 bottom-2 w-px bg-gray-100 dark:bg-slate-700/60" />
+              <div className="absolute left-4 top-2 bottom-2 w-px bg-ink-100" />
               <div className="space-y-5">
                 {minhaCaixaLista.slice(0, 5).map((p) => (
                   <div key={p.id} className="flex gap-4 pl-10 relative">
-                    <div className="absolute left-[11px] top-1.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-slate-800 bg-blue-500 shadow-sm" />
+                    <div className="absolute left-[11px] top-1.5 w-2.5 h-2.5 rounded-full border-2 border-white bg-info-500 shadow-sm" />
                     <div className="flex-1 min-w-0">
                       <Link
                         to={`/${subdomain}/processos/${p.id}`}
-                        className="group flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-slate-700/20 -mx-2 px-2 py-1.5 rounded-lg transition-colors"
+                        className="group flex items-start gap-3 hover:bg-ink-50 -mx-2 px-2 py-1.5 rounded-lg transition-colors"
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-semibold text-gray-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                            <span className="text-sm font-semibold text-ink-900 group-hover:text-brand-600 dark:group-hover:text-info-400 transition-colors">
                               {p.numero}
                             </span>
                             <span className={`badge ${STATUS_CLS[p.status] || ''}`}>{STATUS_LABEL[p.status] || p.status}</span>
                             {p.prioridade === 'urgente' && (
-                              <span className="badge bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300">Urgente</span>
+                              <span className="badge bg-danger-100 dark:bg-danger-900/40 text-danger-700 dark:text-danger-300">Urgente</span>
                             )}
                           </div>
-                          <p className="text-sm text-gray-500 dark:text-slate-400 truncate mt-0.5">{p.assunto}</p>
+                          <p className="text-sm text-ink-500 truncate mt-0.5">{p.assunto}</p>
                           {p.setorAtual && (
-                            <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5 flex items-center gap-1">
-                              <MapPin className="h-3 w-3 flex-shrink-0" />
+                            <p className="text-xs text-ink-400 mt-0.5 flex items-center gap-1">
+                              <MapPin className="h-3 w-3 shrink-0" />
                               {p.setorAtual.nome}
                             </p>
                           )}
                         </div>
-                        <ArrowRight className="h-4 w-4 text-gray-300 group-hover:text-blue-500 mt-1 flex-shrink-0" />
+                        <ArrowRight className="h-4 w-4 text-ink-300 group-hover:text-info-500 mt-1 shrink-0" />
                       </Link>
                     </div>
                   </div>

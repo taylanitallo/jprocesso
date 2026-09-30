@@ -32,7 +32,7 @@ export function proximoCodigo(itens) {
 export function FieldRow({ label, children }) {
   return (
     <div className="flex items-center gap-3 min-h-[34px]">
-      <span className="w-36 shrink-0 text-sm text-right text-gray-600 dark:text-slate-400">{label}</span>
+      <span className="w-36 shrink-0 text-sm text-right text-ink-600">{label}</span>
       <div className="flex-1 min-w-0">{children}</div>
     </div>
   )
@@ -40,7 +40,7 @@ export function FieldRow({ label, children }) {
 
 export function SectionTitle({ children }) {
   return (
-    <div className="bg-slate-100 dark:bg-slate-700 px-4 py-1.5 -mx-6 text-xs font-bold text-gray-600 dark:text-slate-300 uppercase tracking-wide border-y border-gray-200 dark:border-slate-600">
+    <div className="bg-ink-100 px-4 py-1.5 -mx-6 text-xs font-bold text-ink-600 uppercase tracking-wide border-y border-ink-200">
       {children}
     </div>
   )
@@ -49,17 +49,17 @@ export function SectionTitle({ children }) {
 // ── Card de Seção Premium ──────────────────────────────────────────────────────
 export function SectionCard({ icon: Icon, title, subtitle, children, className = '' }) {
   return (
-    <div className={`rounded-2xl border border-gray-100 dark:border-slate-700/60 bg-white dark:bg-slate-800/50 shadow-sm overflow-hidden ${className}`}>
-      <div className="px-5 py-4 border-b border-gray-100 dark:border-slate-700/60 bg-gradient-to-r from-gray-50 to-white dark:from-slate-800 dark:to-slate-800/80">
+    <div className={`rounded-2xl border border-ink-100 bg-surface shadow-sm overflow-hidden ${className}`}>
+      <div className="px-5 py-4 border-b border-ink-100 bg-gradient-to-r from-ink-50 to-white">
         <div className="flex items-center gap-3">
           {Icon && (
-            <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
-              <Icon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <div className="w-8 h-8 rounded-xl bg-info-50 dark:bg-info-900/30 flex items-center justify-center">
+              <Icon className="w-4 h-4 text-brand-600 dark:text-info-400" />
             </div>
           )}
           <div>
-            <p className="text-sm font-semibold text-gray-800 dark:text-slate-200">{title}</p>
-            {subtitle && <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{subtitle}</p>}
+            <p className="text-sm font-semibold text-ink-800">{title}</p>
+            {subtitle && <p className="text-xs text-ink-500 mt-0.5">{subtitle}</p>}
           </div>
         </div>
       </div>
@@ -92,7 +92,7 @@ export function PortalDropdown({ anchorRef, open, children, minWidth = 0, classN
   return createPortal(
     <div
       style={{ position: 'fixed', zIndex: 10000, ...style }}
-      className={`bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl shadow-2xl max-h-52 overflow-y-auto ${className}`}
+      className={`bg-surface border border-ink-200 rounded-xl shadow-2xl max-h-52 overflow-y-auto ${className}`}
     >
       {children}
     </div>,
@@ -104,10 +104,10 @@ export function PortalDropdown({ anchorRef, open, children, minWidth = 0, classN
 export function ViewField({ label, value, mono = false, badge = null, className = '' }) {
   return (
     <div className={`flex flex-col gap-0.5 ${className}`}>
-      <p className="text-[11px] font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider">{label}</p>
+      <p className="text-[11px] font-semibold text-ink-400 uppercase tracking-wider">{label}</p>
       {badge ? badge : (
-        <p className={`text-sm font-medium text-gray-800 dark:text-slate-200 ${mono ? 'font-mono' : ''}`}>
-          {value || <span className="text-gray-300 dark:text-slate-600">—</span>}
+        <p className={`text-sm font-medium text-ink-800 ${mono ? 'font-mono' : ''}`}>
+          {value || <span className="text-ink-300">—</span>}
         </p>
       )}
     </div>
@@ -118,7 +118,7 @@ export function ViewField({ label, value, mono = false, badge = null, className 
 export function PremiumInput({ className = '', ...props }) {
   return (
     <input
-      className={`w-full h-11 px-3.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/50 text-sm text-gray-800 dark:text-slate-200 placeholder-gray-300 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${className}`}
+      className={`w-full h-11 px-3.5 rounded-xl border border-ink-200 bg-surface text-sm text-ink-800 placeholder-gray-300 focus:outline-hidden focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all ${className}`}
       {...props}
     />
   )
@@ -128,7 +128,7 @@ export function PremiumInput({ className = '', ...props }) {
 export function PremiumSelect({ className = '', children, ...props }) {
   return (
     <select
-      className={`w-full h-11 px-3.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/50 text-sm text-gray-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${className}`}
+      className={`w-full h-11 px-3.5 rounded-xl border border-ink-200 bg-surface text-sm text-ink-800 focus:outline-hidden focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all ${className}`}
       {...props}
     >
       {children}
@@ -140,7 +140,7 @@ export function PremiumSelect({ className = '', children, ...props }) {
 export function PremiumTextarea({ className = '', ...props }) {
   return (
     <textarea
-      className={`w-full px-3.5 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/50 text-sm text-gray-800 dark:text-slate-200 placeholder-gray-300 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none ${className}`}
+      className={`w-full px-3.5 py-3 rounded-xl border border-ink-200 bg-surface text-sm text-ink-800 placeholder-gray-300 focus:outline-hidden focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all resize-none ${className}`}
       {...props}
     />
   )
@@ -159,14 +159,14 @@ export function ModalStepper({ steps, currentStep, onStep }) {
             onClick={() => onStep(i)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
               active
-                ? 'bg-blue-600 text-white shadow-sm'
+                ? 'bg-brand-600 text-white shadow-sm'
                 : done
-                ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border border-green-200 dark:border-green-700/50'
-                : 'bg-gray-50 dark:bg-slate-700/50 text-gray-500 dark:text-slate-400 border border-gray-200 dark:border-slate-600 hover:border-blue-300 hover:text-blue-600 dark:hover:text-blue-400'
+                ? 'bg-success-50 text-success-700 dark:bg-success-900/20 dark:text-success-400 border border-success-200 dark:border-success-700/50'
+                : 'bg-ink-50 text-ink-500 border border-ink-200 hover:border-info-300 hover:text-brand-600 dark:hover:text-info-400'
             }`}
           >
             <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
-              active ? 'bg-white/20 text-white' : done ? 'bg-green-500 text-white' : 'bg-gray-200 dark:bg-slate-600 text-gray-500 dark:text-slate-400'
+              active ? 'bg-surface/20 text-white' : done ? 'bg-success-500 text-white' : 'bg-ink-200 text-ink-500'
             }`}>
               {done ? '✓' : i + 1}
             </span>
@@ -191,28 +191,28 @@ export function VigenciaProgress({ inicio, fim, assinatura }) {
   const diasRest  = Math.floor((dtFim - today) / 86400000)
   const vencido   = diasRest < 0
   const proximo   = !vencido && diasRest <= 30
-  const barColor  = vencido ? 'bg-red-500' : proximo ? 'bg-amber-400' : 'bg-green-500'
+  const barColor  = vencido ? 'bg-danger-500' : proximo ? 'bg-amber-400' : 'bg-success-500'
   const fmtDate   = (d) => new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')
   return (
-    <div className="rounded-2xl border border-gray-100 dark:border-slate-700/60 bg-gradient-to-br from-gray-50 to-white dark:from-slate-800 dark:to-slate-800/50 p-4 space-y-3">
+    <div className="rounded-2xl border border-ink-100 bg-gradient-to-br from-ink-50 to-white p-4 space-y-3">
       <div className="grid grid-cols-4 gap-3 text-center">
         {[
           { label: 'Assinatura',  value: fmtDate(assinatura || inicio) },
           { label: 'Início',      value: fmtDate(inicio) },
           { label: 'Fim',         value: fmtDate(fim) },
-          { label: 'Dias restantes', value: vencido ? `Vencido há ${Math.abs(diasRest)}d` : `${diasRest}d`, highlight: vencido ? 'text-red-600' : proximo ? 'text-amber-600' : 'text-green-600' },
+          { label: 'Dias restantes', value: vencido ? `Vencido há ${Math.abs(diasRest)}d` : `${diasRest}d`, highlight: vencido ? 'text-danger-600' : proximo ? 'text-amber-600' : 'text-success-600' },
         ].map(({ label, value, highlight }) => (
           <div key={label} className="flex flex-col gap-0.5">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">{label}</p>
-            <p className={`text-sm font-bold ${highlight || 'text-gray-800 dark:text-slate-200'}`}>{value}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-400">{label}</p>
+            <p className={`text-sm font-bold ${highlight || 'text-ink-800'}`}>{value}</p>
           </div>
         ))}
       </div>
       <div>
-        <div className="h-2 rounded-full bg-gray-100 dark:bg-slate-700 overflow-hidden">
+        <div className="h-2 rounded-full bg-ink-100 overflow-hidden">
           <div className={`h-full rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${pct}%` }} />
         </div>
-        <p className="text-[10px] text-gray-400 mt-1 text-right">{Math.round(pct)}% do período decorrido</p>
+        <p className="text-[10px] text-ink-400 mt-1 text-right">{Math.round(pct)}% do período decorrido</p>
       </div>
     </div>
   )

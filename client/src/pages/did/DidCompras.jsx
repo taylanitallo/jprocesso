@@ -12,35 +12,35 @@ export default function DidSecaoIII({ form, inp, set }) {
         <UserSelect value={form.compras_responsavel} onChange={inp('compras_responsavel')} secretaria="compras" />
       </Field>
       <div className="col-span-2">
-        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Situação</label>
+        <label className="block text-xs font-medium text-ink-500 mb-2">Situação</label>
         <div className="flex gap-6">
-          <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+          <label className="flex items-center gap-2 cursor-pointer text-sm text-ink-700">
             <input type="radio" name="licitado" checked={form.ja_licitado === true}
               onChange={() => set('ja_licitado', true)}
-              className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+              className="w-4 h-4 text-brand-600 focus:ring-brand-500" />
             Já Licitado
           </label>
-          <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+          <label className="flex items-center gap-2 cursor-pointer text-sm text-ink-700">
             <input type="radio" name="licitado" checked={form.ja_licitado === false}
               onChange={() => set('ja_licitado', false)}
-              className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+              className="w-4 h-4 text-brand-600 focus:ring-brand-500" />
             Não Licitado
           </label>
         </div>
       </div>
       <div className="col-span-2">
-        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Realizar Cotação</label>
+        <label className="block text-xs font-medium text-ink-500 mb-2">Realizar Cotação</label>
         <div className="flex gap-6">
-          <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+          <label className="flex items-center gap-2 cursor-pointer text-sm text-ink-700">
             <input type="radio" name="cotacao" checked={form.realizar_cotacao === true}
               onChange={() => set('realizar_cotacao', true)}
-              className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+              className="w-4 h-4 text-brand-600 focus:ring-brand-500" />
             Sim
           </label>
-          <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+          <label className="flex items-center gap-2 cursor-pointer text-sm text-ink-700">
             <input type="radio" name="cotacao" checked={form.realizar_cotacao === false}
               onChange={() => set('realizar_cotacao', false)}
-              className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+              className="w-4 h-4 text-brand-600 focus:ring-brand-500" />
             Não
           </label>
         </div>

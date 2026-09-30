@@ -10,22 +10,22 @@ export const DidReadOnlyContext = createContext(false)
 export function ConfirmModal({ title, message, confirmLabel = 'Confirmar', onConfirm, onClose }) {
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+      <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
         <div className="px-5 py-4 flex items-start gap-3">
           <div className="w-9 h-9 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
             <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-bold text-gray-800 dark:text-gray-100">{title}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{message}</p>
+            <p className="text-sm font-bold text-ink-800">{title}</p>
+            <p className="text-xs text-ink-500 mt-1 leading-relaxed">{message}</p>
           </div>
-          <button onClick={onClose} className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 shrink-0">
+          <button onClick={onClose} className="p-1 rounded-sm text-ink-400 hover:text-ink-600 shrink-0">
             <X className="w-4 h-4" />
           </button>
         </div>
-        <div className="px-5 py-3 bg-gray-50 dark:bg-gray-900/40 flex justify-end gap-2">
+        <div className="px-5 py-3 bg-ink-50 flex justify-end gap-2">
           <button type="button" onClick={onClose}
-            className="px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 font-semibold">
+            className="px-3 py-1.5 text-xs rounded-lg border border-ink-300 text-ink-600 hover:bg-ink-100 font-semibold">
             Cancelar
           </button>
           <button type="button" onClick={onConfirm}
@@ -100,9 +100,9 @@ export const EMPTY = {
 export function Field({ label, children, half, error }) {
   return (
     <div className={half ? 'col-span-1' : 'col-span-2'}>
-      <label className={`block text-xs font-medium mb-1 ${error ? 'text-red-500 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>{label}</label>
+      <label className={`block text-xs font-medium mb-1 ${error ? 'text-danger-500 dark:text-danger-400' : 'text-ink-500'}`}>{label}</label>
       {children}
-      {error && <p className="mt-1 text-xs text-red-500 dark:text-red-400">{error}</p>}
+      {error && <p className="mt-1 text-xs text-danger-500 dark:text-danger-400">{error}</p>}
     </div>
   )
 }
@@ -115,7 +115,7 @@ export function Input({ value, onChange, type = 'text', placeholder, disabled, .
       onChange={onChange}
       placeholder={placeholder}
       disabled={disabled}
-      className={`input-field text-sm${disabled ? ' opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800' : ''}`}
+      className={`input-field text-sm${disabled ? ' opacity-60 cursor-not-allowed bg-ink-50' : ''}`}
       {...rest}
     />
   )
@@ -142,7 +142,7 @@ export function UserSelect({ value, onChange, disabled, secretaria }) {
     if (users.some(u => u.nome === user.nome)) onChange({ target: { value: user.nome } })
   }, [users])
 
-  const cls = `input-field text-sm${disabled ? ' opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800' : ''}`
+  const cls = `input-field text-sm${disabled ? ' opacity-60 cursor-not-allowed bg-ink-50' : ''}`
 
   if (users === null) return <Input value={value} onChange={onChange} disabled placeholder="Carregando..." />
   if (!users.length)  return <Input value={value} onChange={onChange} disabled={disabled} />
@@ -168,7 +168,7 @@ export function Textarea({ value, onChange, placeholder, disabled, rows = 3 }) {
       onChange={onChange}
       placeholder={placeholder}
       disabled={disabled}
-      className={`input-field text-sm resize-none${disabled ? ' opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800' : ''}`}
+      className={`input-field text-sm resize-none${disabled ? ' opacity-60 cursor-not-allowed bg-ink-50' : ''}`}
     />
   )
 }
@@ -185,9 +185,9 @@ export function alertarPendencias(pendencias, secaoLabel) {
 
 export function Checkbox({ label, checked, onChange, disabled }) {
   return (
-    <label className={`flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300${disabled ? ' opacity-60 cursor-not-allowed' : ' cursor-pointer'}`}>
+    <label className={`flex items-center gap-2 text-sm text-ink-700${disabled ? ' opacity-60 cursor-not-allowed' : ' cursor-pointer'}`}>
       <input type="checkbox" checked={!!checked} onChange={onChange} disabled={disabled}
-        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-60" />
+        className="w-4 h-4 rounded-sm border-ink-300 text-brand-600 focus:ring-brand-500 disabled:opacity-60" />
       {label}
     </label>
   )
@@ -213,10 +213,10 @@ export function SecaoBotoes({ locked, onAlterar, onSalvar, saving, label, onLimp
   if (readOnly) return null
 
   return (
-    <div className="col-span-2 flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700 mt-1">
+    <div className="col-span-2 flex justify-between items-center pt-2 border-t border-ink-100 mt-1">
       {onLimpar ? (
         <button type="button" onClick={() => setConfirmarLimpar(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-700 rounded-lg text-sm font-semibold transition-colors">
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-danger-50 hover:bg-danger-100 dark:bg-danger-900/20 dark:hover:bg-danger-900/40 text-danger-600 dark:text-danger-400 border border-danger-200 dark:border-danger-700 rounded-lg text-sm font-semibold transition-colors">
           <RotateCcw className="w-3.5 h-3.5" /> Limpar Seção
         </button>
       ) : <div />}
@@ -228,7 +228,7 @@ export function SecaoBotoes({ locked, onAlterar, onSalvar, saving, label, onLimp
           </button>
         ) : (
           <button type="button" onClick={onSalvar} disabled={saving}
-            className="flex items-center gap-1.5 px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-success-600 hover:bg-success-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} {label}
           </button>
         )}

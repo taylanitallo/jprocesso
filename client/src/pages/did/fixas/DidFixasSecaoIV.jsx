@@ -5,7 +5,7 @@ import { Field, Input, UserSelect, SectionCard, SecaoBotoes, alertarPendencias }
 function SimNao({ value, onChange, disabled }) {
   return (
     <select value={value} onChange={onChange} disabled={disabled}
-      className={`input-field text-sm${disabled ? ' opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800' : ''}`}>
+      className={`input-field text-sm${disabled ? ' opacity-60 cursor-not-allowed bg-ink-50' : ''}`}>
       <option value="">— Selecione —</option>
       <option value="sim">Sim</option>
       <option value="nao">Não</option>
@@ -62,7 +62,7 @@ export default function DidFixasSecaoIV({ form, inp, saving, didId, onSave, onLi
       </Field>
       <Field label="Tipo de Empenho" half>
         <select value={form.tipo_empenho} onChange={inp('tipo_empenho')} disabled={camposEmpenhoDisabled}
-          className={`input-field text-sm${camposEmpenhoDisabled ? ' opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800' : ''}`}>
+          className={`input-field text-sm${camposEmpenhoDisabled ? ' opacity-60 cursor-not-allowed bg-ink-50' : ''}`}>
           <option value="">Selecione...</option>
           <option value="ordinario">Ordinário</option>
           <option value="estimativo">Estimativo</option>

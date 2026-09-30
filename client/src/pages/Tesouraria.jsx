@@ -77,15 +77,15 @@ export default function Tesouraria() {
       />
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-gray-200 dark:border-slate-700/50">
+      <div className="flex gap-1 border-b border-ink-200">
         {visibleTabsTes.map(({ key, label, Icon }) => (
           <button
             key={key}
             onClick={() => handleTab(key)}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px
               ${activeTab === key
-                ? 'border-green-500 text-green-600 dark:text-green-400'
-                : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'
+                ? 'border-success-500 text-success-600 dark:text-success-400'
+                : 'border-transparent text-ink-500 hover:text-ink-700'
               }`}
           >
             <Icon className="h-4 w-4" />
@@ -164,17 +164,17 @@ function ContaSelectInput({ value, contas, onChange }) {
         autoComplete="off"
       />
       {open && filtered.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl shadow-xl max-h-52 overflow-y-auto">
+        <div className="absolute z-50 w-full mt-1 bg-surface border border-ink-200 rounded-xl shadow-xl max-h-52 overflow-y-auto">
           {filtered.map(c => (
             <button
               key={c.id}
               type="button"
               onMouseDown={(e) => { e.preventDefault(); handleSelect(c); }}
-              className="w-full text-left px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-slate-700/60 transition-colors border-b border-gray-100 dark:border-slate-700/40 last:border-0"
+              className="w-full text-left px-3 py-2.5 hover:bg-ink-50 transition-colors border-b border-ink-100 last:border-0"
             >
-              <div className="text-sm text-gray-800 dark:text-slate-200 font-medium">{getLabel(c)}</div>
+              <div className="text-sm text-ink-800 font-medium">{getLabel(c)}</div>
               {c.banco_nome && (
-                <div className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{c.banco_nome}</div>
+                <div className="text-xs text-ink-400 mt-0.5">{c.banco_nome}</div>
               )}
             </button>
           ))}
@@ -215,16 +215,16 @@ function BankSearchInput({ value, onChange, onSelect, bancos }) {
         autoComplete="off"
       />
       {open && filtered.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl shadow-xl max-h-56 overflow-y-auto">
+        <div className="absolute z-50 w-full mt-1 bg-surface border border-ink-200 rounded-xl shadow-xl max-h-56 overflow-y-auto">
           {filtered.map(b => (
             <button
               key={b.code}
               type="button"
               onMouseDown={(e) => { e.preventDefault(); onSelect(b); setOpen(false); }}
-              className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700/60 flex items-center gap-2.5 transition-colors"
+              className="w-full text-left px-3 py-2 hover:bg-ink-50 flex items-center gap-2.5 transition-colors"
             >
-              <span className="shrink-0 text-xs font-mono bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 px-1.5 py-0.5 rounded min-w-[2.5rem] text-center">{b.code}</span>
-              <span className="text-sm text-gray-800 dark:text-slate-200 truncate">{b.name}</span>
+              <span className="shrink-0 text-xs font-mono bg-ink-100 text-ink-500 px-1.5 py-0.5 rounded-sm min-w-[2.5rem] text-center">{b.code}</span>
+              <span className="text-sm text-ink-800 truncate">{b.name}</span>
             </button>
           ))}
         </div>
@@ -316,14 +316,14 @@ function TabContas({ secretarias }) {
     <div className="space-y-3">
       <FilterBar>
         <div className="flex-1 min-w-48">
-          <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Secretaria</label>
+          <label className="block text-xs font-medium text-ink-600 mb-1">Secretaria</label>
           <input value={filtroSec} onChange={e => setFiltroSec(e.target.value)}
             className="input-field text-sm" placeholder="Filtrar por secretaria..." />
         </div>
       </FilterBar>
 
       <div className="card overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-200 dark:border-slate-700/50 flex items-center justify-between">
+        <div className="px-4 py-3 border-b border-ink-200 flex items-center justify-between">
           <SectionTitle icon={Landmark} title="Contas Bancárias Cadastradas" />
           <button onClick={openNew} className="btn-primary flex items-center gap-1.5 text-sm px-3 py-1.5">
             <Plus className="h-4 w-4" /> Nova Conta
@@ -331,57 +331,57 @@ function TabContas({ secretarias }) {
         </div>
         <div className="overflow-x-auto">
           {loading ? (
-            <div className="px-4 py-8 text-center text-sm text-gray-400">Carregando...</div>
+            <div className="px-4 py-8 text-center text-sm text-ink-400">Carregando...</div>
           ) : filtradas.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-gray-400">Nenhuma conta cadastrada.</div>
+            <div className="px-4 py-8 text-center text-sm text-ink-400">Nenhuma conta cadastrada.</div>
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-gray-100 dark:bg-slate-700/30 border-b border-gray-200 dark:border-slate-700/50">
+              <thead className="bg-ink-100 border-b border-ink-200">
                 <tr>
-                  <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Nome</th>
-                  <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Secretaria</th>
-                  <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Banco</th>
-                  <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Agência</th>
-                  <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Conta</th>
-                  <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-28">Tipo</th>
-                  <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-20">Status</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-ink-600">Nome</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-ink-600">Secretaria</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-ink-600">Banco</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-ink-600">Agência</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-ink-600">Conta</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-28">Tipo</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-20">Status</th>
                   <th className="px-4 py-2.5 w-20"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
+              <tbody className="divide-y divide-ink-100">
                 {filtradas.map(c => (
-                  <tr key={c.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/20">
-                    <td className="px-4 py-2.5 font-medium text-gray-800 dark:text-slate-200">{c.nome}</td>
+                  <tr key={c.id} className="hover:bg-ink-50">
+                    <td className="px-4 py-2.5 font-medium text-ink-800">{c.nome}</td>
                     <td className="px-4 py-2.5">
                       {c.secretaria
-                        ? <span className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded font-medium">{c.secretaria.sigla}</span>
-                        : <span className="text-gray-400">—</span>}
+                        ? <span className="text-xs bg-info-50 dark:bg-info-900/20 text-brand-700 dark:text-info-300 px-1.5 py-0.5 rounded-sm font-medium">{c.secretaria.sigla}</span>
+                        : <span className="text-ink-400">—</span>}
                     </td>
-                    <td className="px-4 py-2.5 text-gray-600 dark:text-slate-300">
+                    <td className="px-4 py-2.5 text-ink-600">
                       {c.banco_codigo ? `${c.banco_nome} (${c.banco_codigo})` : c.banco_nome || '—'}
                     </td>
-                    <td className="px-4 py-2.5 text-gray-600 dark:text-slate-300">
+                    <td className="px-4 py-2.5 text-ink-600">
                       {c.agencia}{c.agencia_digito ? `-${c.agencia_digito}` : ''}
                     </td>
-                    <td className="px-4 py-2.5 font-mono text-gray-700 dark:text-slate-300">
+                    <td className="px-4 py-2.5 font-mono text-ink-700">
                       {c.conta}{c.conta_digito ? `-${c.conta_digito}` : ''}
                     </td>
-                    <td className="px-4 py-2.5 text-xs text-gray-500 dark:text-slate-400 capitalize">
+                    <td className="px-4 py-2.5 text-xs text-ink-500 capitalize">
                       {TIPOS_CONTA.find(t => t.value === c.tipo)?.label || c.tipo || '—'}
                     </td>
                     <td className="px-4 py-2.5">
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${c.ativo
-                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                        : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}`}>
+                        ? 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400'
+                        : 'bg-ink-100 text-ink-500'}`}>
                         {c.ativo ? 'Ativa' : 'Inativa'}
                       </span>
                     </td>
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-1">
-                        <button onClick={() => openEdit(c)} className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded transition-colors">
+                        <button onClick={() => openEdit(c)} className="p-1 text-ink-400 hover:text-brand-600 dark:hover:text-info-400 rounded-sm transition-colors">
                           <Edit2 className="h-3.5 w-3.5" />
                         </button>
-                        <button onClick={() => setConfirmarExcluir(c)} className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors">
+                        <button onClick={() => setConfirmarExcluir(c)} className="p-1 text-ink-400 hover:text-danger-600 dark:hover:text-danger-400 rounded-sm transition-colors">
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
@@ -397,17 +397,17 @@ function TabContas({ secretarias }) {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-800 z-10">
+          <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-ink-200 flex items-center justify-between sticky top-0 bg-surface z-10">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-green-50 dark:bg-green-900/30 flex items-center justify-center">
-                  <Landmark className="w-4 h-4 text-green-600 dark:text-green-400" />
+                <div className="w-8 h-8 rounded-xl bg-success-50 dark:bg-success-900/30 flex items-center justify-center">
+                  <Landmark className="w-4 h-4 text-success-600 dark:text-success-400" />
                 </div>
-                <h3 className="text-base font-semibold text-gray-800 dark:text-slate-200">
+                <h3 className="text-base font-semibold text-ink-800">
                   {editing ? 'Alterar Conta Bancária' : 'Nova Conta Bancária'}
                 </h3>
               </div>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-200">
+              <button onClick={() => setShowModal(false)} className="text-ink-400 hover:text-ink-600">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -415,14 +415,14 @@ function TabContas({ secretarias }) {
             <div className="p-6 space-y-5">
               {/* Identificação */}
               <div>
-                <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-3">Identificação</p>
+                <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-3">Identificação</p>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Nome da Conta *</label>
+                    <label className="block text-xs font-medium text-ink-600 mb-1">Nome da Conta *</label>
                     <input value={form.nome} onChange={inp('nome')} className="input-field text-sm" placeholder="Ex: Conta Principal Tesouraria" />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Secretaria Vinculada</label>
+                    <label className="block text-xs font-medium text-ink-600 mb-1">Secretaria Vinculada</label>
                     <select value={form.secretaria_id} onChange={inp('secretaria_id')} className="input-field text-sm">
                       <option value="">— Selecione —</option>
                       {secretarias.map(s => (
@@ -431,13 +431,13 @@ function TabContas({ secretarias }) {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Tipo de Conta</label>
+                    <label className="block text-xs font-medium text-ink-600 mb-1">Tipo de Conta</label>
                     <select value={form.tipo} onChange={inp('tipo')} className="input-field text-sm">
                       {TIPOS_CONTA.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Natureza</label>
+                    <label className="block text-xs font-medium text-ink-600 mb-1">Natureza</label>
                     <select value={form.natureza} onChange={inp('natureza')} className="input-field text-sm">
                       {NATUREZAS_CONTA.map(n => <option key={n.value} value={n.value}>{n.label}</option>)}
                     </select>
@@ -447,10 +447,10 @@ function TabContas({ secretarias }) {
 
               {/* Dados Bancários */}
               <div>
-                <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-3">Dados Bancários</p>
+                <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-3">Dados Bancários</p>
                 <div className="grid grid-cols-4 gap-3">
                   <div className="col-span-3">
-                    <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Nome do Banco</label>
+                    <label className="block text-xs font-medium text-ink-600 mb-1">Nome do Banco</label>
                     <BankSearchInput
                       value={form.banco_nome}
                       onChange={v => setForm(f => ({ ...f, banco_nome: v }))}
@@ -459,24 +459,24 @@ function TabContas({ secretarias }) {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Código COMPE</label>
+                    <label className="block text-xs font-medium text-ink-600 mb-1">Código COMPE</label>
                     <input value={form.banco_codigo} onChange={inp('banco_codigo')} className="input-field text-sm" placeholder="001" maxLength={10} />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Agência</label>
+                    <label className="block text-xs font-medium text-ink-600 mb-1">Agência</label>
                     <input value={form.agencia} onChange={inp('agencia')} className="input-field text-sm" placeholder="0000" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Dígito Ag.</label>
+                    <label className="block text-xs font-medium text-ink-600 mb-1">Dígito Ag.</label>
                     <input value={form.agencia_digito} onChange={inp('agencia_digito')} className="input-field text-sm" placeholder="X" maxLength={2} />
                   </div>
                   <div></div>
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Conta Corrente</label>
+                    <label className="block text-xs font-medium text-ink-600 mb-1">Conta Corrente</label>
                     <input value={form.conta} onChange={inp('conta')} className="input-field text-sm" placeholder="00000-0" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Dígito C/C</label>
+                    <label className="block text-xs font-medium text-ink-600 mb-1">Dígito C/C</label>
                     <input value={form.conta_digito} onChange={inp('conta_digito')} className="input-field text-sm" placeholder="X" maxLength={2} />
                   </div>
                 </div>
@@ -484,32 +484,32 @@ function TabContas({ secretarias }) {
 
               {/* Titular */}
               <div>
-                <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-3">Titular</p>
+                <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-3">Titular</p>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Nome do Titular / Órgão</label>
+                    <label className="block text-xs font-medium text-ink-600 mb-1">Nome do Titular / Órgão</label>
                     <input value={form.titular} onChange={inp('titular')} className="input-field text-sm" placeholder="Prefeitura Municipal de..." />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">CNPJ do Titular</label>
+                    <label className="block text-xs font-medium text-ink-600 mb-1">CNPJ do Titular</label>
                     <input value={form.cnpj_titular} onChange={inp('cnpj_titular')} className="input-field text-sm" placeholder="00.000.000/0000-00" maxLength={18} />
                   </div>
                   <div className="flex items-center gap-2 pt-5">
-                    <input type="checkbox" id="ativo_conta" checked={form.ativo} onChange={chk('ativo')} className="w-4 h-4 rounded border-gray-300 text-green-600" />
-                    <label htmlFor="ativo_conta" className="text-sm text-gray-700 dark:text-slate-300 cursor-pointer">Conta ativa</label>
+                    <input type="checkbox" id="ativo_conta" checked={form.ativo} onChange={chk('ativo')} className="w-4 h-4 rounded-sm border-ink-300 text-success-600" />
+                    <label htmlFor="ativo_conta" className="text-sm text-ink-700 cursor-pointer">Conta ativa</label>
                   </div>
                 </div>
               </div>
 
               {/* Observação */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Observação</label>
+                <label className="block text-xs font-medium text-ink-600 mb-1">Observação</label>
                 <textarea value={form.observacao} onChange={inp('observacao')} rows={2}
                   className="input-field text-sm resize-none" placeholder="Informações adicionais..." />
               </div>
             </div>
 
-            <div className="px-6 py-4 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-2 sticky bottom-0 bg-white dark:bg-slate-800">
+            <div className="px-6 py-4 border-t border-ink-200 flex justify-end gap-2 sticky bottom-0 bg-surface">
               <button onClick={() => setShowModal(false)} className="btn-secondary text-sm px-4 py-2">Cancelar</button>
               <button onClick={salvar} disabled={saving} className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5 disabled:opacity-40">
                 <Save className="h-4 w-4" /> {saving ? 'Salvando...' : 'Salvar Conta'}
@@ -760,22 +760,22 @@ tfoot .val{font-size:15px;color:#15803d}
       <FilterBar>
         <div className="flex flex-wrap gap-3 items-end w-full">
           <div className="min-w-[9rem]">
-            <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Data de</label>
+            <label className="block text-xs font-medium text-ink-600 mb-1">Data de</label>
             <input type="date" value={filtros.data_de} onChange={flt('data_de')} className="input-field text-sm" />
           </div>
           <div className="min-w-[9rem]">
-            <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Data até</label>
+            <label className="block text-xs font-medium text-ink-600 mb-1">Data até</label>
             <input type="date" value={filtros.data_ate} onChange={flt('data_ate')} className="input-field text-sm" />
           </div>
           <div className="min-w-[12rem]">
-            <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Conta</label>
+            <label className="block text-xs font-medium text-ink-600 mb-1">Conta</label>
             <select value={filtros.conta_id} onChange={flt('conta_id')} className="input-field text-sm">
               <option value="">Todas as contas</option>
               {contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </select>
           </div>
           <div className="min-w-[10rem]">
-            <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Banco</label>
+            <label className="block text-xs font-medium text-ink-600 mb-1">Banco</label>
             <input
               type="text"
               value={filtros.banco}
@@ -786,7 +786,7 @@ tfoot .val{font-size:15px;color:#15803d}
             />
           </div>
           <div className="min-w-[8rem]">
-            <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Nº da Conta</label>
+            <label className="block text-xs font-medium text-ink-600 mb-1">Nº da Conta</label>
             <input
               type="text"
               value={filtros.num_conta}
@@ -797,7 +797,7 @@ tfoot .val{font-size:15px;color:#15803d}
             />
           </div>
           <div className="flex-1 min-w-[12rem]">
-            <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Buscar na descrição</label>
+            <label className="block text-xs font-medium text-ink-600 mb-1">Buscar na descrição</label>
             <input
               type="text"
               value={filtros.busca}
@@ -818,14 +818,14 @@ tfoot .val{font-size:15px;color:#15803d}
 
       {/* Extrato */}
       <div className="card overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-200 dark:border-slate-700/50 flex items-center justify-between flex-wrap gap-2">
+        <div className="px-4 py-3 border-b border-ink-200 flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-3">
             <SectionTitle icon={TrendingUp} title="Lançamentos de Receitas" />
             {!loading && receitas.length > 0 && (
-              <span className="text-xs text-gray-500 dark:text-slate-400">
+              <span className="text-xs text-ink-500">
                 {receitas.length} lançamento{receitas.length !== 1 ? 's' : ''}
                 &nbsp;·&nbsp;
-                <span className="font-semibold text-green-600 dark:text-green-400">{fmt(total)}</span>
+                <span className="font-semibold text-success-600 dark:text-success-400">{fmt(total)}</span>
               </span>
             )}
           </div>
@@ -845,13 +845,13 @@ tfoot .val{font-size:15px;color:#15803d}
 
         <div className="overflow-x-auto">
           {loading ? (
-            <div className="py-12 text-center text-sm text-gray-400">Carregando...</div>
+            <div className="py-12 text-center text-sm text-ink-400">Carregando...</div>
           ) : receitas.length === 0 ? (
-            <div className="py-12 text-center text-sm text-gray-400">Nenhum lançamento encontrado.</div>
+            <div className="py-12 text-center text-sm text-ink-400">Nenhum lançamento encontrado.</div>
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-slate-700/30 border-b border-gray-200 dark:border-slate-700/50">
-                <tr className="text-xs font-semibold text-gray-600 dark:text-slate-300 uppercase tracking-wide">
+              <thead className="bg-ink-50 border-b border-ink-200">
+                <tr className="text-xs font-semibold text-ink-600 uppercase tracking-wide">
                   <th className="text-left px-4 py-2.5 w-28">Data</th>
                   <th className="text-left px-4 py-2.5">Descrição</th>
                   <th className="text-left px-4 py-2.5 w-44">Conta</th>
@@ -865,43 +865,43 @@ tfoot .val{font-size:15px;color:#15803d}
                   const dayTotal = items.reduce((s, r) => s + parseFloat(r.valor), 0);
                   return (
                     <Fragment key={date}>
-                      <tr className="bg-green-50/60 dark:bg-green-900/10 border-t border-green-200/50 dark:border-green-800/20">
-                        <td colSpan={5} className="px-4 py-1.5 text-xs font-semibold text-green-700 dark:text-green-400">
+                      <tr className="bg-success-50/60 dark:bg-success-900/10 border-t border-success-200/50 dark:border-success-800/20">
+                        <td colSpan={5} className="px-4 py-1.5 text-xs font-semibold text-success-700 dark:text-success-400">
                           {fmtDate(date)}
-                          <span className="ml-3 font-normal text-green-600/70 dark:text-green-500/60">
+                          <span className="ml-3 font-normal text-success-600/70 dark:text-success-500/60">
                             {items.length} lançamento{items.length > 1 ? 's' : ''} · {fmt(dayTotal)}
                           </span>
                         </td>
                       </tr>
                       {items.map(r => (
-                        <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors group border-b border-gray-100 dark:border-slate-700/30 last:border-0">
-                          <td className="px-4 py-3 text-gray-400 dark:text-slate-500 text-xs tabular-nums">{fmtDate(r.data)}</td>
+                        <tr key={r.id} className="hover:bg-ink-50 transition-colors group border-b border-ink-100 last:border-0">
+                          <td className="px-4 py-3 text-ink-400 text-xs tabular-nums">{fmtDate(r.data)}</td>
                           <td className="px-4 py-3">
-                            <div className="text-gray-800 dark:text-slate-200 font-medium leading-snug">{r.descricao}</div>
+                            <div className="text-ink-800 font-medium leading-snug">{r.descricao}</div>
                             {r.observacao && (
-                              <div className="text-xs text-gray-400 dark:text-slate-500 mt-0.5 italic">{r.observacao}</div>
+                              <div className="text-xs text-ink-400 mt-0.5 italic">{r.observacao}</div>
                             )}
                           </td>
                           <td className="px-4 py-3">
-                            <div className="text-xs text-gray-600 dark:text-slate-400">{r.conta?.nome || '—'}</div>
+                            <div className="text-xs text-ink-600">{r.conta?.nome || '—'}</div>
                             {r.conta?.banco_nome && (
-                              <div className="text-xs text-gray-400 dark:text-slate-500">{r.conta.banco_nome}</div>
+                              <div className="text-xs text-ink-400">{r.conta.banco_nome}</div>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-right font-semibold text-green-600 dark:text-green-400 tabular-nums whitespace-nowrap">
+                          <td className="px-4 py-3 text-right font-semibold text-success-600 dark:text-success-400 tabular-nums whitespace-nowrap">
                             {fmt(r.valor)}
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex gap-0.5 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                               <button
                                 onClick={() => openEdit(r)}
-                                className="p-1.5 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                className="p-1.5 text-ink-400 hover:text-info-500 dark:hover:text-info-400 rounded-lg hover:bg-info-50 dark:hover:bg-info-900/20 transition-colors"
                               >
                                 <Edit2 className="h-3.5 w-3.5" />
                               </button>
                               <button
                                 onClick={() => setConfirmarExcluir(r)}
-                                className="p-1.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                className="p-1.5 text-ink-400 hover:text-danger-500 dark:hover:text-danger-400 rounded-lg hover:bg-danger-50 dark:hover:bg-danger-900/20 transition-colors"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
@@ -914,11 +914,11 @@ tfoot .val{font-size:15px;color:#15803d}
                 })}
               </tbody>
               <tfoot>
-                <tr className="bg-green-50 dark:bg-green-900/20 border-t-2 border-green-200 dark:border-green-800/50">
-                  <td colSpan={3} className="px-4 py-3 text-sm font-bold text-gray-700 dark:text-slate-200">
+                <tr className="bg-success-50 dark:bg-success-900/20 border-t-2 border-success-200 dark:border-success-800/50">
+                  <td colSpan={3} className="px-4 py-3 text-sm font-bold text-ink-700">
                     Total · {receitas.length} lançamento{receitas.length !== 1 ? 's' : ''}
                   </td>
-                  <td className="px-4 py-3 text-right text-base font-bold text-green-600 dark:text-green-400 tabular-nums">
+                  <td className="px-4 py-3 text-right text-base font-bold text-success-600 dark:text-success-400 tabular-nums">
                     {fmt(total)}
                   </td>
                   <td />
@@ -932,23 +932,23 @@ tfoot .val{font-size:15px;color:#15803d}
       {/* Modal lançamento */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
+          <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-lg">
+            <div className="px-6 py-4 border-b border-ink-200 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-green-50 dark:bg-green-900/30 flex items-center justify-center">
-                  <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400" />
+                <div className="w-8 h-8 rounded-xl bg-success-50 dark:bg-success-900/30 flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4 text-success-600 dark:text-success-400" />
                 </div>
-                <h3 className="text-base font-semibold text-gray-800 dark:text-slate-200">
+                <h3 className="text-base font-semibold text-ink-800">
                   {editing ? 'Editar Lançamento' : 'Novo Lançamento de Receita'}
                 </h3>
               </div>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-200">
+              <button onClick={() => setShowModal(false)} className="text-ink-400 hover:text-ink-600">
                 <X className="h-5 w-5" />
               </button>
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Conta Bancária *</label>
+                <label className="block text-xs font-medium text-ink-600 mb-1">Conta Bancária *</label>
                 <ContaSelectInput
                   value={form.conta_id}
                   contas={contas}
@@ -957,11 +957,11 @@ tfoot .val{font-size:15px;color:#15803d}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Data *</label>
+                  <label className="block text-xs font-medium text-ink-600 mb-1">Data *</label>
                   <input type="date" value={form.data} onChange={inp('data')} className="input-field text-sm" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Valor (R$) *</label>
+                  <label className="block text-xs font-medium text-ink-600 mb-1">Valor (R$) *</label>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -973,7 +973,7 @@ tfoot .val{font-size:15px;color:#15803d}
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Descrição *</label>
+                <label className="block text-xs font-medium text-ink-600 mb-1">Descrição *</label>
                 <input
                   value={form.descricao}
                   onChange={inp('descricao')}
@@ -982,7 +982,7 @@ tfoot .val{font-size:15px;color:#15803d}
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Observação</label>
+                <label className="block text-xs font-medium text-ink-600 mb-1">Observação</label>
                 <textarea
                   value={form.observacao}
                   onChange={inp('observacao')}
@@ -992,7 +992,7 @@ tfoot .val{font-size:15px;color:#15803d}
                 />
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-2">
+            <div className="px-6 py-4 border-t border-ink-200 flex justify-end gap-2">
               <button onClick={() => setShowModal(false)} className="btn-secondary text-sm px-4 py-2">Cancelar</button>
               <button
                 onClick={salvar}
@@ -1153,10 +1153,10 @@ function TabDespesas() {
   return (
     <div className="space-y-4">
       {/* Filtros */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4">
+      <div className="bg-surface rounded-xl shadow-sm border border-ink-200 p-4">
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
           <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Tipo</label>
+            <label className="block text-xs font-medium text-ink-600 mb-1">Tipo</label>
             <select value={filtros.tipo} onChange={inpF('tipo')} className="input-field text-sm">
               <option value="TODOS">Todos</option>
               <option value="COMPRA">Ordem de Compra</option>
@@ -1164,7 +1164,7 @@ function TabDespesas() {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Pagamento</label>
+            <label className="block text-xs font-medium text-ink-600 mb-1">Pagamento</label>
             <select value={filtros.pago} onChange={inpF('pago')} className="input-field text-sm">
               <option value="TODOS">Todos</option>
               <option value="pago">Pago</option>
@@ -1172,26 +1172,26 @@ function TabDespesas() {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">De</label>
+            <label className="block text-xs font-medium text-ink-600 mb-1">De</label>
             <input type="date" value={filtros.data_de} onChange={inpF('data_de')} className="input-field text-sm" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Até</label>
+            <label className="block text-xs font-medium text-ink-600 mb-1">Até</label>
             <input type="date" value={filtros.data_ate} onChange={inpF('data_ate')} className="input-field text-sm" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Busca</label>
+            <label className="block text-xs font-medium text-ink-600 mb-1">Busca</label>
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-ink-400" />
               <input value={filtros.busca} onChange={inpF('busca')} className="input-field text-sm pl-8" placeholder="Nº ou objeto..." />
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Secretaria</label>
+            <label className="block text-xs font-medium text-ink-600 mb-1">Secretaria</label>
             <input value={filtros.secretaria} onChange={inpF('secretaria')} className="input-field text-sm" placeholder="Nome da secretaria..." />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Processo</label>
+            <label className="block text-xs font-medium text-ink-600 mb-1">Processo</label>
             <input value={filtros.processo} onChange={inpF('processo')} className="input-field text-sm" placeholder="Nº do processo..." />
           </div>
         </div>
@@ -1205,96 +1205,96 @@ function TabDespesas() {
       {/* Cards resumo */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-center gap-3">
-          <Clock className="h-8 w-8 text-amber-500 flex-shrink-0" />
+          <Clock className="h-8 w-8 text-amber-500 shrink-0" />
           <div>
             <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">Pendentes</p>
             <p className="text-2xl font-bold text-amber-800 dark:text-amber-300">{pendentes}</p>
           </div>
         </div>
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4 flex items-center gap-3">
-          <CheckCircle2 className="h-8 w-8 text-green-500 flex-shrink-0" />
+        <div className="bg-success-50 dark:bg-success-900/20 border border-success-200 dark:border-success-800 rounded-xl p-4 flex items-center gap-3">
+          <CheckCircle2 className="h-8 w-8 text-success-500 shrink-0" />
           <div>
-            <p className="text-xs text-green-700 dark:text-green-400 font-medium">Pagos</p>
-            <p className="text-2xl font-bold text-green-800 dark:text-green-300">{pagos}</p>
+            <p className="text-xs text-success-700 dark:text-success-400 font-medium">Pagos</p>
+            <p className="text-2xl font-bold text-success-800 dark:text-success-300">{pagos}</p>
           </div>
         </div>
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 flex items-center gap-3">
-          <CreditCard className="h-8 w-8 text-blue-500 flex-shrink-0" />
+        <div className="bg-info-50 dark:bg-info-900/20 border border-info-200 dark:border-info-800 rounded-xl p-4 flex items-center gap-3">
+          <CreditCard className="h-8 w-8 text-info-500 shrink-0" />
           <div>
-            <p className="text-xs text-blue-700 dark:text-blue-400 font-medium">Total Pago (Bruto)</p>
-            <p className="text-lg font-bold text-blue-800 dark:text-blue-300">{fmtVal(totalPago)}</p>
+            <p className="text-xs text-brand-700 dark:text-info-400 font-medium">Total Pago (Bruto)</p>
+            <p className="text-lg font-bold text-info-800 dark:text-info-300">{fmtVal(totalPago)}</p>
           </div>
         </div>
       </div>
 
       {/* Erro */}
       {erro && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3 text-sm text-red-700 dark:text-red-400">
+        <div className="bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-800 rounded-xl px-4 py-3 text-sm text-danger-700 dark:text-danger-400">
           Erro: {erro}
         </div>
       )}
 
       {/* Tabela */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+      <div className="bg-surface rounded-xl shadow-sm border border-ink-200 overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-12 text-gray-400">Carregando...</div>
+          <div className="flex items-center justify-center py-12 text-ink-400">Carregando...</div>
         ) : ordens.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-gray-400 gap-2">
+          <div className="flex flex-col items-center justify-center py-12 text-ink-400 gap-2">
             <ShoppingCart className="h-8 w-8 opacity-40" />
             <p className="text-sm">Nenhuma ordem encontrada</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-slate-700">
+              <thead className="bg-ink-50">
                 <tr>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 dark:text-slate-300">Nº / Tipo</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 dark:text-slate-300">Objeto / Contrato</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 dark:text-slate-300">Secretaria</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 dark:text-slate-300">Processo</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-600 dark:text-slate-300">Data Pagamento</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-600 dark:text-slate-300">Valor Total</th>
-                  <th className="text-center px-4 py-3 text-xs font-semibold text-gray-600 dark:text-slate-300">Pagamento</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-600">Nº / Tipo</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-600">Objeto / Contrato</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-600">Secretaria</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-600">Processo</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-600">Data Pagamento</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-ink-600">Valor Total</th>
+                  <th className="text-center px-4 py-3 text-xs font-semibold text-ink-600">Pagamento</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
+              <tbody className="divide-y divide-ink-100">
                 {ordens.map(o => (
-                  <tr key={o.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50 group">
+                  <tr key={o.id} className="hover:bg-ink-50 group">
                     <td className="px-4 py-3">
-                      <div className="font-mono text-xs text-gray-800 dark:text-slate-200">{o.numero}</div>
-                      <span className={`inline-block mt-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded ${o.tipo === 'COMPRA' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'}`}>
+                      <div className="font-mono text-xs text-ink-800">{o.numero}</div>
+                      <span className={`inline-block mt-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-sm ${o.tipo === 'COMPRA' ? 'bg-info-100 text-brand-700 dark:bg-info-900/40 dark:text-info-300' : 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'}`}>
                         {o.tipo === 'COMPRA' ? 'OC' : 'OS'}
                       </span>
                     </td>
                     <td className="px-4 py-3 max-w-xs">
-                      <div className="text-xs text-gray-800 dark:text-slate-200 line-clamp-2">{o.objeto}</div>
+                      <div className="text-xs text-ink-800 line-clamp-2">{o.objeto}</div>
                       {o.contrato && (
-                        <div className="text-[10px] text-gray-500 dark:text-slate-400 line-clamp-2">
+                        <div className="text-[10px] text-ink-500 line-clamp-2">
                           {o.contrato.credor?.razao_social || ''}{o.contrato.credor?.razao_social && ' — '}Contrato {o.contrato.numero_contrato}
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-slate-400 whitespace-nowrap">{o.secretaria_sigla || '—'}</td>
-                    <td className="px-4 py-3 text-xs font-mono text-gray-600 dark:text-slate-400 whitespace-nowrap">{o.did?.processo?.numero || '—'}</td>
-                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-slate-400 whitespace-nowrap">
+                    <td className="px-4 py-3 text-xs text-ink-600 whitespace-nowrap">{o.secretaria_sigla || '—'}</td>
+                    <td className="px-4 py-3 text-xs font-mono text-ink-600 whitespace-nowrap">{o.did?.processo?.numero || '—'}</td>
+                    <td className="px-4 py-3 text-xs text-ink-600 whitespace-nowrap">
                       {o.pagamento?.data_pagamento
                         ? fmtDate(o.pagamento.data_pagamento)
                         : o.did?.pago === 'sim' && o.did.tesouraria_recebido_em
                           ? fmtDate(o.did.tesouraria_recebido_em)
                           : '—'}
                     </td>
-                    <td className="px-4 py-3 text-right text-xs font-medium text-gray-800 dark:text-slate-200 whitespace-nowrap tabular-nums">{fmtVal(o.valor_total)}</td>
+                    <td className="px-4 py-3 text-right text-xs font-medium text-ink-800 whitespace-nowrap tabular-nums">{fmtVal(o.valor_total)}</td>
                     <td className="px-4 py-3 text-center">
                       {o.pagamento ? (
-                        <span className="flex items-center justify-center gap-1 text-[10px] font-semibold text-green-700 dark:text-green-400">
+                        <span className="flex items-center justify-center gap-1 text-[10px] font-semibold text-success-700 dark:text-success-400">
                           <CheckCircle2 className="h-3 w-3" /> PAGO
                         </span>
                       ) : o.did?.pago === 'sim' ? (
                         <div className="flex flex-col items-center gap-0.5">
-                          <span className="flex items-center gap-1 text-[10px] font-semibold text-green-700 dark:text-green-400">
+                          <span className="flex items-center gap-1 text-[10px] font-semibold text-success-700 dark:text-success-400">
                             <CheckCircle2 className="h-3 w-3" /> PAGO
                           </span>
-                          {o.did.doc_caixa && <span className="text-[10px] text-gray-400 dark:text-slate-500">Doc: {o.did.doc_caixa}</span>}
+                          {o.did.doc_caixa && <span className="text-[10px] text-ink-400">Doc: {o.did.doc_caixa}</span>}
                         </div>
                       ) : (
                         <span className="flex items-center justify-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
@@ -1313,37 +1313,37 @@ function TabDespesas() {
       {/* Modal de Pagamento */}
       {showModal && ordemSel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-slate-700">
-              <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+          <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-lg">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-ink-200">
+              <h2 className="text-base font-semibold text-ink-900 dark:text-white">
                 {editingPag ? 'Editar Pagamento' : 'Registrar Pagamento'}
               </h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-300">
+              <button onClick={() => setShowModal(false)} className="text-ink-400 hover:text-ink-600">
                 <X className="h-5 w-5" />
               </button>
             </div>
             <div className="px-6 py-5 space-y-4">
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-xs space-y-1">
-                <div className="flex items-center gap-2 font-semibold text-blue-800 dark:text-blue-300">
-                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${ordemSel.tipo === 'COMPRA' ? 'bg-blue-200 dark:bg-blue-900' : 'bg-purple-200 dark:bg-purple-900'}`}>
+              <div className="bg-info-50 dark:bg-info-900/20 border border-info-200 dark:border-info-800 rounded-lg p-3 text-xs space-y-1">
+                <div className="flex items-center gap-2 font-semibold text-info-800 dark:text-info-300">
+                  <span className={`px-1.5 py-0.5 rounded-sm text-[10px] font-bold ${ordemSel.tipo === 'COMPRA' ? 'bg-info-200 dark:bg-info-900' : 'bg-purple-200 dark:bg-purple-900'}`}>
                     {ordemSel.tipo === 'COMPRA' ? 'OC' : 'OS'}
                   </span>
                   {ordemSel.numero}
                 </div>
-                <div className="text-blue-700 dark:text-blue-400 truncate">{ordemSel.objeto}</div>
-                <div className="text-blue-600 dark:text-blue-500">Valor Total: {fmtVal(ordemSel.valor_total)}</div>
+                <div className="text-brand-700 dark:text-info-400 truncate">{ordemSel.objeto}</div>
+                <div className="text-brand-600 dark:text-info-500">Valor Total: {fmtVal(ordemSel.valor_total)}</div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Conta Bancária *</label>
+                <label className="block text-xs font-medium text-ink-600 mb-1">Conta Bancária *</label>
                 <ContaSelectInput value={form.conta_id} contas={contas} onChange={id => setForm(p => ({ ...p, conta_id: id }))} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Data do Pagamento *</label>
+                <label className="block text-xs font-medium text-ink-600 mb-1">Data do Pagamento *</label>
                 <input type="date" value={form.data_pagamento} onChange={inp('data_pagamento')} className="input-field text-sm" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Valor Bruto (R$) *</label>
+                  <label className="block text-xs font-medium text-ink-600 mb-1">Valor Bruto (R$) *</label>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -1354,7 +1354,7 @@ function TabDespesas() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Valor Líquido (R$)</label>
+                  <label className="block text-xs font-medium text-ink-600 mb-1">Valor Líquido (R$)</label>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -1366,7 +1366,7 @@ function TabDespesas() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Observação</label>
+                <label className="block text-xs font-medium text-ink-600 mb-1">Observação</label>
                 <textarea
                   value={form.observacao}
                   onChange={inp('observacao')}
@@ -1376,7 +1376,7 @@ function TabDespesas() {
                 />
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-2">
+            <div className="px-6 py-4 border-t border-ink-200 flex justify-end gap-2">
               <button onClick={() => setShowModal(false)} className="btn-secondary text-sm px-4 py-2">Cancelar</button>
               <button
                 onClick={salvar}
@@ -1437,17 +1437,17 @@ function ContasMultiSelect({ contas, value, onAplicar, sinalAbrir = 0 }) {
         onClick={() => setOpen(o => !o)}
         className="input-field text-sm flex items-center justify-between gap-2 min-w-[13rem]"
       >
-        <span className={value.length ? 'text-gray-800 dark:text-slate-200' : 'text-gray-400'}>
+        <span className={value.length ? 'text-ink-800' : 'text-ink-400'}>
           {value.length ? `${value.length} conta${value.length > 1 ? 's' : ''} selecionada${value.length > 1 ? 's' : ''}` : 'Selecionar contas'}
         </span>
-        <ChevronDown className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`h-4 w-4 shrink-0 text-ink-400 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
-        <div className="absolute z-50 mt-1 w-80 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl shadow-xl overflow-hidden">
-          <div className="p-2 border-b border-gray-100 dark:border-slate-700">
+        <div className="absolute z-50 mt-1 w-80 bg-surface border border-ink-200 rounded-xl shadow-xl overflow-hidden">
+          <div className="p-2 border-b border-ink-100">
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-ink-400" />
               <input
                 value={q}
                 onChange={e => setQ(e.target.value)}
@@ -1460,7 +1460,7 @@ function ContasMultiSelect({ contas, value, onAplicar, sinalAbrir = 0 }) {
 
           <div className="max-h-64 overflow-y-auto">
             {visiveis.length === 0 && (
-              <p className="px-3 py-6 text-center text-xs text-gray-400">Nenhuma conta encontrada</p>
+              <p className="px-3 py-6 text-center text-xs text-ink-400">Nenhuma conta encontrada</p>
             )}
             {visiveis.map(c => {
               const marcada = draft.includes(c.id);
@@ -1469,32 +1469,32 @@ function ContasMultiSelect({ contas, value, onAplicar, sinalAbrir = 0 }) {
                   key={c.id}
                   type="button"
                   onClick={() => toggle(c.id)}
-                  className="w-full flex items-start gap-2.5 text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-700/60 transition-colors border-b border-gray-100 dark:border-slate-700/40 last:border-0"
+                  className="w-full flex items-start gap-2.5 text-left px-3 py-2 hover:bg-ink-50 transition-colors border-b border-ink-100 last:border-0"
                 >
-                  <span className={`mt-0.5 h-4 w-4 shrink-0 rounded border flex items-center justify-center transition-colors ${marcada ? 'bg-blue-600 border-blue-600' : 'border-gray-300 dark:border-slate-500'}`}>
+                  <span className={`mt-0.5 h-4 w-4 shrink-0 rounded-sm border flex items-center justify-center transition-colors ${marcada ? 'bg-brand-600 border-brand-600' : 'border-ink-300'}`}>
                     {marcada && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
                   </span>
                   <span className="min-w-0">
-                    <span className="block text-xs font-medium text-gray-800 dark:text-slate-200 truncate">{contaLabel(c)}</span>
-                    {c.banco_nome && <span className="block text-[11px] text-gray-500 dark:text-slate-400 truncate">{c.banco_nome}</span>}
+                    <span className="block text-xs font-medium text-ink-800 truncate">{contaLabel(c)}</span>
+                    {c.banco_nome && <span className="block text-[11px] text-ink-500 truncate">{c.banco_nome}</span>}
                   </span>
                 </button>
               );
             })}
           </div>
 
-          <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/40">
+          <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-ink-100 bg-ink-50">
             <div className="flex gap-2 text-[11px]">
-              <button type="button" onClick={marcarVisiveis} className="text-blue-600 dark:text-blue-400 hover:underline">
+              <button type="button" onClick={marcarVisiveis} className="text-brand-600 dark:text-info-400 hover:underline">
                 {termo ? 'Marcar filtradas' : 'Marcar todas'}
               </button>
-              <span className="text-gray-300 dark:text-slate-600">|</span>
-              <button type="button" onClick={() => setDraft([])} className="text-gray-500 dark:text-slate-400 hover:underline">Limpar</button>
+              <span className="text-ink-300">|</span>
+              <button type="button" onClick={() => setDraft([])} className="text-ink-500 hover:underline">Limpar</button>
             </div>
-            <span className="text-[11px] text-gray-500 dark:text-slate-400">{draft.length} marcada{draft.length !== 1 ? 's' : ''}</span>
+            <span className="text-[11px] text-ink-500">{draft.length} marcada{draft.length !== 1 ? 's' : ''}</span>
           </div>
 
-          <div className="px-3 py-2 border-t border-gray-100 dark:border-slate-700">
+          <div className="px-3 py-2 border-t border-ink-100">
             <button type="button" onClick={aplicar} className="btn-primary w-full text-xs py-1.5">Aplicar</button>
           </div>
         </div>
@@ -1517,14 +1517,14 @@ function NomearGrupoModal({ qtdContas, onSalvar, onCancel }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm">
-        <div className="px-4 py-3 border-b border-gray-100 dark:border-slate-700 flex items-center gap-2">
-          <Layers className="h-4 w-4 text-blue-600" />
-          <h3 className="text-sm font-semibold text-gray-800 dark:text-slate-200">Salvar grupo de contas</h3>
+      <div className="bg-surface rounded-xl shadow-2xl w-full max-w-sm">
+        <div className="px-4 py-3 border-b border-ink-100 flex items-center gap-2">
+          <Layers className="h-4 w-4 text-brand-600" />
+          <h3 className="text-sm font-semibold text-ink-800">Salvar grupo de contas</h3>
         </div>
         <div className="p-4 space-y-3">
           <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Nome do grupo *</label>
+            <label className="block text-xs font-medium text-ink-600 mb-1">Nome do grupo *</label>
             <input
               value={nome}
               onChange={e => setNome(e.target.value)}
@@ -1535,11 +1535,11 @@ function NomearGrupoModal({ qtdContas, onSalvar, onCancel }) {
               autoFocus
             />
           </div>
-          <p className="text-xs text-gray-500 dark:text-slate-400">
+          <p className="text-xs text-ink-500">
             {qtdContas} conta{qtdContas !== 1 ? 's' : ''} será{qtdContas !== 1 ? 'ão' : ''} salva{qtdContas !== 1 ? 's' : ''} neste grupo. O grupo é seu — outros usuários não o enxergam.
           </p>
         </div>
-        <div className="px-4 py-3 border-t border-gray-100 dark:border-slate-700 flex justify-end gap-2">
+        <div className="px-4 py-3 border-t border-ink-100 flex justify-end gap-2">
           <button onClick={onCancel} className="btn-secondary text-sm px-4 py-2">Cancelar</button>
           <button onClick={salvar} disabled={!nome.trim() || saving} className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5 disabled:opacity-40">
             <Save className="h-4 w-4" /> {saving ? 'Salvando...' : 'Salvar'}
@@ -1563,13 +1563,13 @@ function GerenciarGruposModal({ grupos, contas, onRenomear, onExcluir, onReorden
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
-        <div className="px-4 py-3 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
+      <div className="bg-surface rounded-xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
+        <div className="px-4 py-3 border-b border-ink-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Settings2 className="h-4 w-4 text-blue-600" />
-            <h3 className="text-sm font-semibold text-gray-800 dark:text-slate-200">Gerenciar grupos de contas</h3>
+            <Settings2 className="h-4 w-4 text-brand-600" />
+            <h3 className="text-sm font-semibold text-ink-800">Gerenciar grupos de contas</h3>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-200">
+          <button onClick={onClose} className="text-ink-400 hover:text-ink-600">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -1577,8 +1577,8 @@ function GerenciarGruposModal({ grupos, contas, onRenomear, onExcluir, onReorden
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {grupos.length === 0 && (
             <div className="py-8 text-center space-y-3">
-              <p className="text-sm text-gray-500 dark:text-slate-400">Nenhum grupo salvo ainda.</p>
-              <p className="text-xs text-gray-400 dark:text-slate-500 max-w-xs mx-auto leading-relaxed">
+              <p className="text-sm text-ink-500">Nenhum grupo salvo ainda.</p>
+              <p className="text-xs text-ink-400 max-w-xs mx-auto leading-relaxed">
                 Um grupo é um conjunto de contas que você salva para consultar de novo com um clique.
                 Marque as contas primeiro; o botão de salvar aparece logo abaixo dos chips.
               </p>
@@ -1592,13 +1592,13 @@ function GerenciarGruposModal({ grupos, contas, onRenomear, onExcluir, onReorden
             const validas = (g.contas_ids || []).filter(id => contas.some(c => c.id === id));
             const orfas = (g.contas_ids || []).length - validas.length;
             return (
-              <div key={g.id} className="border border-gray-200 dark:border-slate-600 rounded-lg p-3 flex items-start gap-3">
+              <div key={g.id} className="border border-ink-200 rounded-lg p-3 flex items-start gap-3">
                 {grupos.length > 1 && (
                   <div className="flex flex-col gap-0.5 pt-0.5">
                     <button
                       onClick={() => onReordenar(i, i - 1)}
                       disabled={i === 0}
-                      className="text-gray-400 hover:text-gray-700 dark:hover:text-slate-200 disabled:opacity-20"
+                      className="text-ink-400 hover:text-ink-700 disabled:opacity-20"
                       title="Mover para cima"
                     >
                       <ChevronUp className="h-3.5 w-3.5" />
@@ -1606,7 +1606,7 @@ function GerenciarGruposModal({ grupos, contas, onRenomear, onExcluir, onReorden
                     <button
                       onClick={() => onReordenar(i, i + 1)}
                       disabled={i === grupos.length - 1}
-                      className="text-gray-400 hover:text-gray-700 dark:hover:text-slate-200 disabled:opacity-20"
+                      className="text-ink-400 hover:text-ink-700 disabled:opacity-20"
                       title="Mover para baixo"
                     >
                       <ChevronDown className="h-3.5 w-3.5" />
@@ -1628,13 +1628,13 @@ function GerenciarGruposModal({ grupos, contas, onRenomear, onExcluir, onReorden
                   ) : (
                     <button
                       onClick={() => setEditando({ id: g.id, nome: g.nome })}
-                      className="text-sm font-medium text-gray-800 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 text-left"
+                      className="text-sm font-medium text-ink-800 hover:text-brand-600 dark:hover:text-info-400 text-left"
                       title="Clique para renomear"
                     >
                       {g.nome}
                     </button>
                   )}
-                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+                  <p className="text-xs text-ink-500 mt-0.5">
                     {validas.length} conta{validas.length !== 1 ? 's' : ''}
                     {orfas > 0 && (
                       <span className="text-amber-600 dark:text-amber-400 ml-1.5 inline-flex items-center gap-1">
@@ -1648,14 +1648,14 @@ function GerenciarGruposModal({ grupos, contas, onRenomear, onExcluir, onReorden
                 <div className="flex gap-1 shrink-0">
                   <button
                     onClick={() => onEditarContas(g)}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-700"
+                    className="p-1.5 rounded-lg text-ink-400 hover:text-brand-600 hover:bg-info-50"
                     title="Editar contas do grupo"
                   >
                     <Edit2 className="h-3.5 w-3.5" />
                   </button>
                   <button
                     onClick={() => setConfirmando(g)}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-slate-700"
+                    className="p-1.5 rounded-lg text-ink-400 hover:text-danger-600 hover:bg-danger-50"
                     title="Excluir grupo"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -1666,7 +1666,7 @@ function GerenciarGruposModal({ grupos, contas, onRenomear, onExcluir, onReorden
           })}
         </div>
 
-        <div className="px-4 py-3 border-t border-gray-100 dark:border-slate-700 flex justify-end">
+        <div className="px-4 py-3 border-t border-ink-100 flex justify-end">
           <button onClick={onClose} className="btn-secondary text-sm px-4 py-2">Fechar</button>
         </div>
       </div>
@@ -1994,7 +1994,7 @@ function TabRelatorios() {
   return (
     <div className="space-y-4">
       {/* Seletor de tipo e filtros */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 space-y-4">
+      <div className="bg-surface rounded-xl shadow-sm border border-ink-200 p-4 space-y-4">
         <div className="flex flex-wrap gap-2">
           {[
             { key: 'saldo',   label: 'Saldo por Conta' },
@@ -2004,7 +2004,7 @@ function TabRelatorios() {
             <button
               key={t.key}
               onClick={() => { setTipo(t.key); if (t.key !== 'saldo') setResultado(null); else loadSaldo(); }}
-              className={`text-sm px-4 py-2 rounded-lg font-medium transition-colors ${tipo === t.key ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600'}`}
+              className={`text-sm px-4 py-2 rounded-lg font-medium transition-colors ${tipo === t.key ? 'bg-brand-600 text-white' : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}`}
             >
               {t.label}
             </button>
@@ -2012,12 +2012,12 @@ function TabRelatorios() {
         </div>
         {/* Grupos de contas — atalhos salvos + seleção manual */}
         {tipo === 'saldo' && (
-          <div className="space-y-2 pb-1 border-b border-gray-100 dark:border-slate-700">
+          <div className="space-y-2 pb-1 border-b border-ink-100">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-xs font-medium text-gray-500 dark:text-slate-400 mr-1">Grupo:</span>
+              <span className="text-xs font-medium text-ink-500 mr-1">Grupo:</span>
               <button
                 onClick={usarTodas}
-                className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${!grupoAtivo && !selecao.length ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600'}`}
+                className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${!grupoAtivo && !selecao.length ? 'bg-brand-600 text-white' : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}`}
               >
                 Todas as contas
               </button>
@@ -2025,7 +2025,7 @@ function TabRelatorios() {
                 <button
                   key={g.id}
                   onClick={() => usarGrupo(g)}
-                  className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors flex items-center gap-1.5 ${grupoAtivo === g.id ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600'}`}
+                  className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors flex items-center gap-1.5 ${grupoAtivo === g.id ? 'bg-brand-600 text-white' : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}`}
                   title={`${(g.contas_ids || []).length} conta(s)`}
                 >
                   <Layers className="h-3 w-3" />
@@ -2034,13 +2034,13 @@ function TabRelatorios() {
                 </button>
               ))}
               {!grupoAtivo && selecao.length > 0 && (
-                <span className="text-xs px-3 py-1.5 rounded-full font-medium bg-blue-600 text-white">
+                <span className="text-xs px-3 py-1.5 rounded-full font-medium bg-brand-600 text-white">
                   Seleção manual ({selecao.length})
                 </span>
               )}
               <button
                 onClick={() => setModalGerenciar(true)}
-                className="text-xs px-3 py-1.5 rounded-full font-medium text-gray-500 dark:text-slate-400 border border-dashed border-gray-300 dark:border-slate-600 hover:text-blue-600 hover:border-blue-400 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"
+                className="text-xs px-3 py-1.5 rounded-full font-medium text-ink-500 border border-dashed border-ink-300 hover:text-brand-600 hover:border-info-400 dark:hover:text-info-400 transition-colors flex items-center gap-1.5"
                 title="Renomear, editar contas ou excluir grupos"
               >
                 <Settings2 className="h-3.5 w-3.5" />
@@ -2052,11 +2052,11 @@ function TabRelatorios() {
             {selecao.length > 0 && (grupoModificado || !grupoAtivo) && (
               <div className="flex flex-wrap items-center gap-2">
                 {grupoModificado && (
-                  <button onClick={atualizarGrupoAtivo} className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+                  <button onClick={atualizarGrupoAtivo} className="text-xs text-brand-600 dark:text-info-400 hover:underline flex items-center gap-1">
                     <Save className="h-3 w-3" /> Atualizar "{grupoObj.nome}" com esta seleção
                   </button>
                 )}
-                <button onClick={() => setModalNomear(true)} className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+                <button onClick={() => setModalNomear(true)} className="text-xs text-brand-600 dark:text-info-400 hover:underline flex items-center gap-1">
                   <Plus className="h-3 w-3" /> Salvar como {grupoModificado ? 'novo ' : ''}grupo
                 </button>
               </div>
@@ -2068,15 +2068,15 @@ function TabRelatorios() {
           {tipo === 'saldo' && (
             <>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Contas</label>
+                <label className="block text-xs font-medium text-ink-600 mb-1">Contas</label>
                 <ContasMultiSelect contas={contas} value={selecao} onAplicar={aplicarSelecao} sinalAbrir={sinalAbrir} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">De</label>
+                <label className="block text-xs font-medium text-ink-600 mb-1">De</label>
                 <input type="date" value={filtros.data_de} onChange={inpF('data_de')} className="input-field text-sm" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Até</label>
+                <label className="block text-xs font-medium text-ink-600 mb-1">Até</label>
                 <input type="date" value={filtros.data_ate} onChange={inpF('data_ate')} className="input-field text-sm" />
               </div>
             </>
@@ -2084,11 +2084,11 @@ function TabRelatorios() {
           {tipo === 'fluxo' && (
             <>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Ano</label>
+                <label className="block text-xs font-medium text-ink-600 mb-1">Ano</label>
                 <input type="number" value={filtros.ano} onChange={inpF('ano')} min="2000" max="2099" className="input-field text-sm" style={{ width: '7rem' }} />
               </div>
               <div style={{ minWidth: '14rem' }}>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Conta (opcional)</label>
+                <label className="block text-xs font-medium text-ink-600 mb-1">Conta (opcional)</label>
                 <ContaSelectInput value={filtros.conta_id} contas={contas} onChange={id => setFiltros(p => ({ ...p, conta_id: id }))} />
               </div>
             </>
@@ -2096,15 +2096,15 @@ function TabRelatorios() {
           {tipo === 'extrato' && (
             <>
               <div style={{ minWidth: '14rem' }}>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Conta *</label>
+                <label className="block text-xs font-medium text-ink-600 mb-1">Conta *</label>
                 <ContaSelectInput value={filtros.conta_id} contas={contas} onChange={id => setFiltros(p => ({ ...p, conta_id: id }))} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">De</label>
+                <label className="block text-xs font-medium text-ink-600 mb-1">De</label>
                 <input type="date" value={filtros.data_de} onChange={inpF('data_de')} className="input-field text-sm" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Até</label>
+                <label className="block text-xs font-medium text-ink-600 mb-1">Até</label>
                 <input type="date" value={filtros.data_ate} onChange={inpF('data_ate')} className="input-field text-sm" />
               </div>
             </>
@@ -2124,7 +2124,7 @@ function TabRelatorios() {
 
       {/* Estado de carregamento inicial */}
       {loading && !resultado && (
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 flex items-center justify-center py-16 text-gray-400 gap-2">
+        <div className="bg-surface rounded-xl shadow-sm border border-ink-200 flex items-center justify-center py-16 text-ink-400 gap-2">
           <BarChart2 className="h-5 w-5 animate-pulse" />
           <span className="text-sm">Carregando...</span>
         </div>
@@ -2132,15 +2132,15 @@ function TabRelatorios() {
 
       {/* Resultado */}
       {resultado && (
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+        <div className="bg-surface rounded-xl shadow-sm border border-ink-200 overflow-hidden">
           {resultado.tipo === 'saldo' && (
             <>
-              <div className="px-4 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700">
-                <h3 className="text-sm font-semibold text-gray-800 dark:text-slate-200">
+              <div className="px-4 py-3 border-b border-ink-100 bg-ink-50">
+                <h3 className="text-sm font-semibold text-ink-800">
                   Saldo por Conta Bancária
-                  {resultado.filtro?.grupo_nome && <span className="text-blue-600 dark:text-blue-400"> — {resultado.filtro.grupo_nome}</span>}
+                  {resultado.filtro?.grupo_nome && <span className="text-brand-600 dark:text-info-400"> — {resultado.filtro.grupo_nome}</span>}
                 </h3>
-                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+                <p className="text-xs text-ink-500 mt-0.5">
                   {resultado.filtro
                     ? `${resultado.contas.length} conta${resultado.contas.length !== 1 ? 's' : ''} selecionada${resultado.contas.length !== 1 ? 's' : ''}`
                     : 'Todas as contas ativas'}
@@ -2154,7 +2154,7 @@ function TabRelatorios() {
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-blue-800 text-white">
+                  <thead className="bg-info-800 text-white">
                     <tr>
                       <th className="text-left px-4 py-3 text-xs font-semibold">Conta</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold">Banco</th>
@@ -2163,23 +2163,23 @@ function TabRelatorios() {
                       <th className="text-right px-4 py-3 text-xs font-semibold">Saldo</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
+                  <tbody className="divide-y divide-ink-100">
                     {resultado.contas.map(c => (
-                      <tr key={c.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50">
-                        <td className="px-4 py-3 text-xs font-medium text-gray-800 dark:text-slate-200">{c.nome}</td>
-                        <td className="px-4 py-3 text-xs text-gray-600 dark:text-slate-400">{c.banco_nome || '—'}</td>
-                        <td className="px-4 py-3 text-right text-xs font-medium text-green-700 dark:text-green-400 tabular-nums">{fmtVal(c.total_receitas)}</td>
-                        <td className="px-4 py-3 text-right text-xs font-medium text-red-600 dark:text-red-400 tabular-nums">{fmtVal(c.total_despesas)}</td>
-                        <td className={`px-4 py-3 text-right text-xs font-bold tabular-nums ${c.saldo >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{fmtVal(c.saldo)}</td>
+                      <tr key={c.id} className="hover:bg-ink-50">
+                        <td className="px-4 py-3 text-xs font-medium text-ink-800">{c.nome}</td>
+                        <td className="px-4 py-3 text-xs text-ink-600">{c.banco_nome || '—'}</td>
+                        <td className="px-4 py-3 text-right text-xs font-medium text-success-700 dark:text-success-400 tabular-nums">{fmtVal(c.total_receitas)}</td>
+                        <td className="px-4 py-3 text-right text-xs font-medium text-danger-600 dark:text-danger-400 tabular-nums">{fmtVal(c.total_despesas)}</td>
+                        <td className={`px-4 py-3 text-right text-xs font-bold tabular-nums ${c.saldo >= 0 ? 'text-success-700 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'}`}>{fmtVal(c.saldo)}</td>
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="bg-blue-50 dark:bg-blue-900/20">
+                  <tfoot className="bg-info-50 dark:bg-info-900/20">
                     <tr>
-                      <td colSpan={2} className="px-4 py-3 text-xs font-bold text-gray-800 dark:text-slate-200">TOTAL GERAL</td>
-                      <td className="px-4 py-3 text-right text-xs font-bold text-green-700 dark:text-green-400 tabular-nums">{fmtVal(resultado.totais.receitas)}</td>
-                      <td className="px-4 py-3 text-right text-xs font-bold text-red-600 dark:text-red-400 tabular-nums">{fmtVal(resultado.totais.despesas)}</td>
-                      <td className={`px-4 py-3 text-right text-xs font-bold tabular-nums ${resultado.totais.saldo >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{fmtVal(resultado.totais.saldo)}</td>
+                      <td colSpan={2} className="px-4 py-3 text-xs font-bold text-ink-800">TOTAL GERAL</td>
+                      <td className="px-4 py-3 text-right text-xs font-bold text-success-700 dark:text-success-400 tabular-nums">{fmtVal(resultado.totais.receitas)}</td>
+                      <td className="px-4 py-3 text-right text-xs font-bold text-danger-600 dark:text-danger-400 tabular-nums">{fmtVal(resultado.totais.despesas)}</td>
+                      <td className={`px-4 py-3 text-right text-xs font-bold tabular-nums ${resultado.totais.saldo >= 0 ? 'text-success-700 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'}`}>{fmtVal(resultado.totais.saldo)}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -2189,12 +2189,12 @@ function TabRelatorios() {
 
           {resultado.tipo === 'fluxo' && (
             <>
-              <div className="px-4 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700">
-                <h3 className="text-sm font-semibold text-gray-800 dark:text-slate-200">Fluxo de Caixa Mensal — {resultado.ano}</h3>
+              <div className="px-4 py-3 border-b border-ink-100 bg-ink-50">
+                <h3 className="text-sm font-semibold text-ink-800">Fluxo de Caixa Mensal — {resultado.ano}</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-blue-800 text-white">
+                  <thead className="bg-info-800 text-white">
                     <tr>
                       <th className="text-left px-4 py-3 text-xs font-semibold">Mês</th>
                       <th className="text-right px-4 py-3 text-xs font-semibold">Receitas</th>
@@ -2202,22 +2202,22 @@ function TabRelatorios() {
                       <th className="text-right px-4 py-3 text-xs font-semibold">Resultado</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
+                  <tbody className="divide-y divide-ink-100">
                     {resultado.meses.map(m => (
-                      <tr key={m.mes} className="hover:bg-gray-50 dark:hover:bg-slate-700/50">
-                        <td className="px-4 py-3 text-xs font-medium text-gray-800 dark:text-slate-200">{fmtMes(m.mes)}</td>
-                        <td className="px-4 py-3 text-right text-xs font-medium text-green-700 dark:text-green-400 tabular-nums">{fmtVal(m.receitas)}</td>
-                        <td className="px-4 py-3 text-right text-xs font-medium text-red-600 dark:text-red-400 tabular-nums">{fmtVal(m.despesas)}</td>
-                        <td className={`px-4 py-3 text-right text-xs font-bold tabular-nums ${m.resultado >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{fmtVal(m.resultado)}</td>
+                      <tr key={m.mes} className="hover:bg-ink-50">
+                        <td className="px-4 py-3 text-xs font-medium text-ink-800">{fmtMes(m.mes)}</td>
+                        <td className="px-4 py-3 text-right text-xs font-medium text-success-700 dark:text-success-400 tabular-nums">{fmtVal(m.receitas)}</td>
+                        <td className="px-4 py-3 text-right text-xs font-medium text-danger-600 dark:text-danger-400 tabular-nums">{fmtVal(m.despesas)}</td>
+                        <td className={`px-4 py-3 text-right text-xs font-bold tabular-nums ${m.resultado >= 0 ? 'text-success-700 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'}`}>{fmtVal(m.resultado)}</td>
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="bg-blue-50 dark:bg-blue-900/20">
+                  <tfoot className="bg-info-50 dark:bg-info-900/20">
                     <tr>
-                      <td className="px-4 py-3 text-xs font-bold text-gray-800 dark:text-slate-200">TOTAL {resultado.ano}</td>
-                      <td className="px-4 py-3 text-right text-xs font-bold text-green-700 dark:text-green-400 tabular-nums">{fmtVal(resultado.totais.receitas)}</td>
-                      <td className="px-4 py-3 text-right text-xs font-bold text-red-600 dark:text-red-400 tabular-nums">{fmtVal(resultado.totais.despesas)}</td>
-                      <td className={`px-4 py-3 text-right text-xs font-bold tabular-nums ${resultado.totais.resultado >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{fmtVal(resultado.totais.resultado)}</td>
+                      <td className="px-4 py-3 text-xs font-bold text-ink-800">TOTAL {resultado.ano}</td>
+                      <td className="px-4 py-3 text-right text-xs font-bold text-success-700 dark:text-success-400 tabular-nums">{fmtVal(resultado.totais.receitas)}</td>
+                      <td className="px-4 py-3 text-right text-xs font-bold text-danger-600 dark:text-danger-400 tabular-nums">{fmtVal(resultado.totais.despesas)}</td>
+                      <td className={`px-4 py-3 text-right text-xs font-bold tabular-nums ${resultado.totais.resultado >= 0 ? 'text-success-700 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'}`}>{fmtVal(resultado.totais.resultado)}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -2227,19 +2227,19 @@ function TabRelatorios() {
 
           {resultado.tipo === 'extrato' && (
             <>
-              <div className="px-4 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700">
-                <h3 className="text-sm font-semibold text-gray-800 dark:text-slate-200">Extrato — {resultado.conta.nome}</h3>
-                <p className="text-xs text-gray-500 dark:text-slate-400">{resultado.conta.banco_nome}</p>
+              <div className="px-4 py-3 border-b border-ink-100 bg-ink-50">
+                <h3 className="text-sm font-semibold text-ink-800">Extrato — {resultado.conta.nome}</h3>
+                <p className="text-xs text-ink-500">{resultado.conta.banco_nome}</p>
               </div>
               {resultado.lancamentos.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-gray-400 gap-2">
+                <div className="flex flex-col items-center justify-center py-12 text-ink-400 gap-2">
                   <BarChart2 className="h-8 w-8 opacity-40" />
                   <p className="text-sm">Nenhum lançamento no período</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-green-800 text-white">
+                    <thead className="bg-success-800 text-white">
                       <tr>
                         <th className="text-left px-4 py-3 text-xs font-semibold">Data</th>
                         <th className="text-left px-4 py-3 text-xs font-semibold">Descrição</th>
@@ -2248,23 +2248,23 @@ function TabRelatorios() {
                         <th className="text-right px-4 py-3 text-xs font-semibold">Saldo</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
+                    <tbody className="divide-y divide-ink-100">
                       {resultado.lancamentos.map((l, i) => (
-                        <tr key={i} className={l.tipo === 'R' ? 'bg-green-50/60 dark:bg-green-900/10' : 'hover:bg-gray-50 dark:hover:bg-slate-700/30'}>
-                          <td className="px-4 py-2.5 text-xs text-gray-600 dark:text-slate-400 whitespace-nowrap">{fmtDate(l.data)}</td>
-                          <td className="px-4 py-2.5 text-xs text-gray-800 dark:text-slate-200">{l.descricao}</td>
-                          <td className="px-4 py-2.5 text-right text-xs font-medium text-green-700 dark:text-green-400 tabular-nums">{l.tipo === 'R' ? fmtVal(l.valor) : ''}</td>
-                          <td className="px-4 py-2.5 text-right text-xs font-medium text-red-600 dark:text-red-400 tabular-nums">{l.tipo === 'D' ? fmtVal(l.valor) : ''}</td>
-                          <td className={`px-4 py-2.5 text-right text-xs font-bold tabular-nums ${l.saldo >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{fmtVal(l.saldo)}</td>
+                        <tr key={i} className={l.tipo === 'R' ? 'bg-success-50/60 dark:bg-success-900/10' : 'hover:bg-ink-50'}>
+                          <td className="px-4 py-2.5 text-xs text-ink-600 whitespace-nowrap">{fmtDate(l.data)}</td>
+                          <td className="px-4 py-2.5 text-xs text-ink-800">{l.descricao}</td>
+                          <td className="px-4 py-2.5 text-right text-xs font-medium text-success-700 dark:text-success-400 tabular-nums">{l.tipo === 'R' ? fmtVal(l.valor) : ''}</td>
+                          <td className="px-4 py-2.5 text-right text-xs font-medium text-danger-600 dark:text-danger-400 tabular-nums">{l.tipo === 'D' ? fmtVal(l.valor) : ''}</td>
+                          <td className={`px-4 py-2.5 text-right text-xs font-bold tabular-nums ${l.saldo >= 0 ? 'text-success-700 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'}`}>{fmtVal(l.saldo)}</td>
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot className="bg-green-50 dark:bg-green-900/20">
+                    <tfoot className="bg-success-50 dark:bg-success-900/20">
                       <tr>
-                        <td colSpan={2} className="px-4 py-3 text-xs font-bold text-gray-800 dark:text-slate-200">TOTAIS DO PERÍODO</td>
-                        <td className="px-4 py-3 text-right text-xs font-bold text-green-700 dark:text-green-400 tabular-nums">{fmtVal(resultado.totais.receitas)}</td>
-                        <td className="px-4 py-3 text-right text-xs font-bold text-red-600 dark:text-red-400 tabular-nums">{fmtVal(resultado.totais.despesas)}</td>
-                        <td className={`px-4 py-3 text-right text-xs font-bold tabular-nums ${resultado.totais.saldo >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{fmtVal(resultado.totais.saldo)}</td>
+                        <td colSpan={2} className="px-4 py-3 text-xs font-bold text-ink-800">TOTAIS DO PERÍODO</td>
+                        <td className="px-4 py-3 text-right text-xs font-bold text-success-700 dark:text-success-400 tabular-nums">{fmtVal(resultado.totais.receitas)}</td>
+                        <td className="px-4 py-3 text-right text-xs font-bold text-danger-600 dark:text-danger-400 tabular-nums">{fmtVal(resultado.totais.despesas)}</td>
+                        <td className={`px-4 py-3 text-right text-xs font-bold tabular-nums ${resultado.totais.saldo >= 0 ? 'text-success-700 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'}`}>{fmtVal(resultado.totais.saldo)}</td>
                       </tr>
                     </tfoot>
                   </table>

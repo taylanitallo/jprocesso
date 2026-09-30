@@ -110,7 +110,7 @@ export default function Patrimonio() {
 
       {/* Tabs */}
       <div
-        className="border-b border-gray-200 dark:border-slate-700/50 overflow-x-auto overflow-y-hidden scrollbar-none touch-pan-x"
+        className="border-b border-ink-200 overflow-x-auto overflow-y-hidden scrollbar-none touch-pan-x"
         style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
       >
         <nav className="flex space-x-1 min-w-max">
@@ -124,7 +124,7 @@ export default function Patrimonio() {
                 className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                   active
                     ? 'border-indigo-500 text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
-                    : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:border-gray-300 dark:hover:border-slate-600'
+                    : 'border-transparent text-ink-500 hover:text-ink-700 hover:border-ink-300'
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -138,12 +138,12 @@ export default function Patrimonio() {
       {/* Conteúdo */}
       <div>
         {(activeTab === 'transferencia' || activeTab === 'baixa') && !bemSelecionado ? (
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-6 text-center">
-            <p className="text-yellow-700 dark:text-yellow-300 font-medium">
+          <div className="bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800 rounded-xl p-6 text-center">
+            <p className="text-warning-700 dark:text-warning-300 font-medium">
               Selecione um bem na aba <strong>Bens</strong> para realizar esta operação.
             </p>
             <button onClick={() => setActiveTab('bens')}
-              className="mt-3 px-4 py-2 bg-yellow-600 text-white rounded-lg text-sm hover:bg-yellow-700">
+              className="mt-3 px-4 py-2 bg-warning-600 text-white rounded-lg text-sm hover:bg-warning-700">
               Ir para Bens
             </button>
           </div>

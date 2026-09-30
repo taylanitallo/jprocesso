@@ -13,16 +13,16 @@ export default function SectionTitle({ icon: Icon, title, subtitle, action }) {
       <div className="flex items-center gap-2.5 min-w-0">
         {Icon && (
           <Icon
-            className="w-4 h-4 shrink-0 text-gray-400 dark:text-slate-500"
+            className="w-4 h-4 shrink-0 text-ink-400"
             strokeWidth={2}
           />
         )}
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-slate-200 truncate">
+          <h3 className="text-sm font-semibold text-ink-700 truncate">
             {title}
           </h3>
           {subtitle && (
-            <p className="text-xs text-gray-400 dark:text-slate-500 truncate mt-0.5">
+            <p className="text-xs text-ink-400 truncate mt-0.5">
               {subtitle}
             </p>
           )}

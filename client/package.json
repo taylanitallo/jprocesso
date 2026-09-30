@@ -3,8 +3,10 @@
   "version": "1.0.1",
   "private": true,
   "dependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "autoprefixer": "^10.4.16",
     "axios": "^1.6.2",
+    "clsx": "^2.1.1",
     "date-fns": "^3.0.6",
     "jspdf": "^4.1.0",
     "jspdf-autotable": "^5.0.7",
@@ -18,7 +20,8 @@
     "react-query": "^3.39.3",
     "react-router-dom": "^6.21.0",
     "recharts": "^3.8.1",
-    "tailwindcss": "^3.4.0",
+    "tailwind-merge": "^3.7.0",
+    "tailwindcss": "^4.3.3",
     "uuid": "^13.0.0",
     "xlsx": "^0.18.5"
   },

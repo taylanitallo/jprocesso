@@ -14,10 +14,10 @@ export default function LoadingBar({ label = 'Carregando...' }) {
     <div className="flex flex-col items-center justify-center py-12 gap-4 w-full">
       <div className="w-full max-w-xs">
         <div className="flex justify-between items-center mb-1.5">
-          <span className="text-xs text-gray-500 dark:text-slate-400">{label}</span>
-          <span className="text-xs font-semibold tabular-nums text-blue-500">{pct}%</span>
+          <span className="text-xs text-ink-500">{label}</span>
+          <span className="text-xs font-semibold tabular-nums text-info-500">{pct}%</span>
         </div>
-        <div className="w-full h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
+        <div className="w-full h-1.5 bg-ink-200 rounded-full overflow-hidden">
           <div
             className="h-full rounded-full"
             style={{

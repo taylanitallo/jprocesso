@@ -11,14 +11,14 @@ import LoadingBar from '../components/LoadingBar'
 
 // ─── Configuração de ações ────────────────────────────────────────────────────
 const ACAO_CFG = {
-  CRIOU:          { label: 'Criou',          color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',      icon: FileText,       dot: 'bg-blue-500'    },
-  AUTORIZOU:      { label: 'Autorizou',      color: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',  icon: CheckCircle,    dot: 'bg-green-500'   },
+  CRIOU:          { label: 'Criou',          color: 'bg-info-100 text-info-800 dark:bg-info-900/40 dark:text-info-300',      icon: FileText,       dot: 'bg-info-500'    },
+  AUTORIZOU:      { label: 'Autorizou',      color: 'bg-success-100 text-success-800 dark:bg-success-900/40 dark:text-success-300',  icon: CheckCircle,    dot: 'bg-success-500'   },
   SEPAROU:        { label: 'Separou',        color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',  icon: Package,        dot: 'bg-amber-500'   },
   ENTREGOU:       { label: 'Entregou',       color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300', icon: Truck,     dot: 'bg-emerald-500' },
-  CANCELOU:       { label: 'Cancelou',       color: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',          icon: XCircle,        dot: 'bg-red-500'     },
+  CANCELOU:       { label: 'Cancelou',       color: 'bg-danger-100 text-danger-800 dark:bg-danger-900/40 dark:text-danger-300',          icon: XCircle,        dot: 'bg-danger-500'     },
   ENTRADA:        { label: 'Entrada',        color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300', icon: ArrowDownCircle, dot: 'bg-purple-500' },
   SAIDA:          { label: 'Saída',          color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300', icon: ArrowUpCircle, dot: 'bg-orange-500'  },
-  ATUALIZOU:      { label: 'Atualizou',      color: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',         icon: Settings,       dot: 'bg-gray-400'    },
+  ATUALIZOU:      { label: 'Atualizou',      color: 'bg-ink-100 text-ink-700',         icon: Settings,       dot: 'bg-ink-400'    },
   TOKEN_GERADO:   { label: 'Token Gerado',   color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300', icon: Key,           dot: 'bg-indigo-500'  },
   REGENEROU_TOKEN:{ label: 'Regen. Token',  color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300', icon: Key,           dot: 'bg-indigo-400'  },
   CONCLUIU:       { label: 'Concluiu',       color: 'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300',      icon: ClipboardList,  dot: 'bg-teal-500'    },
@@ -47,11 +47,11 @@ function iniciais(nome) {
 }
 
 const USER_COLORS = [
-  'bg-violet-500', 'bg-blue-500', 'bg-emerald-500', 'bg-amber-500',
-  'bg-rose-500', 'bg-cyan-500', 'bg-indigo-500', 'bg-teal-500',
+  'bg-violet-500', 'bg-info-500', 'bg-emerald-500', 'bg-amber-500',
+  'bg-danger-500', 'bg-cyan-500', 'bg-indigo-500', 'bg-teal-500',
 ]
 function avatarColor(nome) {
-  if (!nome) return 'bg-gray-400'
+  if (!nome) return 'bg-ink-400'
   let h = 0
   for (let i = 0; i < nome.length; i++) h = (h * 31 + nome.charCodeAt(i)) % USER_COLORS.length
   return USER_COLORS[h]
@@ -70,7 +70,7 @@ function AcaoBadge({ acao }) {
   const cfg = ACAO_CFG[acao]
   const Ic  = cfg?.icon || AlertTriangle
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${cfg?.color || 'bg-gray-100 text-gray-700'}`}>
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${cfg?.color || 'bg-ink-100 text-ink-700'}`}>
       <Ic className="h-3 w-3" />
       {cfg?.label || acao}
     </span>
@@ -80,7 +80,7 @@ function AcaoBadge({ acao }) {
 function TabelaBadge({ tabela }) {
   const label = tabela?.replace(/^almox(arifado)?_/, '') ?? '-'
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400 font-mono">
+    <span className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-ink-100 text-ink-500 font-mono">
       {label}
     </span>
   )
@@ -88,7 +88,7 @@ function TabelaBadge({ tabela }) {
 
 // ─── Diff JSON melhorado ──────────────────────────────────────────────────────
 function JsonDiff({ antes, depois }) {
-  if (!antes && !depois) return <p className="text-gray-500 text-xs italic">Sem snapshot registrado.</p>
+  if (!antes && !depois) return <p className="text-ink-500 text-xs italic">Sem snapshot registrado.</p>
 
   // Detectar campos alterados
   const mudancas = []
@@ -105,15 +105,15 @@ function JsonDiff({ antes, depois }) {
     <div className="space-y-3">
       {mudancas.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Campos alterados</p>
+          <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-2">Campos alterados</p>
           <div className="space-y-1">
             {mudancas.map(({ campo, antes: a, depois: d }) => (
               <div key={campo} className="grid grid-cols-[140px_1fr_1fr] gap-2 text-xs items-start">
-                <span className="font-mono text-gray-500 truncate pt-0.5">{campo}</span>
-                <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded px-2 py-1 text-red-800 dark:text-red-300 break-all">
+                <span className="font-mono text-ink-500 truncate pt-0.5">{campo}</span>
+                <div className="bg-danger-50 dark:bg-danger-950/30 border border-danger-200 dark:border-danger-800 rounded-sm px-2 py-1 text-danger-800 dark:text-danger-300 break-all">
                   {a === undefined ? <em className="opacity-50">—</em> : String(a ?? '—')}
                 </div>
-                <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded px-2 py-1 text-green-800 dark:text-green-300 break-all">
+                <div className="bg-success-50 dark:bg-success-950/30 border border-success-200 dark:border-success-800 rounded-sm px-2 py-1 text-success-800 dark:text-success-300 break-all">
                   {d === undefined ? <em className="opacity-50">—</em> : String(d ?? '—')}
                 </div>
               </div>
@@ -125,20 +125,20 @@ function JsonDiff({ antes, depois }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {antes && (
           <div>
-            <p className="text-xs font-semibold text-red-500 mb-1 uppercase tracking-wide flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-red-400 inline-block" /> Antes
+            <p className="text-xs font-semibold text-danger-500 mb-1 uppercase tracking-wide flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-danger-400 inline-block" /> Antes
             </p>
-            <pre className="text-xs bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded p-2 overflow-auto max-h-48 text-red-900 dark:text-red-300">
+            <pre className="text-xs bg-danger-50 dark:bg-danger-950/30 border border-danger-200 dark:border-danger-800 rounded-sm p-2 overflow-auto max-h-48 text-danger-900 dark:text-danger-300">
               {JSON.stringify(antes, null, 2)}
             </pre>
           </div>
         )}
         {depois && (
           <div>
-            <p className="text-xs font-semibold text-green-600 mb-1 uppercase tracking-wide flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> Depois
+            <p className="text-xs font-semibold text-success-600 mb-1 uppercase tracking-wide flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-success-500 inline-block" /> Depois
             </p>
-            <pre className="text-xs bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded p-2 overflow-auto max-h-48 text-green-900 dark:text-green-300">
+            <pre className="text-xs bg-success-50 dark:bg-success-950/30 border border-success-200 dark:border-success-800 rounded-sm p-2 overflow-auto max-h-48 text-success-900 dark:text-success-300">
               {JSON.stringify(depois, null, 2)}
             </pre>
           </div>
@@ -164,7 +164,7 @@ function LogRow({ log, isLast }) {
   const [expanded, setExpanded] = useState(false)
   const temDados = log.dados_anteriores || log.dados_novos
   const cfg = ACAO_CFG[log.acao]
-  const dot = cfg?.dot || 'bg-gray-400'
+  const dot = cfg?.dot || 'bg-ink-400'
 
   const dt = new Date(log.created_at)
   const hora = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
@@ -174,13 +174,13 @@ function LogRow({ log, isLast }) {
     <div className="relative pl-8">
       {/* Linha vertical da timeline */}
       {!isLast && (
-        <div className="absolute left-3 top-8 bottom-0 w-px bg-gray-200 dark:bg-gray-700" />
+        <div className="absolute left-3 top-8 bottom-0 w-px bg-ink-200" />
       )}
       {/* Dot */}
-      <div className={`absolute left-1.5 top-4 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${dot}`} />
+      <div className={`absolute left-1.5 top-4 w-3 h-3 rounded-full border-2 border-white ${dot}`} />
 
       <div
-        className={`mb-3 rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm overflow-hidden ${temDados ? 'cursor-pointer' : ''}`}
+        className={`mb-3 rounded-xl border border-ink-100 bg-surface shadow-sm overflow-hidden ${temDados ? 'cursor-pointer' : ''}`}
         onClick={() => temDados && setExpanded(v => !v)}
       >
         {/* Linha principal */}
@@ -189,8 +189,8 @@ function LogRow({ log, isLast }) {
           <div className="pt-0.5 shrink-0">
             {log.user_nome
               ? <UserAvatar nome={log.user_nome} />
-              : <span className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                  <User className="h-4 w-4 text-gray-400" />
+              : <span className="w-7 h-7 rounded-full bg-ink-200 flex items-center justify-center">
+                  <User className="h-4 w-4 text-ink-400" />
                 </span>
             }
           </div>
@@ -203,22 +203,22 @@ function LogRow({ log, isLast }) {
               {temDados && (
                 <span className="ml-auto">
                   {expanded
-                    ? <ChevronDown className="h-4 w-4 text-gray-400" />
-                    : <ChevronRight className="h-4 w-4 text-gray-400" />
+                    ? <ChevronDown className="h-4 w-4 text-ink-400" />
+                    : <ChevronRight className="h-4 w-4 text-ink-400" />
                   }
                 </span>
               )}
             </div>
 
             {/* Descrição */}
-            <p className="mt-1 text-sm text-gray-800 dark:text-gray-200 leading-snug">
+            <p className="mt-1 text-sm text-ink-800 leading-snug">
               {formatDesc(log.descricao, log.user_nome)}
             </p>
 
             {/* Meta: usuário | data/hora | IP */}
-            <div className="mt-1.5 flex items-center gap-3 flex-wrap text-xs text-gray-400 dark:text-gray-500">
+            <div className="mt-1.5 flex items-center gap-3 flex-wrap text-xs text-ink-400">
               {log.user_nome && (
-                <span className="flex items-center gap-1 font-medium text-gray-600 dark:text-gray-300">
+                <span className="flex items-center gap-1 font-medium text-ink-600">
                   <User className="h-3 w-3" />
                   {log.user_nome}
                 </span>
@@ -239,7 +239,7 @@ function LogRow({ log, isLast }) {
 
         {/* Diff expandido */}
         {expanded && temDados && (
-          <div className="border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-4 py-4"
+          <div className="border-t border-ink-100 bg-ink-50 px-4 py-4"
                onClick={e => e.stopPropagation()}>
             <JsonDiff antes={log.dados_anteriores} depois={log.dados_novos} />
           </div>
@@ -257,8 +257,8 @@ function StatCard({ label, value, color, icon: Ic }) {
         <Ic className="h-5 w-5 text-white" />
       </div>
       <div>
-        <p className="text-2xl font-bold text-gray-800 dark:text-gray-100">{value}</p>
-        <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
+        <p className="text-2xl font-bold text-ink-800">{value}</p>
+        <p className="text-xs text-ink-500">{label}</p>
       </div>
     </div>
   )
@@ -428,7 +428,7 @@ export default function AlmoxAuditLog() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
           <Shield className="h-5 w-5 text-indigo-500" />
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+          <h2 className="text-lg font-semibold text-ink-800">
             Trilha de Auditoria
           </h2>
           {!loading && (
@@ -460,11 +460,11 @@ export default function AlmoxAuditLog() {
 
       {/* Filtros */}
       <div className="card p-4 space-y-3">
-        <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+        <div className="flex items-center gap-2 text-xs font-semibold text-ink-500 uppercase tracking-wide">
           <Filter className="h-3.5 w-3.5" />
           Filtros
           {hasFilters && (
-            <button onClick={clearFilters} className="ml-auto flex items-center gap-1 text-red-500 hover:text-red-600 normal-case font-medium">
+            <button onClick={clearFilters} className="ml-auto flex items-center gap-1 text-danger-500 hover:text-danger-600 normal-case font-medium">
               <X className="h-3.5 w-3.5" /> Limpar
             </button>
           )}
@@ -479,7 +479,7 @@ export default function AlmoxAuditLog() {
           </select>
 
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400" />
             <input type="text" placeholder="Filtrar por usuário..." value={filtUser}
               onChange={e => setFiltUser(e.target.value)}
               className="input-field text-sm pl-9 w-44" />
@@ -487,13 +487,13 @@ export default function AlmoxAuditLog() {
 
           <div className="flex items-center gap-2">
             <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400" />
               <input type="date" value={filtDataDe} onChange={e => setFiltDataDe(e.target.value)}
                 className="input-field text-sm pl-9 w-40" title="Data inicial" />
             </div>
-            <span className="text-gray-400 text-xs">até</span>
+            <span className="text-ink-400 text-xs">até</span>
             <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400" />
               <input type="date" value={filtDataAte} onChange={e => setFiltDataAte(e.target.value)}
                 className="input-field text-sm pl-9 w-40" title="Data final" />
             </div>
@@ -509,7 +509,7 @@ export default function AlmoxAuditLog() {
           {loading ? (
             <LoadingBar label="Carregando registros..." />
           ) : logs.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+            <div className="flex flex-col items-center justify-center py-20 text-ink-400">
               <Shield className="h-12 w-12 mb-3 opacity-20" />
               <p className="text-sm font-medium">Nenhum registro encontrado</p>
               {hasFilters && (
@@ -528,13 +528,13 @@ export default function AlmoxAuditLog() {
 
           {/* Paginação */}
           {totalPages > 1 && !loading && (
-            <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700 mt-2">
-              <p className="text-xs text-gray-500">
+            <div className="flex items-center justify-between pt-4 border-t border-ink-100 mt-2">
+              <p className="text-xs text-ink-500">
                 Pág. {page} de {totalPages} — {total} registros
               </p>
               <div className="flex gap-1">
                 <button disabled={page <= 1} onClick={() => handlePage(page - 1)}
-                  className="px-3 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-700">
+                  className="px-3 py-1 text-xs rounded-sm border border-ink-300 disabled:opacity-40 hover:bg-ink-100">
                   ← Ant.
                 </button>
                 {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
@@ -542,16 +542,16 @@ export default function AlmoxAuditLog() {
                   if (p < 1 || p > totalPages) return null
                   return (
                     <button key={p} onClick={() => handlePage(p)}
-                      className={`px-3 py-1 text-xs rounded border transition-colors ${
+                      className={`px-3 py-1 text-xs rounded-sm border transition-colors ${
                         p === page ? 'bg-indigo-600 text-white border-indigo-600'
-                                   : 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                                   : 'border-ink-300 hover:bg-ink-100 text-ink-700'
                       }`}>
                       {p}
                     </button>
                   )
                 })}
                 <button disabled={page >= totalPages} onClick={() => handlePage(page + 1)}
-                  className="px-3 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-700">
+                  className="px-3 py-1 text-xs rounded-sm border border-ink-300 disabled:opacity-40 hover:bg-ink-100">
                   Próx. →
                 </button>
               </div>
@@ -565,7 +565,7 @@ export default function AlmoxAuditLog() {
 
             {/* Ações na página */}
             <div className="card p-4">
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+              <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-3">
                 Ações nesta página
               </p>
               <div className="space-y-2">
@@ -578,15 +578,15 @@ export default function AlmoxAuditLog() {
                     return (
                       <div key={acao}>
                         <div className="flex items-center justify-between mb-0.5">
-                          <span className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">
-                            <Ic className="h-3.5 w-3.5 text-gray-400" />
+                          <span className="flex items-center gap-1.5 text-xs text-ink-600">
+                            <Ic className="h-3.5 w-3.5 text-ink-400" />
                             {cfg?.label || acao}
                           </span>
-                          <span className="text-xs font-bold text-gray-700 dark:text-gray-200">{count}</span>
+                          <span className="text-xs font-bold text-ink-700">{count}</span>
                         </div>
-                        <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div className="h-1.5 bg-ink-100 rounded-full overflow-hidden">
                           <div
-                            className={`h-full rounded-full ${cfg?.dot || 'bg-gray-400'}`}
+                            className={`h-full rounded-full ${cfg?.dot || 'bg-ink-400'}`}
                             style={{ width: `${(count / max) * 100}%` }}
                           />
                         </div>
@@ -599,7 +599,7 @@ export default function AlmoxAuditLog() {
             {/* Usuários ativos na página */}
             {usuarios.length > 0 && (
               <div className="card p-4">
-                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+                <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-3">
                   Usuários nesta página
                 </p>
                 <div className="space-y-2">
@@ -607,8 +607,8 @@ export default function AlmoxAuditLog() {
                     <div key={nome} className="flex items-center gap-2">
                       <UserAvatar nome={nome} size="sm" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-gray-700 dark:text-gray-200 truncate">{nome}</p>
-                        <p className="text-xs text-gray-400">{count} ação{count !== 1 ? 'ões' : ''}</p>
+                        <p className="text-xs font-medium text-ink-700 truncate">{nome}</p>
+                        <p className="text-xs text-ink-400">{count} ação{count !== 1 ? 'ões' : ''}</p>
                       </div>
                     </div>
                   ))}
@@ -617,7 +617,7 @@ export default function AlmoxAuditLog() {
             )}
 
             {/* Dica */}
-            <p className="text-xs text-gray-400 dark:text-gray-600 flex items-start gap-1">
+            <p className="text-xs text-ink-400 flex items-start gap-1">
               <Shield className="h-3 w-3 mt-0.5 shrink-0" />
               Clique em um registro para ver o snapshot antes/depois da operação.
             </p>

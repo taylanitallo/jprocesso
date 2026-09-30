@@ -140,24 +140,24 @@ export default function Layout() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-[#f8fafc] dark:bg-[#020617] transition-colors duration-200">
+    <div className="min-h-screen w-full bg-canvas transition-colors duration-200">
 
       {/* â"€â"€â"€ Sidebar â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
       <aside className={`
-        fixed top-0 bottom-8 left-0 z-50 w-[260px] bg-white dark:bg-slate-900
-        border-r border-gray-200 dark:border-slate-700/50
+        fixed top-0 bottom-8 left-0 z-50 w-[264px] bg-sidebar
+        border-r border-ink-200
         flex flex-col transform transition-all duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0
-        ${sidebarCollapsed ? 'lg:w-[72px]' : 'lg:w-[260px]'}
+        ${sidebarCollapsed ? 'lg:w-[76px]' : 'lg:w-[264px]'}
       `}>
 
         {/* Botão recolher/expandir — somente desktop */}
         <button
           onClick={() => setSidebarCollapsed(v => !v)}
           className="hidden lg:flex absolute -right-3 top-16 z-10 w-6 h-6 items-center justify-center rounded-full
-            bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-md
-            text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300
+            bg-surface border border-ink-200 shadow-md
+            text-ink-500 hover:text-brand-600 dark:hover:text-info-400 hover:border-info-300
             transition-colors"
           title={sidebarCollapsed ? 'Expandir menu' : 'Recolher menu'}
         >
@@ -165,15 +165,21 @@ export default function Layout() {
         </button>
 
         {/* Logo */}
-        <div className="h-[41px] p-[1mm] flex items-center justify-between border-b border-gray-200 dark:border-slate-700/50 flex-shrink-0 overflow-hidden">
+        <div className="h-16 px-4 flex items-center justify-between border-b border-ink-200 shrink-0 overflow-hidden">
           {!sidebarCollapsed && (
             tenant?.configuracoes?.logo_interna_url && tenant?.subdominio
-              ? <img src={`/api/tenants/${tenant.subdominio}/logo/interna`} alt="logo" className="h-full w-auto max-w-full object-contain" />
-              : <img src="/logo_jprocesso.png" alt="jProcesso" className="h-full w-auto max-w-full object-contain dark:brightness-0 dark:invert" />
+              ? <img src={`/api/tenants/${tenant.subdominio}/logo/interna`} alt="logo" className="max-h-10 w-auto max-w-full object-contain" />
+              /*
+               * A arte tem "Processo" e o subtítulo em branco — foi desenhada
+               * para fundo escuro e sumia no tema claro. `brightness-0` achata
+               * tudo em preto (legível no claro) e o `dark:invert` devolve o
+               * branco no escuro, mantendo o comportamento que já existia lá.
+               */
+              : <img src="/logo_jprocesso_trim.png" alt="jProcesso" className="h-11 w-auto max-w-full object-contain brightness-0 dark:invert" />
           )}
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700/50"
+            className="lg:hidden p-1.5 rounded-[8px] text-ink-400 hover:text-ink-600 hover:bg-ink-100"
           >
             <X className="h-4 w-4" />
           </button>
@@ -197,13 +203,13 @@ export default function Layout() {
                     type="button"
                     title={sidebarCollapsed ? item.label : undefined}
                     onClick={() => { setSidebarOpen(false); setModuloBloqueado({ label: item.label }) }}
-                    className={`w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium text-gray-400 dark:text-slate-600 hover:bg-gray-50 dark:hover:bg-white/5 ${sidebarCollapsed ? 'lg:justify-center' : 'justify-between'}`}
+                    className={`w-full flex items-center px-3 py-2.5 rounded-[10px] text-sm font-semibold text-ink-400 hover:bg-ink-50 ${sidebarCollapsed ? 'lg:justify-center' : 'justify-between'}`}
                   >
                     <div className="flex items-center gap-3">
-                      <Icon className="h-4 w-4 flex-shrink-0 opacity-50" />
+                      <Icon className="h-4 w-4 shrink-0 opacity-50" />
                       <span className={`opacity-60 ${sidebarCollapsed ? 'lg:hidden' : ''}`}>{item.label}</span>
                     </div>
-                    <Lock className={`h-3.5 w-3.5 flex-shrink-0 ${sidebarCollapsed ? 'lg:hidden' : ''}`} />
+                    <Lock className={`h-3.5 w-3.5 shrink-0 ${sidebarCollapsed ? 'lg:hidden' : ''}`} />
                   </button>
                 )
               }
@@ -215,19 +221,19 @@ export default function Layout() {
                   title={sidebarCollapsed ? item.label : undefined}
                   onClick={() => setSidebarOpen(false)}
                   className={`
-                    flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                    flex items-center px-3 py-2.5 rounded-[10px] text-sm font-semibold transition-colors
                     ${sidebarCollapsed ? 'lg:justify-center' : 'justify-between'}
                     ${active
-                      ? 'bg-blue-500/10 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 ring-1 ring-inset ring-blue-500/20'
-                      : 'text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-slate-200'
+                      ? 'bg-brand-600 text-white shadow-xs'
+                      : 'text-ink-600 hover:bg-ink-100 hover:text-ink-900'
                     }
                   `}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className={`h-4 w-4 flex-shrink-0 ${active ? 'text-blue-500 dark:text-blue-400' : 'opacity-70'}`} />
+                    <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-info-500 dark:text-info-400' : 'opacity-70'}`} />
                     <span className={sidebarCollapsed ? 'lg:hidden' : ''}>{item.label}</span>
                   </div>
-                  {active && <ChevronRight className={`h-3.5 w-3.5 text-blue-400 dark:text-blue-500 flex-shrink-0 ${sidebarCollapsed ? 'lg:hidden' : ''}`} />}
+                  {active && <ChevronRight className={`h-3.5 w-3.5 text-info-400 dark:text-info-500 shrink-0 ${sidebarCollapsed ? 'lg:hidden' : ''}`} />}
                 </Link>
               )
             })}
@@ -236,7 +242,7 @@ export default function Layout() {
           {/* Menu administração */}
           {visibleAdminMenuItems.length > 0 && (
             <div>
-              <p className={`px-3 mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400 dark:text-slate-500 ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
+              <p className={`px-3 mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-ink-400 ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
                 Administração
               </p>
               <div className="space-y-0.5">
@@ -250,19 +256,19 @@ export default function Layout() {
                       title={sidebarCollapsed ? item.label : undefined}
                       onClick={() => setSidebarOpen(false)}
                       className={`
-                        flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                        flex items-center px-3 py-2.5 rounded-[10px] text-sm font-semibold transition-colors
                         ${sidebarCollapsed ? 'lg:justify-center' : 'justify-between'}
                         ${active
-                          ? 'bg-blue-500/10 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 ring-1 ring-inset ring-blue-500/20'
-                          : 'text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-slate-200'
+                          ? 'bg-brand-600 text-white shadow-xs'
+                          : 'text-ink-600 hover:bg-ink-100 hover:text-ink-900'
                         }
                       `}
                     >
                       <div className="flex items-center gap-3">
-                        <Icon className={`h-4 w-4 flex-shrink-0 ${active ? 'text-blue-500 dark:text-blue-400' : 'opacity-70'}`} />
+                        <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-info-500 dark:text-info-400' : 'opacity-70'}`} />
                         <span className={sidebarCollapsed ? 'lg:hidden' : ''}>{item.label}</span>
                       </div>
-                      {active && <ChevronRight className={`h-3.5 w-3.5 text-blue-400 dark:text-blue-500 flex-shrink-0 ${sidebarCollapsed ? 'lg:hidden' : ''}`} />}
+                      {active && <ChevronRight className={`h-3.5 w-3.5 text-info-400 dark:text-info-500 shrink-0 ${sidebarCollapsed ? 'lg:hidden' : ''}`} />}
                     </Link>
                   )
                 })}
@@ -276,41 +282,41 @@ export default function Layout() {
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 bg-ink-900/50 backdrop-blur-[2px] z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* â"€â"€â"€ Ãrea principal â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
-      <div className={`flex flex-col min-h-screen pb-8 transition-[padding] duration-300 ease-in-out ${sidebarCollapsed ? 'lg:pl-[72px]' : 'lg:pl-[260px]'}`}>
+      <div className={`flex flex-col min-h-screen pb-8 transition-[padding] duration-300 ease-in-out ${sidebarCollapsed ? 'lg:pl-[76px]' : 'lg:pl-[264px]'}`}>
 
         {/* Topbar */}
-        <header className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700/50 sticky top-0 z-30 flex-shrink-0">
+        <header className="bg-surface/90 backdrop-blur border-b border-ink-200 sticky top-0 z-30 shrink-0">
           <div className="px-4 sm:px-6">
-            <div className="flex items-center h-[41px] gap-4">
+            <div className="flex items-center h-16 gap-4">
 
               {/* Esquerda: hamburger + nome da entidade */}
               <div className="flex items-center gap-3 min-w-0">
                 <button
                   onClick={() => setSidebarOpen(true)}
-                  className="lg:hidden p-2 rounded-lg text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors flex-shrink-0"
+                  className="lg:hidden p-2 rounded-lg text-ink-500 hover:bg-ink-100 transition-colors shrink-0"
                 >
                   <Menu className="h-5 w-5" />
                 </button>
                 {nomeEntidade && (
-                  <span className="text-xs font-bold text-gray-600 dark:text-slate-300 truncate tracking-wide uppercase">
+                  <span className="text-xs font-bold text-ink-600 truncate tracking-wide uppercase">
                     {nomeEntidade}
                   </span>
                 )}
               </div>
 
               {/* Direita: tema + perfil colados */}
-              <div ref={profileRef} className="ml-auto relative flex items-center gap-4 flex-shrink-0">
+              <div ref={profileRef} className="ml-auto relative flex items-center gap-4 shrink-0">
 
                 {/* Botão tema */}
                 <button
                   onClick={toggleTheme}
-                  className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
+                  className="p-2 rounded-lg text-ink-500 hover:bg-ink-100 transition-colors shrink-0"
                   title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
                 >
                   {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -318,55 +324,55 @@ export default function Layout() {
 
                 <button
                   onClick={() => setProfileOpen(v => !v)}
-                  className="flex items-center gap-2.5 pl-3 border-l border-gray-200 dark:border-slate-700/50 hover:opacity-80 transition-opacity"
+                  className="flex items-center gap-2.5 pl-3 border-l border-ink-200 hover:opacity-80 transition-opacity"
                 >
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-fuchsia-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-info-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
                     {user?.nome?.charAt(0)?.toUpperCase() || '?'}
                   </div>
                   <div className="hidden sm:block leading-tight text-left">
-                    <p className="text-xs font-semibold text-gray-800 dark:text-slate-200">
+                    <p className="text-xs font-semibold text-ink-800">
                       {user?.nomeReduzido || user?.nome?.split(' ')[0]}
                     </p>
-                    <p className="text-[10px] text-gray-400 dark:text-slate-500">
+                    <p className="text-[10px] text-ink-400">
                       {tipoLabel[user?.tipo] || user?.tipo}
                     </p>
                   </div>
                 </button>
                 {profileOpen && (
-                  <div className="absolute right-0 top-full mt-3 w-72 sm:w-80 max-w-[calc(100vw-1rem)] bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700/50 rounded-2xl shadow-2xl z-[100] overflow-hidden">
-                    <div className="p-5 flex items-center gap-4 border-b border-gray-100 dark:border-slate-700/50">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-fuchsia-600 flex items-center justify-center text-white text-base font-bold flex-shrink-0">
+                  <div className="absolute right-0 top-full mt-3 w-72 sm:w-80 max-w-[calc(100vw-1rem)] bg-surface border border-ink-200 rounded-2xl shadow-2xl z-[100] overflow-hidden">
+                    <div className="p-5 flex items-center gap-4 border-b border-ink-100">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-info-500 to-violet-600 flex items-center justify-center text-white text-base font-bold shrink-0">
                         {user?.nome?.charAt(0)?.toUpperCase() || '?'}
                       </div>
                       <div className="min-w-0">
-                        <p className="font-semibold text-gray-900 dark:text-slate-100 truncate">{user?.nome}</p>
-                        <p className="text-xs text-gray-400 dark:text-slate-400 truncate mt-0.5">{user?.email}</p>
+                        <p className="font-semibold text-ink-900 truncate">{user?.nome}</p>
+                        <p className="text-xs text-ink-400 truncate mt-0.5">{user?.email}</p>
                       </div>
                     </div>
                     <div className="py-2">
                       <div className="flex items-center justify-between px-5 py-2.5">
-                        <span className="text-sm text-gray-700 dark:text-slate-300">Modo escuro</span>
+                        <span className="text-sm text-ink-700">Modo escuro</span>
                         <button
                           onClick={toggleTheme}
-                          className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors ${theme === 'dark' ? 'bg-blue-500' : 'bg-gray-200'}`}
+                          className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${theme === 'dark' ? 'bg-info-500' : 'bg-ink-200'}`}
                         >
-                          <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${theme === 'dark' ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                          <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-surface shadow-sm transition-transform ${theme === 'dark' ? 'translate-x-4' : 'translate-x-0.5'}`} />
                         </button>
                       </div>
                       <div className="flex items-center justify-between px-5 py-2.5">
-                        <span className="text-sm text-gray-700 dark:text-slate-300">{showJAI ? 'Ocultar Ayla IA' : 'Mostrar Ayla IA'}</span>
+                        <span className="text-sm text-ink-700">{showJAI ? 'Ocultar Ayla IA' : 'Mostrar Ayla IA'}</span>
                         <button
                           onClick={() => setShowJAI(v => !v)}
-                          className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors ${showJAI ? 'bg-blue-500' : 'bg-gray-200 dark:bg-slate-600'}`}
+                          className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${showJAI ? 'bg-info-500' : 'bg-ink-200'}`}
                         >
-                          <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${showJAI ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                          <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-surface shadow-sm transition-transform ${showJAI ? 'translate-x-4' : 'translate-x-0.5'}`} />
                         </button>
                       </div>
                     </div>
-                    <div className="border-t border-gray-100 dark:border-slate-700/50 py-2">
+                    <div className="border-t border-ink-100 py-2">
                       <button
                         onClick={() => { setProfileOpen(false); handleLogout() }}
-                        className="w-full flex items-center gap-3 px-5 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        className="w-full flex items-center gap-3 px-5 py-2.5 text-sm text-danger-600 hover:bg-danger-50 dark:hover:bg-danger-900/20 transition-colors"
                       >
                         <LogOut className="h-4 w-4" />
                         <span>Sair do sistema</span>
@@ -380,7 +386,7 @@ export default function Layout() {
 
         {/* Conteúdo */}
         <main className="flex-1 overflow-auto">
-          <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-7xl mx-auto animate-fade-in">
+          <div className="px-4 py-6 sm:px-6 lg:px-8 max-w-[1400px] mx-auto animate-fade-in">
             <Outlet />
           </div>
         </main>
@@ -391,18 +397,18 @@ export default function Layout() {
       </div>
 
       {/* Rodapé fixo â€" largura total, sobre sidebar e conteúdo */}
-      <footer className="fixed bottom-0 left-0 right-0 z-40 h-8 flex items-center bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700/50 px-3 sm:px-4">
+      <footer className="fixed bottom-0 left-0 right-0 z-40 h-8 flex items-center bg-surface border-t border-ink-200 px-3 sm:px-4">
         {/* Mobile: só nome do sistema + hora */}
-        <div className="sm:hidden w-full flex items-center justify-between text-[10px] text-gray-400 dark:text-slate-500">
-          <span className="font-medium text-gray-500 dark:text-slate-400 truncate">JEOS Sistema de Governo</span>
-          <span className="tabular-nums flex-shrink-0 ml-2">{fmtHora(now)}</span>
+        <div className="sm:hidden w-full flex items-center justify-between text-[10px] text-ink-400">
+          <span className="font-medium text-ink-500 truncate">JEOS Sistema de Governo</span>
+          <span className="tabular-nums shrink-0 ml-2">{fmtHora(now)}</span>
         </div>
         {/* Desktop: 3 colunas */}
-        <div className="hidden sm:grid w-full grid-cols-3 items-center text-[11px] text-gray-400 dark:text-slate-500">
+        <div className="hidden sm:grid w-full grid-cols-3 items-center text-[11px] text-ink-400">
           <span className="flex items-center gap-1 truncate">
             {geoLocation ? <>📍 {geoLocation}</> : <span className="opacity-40">localizando...</span>}
           </span>
-          <span className="text-center font-medium text-gray-500 dark:text-slate-400 whitespace-nowrap">
+          <span className="text-center font-medium text-ink-500 whitespace-nowrap">
             JEOS Sistema de Governo &copy;
           </span>
           <span className="text-right tabular-nums capitalize">
@@ -418,38 +424,38 @@ export default function Layout() {
           onClick={() => setModuloBloqueado(null)}
         >
           <div
-            className="bg-white dark:bg-slate-900 rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden"
+            className="bg-surface rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
-            <div className="bg-gradient-to-r from-red-500 to-rose-600 p-6 text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-full mb-3">
+            <div className="bg-gradient-to-r from-danger-500 to-danger-600 p-6 text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-surface/20 rounded-full mb-3">
                 <Lock className="h-8 w-8 text-white" />
               </div>
               <h2 className="text-xl font-bold text-white">Módulo não disponível</h2>
-              <p className="text-red-100 text-sm mt-1">{moduloBloqueado.label}</p>
+              <p className="text-danger-100 text-sm mt-1">{moduloBloqueado.label}</p>
             </div>
 
             <div className="p-6 text-center space-y-4">
-              <p className="text-gray-700 dark:text-slate-300 text-sm leading-relaxed">
-                O módulo <strong className="text-gray-900 dark:text-white">{moduloBloqueado.label}</strong> não está habilitado para o seu município.
+              <p className="text-ink-700 text-sm leading-relaxed">
+                O módulo <strong className="text-ink-900 dark:text-white">{moduloBloqueado.label}</strong> não está habilitado para o seu município.
               </p>
-              <p className="text-gray-500 dark:text-slate-400 text-sm">
+              <p className="text-ink-500 text-sm">
                 Para liberar o acesso, entre em contato com nosso comercial:
               </p>
-              <div className="bg-gray-50 dark:bg-slate-700/30 rounded-xl p-4 space-y-2 text-sm">
-                <div className="flex items-center justify-center gap-2 text-gray-700 dark:text-slate-300">
-                  <a href="tel:+5585999999999" className="font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors">(85) 9 9999-9999</a>
+              <div className="bg-ink-50 rounded-xl p-4 space-y-2 text-sm">
+                <div className="flex items-center justify-center gap-2 text-ink-700">
+                  <a href="tel:+5585999999999" className="font-medium hover:text-brand-600 dark:hover:text-info-400 transition-colors">(85) 9 9999-9999</a>
                 </div>
-                <div className="flex items-center justify-center gap-2 text-gray-700 dark:text-slate-300">
-                  <a href="mailto:comercial@jeossistemas.com.br" className="font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors">comercial@jeossistemas.com.br</a>
+                <div className="flex items-center justify-center gap-2 text-ink-700">
+                  <a href="mailto:comercial@jeossistemas.com.br" className="font-medium hover:text-brand-600 dark:hover:text-info-400 transition-colors">comercial@jeossistemas.com.br</a>
                 </div>
-                <div className="flex items-center justify-center gap-2 text-gray-700 dark:text-slate-300">
-                  <a href="https://jeossistemas.com" target="_blank" rel="noopener noreferrer" className="font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors">jeossistemas.com</a>
+                <div className="flex items-center justify-center gap-2 text-ink-700">
+                  <a href="https://jeossistemas.com" target="_blank" rel="noopener noreferrer" className="font-medium hover:text-brand-600 dark:hover:text-info-400 transition-colors">jeossistemas.com</a>
                 </div>
               </div>
               <button
                 onClick={() => setModuloBloqueado(null)}
-                className="w-full px-4 py-2.5 bg-gray-100 dark:bg-slate-700/30 hover:bg-gray-200 dark:hover:bg-slate-700/50 text-gray-700 dark:text-slate-300 rounded-xl font-medium text-sm transition-colors"
+                className="w-full px-4 py-2.5 bg-ink-100 hover:bg-ink-200 text-ink-700 rounded-xl font-medium text-sm transition-colors"
               >
                 Fechar
               </button>

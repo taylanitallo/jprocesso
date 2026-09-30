@@ -5,7 +5,7 @@ import { Field, Input, UserSelect, SectionCard, SecaoBotoes, alertarPendencias }
 function SimNao({ value, onChange, disabled }) {
   return (
     <select value={value} onChange={onChange} disabled={disabled}
-      className={`input-field text-sm${disabled ? ' opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800' : ''}`}>
+      className={`input-field text-sm${disabled ? ' opacity-60 cursor-not-allowed bg-ink-50' : ''}`}>
       <option value="">— Selecione —</option>
       <option value="sim">Sim</option>
       <option value="nao">Não</option>

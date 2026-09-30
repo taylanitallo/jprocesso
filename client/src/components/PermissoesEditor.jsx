@@ -99,18 +99,18 @@ function Toggle({ checked, onChange }) {
     <button
       type="button"
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0 ${checked ? 'bg-blue-600' : 'bg-gray-200 dark:bg-slate-600'}`}
+      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0 ${checked ? 'bg-brand-600' : 'bg-ink-200'}`}
     >
-      <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
+      <span className={`inline-block h-3.5 w-3.5 rounded-full bg-surface shadow-sm transition-transform ${checked ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
     </button>
   )
 }
 
 // ── Scope select — substitui o Toggle para ações "ver" ────────────────────────
 const SCOPE_OPTIONS = [
-  { value: 'none',    label: 'Bloqueado',     cls: 'bg-red-500 text-white' },
-  { value: 'propria', label: 'Só sua sec.',   cls: 'bg-blue-500 text-white' },
-  { value: 'todas',   label: 'Todas',         cls: 'bg-green-500 text-white' },
+  { value: 'none',    label: 'Bloqueado',     cls: 'bg-danger-500 text-white' },
+  { value: 'propria', label: 'Só sua sec.',   cls: 'bg-info-500 text-white' },
+  { value: 'todas',   label: 'Todas',         cls: 'bg-success-500 text-white' },
   { value: 'algumas', label: 'Específicas…',  cls: 'bg-amber-500 text-white' },
 ]
 
@@ -130,7 +130,7 @@ function ScopeSelect({ value, onChange }) {
           const v = e.target.value
           onChange(v === 'none' ? false : v)
         }}
-        className={`h-5 text-[10px] font-semibold pl-1.5 pr-5 rounded border-0 appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-400 ${active?.cls ?? 'bg-gray-200 text-gray-600'}`}
+        className={`h-5 text-[10px] font-semibold pl-1.5 pr-5 rounded-sm border-0 appearance-none cursor-pointer focus:outline-hidden focus:ring-1 focus:ring-info-400 ${active?.cls ?? 'bg-ink-200 text-ink-600'}`}
         style={{ minWidth: '82px' }}
       >
         {SCOPE_OPTIONS.map(o => (
@@ -145,7 +145,7 @@ function ScopeSelect({ value, onChange }) {
 // ── Checkboxes de secretarias para scope "Algumas" ────────────────────────────
 function SecretariasCheckboxes({ secretariaIds, secretariasList, onChange }) {
   if (secretariasList.length === 0) {
-    return <span className="text-[10px] text-gray-400 italic">Nenhuma secretaria disponível</span>
+    return <span className="text-[10px] text-ink-400 italic">Nenhuma secretaria disponível</span>
   }
   return (
     <div className="flex flex-wrap gap-x-3 gap-y-1">
@@ -158,9 +158,9 @@ function SecretariasCheckboxes({ secretariaIds, secretariasList, onChange }) {
               const ids = secretariaIds || []
               onChange(e.target.checked ? [...ids, s.id] : ids.filter(id => id !== s.id))
             }}
-            className="w-3 h-3 accent-blue-600"
+            className="w-3 h-3 accent-info-600"
           />
-          <span className="text-gray-600 dark:text-slate-400">{s.sigla ? `${s.sigla} – ${s.nome}` : s.nome}</span>
+          <span className="text-ink-600">{s.sigla ? `${s.sigla} – ${s.nome}` : s.nome}</span>
         </label>
       ))}
     </div>
@@ -214,9 +214,9 @@ export default function PermissoesEditor({ permissoes, onChange, secretariasList
         const acessar = mod.comAcesso ? (perm[mod.key]?.acessar !== false) : true
 
         return (
-          <div key={mod.key} className="border border-gray-200 dark:border-slate-700 rounded-xl overflow-hidden">
+          <div key={mod.key} className="border border-ink-200 rounded-xl overflow-hidden">
             {/* Header do módulo */}
-            <div className="flex items-center gap-3 px-4 py-2.5 bg-gray-50 dark:bg-slate-800">
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-ink-50">
               {mod.comAcesso && (
                 <Toggle
                   checked={acessar}
@@ -228,16 +228,16 @@ export default function PermissoesEditor({ permissoes, onChange, secretariasList
                 onClick={() => toggle(mod.key)}
                 className="flex-1 flex items-center justify-between text-left"
               >
-                <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">{mod.label}</span>
+                <span className="text-sm font-semibold text-ink-700">{mod.label}</span>
                 {(mod.abas || mod.acoes) && (
-                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-4 h-4 text-ink-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 )}
               </button>
             </div>
 
             {/* Body */}
             {isOpen && (
-              <div className="px-4 py-3 bg-white dark:bg-slate-800/30 border-t border-gray-100 dark:border-slate-700 space-y-2">
+              <div className="px-4 py-3 bg-surface border-t border-ink-100 space-y-2">
 
                 {/* Módulo com abas */}
                 {mod.abas?.map(aba => {
@@ -245,7 +245,7 @@ export default function PermissoesEditor({ permissoes, onChange, secretariasList
                   return (
                     <div key={aba.key} className="space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="w-28 shrink-0 text-xs text-gray-500 dark:text-slate-400 font-medium">{aba.label}</span>
+                        <span className="w-28 shrink-0 text-xs text-ink-500 font-medium">{aba.label}</span>
                         <div className="flex flex-wrap gap-3 items-center">
                           {aba.acoes.map(acao => (
                             <div key={acao.key} className="flex items-center gap-1.5">
@@ -257,7 +257,7 @@ export default function PermissoesEditor({ permissoes, onChange, secretariasList
                               ) : (
                                 <Toggle checked={get(mod.key, aba.key, acao.key)} onChange={v => set(mod.key, v, aba.key, acao.key)} />
                               )}
-                              <span className="text-xs text-gray-600 dark:text-slate-300">{acao.label}</span>
+                              <span className="text-xs text-ink-600">{acao.label}</span>
                             </div>
                           ))}
                         </div>
@@ -292,7 +292,7 @@ export default function PermissoesEditor({ permissoes, onChange, secretariasList
                             ) : (
                               <Toggle checked={get(mod.key, acao.key)} onChange={v => set(mod.key, v, acao.key)} />
                             )}
-                            <span className="text-xs text-gray-600 dark:text-slate-300">{acao.label}</span>
+                            <span className="text-xs text-ink-600">{acao.label}</span>
                           </div>
                         ))}
                       </div>

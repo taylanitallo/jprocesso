@@ -4,8 +4,8 @@ import api from '../services/api'
 import SectionTitle from '../components/ui/SectionTitle'
 import ActionBar from '../components/ui/ActionBar'
 
-const required = 'border-red-400 focus:ring-red-300'
-const base = 'w-full border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-300'
+const required = 'border-danger-400 focus:ring-danger-300'
+const base = 'w-full border rounded-lg px-3 py-2 text-sm dark:text-white focus:outline-hidden focus:ring-2 focus:ring-info-300'
 
 export default function PatEntrada({ onSuccess, onCancel }) {
   const [loading, setLoading]     = useState(false)
@@ -97,8 +97,8 @@ export default function PatEntrada({ onSuccess, onCancel }) {
   }
 
   const Label = ({ children, required: req }) => (
-    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-      {children}{req && <span className="text-red-500 ml-1">*</span>}
+    <label className="block text-sm font-medium text-ink-700 mb-1">
+      {children}{req && <span className="text-danger-500 ml-1">*</span>}
     </label>
   )
 
@@ -125,19 +125,19 @@ export default function PatEntrada({ onSuccess, onCancel }) {
   return (
     <form onSubmit={submit} className="space-y-6">
       {/* Próximo tombamento */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+      <div className="bg-info-50 dark:bg-info-900/20 border border-info-200 dark:border-info-800 rounded-xl p-4">
         <div className="flex items-center gap-3">
-          <Hash className="h-6 w-6 text-blue-600" />
+          <Hash className="h-6 w-6 text-brand-600" />
           <div>
-            <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">Próximo número de tombamento</p>
-            <p className="text-2xl font-bold font-mono text-blue-800 dark:text-blue-200">
+            <p className="text-sm text-brand-700 dark:text-info-300 font-medium">Próximo número de tombamento</p>
+            <p className="text-2xl font-bold font-mono text-info-800 dark:text-info-200">
               {loadingTomb ? '...' : (form.numero_tombamento_manual || proximoTombamento)}
             </p>
           </div>
           <div className="ml-auto flex items-center gap-2">
             <input
               type="number"
-              className="w-24 border rounded-lg px-2 py-1 text-sm dark:bg-gray-800 dark:border-gray-700"
+              className="w-24 border rounded-lg px-2 py-1 text-sm"
               placeholder="Ano"
               value={form.ano_tombamento}
               onChange={e => set('ano_tombamento', e.target.value)}
@@ -145,9 +145,9 @@ export default function PatEntrada({ onSuccess, onCancel }) {
           </div>
         </div>
         <div className="mt-3">
-          <label className="text-xs text-blue-600 dark:text-blue-400">Tombamento manual (opcional – sobrescreve o automático)</label>
+          <label className="text-xs text-brand-600 dark:text-info-400">Tombamento manual (opcional – sobrescreve o automático)</label>
           <input
-            className="w-full mt-1 border rounded-lg px-3 py-1.5 text-sm font-mono dark:bg-gray-800 dark:border-gray-700"
+            className="w-full mt-1 border rounded-lg px-3 py-1.5 text-sm font-mono"
             placeholder="Ex: 2026000999"
             value={form.numero_tombamento_manual}
             onChange={e => set('numero_tombamento_manual', e.target.value)}
@@ -162,7 +162,7 @@ export default function PatEntrada({ onSuccess, onCancel }) {
           <div className="md:col-span-2">
             <Label required>Descrição</Label>
             <Input field="descricao" placeholder="Ex: Mesa de escritório L com painel" />
-            {erros.descricao && <p className="text-xs text-red-500 mt-1">{erros.descricao}</p>}
+            {erros.descricao && <p className="text-xs text-danger-500 mt-1">{erros.descricao}</p>}
           </div>
           <div>
             <Label>Grupo (TCE-CE)</Label>
@@ -218,7 +218,7 @@ export default function PatEntrada({ onSuccess, onCancel }) {
       {/* Veículo (placa/RENAVAM) */}
       <section>
         <details>
-          <summary className="cursor-pointer font-semibold text-gray-800 dark:text-white mb-3 pb-1 border-b dark:border-gray-700">
+          <summary className="cursor-pointer font-semibold text-ink-800 dark:text-white mb-3 pb-1 border-b">
             🚗 Dados do Veículo (se aplicável)
           </summary>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
@@ -235,12 +235,12 @@ export default function PatEntrada({ onSuccess, onCancel }) {
           <div>
             <Label required>Data de Aquisição</Label>
             <Input field="data_aquisicao" type="date" />
-            {erros.data_aquisicao && <p className="text-xs text-red-500 mt-1">{erros.data_aquisicao}</p>}
+            {erros.data_aquisicao && <p className="text-xs text-danger-500 mt-1">{erros.data_aquisicao}</p>}
           </div>
           <div>
             <Label required>Valor de Aquisição (R$)</Label>
             <Input field="valor_aquisicao" type="number" step="0.01" min="0" placeholder="0,00" />
-            {erros.valor_aquisicao && <p className="text-xs text-red-500 mt-1">{erros.valor_aquisicao}</p>}
+            {erros.valor_aquisicao && <p className="text-xs text-danger-500 mt-1">{erros.valor_aquisicao}</p>}
           </div>
           <div>
             <Label>Nº da Nota Fiscal</Label>
@@ -298,7 +298,7 @@ export default function PatEntrada({ onSuccess, onCancel }) {
             <Input field="valor_residual" type="number" step="0.01" min="0" />
           </div>
         </div>
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="text-xs text-ink-500 mt-2">
           Valores padrão são preenchidos automaticamente ao selecionar o grupo conforme tabela TCE-CE.
         </p>
       </section>
@@ -313,7 +313,7 @@ export default function PatEntrada({ onSuccess, onCancel }) {
               <option value="">Selecione a secretaria</option>
               {secretarias.map(s => <option key={s.id} value={s.id}>{s.sigla ? `${s.sigla} – ` : ''}{s.nome}</option>)}
             </Sel>
-            {erros.secretaria_id && <p className="text-xs text-red-500 mt-1">{erros.secretaria_id}</p>}
+            {erros.secretaria_id && <p className="text-xs text-danger-500 mt-1">{erros.secretaria_id}</p>}
           </div>
           <div>
             <Label>Setor</Label>
@@ -331,8 +331,8 @@ export default function PatEntrada({ onSuccess, onCancel }) {
             <Input field="sala" placeholder="Ex: Sala 201" />
           </div>
 
-          <div className="md:col-span-2 border-t dark:border-gray-700 pt-4">
-            <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-3">
+          <div className="md:col-span-2 border-t pt-4">
+            <h4 className="font-medium text-ink-700 mb-3">
               📄 Responsável pela Guarda (Termo de Responsabilidade)
             </h4>
           </div>
@@ -347,7 +347,7 @@ export default function PatEntrada({ onSuccess, onCancel }) {
           <div>
             <Label required>Nome do Responsável</Label>
             <Input field="nome_responsavel" placeholder="Nome completo" />
-            {erros.nome_responsavel && <p className="text-xs text-red-500 mt-1">{erros.nome_responsavel}</p>}
+            {erros.nome_responsavel && <p className="text-xs text-danger-500 mt-1">{erros.nome_responsavel}</p>}
           </div>
           <div>
             <Label>Cargo</Label>
@@ -361,16 +361,16 @@ export default function PatEntrada({ onSuccess, onCancel }) {
       </section>
 
       {/* Ações */}
-      <div className="pt-2 border-t dark:border-gray-700">
+      <div className="pt-2 border-t">
         <ActionBar>
           {onCancel && (
             <button type="button" onClick={onCancel}
-              className="px-6 py-2 border rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+              className="px-6 py-2 border rounded-lg text-sm hover:bg-ink-50">
               Cancelar
             </button>
           )}
           <button type="submit" disabled={loading}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-60">
+            className="flex items-center gap-2 px-6 py-2 bg-brand-600 text-white rounded-lg text-sm hover:bg-brand-700 disabled:opacity-60">
             {loading && <RefreshCw className="h-4 w-4 animate-spin" />}
             Registrar Tombamento
           </button>

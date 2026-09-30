@@ -16,17 +16,17 @@ const STATUS_LABELS = {
 }
 
 const STATUS_COLORS = {
-  rascunho: 'bg-gray-100 text-gray-700 border-gray-300',
-  aberto: 'bg-blue-100 text-blue-700 border-blue-300',
+  rascunho: 'bg-ink-100 text-ink-700 border-ink-300',
+  aberto: 'bg-info-100 text-brand-700 border-info-300',
   fechado: 'bg-orange-100 text-orange-700 border-orange-300',
-  aprovado: 'bg-green-100 text-green-700 border-green-300',
-  cancelado: 'bg-red-100 text-red-700 border-red-300'
+  aprovado: 'bg-success-100 text-success-700 border-success-300',
+  cancelado: 'bg-danger-100 text-danger-700 border-danger-300'
 }
 
 const ENTRADA_STATUS_COLORS = {
-  pendente: 'text-gray-400',
-  preenchido: 'text-blue-600',
-  aprovado: 'text-green-600'
+  pendente: 'text-ink-400',
+  preenchido: 'text-brand-600',
+  aprovado: 'text-success-600'
 }
 
 const MESES = [
@@ -250,39 +250,39 @@ export default function ModalDid({ processo, onClose }) {
   // ══════════════════════════════════════════════════════════
   return (
     <div className="fixed inset-0 bg-black/60 flex items-start justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 rounded-xl w-full max-w-5xl my-6 shadow-2xl">
+      <div className="bg-surface rounded-xl w-full max-w-5xl my-6 shadow-2xl">
 
         {/* Cabeçalho */}
-        <div className="flex items-center justify-between p-6 border-b dark:border-slate-700/50">
+        <div className="flex items-center justify-between p-6 border-b">
           <div className="flex items-center space-x-3">
             <div className="bg-indigo-100 dark:bg-indigo-900/40 p-2 rounded-lg">
               <FileText className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              <h2 className="text-xl font-bold text-ink-900 dark:text-white">
                 📄 DID — Documento de Intenção de Despesas
               </h2>
-              <p className="text-sm text-gray-500 dark:text-slate-400">
+              <p className="text-sm text-ink-500">
                 Processo: {processo.numero}
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700/50 rounded-lg transition-colors">
-            <X className="h-6 w-6 text-gray-500" />
+          <button onClick={onClose} className="p-2 hover:bg-ink-100 rounded-lg transition-colors">
+            <X className="h-6 w-6 text-ink-500" />
           </button>
         </div>
 
         <div className="p-6">
           {/* Alertas */}
           {erro && (
-            <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg flex items-center space-x-2">
-              <AlertCircle className="h-5 w-5 flex-shrink-0" />
+            <div className="mb-4 bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-700 text-danger-700 dark:text-danger-400 px-4 py-3 rounded-lg flex items-center space-x-2">
+              <AlertCircle className="h-5 w-5 shrink-0" />
               <span>{erro}</span>
             </div>
           )}
           {sucesso && (
-            <div className="mb-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 text-green-700 dark:text-green-400 px-4 py-3 rounded-lg flex items-center space-x-2">
-              <CheckCircle className="h-5 w-5 flex-shrink-0" />
+            <div className="mb-4 bg-success-50 dark:bg-success-900/20 border border-success-200 dark:border-success-700 text-success-700 dark:text-success-400 px-4 py-3 rounded-lg flex items-center space-x-2">
+              <CheckCircle className="h-5 w-5 shrink-0" />
               <span>{sucesso}</span>
             </div>
           )}
@@ -295,9 +295,9 @@ export default function ModalDid({ processo, onClose }) {
           {/* ── FORMULÁRIO DE CRIAÇÃO ── */}
           {!loading && criandoDid && (
             <div>
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-6">
-                <p className="text-sm text-blue-800 dark:text-blue-300 flex items-center space-x-2">
-                  <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              <div className="bg-info-50 dark:bg-info-900/20 border border-info-200 dark:border-info-700 rounded-lg p-4 mb-6">
+                <p className="text-sm text-info-800 dark:text-info-300 flex items-center space-x-2">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
                   <span>Este processo ainda não possui um DID. Preencha abaixo para criar.</span>
                 </p>
               </div>
@@ -305,8 +305,8 @@ export default function ModalDid({ processo, onClose }) {
               <form onSubmit={handleCriarDid} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">
-                      Objeto * <span className="text-xs font-normal text-gray-500">(ex: LOCAÇÃO DE IMPRESSORA)</span>
+                    <label className="block text-sm font-semibold text-ink-700 mb-1">
+                      Objeto * <span className="text-xs font-normal text-ink-500">(ex: LOCAÇÃO DE IMPRESSORA)</span>
                     </label>
                     <input
                       type="text"
@@ -318,7 +318,7 @@ export default function ModalDid({ processo, onClose }) {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">
+                    <label className="block text-sm font-semibold text-ink-700 mb-1">
                       Período de Referência *
                     </label>
                     <input
@@ -331,7 +331,7 @@ export default function ModalDid({ processo, onClose }) {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">
+                    <label className="block text-sm font-semibold text-ink-700 mb-1">
                       Observações
                     </label>
                     <input
@@ -346,26 +346,26 @@ export default function ModalDid({ processo, onClose }) {
 
                 {/* Seleção de secretarias participantes */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
+                  <label className="block text-sm font-semibold text-ink-700 mb-2">
                     Secretarias Participantes
-                    <span className="ml-2 text-xs font-normal text-gray-500">(selecione as que preencherão sua intenção)</span>
+                    <span className="ml-2 text-xs font-normal text-ink-500">(selecione as que preencherão sua intenção)</span>
                   </label>
                   {secretariasDisponiveis.length === 0 ? (
-                    <p className="text-sm text-gray-500">Carregando secretarias...</p>
+                    <p className="text-sm text-ink-500">Carregando secretarias...</p>
                   ) : (
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                       {secretariasDisponiveis.map(sec => {
                         const selecionada = formCriar.secretarias_participantes.includes(sec.id)
                         return (
-                          <label key={sec.id} className={`flex items-center space-x-2 p-2 rounded-lg border-2 cursor-pointer transition-all ${selecionada ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' : 'border-gray-200 dark:border-slate-600 hover:border-gray-300'}`}>
+                          <label key={sec.id} className={`flex items-center space-x-2 p-2 rounded-lg border-2 cursor-pointer transition-all ${selecionada ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' : 'border-ink-200 hover:border-ink-300'}`}>
                             <input
                               type="checkbox"
                               checked={selecionada}
                               onChange={() => toggleSecretaria(sec.id)}
-                              className="rounded"
+                              className="rounded-sm"
                             />
-                            <span className="text-sm font-medium text-gray-800 dark:text-slate-200">{sec.sigla}</span>
-                            <span className="text-xs text-gray-500 truncate">{sec.nome}</span>
+                            <span className="text-sm font-medium text-ink-800">{sec.sigla}</span>
+                            <span className="text-xs text-ink-500 truncate">{sec.nome}</span>
                           </label>
                         )
                       })}
@@ -373,7 +373,7 @@ export default function ModalDid({ processo, onClose }) {
                   )}
                 </div>
 
-                <div className="flex justify-end space-x-3 pt-4 border-t dark:border-slate-700/50">
+                <div className="flex justify-end space-x-3 pt-4 border-t">
                   <button type="button" onClick={onClose} className="btn-secondary">
                     Cancelar
                   </button>
@@ -402,18 +402,18 @@ export default function ModalDid({ processo, onClose }) {
                         {STATUS_LABELS[did.did.status]}
                       </span>
                     </div>
-                    <p className="text-lg font-semibold text-gray-800 dark:text-slate-200">{did.did.objeto}</p>
-                    <p className="text-sm text-gray-600 dark:text-slate-400">Período: <strong>{did.did.periodo_referencia}</strong></p>
+                    <p className="text-lg font-semibold text-ink-800">{did.did.objeto}</p>
+                    <p className="text-sm text-ink-600">Período: <strong>{did.did.periodo_referencia}</strong></p>
                     {did.did.secretariaOrigem && (
-                      <p className="text-sm text-gray-600 dark:text-slate-400">Origem: <strong>{did.did.secretariaOrigem.sigla} — {did.did.secretariaOrigem.nome}</strong></p>
+                      <p className="text-sm text-ink-600">Origem: <strong>{did.did.secretariaOrigem.sigla} — {did.did.secretariaOrigem.nome}</strong></p>
                     )}
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-gray-500 dark:text-slate-400">Total Geral</p>
+                    <p className="text-sm text-ink-500">Total Geral</p>
                     <p className="text-3xl font-bold text-indigo-700 dark:text-indigo-300">
                       {formatMoeda(did.totalGeral)}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-ink-500 mt-1">
                       {(did.did.entradas || []).filter(e => e.status === 'preenchido' || e.status === 'aprovado').length}/{(did.did.entradas || []).length} secretarias preenchidas
                     </p>
                   </div>
@@ -423,7 +423,7 @@ export default function ModalDid({ processo, onClose }) {
               {/* Aviso de permissão */}
               {!isAdminOuGestor && (
                 <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-3 flex items-start space-x-2">
-                  <Shield className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <Shield className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
                   <p className="text-sm text-amber-800 dark:text-amber-300">
                     <strong>Regra de preenchimento:</strong> Cada secretaria preenche apenas sua própria linha. Você só pode editar a entrada da sua secretaria.
                   </p>
@@ -433,7 +433,7 @@ export default function ModalDid({ processo, onClose }) {
               {/* Tabela de entradas */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
+                  <h3 className="font-semibold text-ink-900 dark:text-white flex items-center space-x-2">
                     <DollarSign className="h-5 w-5 text-indigo-600" />
                     <span>Intenções por Secretaria</span>
                   </h3>
@@ -450,7 +450,7 @@ export default function ModalDid({ processo, onClose }) {
 
                 {/* Adicionar secretaria (admin) */}
                 {adicionandoSecretaria && (
-                  <div className="mb-3 p-3 bg-gray-50 dark:bg-slate-700/30 rounded-lg flex items-center space-x-3">
+                  <div className="mb-3 p-3 bg-ink-50 rounded-lg flex items-center space-x-3">
                     <select
                       value={novaSecretariaId}
                       onChange={e => setNovaSecretariaId(e.target.value)}
@@ -473,17 +473,17 @@ export default function ModalDid({ processo, onClose }) {
                 )}
 
                 {/* Tabela de entradas */}
-                <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-slate-700/50">
+                <div className="overflow-x-auto rounded-xl border border-ink-200">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="bg-gray-50 dark:bg-slate-700/30 border-b border-gray-200 dark:border-slate-600">
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-slate-300 w-32">Secretaria</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-slate-300">Descrição</th>
-                        <th className="text-right p-3 font-semibold text-gray-700 dark:text-slate-300 w-20">Qtd</th>
-                        <th className="text-center p-3 font-semibold text-gray-700 dark:text-slate-300 w-16">Un</th>
-                        <th className="text-right p-3 font-semibold text-gray-700 dark:text-slate-300 w-28">Vlr. Unit.</th>
-                        <th className="text-right p-3 font-semibold text-gray-700 dark:text-slate-300 w-28">Total</th>
-                        <th className="text-center p-3 font-semibold text-gray-700 dark:text-slate-300 w-20">Ação</th>
+                      <tr className="bg-ink-50 border-b border-ink-200">
+                        <th className="text-left p-3 font-semibold text-ink-700 w-32">Secretaria</th>
+                        <th className="text-left p-3 font-semibold text-ink-700">Descrição</th>
+                        <th className="text-right p-3 font-semibold text-ink-700 w-20">Qtd</th>
+                        <th className="text-center p-3 font-semibold text-ink-700 w-16">Un</th>
+                        <th className="text-right p-3 font-semibold text-ink-700 w-28">Vlr. Unit.</th>
+                        <th className="text-right p-3 font-semibold text-ink-700 w-28">Total</th>
+                        <th className="text-center p-3 font-semibold text-ink-700 w-20">Ação</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -496,17 +496,17 @@ export default function ModalDid({ processo, onClose }) {
                         return (
                           <tr
                             key={entrada.id}
-                            className={`border-b dark:border-slate-700/50 transition-colors ${
+                            className={`border-b transition-colors ${
                               eMinhaSecretaria && !isAdminOuGestor
-                                ? 'bg-blue-50/40 dark:bg-blue-900/10'
-                                : 'hover:bg-gray-50 dark:hover:bg-slate-700/30'
+                                ? 'bg-info-50/40 dark:bg-info-900/10'
+                                : 'hover:bg-ink-50'
                             }`}
                           >
                             {/* ── Linha em modo visualização ── */}
                             {!editando && (
                               <>
                                 <td className="p-3">
-                                  <div className="font-bold text-gray-900 dark:text-white text-xs">
+                                  <div className="font-bold text-ink-900 dark:text-white text-xs">
                                     {entrada.secretaria?.sigla}
                                   </div>
                                   <div className={`text-xs mt-0.5 flex items-center space-x-1 ${ENTRADA_STATUS_COLORS[entrada.status]}`}>
@@ -514,29 +514,29 @@ export default function ModalDid({ processo, onClose }) {
                                     <span className="capitalize">{entrada.status}</span>
                                   </div>
                                   {eMinhaSecretaria && !isAdminOuGestor && (
-                                    <span className="text-xs text-blue-600 font-semibold mt-0.5 block">← Sua entrada</span>
+                                    <span className="text-xs text-brand-600 font-semibold mt-0.5 block">← Sua entrada</span>
                                   )}
                                 </td>
                                 <td className="p-3">
                                   {entrada.descricao ? (
-                                    <span className="text-gray-800 dark:text-slate-200">{entrada.descricao}</span>
+                                    <span className="text-ink-800">{entrada.descricao}</span>
                                   ) : (
-                                    <span className="text-gray-400 italic text-xs">Não preenchido</span>
+                                    <span className="text-ink-400 italic text-xs">Não preenchido</span>
                                   )}
                                   {entrada.dotacao_orcamentaria && (
-                                    <div className="text-xs text-gray-400 mt-0.5">Dotação: {entrada.dotacao_orcamentaria}</div>
+                                    <div className="text-xs text-ink-400 mt-0.5">Dotação: {entrada.dotacao_orcamentaria}</div>
                                   )}
                                 </td>
-                                <td className="p-3 text-right text-gray-700 dark:text-slate-300">
+                                <td className="p-3 text-right text-ink-700">
                                   {entrada.quantidade > 0 ? parseFloat(entrada.quantidade).toLocaleString('pt-BR') : '—'}
                                 </td>
-                                <td className="p-3 text-center text-gray-600 dark:text-slate-400 text-xs">
+                                <td className="p-3 text-center text-ink-600 text-xs">
                                   {entrada.unidade || '—'}
                                 </td>
-                                <td className="p-3 text-right text-gray-700 dark:text-slate-300">
+                                <td className="p-3 text-right text-ink-700">
                                   {entrada.valor_unitario > 0 ? formatMoeda(entrada.valor_unitario) : '—'}
                                 </td>
-                                <td className="p-3 text-right font-semibold text-gray-900 dark:text-white">
+                                <td className="p-3 text-right font-semibold text-ink-900 dark:text-white">
                                   {entrada.valor_total > 0 ? formatMoeda(entrada.valor_total) : '—'}
                                 </td>
                                 <td className="p-3 text-center">
@@ -549,7 +549,7 @@ export default function ModalDid({ processo, onClose }) {
                                       <Edit3 className="h-4 w-4" />
                                     </button>
                                   ) : (
-                                    <Lock className="h-4 w-4 text-gray-300 mx-auto" title="Sem permissão para editar" />
+                                    <Lock className="h-4 w-4 text-ink-300 mx-auto" title="Sem permissão para editar" />
                                   )}
                                 </td>
                               </>
@@ -567,7 +567,7 @@ export default function ModalDid({ processo, onClose }) {
                                   </div>
                                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                                     <div className="md:col-span-2">
-                                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 block mb-1">Descrição</label>
+                                      <label className="text-xs font-semibold text-ink-600 block mb-1">Descrição</label>
                                       <input
                                         type="text"
                                         value={formEntrada.descricao}
@@ -577,7 +577,7 @@ export default function ModalDid({ processo, onClose }) {
                                       />
                                     </div>
                                     <div>
-                                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 block mb-1">Quantidade</label>
+                                      <label className="text-xs font-semibold text-ink-600 block mb-1">Quantidade</label>
                                       <input
                                         type="number"
                                         min="0"
@@ -589,7 +589,7 @@ export default function ModalDid({ processo, onClose }) {
                                       />
                                     </div>
                                     <div>
-                                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 block mb-1">Unidade</label>
+                                      <label className="text-xs font-semibold text-ink-600 block mb-1">Unidade</label>
                                       <select
                                         value={formEntrada.unidade}
                                         onChange={e => setFormEntrada(p => ({ ...p, unidade: e.target.value }))}
@@ -601,7 +601,7 @@ export default function ModalDid({ processo, onClose }) {
                                       </select>
                                     </div>
                                     <div>
-                                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 block mb-1">Valor Unitário (R$)</label>
+                                      <label className="text-xs font-semibold text-ink-600 block mb-1">Valor Unitário (R$)</label>
                                       <input
                                         type="number"
                                         min="0"
@@ -613,13 +613,13 @@ export default function ModalDid({ processo, onClose }) {
                                       />
                                     </div>
                                     <div>
-                                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 block mb-1">Total Calculado</label>
-                                      <div className="input-field text-sm bg-gray-100 dark:bg-slate-600 font-bold text-indigo-700 dark:text-indigo-300">
+                                      <label className="text-xs font-semibold text-ink-600 block mb-1">Total Calculado</label>
+                                      <div className="input-field text-sm bg-ink-100 font-bold text-indigo-700 dark:text-indigo-300">
                                         {formatMoeda(valorTotalCalculado)}
                                       </div>
                                     </div>
                                     <div className="md:col-span-2">
-                                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 block mb-1">Dotação Orçamentária</label>
+                                      <label className="text-xs font-semibold text-ink-600 block mb-1">Dotação Orçamentária</label>
                                       <input
                                         type="text"
                                         value={formEntrada.dotacao_orcamentaria}
@@ -629,7 +629,7 @@ export default function ModalDid({ processo, onClose }) {
                                       />
                                     </div>
                                     <div className="md:col-span-4">
-                                      <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 block mb-1">Observações</label>
+                                      <label className="text-xs font-semibold text-ink-600 block mb-1">Observações</label>
                                       <input
                                         type="text"
                                         value={formEntrada.observacoes}
@@ -662,7 +662,7 @@ export default function ModalDid({ processo, onClose }) {
                       {/* Total geral */}
                       {(did.did.entradas || []).length > 0 && (
                         <tr className="bg-indigo-50 dark:bg-indigo-900/20 font-bold border-t-2 border-indigo-200 dark:border-indigo-700">
-                          <td colSpan={5} className="p-3 text-right text-gray-700 dark:text-slate-300">
+                          <td colSpan={5} className="p-3 text-right text-ink-700">
                             TOTAL GERAL
                           </td>
                           <td className="p-3 text-right text-indigo-700 dark:text-indigo-300 text-base">
@@ -674,7 +674,7 @@ export default function ModalDid({ processo, onClose }) {
 
                       {(did.did.entradas || []).length === 0 && (
                         <tr>
-                          <td colSpan={7} className="p-8 text-center text-gray-400 italic">
+                          <td colSpan={7} className="p-8 text-center text-ink-400 italic">
                             Nenhuma secretaria participante. {isAdminOuGestor ? 'Adicione secretarias acima.' : ''}
                           </td>
                         </tr>
@@ -686,8 +686,8 @@ export default function ModalDid({ processo, onClose }) {
 
               {/* Ações de status (admin/gestor) */}
               {isAdminOuGestor && (
-                <div className="flex flex-wrap items-center gap-3 pt-4 border-t dark:border-slate-700/50">
-                  <span className="text-sm font-semibold text-gray-600 dark:text-slate-400">Alterar status:</span>
+                <div className="flex flex-wrap items-center gap-3 pt-4 border-t">
+                  <span className="text-sm font-semibold text-ink-600">Alterar status:</span>
                   {didStatus === 'aberto' && (
                     <button
                       onClick={() => handleAlterarStatus('fechado')}
@@ -703,7 +703,7 @@ export default function ModalDid({ processo, onClose }) {
                       <button
                         onClick={() => handleAlterarStatus('aberto')}
                         disabled={salvando}
-                        className="flex items-center space-x-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm font-medium shadow-sm transition-all"
+                        className="flex items-center space-x-1 px-4 py-2 bg-info-500 text-white rounded-lg hover:bg-brand-600 text-sm font-medium shadow-sm transition-all"
                       >
                         <Unlock className="h-4 w-4" />
                         <span>Reabrir</span>
@@ -711,7 +711,7 @@ export default function ModalDid({ processo, onClose }) {
                       <button
                         onClick={() => handleAlterarStatus('aprovado')}
                         disabled={salvando}
-                        className="flex items-center space-x-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium shadow-sm transition-all"
+                        className="flex items-center space-x-1 px-4 py-2 bg-success-600 text-white rounded-lg hover:bg-success-700 text-sm font-medium shadow-sm transition-all"
                       >
                         <CheckCircle className="h-4 w-4" />
                         <span>Aprovar DID</span>
@@ -719,7 +719,7 @@ export default function ModalDid({ processo, onClose }) {
                     </>
                   )}
                   {(didStatus === 'aprovado' || didStatus === 'rascunho') && (
-                    <span className="text-sm text-gray-500 italic">
+                    <span className="text-sm text-ink-500 italic">
                       {didStatus === 'aprovado' ? 'DID aprovado. Nenhuma alteração permitida.' : 'Em rascunho.'}
                     </span>
                   )}

@@ -32,25 +32,25 @@ function AssinaturaStep({ resumo, onConfirm, onBack, saving, erro }) {
   const [senha, setSenha] = useState('')
   return (
     <div className="space-y-4">
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 flex items-start gap-3">
-        <Lock className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+      <div className="bg-info-50 dark:bg-info-900/20 border border-info-200 dark:border-info-700 rounded-lg p-4 flex items-start gap-3">
+        <Lock className="h-5 w-5 text-brand-600 dark:text-info-400 mt-0.5 shrink-0" />
         <div>
-          <p className="text-sm font-semibold text-blue-900 dark:text-blue-300">Assinatura Eletrônica</p>
-          <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
+          <p className="text-sm font-semibold text-info-900 dark:text-info-300">Assinatura Eletrônica</p>
+          <p className="text-xs text-brand-700 dark:text-info-400 mt-1">
             Confirme com sua senha para registrar a entrega.
           </p>
         </div>
       </div>
       {resumo && (
-        <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-sm space-y-1 text-gray-700 dark:text-gray-300">
+        <div className="bg-ink-50 rounded-lg p-3 text-sm space-y-1 text-ink-700">
           {resumo}
         </div>
       )}
       {erro && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg px-4 py-2 text-sm">{erro}</div>
+        <div className="bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-700 text-danger-700 dark:text-danger-300 rounded-lg px-4 py-2 text-sm">{erro}</div>
       )}
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label className="block text-sm font-medium text-ink-700 mb-2">
           Digite sua senha para confirmar *
         </label>
         <input
@@ -60,13 +60,13 @@ function AssinaturaStep({ resumo, onConfirm, onBack, saving, erro }) {
           onKeyDown={e => e.key === 'Enter' && senha && onConfirm(senha)}
           placeholder="••••••••"
           autoFocus
-          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+          className="w-full border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900 focus:ring-2 focus:ring-brand-500"
         />
       </div>
       <div className="flex justify-between pt-2">
         <button onClick={onBack} disabled={saving} className="btn-secondary text-sm">Voltar</button>
         <button onClick={() => onConfirm(senha)} disabled={saving || !senha}
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50">
+          className="flex items-center gap-2 px-4 py-2 bg-success-600 text-white rounded-lg text-sm font-medium hover:bg-success-700 disabled:opacity-50">
           <Truck className="h-4 w-4" /> {saving ? 'Confirmando...' : 'Confirmar Entrega'}
         </button>
       </div>
@@ -99,30 +99,30 @@ function EntregarModal({ req, onClose, onSave, saving, erro }) {
   return (
     <AlmoxModal title={`Confirmar Entrega — ${req.numero}`} onClose={onClose}>
       <div className="space-y-4">
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-4">
-          <p className="text-sm text-green-800 dark:text-green-300 font-medium">
+        <div className="bg-success-50 dark:bg-success-900/20 border border-success-200 dark:border-success-700 rounded-lg p-4">
+          <p className="text-sm text-success-800 dark:text-success-300 font-medium">
             Confirme a entrega dos materiais ao setor solicitante.
           </p>
-          <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+          <p className="text-xs text-success-600 dark:text-success-400 mt-1">
             O estoque será deduzido automaticamente via FIFO/PEPS após a confirmação.
           </p>
         </div>
-        <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-sm space-y-1">
+        <div className="bg-ink-50 rounded-lg p-3 text-sm space-y-1">
           <p><strong>Setor:</strong> {req.setor?.nome || '—'}</p>
           <p><strong>Solicitante:</strong> {req.solicitante?.nome || '—'}</p>
         </div>
         <div className="space-y-2 max-h-48 overflow-y-auto">
           {(req.itens || []).map(ri => (
-            <div key={ri.id} className="flex justify-between text-sm border border-gray-100 dark:border-gray-700 rounded-lg px-3 py-2">
-              <span className="text-gray-700 dark:text-gray-300">{ri.item?.nome}</span>
-              <span className="font-medium text-gray-900 dark:text-white">{fmt(ri.quantidade_solicitada)} {ri.item?.unidade}</span>
+            <div key={ri.id} className="flex justify-between text-sm border border-ink-100 rounded-lg px-3 py-2">
+              <span className="text-ink-700">{ri.item?.nome}</span>
+              <span className="font-medium text-ink-900 dark:text-white">{fmt(ri.quantidade_solicitada)} {ri.item?.unidade}</span>
             </div>
           ))}
         </div>
         <div className="flex justify-end gap-3 pt-2">
           <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
           <button onClick={() => setStep(2)}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
+            className="flex items-center gap-2 px-4 py-2 bg-success-600 text-white rounded-lg text-sm font-medium hover:bg-success-700">
             <Truck className="h-4 w-4" /> Avançar — Assinar
           </button>
         </div>
@@ -138,17 +138,17 @@ function CancelarModal({ req, onClose, onSave, saving, erro }) {
     <AlmoxModal title={`Cancelar Requisição ${req.numero}`} onClose={onClose}>
       <div className="space-y-4">
         {erro && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg px-4 py-2 text-sm">{erro}</div>
+          <div className="bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-700 text-danger-700 dark:text-danger-300 rounded-lg px-4 py-2 text-sm">{erro}</div>
         )}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Justificativa (opcional)</label>
+          <label className="block text-sm font-medium text-ink-700 mb-1">Justificativa (opcional)</label>
           <textarea value={justificativa} onChange={e => setJustificativa(e.target.value)} rows={3}
-            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500 resize-none" />
+            className="w-full border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900 focus:ring-2 focus:ring-danger-500 resize-none" />
         </div>
         <div className="flex justify-end gap-3 pt-2">
           <button onClick={onClose} className="btn-secondary text-sm">Voltar</button>
           <button onClick={() => onSave(justificativa)} disabled={saving}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50">
+            className="px-4 py-2 bg-danger-600 text-white rounded-lg text-sm font-medium hover:bg-danger-700 disabled:opacity-50">
             {saving ? 'Cancelando...' : 'Confirmar Cancelamento'}
           </button>
         </div>
@@ -169,21 +169,21 @@ function SolRow({ r, onSeparar, onAguardandoRetirada, onEntregar, onCancelar, on
   const podeCancelar          = !['ENTREGUE', 'ATENDIDA', 'CANCELADA'].includes(r.status) && ['admin', 'gestor'].includes(userTipo)
 
   return (
-    <tr className="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
+    <tr className="hover:bg-ink-50 transition-colors">
       <td className="px-4 py-3">
-        <p className="font-mono text-xs font-semibold text-blue-700 dark:text-blue-400">{r.numero}</p>
+        <p className="font-mono text-xs font-semibold text-brand-700 dark:text-info-400">{r.numero}</p>
         {priorSt && r.prioridade !== 'NORMAL' && (
-          <span className={`inline-flex text-xs font-medium px-1.5 py-0.5 rounded mt-0.5 ${priorSt.color}`}>
+          <span className={`inline-flex text-xs font-medium px-1.5 py-0.5 rounded-sm mt-0.5 ${priorSt.color}`}>
             {priorSt.label}
           </span>
         )}
       </td>
-      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{r.setor?.nome || '—'}</td>
-      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{r.solicitante?.nome || '—'}</td>
-      <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+      <td className="px-4 py-3 text-sm text-ink-700">{r.setor?.nome || '—'}</td>
+      <td className="px-4 py-3 text-sm text-ink-700">{r.solicitante?.nome || '—'}</td>
+      <td className="px-4 py-3 text-xs text-ink-500">
         {r.data_solicitacao ? new Date(String(r.data_solicitacao).slice(0, 10) + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
       </td>
-      <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 text-center">
+      <td className="px-4 py-3 text-xs text-ink-500 text-center">
         {r.itens?.length || 0}
       </td>
       <td className="px-4 py-3">
@@ -194,30 +194,30 @@ function SolRow({ r, onSeparar, onAguardandoRetirada, onEntregar, onCancelar, on
       <td className="px-4 py-3">
         <div className="flex items-center gap-1 flex-wrap">
           <button onClick={() => onVisualizar(r.id)}
-            className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 font-medium">
+            className="flex items-center gap-1 px-2 py-1 text-xs bg-ink-100 text-ink-700 rounded-sm hover:bg-ink-200 font-medium">
             <Eye className="h-3 w-3" /> Ver
           </button>
           {podeSeparar && (
             <button onClick={() => onSeparar(r.id)}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 rounded hover:bg-purple-200 font-medium">
+              className="flex items-center gap-1 px-2 py-1 text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 rounded-sm hover:bg-purple-200 font-medium">
               <Package className="h-3 w-3" /> Separar
             </button>
           )}
           {podeAguardandoRetirada && (
             <button onClick={() => onAguardandoRetirada(r.id)}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 rounded hover:bg-orange-200 font-medium">
+              className="flex items-center gap-1 px-2 py-1 text-xs bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 rounded-sm hover:bg-orange-200 font-medium">
               <Clock className="h-3 w-3" /> Pronto p/ Retirada
             </button>
           )}
           {podeEntregar && (
             <button onClick={() => onEntregar(r)}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 rounded hover:bg-green-200 font-medium">
+              className="flex items-center gap-1 px-2 py-1 text-xs bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-300 rounded-sm hover:bg-success-200 font-medium">
               <Truck className="h-3 w-3" /> Entregar
             </button>
           )}
           {podeCancelar && (
             <button onClick={() => onCancelar(r)}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 rounded hover:bg-red-200 font-medium">
+              className="flex items-center gap-1 px-2 py-1 text-xs bg-danger-100 text-danger-700 dark:bg-danger-900/30 dark:text-danger-300 rounded-sm hover:bg-danger-200 font-medium">
               <XCircle className="h-3 w-3" /> Cancelar
             </button>
           )}
@@ -246,68 +246,68 @@ function VisualizarModal({ reqId, onClose }) {
   return (
     <AlmoxModal title={`Requisição ${req?.numero || '...'}`} onClose={onClose} wide>
       {loading ? <LoadingBar label="Carregando..." /> : !req ? (
-        <p className="text-center text-gray-500 py-8">Não foi possível carregar a requisição.</p>
+        <p className="text-center text-ink-500 py-8">Não foi possível carregar a requisição.</p>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="space-y-2">
-              <div><label className="text-xs font-semibold text-gray-500 uppercase">Número</label>
-                <p className="font-mono font-bold text-blue-700 dark:text-blue-400">{req.numero}</p></div>
-              <div><label className="text-xs font-semibold text-gray-500 uppercase">Secretaria</label>
+              <div><label className="text-xs font-semibold text-ink-500 uppercase">Número</label>
+                <p className="font-mono font-bold text-brand-700 dark:text-info-400">{req.numero}</p></div>
+              <div><label className="text-xs font-semibold text-ink-500 uppercase">Secretaria</label>
                 <p className="text-sm">{req.secretaria?.nome || '—'}</p></div>
-              <div><label className="text-xs font-semibold text-gray-500 uppercase">Setor</label>
+              <div><label className="text-xs font-semibold text-ink-500 uppercase">Setor</label>
                 <p className="text-sm">{req.setor?.nome || '—'}</p></div>
             </div>
             <div className="space-y-2">
-              <div><label className="text-xs font-semibold text-gray-500 uppercase">Status</label>
+              <div><label className="text-xs font-semibold text-ink-500 uppercase">Status</label>
                 <p><span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${st?.color}`}>{st?.label}</span></p></div>
-              <div><label className="text-xs font-semibold text-gray-500 uppercase">Solicitante</label>
+              <div><label className="text-xs font-semibold text-ink-500 uppercase">Solicitante</label>
                 <p className="text-sm">{req.solicitante?.nome || '—'}</p></div>
-              <div><label className="text-xs font-semibold text-gray-500 uppercase">Autorizador</label>
+              <div><label className="text-xs font-semibold text-ink-500 uppercase">Autorizador</label>
                 <p className="text-sm">{req.autorizador?.nome || '—'}</p></div>
             </div>
           </div>
 
-          <table className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden mb-4">
-            <thead className="bg-gray-50 dark:bg-gray-700/50">
+          <table className="w-full text-sm border border-ink-200 rounded-lg overflow-hidden mb-4">
+            <thead className="bg-ink-50">
               <tr>
                 {['#', 'Item', 'Qtd. Solicitada', 'Qtd. Entregue', 'Unid.'].map(h => (
-                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase border-b border-gray-200 dark:border-gray-700">{h}</th>
+                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-ink-500 uppercase border-b border-ink-200">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+            <tbody className="divide-y divide-ink-100">
               {(req.itens || []).map((ri, i) => (
                 <tr key={ri.id}>
-                  <td className="px-3 py-2 text-xs text-gray-400">{i + 1}</td>
-                  <td className="px-3 py-2 font-medium text-gray-900 dark:text-white">{ri.item?.nome}</td>
+                  <td className="px-3 py-2 text-xs text-ink-400">{i + 1}</td>
+                  <td className="px-3 py-2 font-medium text-ink-900 dark:text-white">{ri.item?.nome}</td>
                   <td className="px-3 py-2 tabular-nums">{fmt(ri.quantidade_solicitada)}</td>
-                  <td className="px-3 py-2 tabular-nums text-green-700 dark:text-green-400">
+                  <td className="px-3 py-2 tabular-nums text-success-700 dark:text-success-400">
                     {ri.quantidade_entregue != null ? fmt(ri.quantidade_entregue) : '—'}
                   </td>
-                  <td className="px-3 py-2 text-gray-500">{ri.item?.unidade || '—'}</td>
+                  <td className="px-3 py-2 text-ink-500">{ri.item?.unidade || '—'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
 
-          <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="grid grid-cols-3 gap-4 pt-4 border-t border-ink-200">
             {[
               { nome: req.solicitante?.nome, papel: 'Solicitante', data: fmtDate(req.data_solicitacao), hash: req.hash_solicitante },
               { nome: req.autorizador?.nome, papel: 'Autorizador', data: req.data_autorizacao ? fmtDateTime(req.data_autorizacao) : '—', hash: req.hash_assinatura },
               { nome: req.atendente?.nome,   papel: 'Entregador',  data: req.data_entrega ? fmtDateTime(req.data_entrega) : '—', hash: req.hash_entrega },
             ].map(({ nome, papel, data, hash }) => (
               <div key={papel} className="text-center">
-                <div className="border-t-2 border-gray-400 dark:border-gray-500 pt-3">
-                  <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">{nome || '—'}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{papel}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{data}</p>
+                <div className="border-t-2 border-ink-400 pt-3">
+                  <p className="text-xs font-semibold text-ink-700">{nome || '—'}</p>
+                  <p className="text-xs text-ink-500 mt-0.5">{papel}</p>
+                  <p className="text-xs text-ink-400 mt-0.5">{data}</p>
                   {hash ? (
-                    <div className="mt-2 bg-gray-50 dark:bg-gray-700/50 rounded px-2 py-1">
-                      <p className="text-xs font-mono text-blue-600 dark:text-blue-400 break-all">{hash}</p>
+                    <div className="mt-2 bg-ink-50 rounded-sm px-2 py-1">
+                      <p className="text-xs font-mono text-brand-600 dark:text-info-400 break-all">{hash}</p>
                     </div>
                   ) : (
-                    <div className="mt-2 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1 text-xs text-amber-600 dark:text-amber-400">
+                    <div className="mt-2 bg-amber-50 dark:bg-amber-900/20 rounded-sm px-2 py-1 text-xs text-amber-600 dark:text-amber-400">
                       Aguardando
                     </div>
                   )}
@@ -421,7 +421,7 @@ export default function AlmoxSolicitacoes() {
         subtitle="Gerencie o fluxo de entregas: separe os materiais, marque como pronto e confirme a entrega."
         actions={
           <ActionBar>
-            <button onClick={() => load(page, statusFiltro)} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+            <button onClick={() => load(page, statusFiltro)} className="p-2 text-ink-400 hover:text-ink-600 rounded-lg hover:bg-ink-100">
               <RefreshCw className="h-4 w-4" />
             </button>
           </ActionBar>
@@ -430,9 +430,9 @@ export default function AlmoxSolicitacoes() {
 
       <FilterBar>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Status</label>
+          <label className="text-xs font-medium text-ink-500">Status</label>
           <select value={statusFiltro} onChange={e => { setStatusFiltro(e.target.value); setPage(1) }}
-            className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+            className="border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900">
             {FILTROS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
           </select>
         </div>
@@ -441,20 +441,20 @@ export default function AlmoxSolicitacoes() {
       {loading ? (
         <LoadingBar label="Carregando solicitações..." />
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="bg-surface rounded-xl border border-ink-200 overflow-hidden">
           <div className="px-4 pt-4">
             <SectionTitle icon={ClipboardList} title="Requisições" subtitle={`${total} solicitação(ões)`} />
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+              <thead className="bg-ink-50 border-b border-ink-200">
                 <tr>
                   {['Número', 'Setor', 'Solicitante', 'Data', 'Itens', 'Status', 'Ações'].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-ink-500 uppercase">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              <tbody className="divide-y divide-ink-100">
                 {reqs.length === 0 && (
                   <tr>
                     <td colSpan={7} className="px-4 py-0">
@@ -483,14 +483,14 @@ export default function AlmoxSolicitacoes() {
           </div>
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Total: {total}</span>
+            <div className="flex items-center justify-between px-4 py-3 border-t border-ink-200">
+              <span className="text-sm text-ink-500">Total: {total}</span>
               <div className="flex items-center gap-2">
-                <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-1 rounded hover:bg-gray-100 disabled:opacity-40">
+                <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-1 rounded-sm hover:bg-ink-100 disabled:opacity-40">
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 <span className="text-sm">{page} / {totalPages}</span>
-                <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="p-1 rounded hover:bg-gray-100 disabled:opacity-40">
+                <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="p-1 rounded-sm hover:bg-ink-100 disabled:opacity-40">
                   <ChevronRight className="h-4 w-4" />
                 </button>
               </div>

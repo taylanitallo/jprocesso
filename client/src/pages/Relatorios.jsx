@@ -552,7 +552,7 @@ export default function Relatorios() {
         <SectionTitle icon={ClipboardList} title="Gerar Relatório" />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div>
-            <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+            <label className="flex items-center gap-1.5 text-sm font-medium text-ink-700 mb-2">
               <Calendar className="h-3.5 w-3.5" />Data Inicial
             </label>
             <input
@@ -563,7 +563,7 @@ export default function Relatorios() {
             />
           </div>
           <div>
-            <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+            <label className="flex items-center gap-1.5 text-sm font-medium text-ink-700 mb-2">
               <Calendar className="h-3.5 w-3.5" />Data Final
             </label>
             <input
@@ -574,7 +574,7 @@ export default function Relatorios() {
             />
           </div>
           <div>
-            <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+            <label className="flex items-center gap-1.5 text-sm font-medium text-ink-700 mb-2">
               <ListFilter className="h-3.5 w-3.5" />Tipo de Relatório
             </label>
             <select 
@@ -628,42 +628,42 @@ export default function Relatorios() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="card p-6 hover:shadow-md transition-shadow animate-bounce-in">
           <div className="flex items-center mb-4">
-            <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-lg">
-              <FileText className="h-6 w-6 text-blue-600" />
+            <div className="bg-info-100 dark:bg-info-900/30 p-3 rounded-lg">
+              <FileText className="h-6 w-6 text-brand-600" />
             </div>
           </div>
-          <p className="text-sm text-gray-600 dark:text-slate-400 mb-1">Total de Processos</p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">{estatisticas.totalProcessos}</p>
+          <p className="text-sm text-ink-600 mb-1">Total de Processos</p>
+          <p className="text-3xl font-bold text-ink-900 dark:text-white">{estatisticas.totalProcessos}</p>
         </div>
 
         <div className="card p-6 hover:shadow-md transition-shadow animate-bounce-in" style={{animationDelay: '75ms'}}>
           <div className="flex items-center mb-4">
-            <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-lg">
-              <CheckCircle className="h-6 w-6 text-green-600" />
+            <div className="bg-success-100 dark:bg-success-900/30 p-3 rounded-lg">
+              <CheckCircle className="h-6 w-6 text-success-600" />
             </div>
           </div>
-          <p className="text-sm text-gray-600 dark:text-slate-400 mb-1">Concluídos</p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">{estatisticas.processosConcluidos}</p>
+          <p className="text-sm text-ink-600 mb-1">Concluídos</p>
+          <p className="text-3xl font-bold text-ink-900 dark:text-white">{estatisticas.processosConcluidos}</p>
         </div>
 
         <div className="card p-6 hover:shadow-md transition-shadow animate-bounce-in" style={{animationDelay: '150ms'}}>
           <div className="flex items-center mb-4">
-            <div className="bg-yellow-100 dark:bg-yellow-900/30 p-3 rounded-lg">
-              <TrendingUp className="h-6 w-6 text-yellow-600" />
+            <div className="bg-warning-100 dark:bg-warning-900/30 p-3 rounded-lg">
+              <TrendingUp className="h-6 w-6 text-warning-600" />
             </div>
           </div>
-          <p className="text-sm text-gray-600 dark:text-slate-400 mb-1">Em Andamento</p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">{estatisticas.processosAbertos + estatisticas.processosEmAnalise}</p>
+          <p className="text-sm text-ink-600 mb-1">Em Andamento</p>
+          <p className="text-3xl font-bold text-ink-900 dark:text-white">{estatisticas.processosAbertos + estatisticas.processosEmAnalise}</p>
         </div>
 
         <div className="card p-6 hover:shadow-md transition-shadow animate-bounce-in" style={{animationDelay: '225ms'}}>
           <div className="flex items-center mb-4">
-            <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-lg">
-              <Clock className="h-6 w-6 text-red-600" />
+            <div className="bg-danger-100 dark:bg-danger-900/30 p-3 rounded-lg">
+              <Clock className="h-6 w-6 text-danger-600" />
             </div>
           </div>
-          <p className="text-sm text-gray-600 dark:text-slate-400 mb-1">Atrasados</p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">{estatisticas.processosAtrasados}</p>
+          <p className="text-sm text-ink-600 mb-1">Atrasados</p>
+          <p className="text-3xl font-bold text-ink-900 dark:text-white">{estatisticas.processosAtrasados}</p>
         </div>
       </div>
 
@@ -678,17 +678,17 @@ export default function Relatorios() {
               .map((setor, index) => (
                 <div key={index} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3 flex-1">
-                    <Building2 className="h-5 w-5 text-gray-400 dark:text-slate-500" />
-                    <span className="text-sm font-medium text-gray-700 dark:text-slate-300">{setor.nome}</span>
+                    <Building2 className="h-5 w-5 text-ink-400" />
+                    <span className="text-sm font-medium text-ink-700">{setor.nome}</span>
                   </div>
                   <div className="flex items-center space-x-4">
-                    <div className="w-48 bg-gray-200 dark:bg-slate-600 rounded-full h-2.5">
+                    <div className="w-48 bg-ink-200 rounded-full h-2.5">
                       <div
-                        className="bg-blue-600 h-2.5 rounded-full transition-all"
+                        className="bg-brand-600 h-2.5 rounded-full transition-all"
                         style={{ width: `${Math.min((setor.total / estatisticas.totalProcessos) * 100, 100)}%` }}
                       ></div>
                     </div>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white w-12 text-right">
+                    <span className="text-sm font-semibold text-ink-900 dark:text-white w-12 text-right">
                       {setor.total}
                     </span>
                   </div>
@@ -696,7 +696,7 @@ export default function Relatorios() {
               ))}
           </div>
         ) : (
-          <p className="flex items-center justify-center gap-2 text-gray-500 dark:text-slate-400 text-center py-8">
+          <p className="flex items-center justify-center gap-2 text-ink-500 text-center py-8">
             <Inbox className="h-5 w-5" />Nenhum dado disponível para exibir
           </p>
         )}
@@ -706,12 +706,12 @@ export default function Relatorios() {
       <div className="card p-6">
         <SectionTitle icon={Clock} title="Tempo Médio de Conclusão" />
         <div className="flex items-center space-x-4">
-          <div className="bg-blue-100 dark:bg-blue-900/30 p-4 rounded-xl">
-            <Clock className="h-8 w-8 text-blue-600" />
+          <div className="bg-info-100 dark:bg-info-900/30 p-4 rounded-xl">
+            <Clock className="h-8 w-8 text-brand-600" />
           </div>
           <div>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white">{estatisticas.tempoMedioConclusao}</p>
-            <p className="text-sm text-gray-600 dark:text-slate-400">Tempo médio para concluir processos</p>
+            <p className="text-3xl font-bold text-ink-900 dark:text-white">{estatisticas.tempoMedioConclusao}</p>
+            <p className="text-sm text-ink-600">Tempo médio para concluir processos</p>
           </div>
         </div>
       </div>

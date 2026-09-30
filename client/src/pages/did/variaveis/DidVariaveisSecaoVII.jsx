@@ -25,7 +25,7 @@ export default function DidVariaveisSecaoVII({ form, inp, chk, saving, didId, on
     <SectionCard
       icon={ClipboardCheck}
       title="Seção VII - Almoxarifado (Recebimento)"
-      color="bg-gray-500 text-white dark:bg-gray-700"
+      color="bg-ink-500 text-white"
     >
       {/* Badge exclusivo */}
       <div className="col-span-2 flex items-center gap-2 -mt-1 mb-1">
@@ -33,14 +33,14 @@ export default function DidVariaveisSecaoVII({ form, inp, chk, saving, didId, on
           px-2.5 py-0.5 rounded-full border border-orange-200 dark:border-orange-700 font-semibold">
           📊 Exclusivo — DID Contas Variáveis
         </span>
-        <span className="text-xs text-gray-500 dark:text-gray-400">
+        <span className="text-xs text-ink-500">
           Fiscal do contrato atesta o recebimento dos itens
         </span>
       </div>
 
       {/* Ordem recebida? — controla a liberação da ordem na aba Entrada do Almoxarifado */}
-      <div className="col-span-2 flex flex-col items-center gap-3 py-3 border-b border-gray-200 dark:border-gray-600 mb-2">
-        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
+      <div className="col-span-2 flex flex-col items-center gap-3 py-3 border-b border-ink-200 mb-2">
+        <p className="text-xs font-semibold text-ink-500 uppercase tracking-widest">
           A ordem de compra foi recebida?
         </p>
         <div className="flex items-center gap-4">
@@ -50,8 +50,8 @@ export default function DidVariaveisSecaoVII({ form, inp, chk, saving, didId, on
             onClick={() => inp('receb_ordem_recebida')({ target: { value: 'sim' } })}
             className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-semibold border-2 transition-colors shadow-sm
               ${ form.receb_ordem_recebida === 'sim'
-                ? 'bg-green-600 border-green-600 text-white'
-                : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-green-500 hover:text-green-600'
+                ? 'bg-success-600 border-success-600 text-white'
+                : 'bg-surface border-ink-300 text-ink-500 hover:border-success-500 hover:text-success-600'
               }
               ${ locked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer' }`}
           >
@@ -64,14 +64,14 @@ export default function DidVariaveisSecaoVII({ form, inp, chk, saving, didId, on
             className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-semibold border-2 transition-colors shadow-sm
               ${ form.receb_ordem_recebida === 'nao'
                 ? 'bg-orange-500 border-orange-500 text-white'
-                : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-orange-400 hover:text-orange-500'
+                : 'bg-surface border-ink-300 text-ink-500 hover:border-orange-400 hover:text-orange-500'
               }
               ${ locked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer' }`}
           >
             ⏳ Não recebida
           </button>
         </div>
-        <p className="text-[11px] text-gray-400 dark:text-gray-500 text-center max-w-md">
+        <p className="text-[11px] text-ink-400 text-center max-w-md">
           {form.receb_ordem_recebida === 'sim'
             ? '✓ Esta ordem ficará disponível na busca da aba Entrada do Almoxarifado.'
             : 'Enquanto não marcada como recebida, esta ordem não aparece na busca da aba Entrada do Almoxarifado.'}
@@ -116,7 +116,7 @@ export default function DidVariaveisSecaoVII({ form, inp, chk, saving, didId, on
 
       {/* Checklist de conferência */}
       <div className="col-span-2">
-        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+        <label className="block text-xs font-medium text-ink-500 mb-2">
           Conferência dos Itens Entregues
         </label>
         <div className="flex flex-wrap gap-6">

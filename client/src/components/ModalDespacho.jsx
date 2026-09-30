@@ -113,9 +113,9 @@ export default function ModalDespacho({ processo, onClose, onSaved }) {
   }
 
   /* ── Estilos ── */
-  const lbl = 'block text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wide mb-1'
-  const inp = 'w-full border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500'
-  const ro  = 'w-full rounded-lg px-3 py-2 text-sm bg-gray-50 dark:bg-slate-700/50 text-gray-800 dark:text-slate-200 border border-gray-200 dark:border-slate-600'
+  const lbl = 'block text-xs font-semibold text-ink-600 uppercase tracking-wide mb-1'
+  const inp = 'w-full border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900 focus:outline-hidden focus:ring-2 focus:ring-indigo-500'
+  const ro  = 'w-full rounded-lg px-3 py-2 text-sm bg-ink-50 text-ink-800 border border-ink-200'
   const sel = inp + ' appearance-none cursor-pointer pr-8'
 
   const tipoLabel = TIPOS.find(t => t.value === form.tipo_despacho)?.label || '—'
@@ -123,20 +123,20 @@ export default function ModalDespacho({ processo, onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-2xl my-4">
+      <div className="bg-surface rounded-xl shadow-2xl w-full max-w-2xl my-4">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-slate-700">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-ink-200">
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-indigo-600" />
-            <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100">
+            <h2 className="text-lg font-bold text-ink-900">
               {form.tipo_despacho ? tipoLabel : 'Despacho'}
             </h2>
             <span className="text-xs bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full font-medium">
               {processo?.numero}
             </span>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-500">
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-ink-100 text-ink-500">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -146,14 +146,14 @@ export default function ModalDespacho({ processo, onClose, onSaved }) {
 
           {/* Tipo */}
           <div>
-            <label className={lbl}>Tipo de Despacho <span className="text-red-500">*</span></label>
+            <label className={lbl}>Tipo de Despacho <span className="text-danger-500">*</span></label>
             {editing ? (
               <div className="relative">
                 <select className={sel} value={form.tipo_despacho} onChange={set('tipo_despacho')}>
                   <option value="">Selecione o tipo...</option>
                   {TIPOS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
-                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400 pointer-events-none" />
               </div>
             ) : (
               <p className={ro + ' font-semibold text-indigo-700 dark:text-indigo-300'}>{tipoLabel}</p>
@@ -197,7 +197,7 @@ export default function ModalDespacho({ processo, onClose, onSaved }) {
 
               {/* Texto */}
               <div>
-                <label className={lbl}>Texto do Ofício <span className="text-red-500">*</span></label>
+                <label className={lbl}>Texto do Ofício <span className="text-danger-500">*</span></label>
                 {editing
                   ? <textarea className={inp + ' resize-none'} rows={8} value={form.texto} onChange={set('texto')} placeholder="Corpo do ofício..." />
                   : <pre className={ro + ' whitespace-pre-wrap leading-relaxed min-h-[80px]'}>{form.texto || '—'}</pre>}
@@ -309,7 +309,7 @@ export default function ModalDespacho({ processo, onClose, onSaved }) {
                   {form.tipo_despacho === 'portaria' || form.tipo_despacho === 'decreto'
                     ? 'Considerandos e Dispositivo'
                     : 'Texto'}
-                  {' '}<span className="text-red-500">*</span>
+                  {' '}<span className="text-danger-500">*</span>
                 </label>
                 {editing
                   ? <textarea
@@ -331,19 +331,19 @@ export default function ModalDespacho({ processo, onClose, onSaved }) {
           )}
 
           {editing && !form.tipo_despacho && (
-            <p className="text-sm text-gray-400 dark:text-slate-500 text-center py-4">
+            <p className="text-sm text-ink-400 text-center py-4">
               Selecione o tipo de despacho para preencher o formulário.
             </p>
           )}
 
-          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+          {error && <p className="text-sm text-danger-600 dark:text-danger-400">{error}</p>}
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 rounded-b-xl">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-ink-200 bg-ink-50 rounded-b-xl">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            className="px-4 py-2 text-sm font-medium text-ink-700 hover:bg-ink-200 rounded-lg transition-colors"
           >
             Fechar
           </button>
@@ -363,7 +363,7 @@ export default function ModalDespacho({ processo, onClose, onSaved }) {
               <button
                 onClick={handleSalvar}
                 disabled={saving}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-60 transition-colors"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-success-600 text-white hover:bg-success-700 disabled:opacity-60 transition-colors"
               >
                 <Save className="h-3.5 w-3.5" />
                 {saving ? 'Salvando...' : 'Salvar'}
@@ -381,7 +381,7 @@ export default function ModalDespacho({ processo, onClose, onSaved }) {
                 </button>
                 <button
                   onClick={() => handleGerarPDF(true)}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-slate-700 text-white hover:bg-slate-800 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-ink-700 text-white hover:bg-ink-800 transition-colors"
                 >
                   <Printer className="h-3.5 w-3.5" />
                   Imprimir

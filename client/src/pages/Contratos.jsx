@@ -36,7 +36,7 @@ export default function Contratos() {
       />
 
       <div
-        className="border-b border-gray-200 dark:border-slate-700/50 overflow-x-auto overflow-y-hidden scrollbar-none touch-pan-x"
+        className="border-b border-ink-200 overflow-x-auto overflow-y-hidden scrollbar-none touch-pan-x"
         style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
       >
         <nav className="flex gap-1 min-w-max">
@@ -47,7 +47,7 @@ export default function Contratos() {
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
-                className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${active ? 'border-blue-600 text-blue-700 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:border-gray-300'}`}
+                className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${active ? 'border-brand-600 text-brand-700 dark:text-info-400' : 'border-transparent text-ink-500 hover:text-ink-700 hover:border-ink-300'}`}
               >
                 <Icon className="w-4 h-4" />
                 {t.label}

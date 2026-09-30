@@ -106,28 +106,28 @@ export default function SessionActivityGuard() {
 
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6 text-center">
+      <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-md p-6 text-center">
         <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
           <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-400" />
         </div>
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Sua sessão vai expirar</h2>
-        <p className="text-sm text-gray-600 dark:text-slate-300 mt-2">
+        <h2 className="text-lg font-bold text-ink-900 dark:text-white">Sua sessão vai expirar</h2>
+        <p className="text-sm text-ink-600 mt-2">
           Você está inativo há um tempo. Por segurança, sua sessão será encerrada em{' '}
           <strong className="text-amber-600 dark:text-amber-400 tabular-nums">{secondsLeft}s</strong>.
         </p>
-        <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+        <p className="text-xs text-ink-500 mt-1">
           Salve o que estiver fazendo ou continue conectado.
         </p>
         <div className="flex gap-3 mt-6">
           <button
             onClick={logout}
-            className="flex-1 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-slate-600 text-sm font-semibold text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+            className="flex-1 px-4 py-2.5 rounded-xl border border-ink-300 text-sm font-semibold text-ink-700 hover:bg-ink-50 transition-colors"
           >
             Sair agora
           </button>
           <button
             onClick={continuar}
-            className="flex-1 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-sm font-semibold text-white transition-colors"
+            className="flex-1 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-sm font-semibold text-white transition-colors"
           >
             Continuar conectado
           </button>

@@ -23,7 +23,7 @@ export default function DidSecaoRecebimento({ form, inp, chk, saving, didId, onS
           px-2.5 py-0.5 rounded-full border border-orange-200 dark:border-orange-700 font-semibold">
           📊 Exclusivo — DID Contas Variáveis
         </span>
-        <span className="text-xs text-gray-500 dark:text-gray-400">
+        <span className="text-xs text-ink-500">
           Fiscal do contrato atesta o recebimento dos itens
         </span>
       </div>
@@ -66,7 +66,7 @@ export default function DidSecaoRecebimento({ form, inp, chk, saving, didId, onS
 
       {/* Checklist de conferência */}
       <div className="col-span-2">
-        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+        <label className="block text-xs font-medium text-ink-500 mb-2">
           Conferência dos Itens Entregues
         </label>
         <div className="flex flex-wrap gap-6">

@@ -76,7 +76,7 @@ export default function MunicipioSelector() {
         style={{ maxWidth: '1152px', margin: '0 auto' }}
       >
         <div
-          className="w-full max-w-md flex-shrink-0 rounded-2xl p-6 sm:p-8 flex flex-col gap-5"
+          className="w-full max-w-md shrink-0 rounded-2xl p-6 sm:p-8 flex flex-col gap-5"
           style={{
             background: 'rgba(10, 8, 28, 0.80)',
             backdropFilter: 'blur(24px)',
@@ -93,7 +93,7 @@ export default function MunicipioSelector() {
               </p>
 
               {error && (
-                <div className="bg-red-900/30 border border-red-500/30 text-red-300 px-4 py-2.5 rounded-xl text-sm">
+                <div className="bg-danger-900/30 border border-danger-500/30 text-danger-300 px-4 py-2.5 rounded-xl text-sm">
                   {error}
                 </div>
               )}
@@ -106,7 +106,7 @@ export default function MunicipioSelector() {
                     placeholder="seu@email.com"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl text-sm text-white placeholder-white/30 outline-none transition-all"
+                    className="w-full px-3.5 py-2.5 rounded-xl text-sm text-white placeholder-white/30 outline-hidden transition-all"
                     style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)' }}
                     onFocus={e => { e.currentTarget.style.borderColor = 'rgba(139,92,246,0.60)' }}
                     onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}
@@ -141,7 +141,7 @@ export default function MunicipioSelector() {
                   value={busca}
                   onChange={e => setBusca(e.target.value)}
                   autoFocus
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl text-sm text-white placeholder-white/30 outline-none transition-all"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl text-sm text-white placeholder-white/30 outline-hidden transition-all"
                   style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)' }}
                   onFocus={e => { e.currentTarget.style.borderColor = 'rgba(139,92,246,0.60)' }}
                   onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}
@@ -169,7 +169,7 @@ export default function MunicipioSelector() {
                     onClick={() => navigate(`/${m.subdominio}/login`)}
                   >
                     <div
-                      className="flex-shrink-0 w-11 h-11 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center overflow-hidden"
+                      className="shrink-0 w-11 h-11 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center overflow-hidden"
                       style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.30)' }}
                     >
                       {logoUrl(m) ? (

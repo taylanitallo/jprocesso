@@ -11,11 +11,11 @@ import { fmt, fmtMoney, today } from './almoxConstants'
 
 // ─── Badge de validade ────────────────────────────────────────────────────────
 function ValidadeBadge({ data }) {
-  if (!data) return <span className="text-xs text-gray-400">—</span>
+  if (!data) return <span className="text-xs text-ink-400">—</span>
   const dias = Math.ceil((new Date(data) - new Date()) / 86400000)
-  const cls = dias < 0   ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+  const cls = dias < 0   ? 'bg-danger-100 text-danger-700 dark:bg-danger-900/30 dark:text-danger-300'
             : dias <= 30 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300'
-            :               'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+            :               'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-300'
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>
       {dias < 0 ? <AlertTriangle className="h-3 w-3" /> : <Calendar className="h-3 w-3" />}
@@ -55,13 +55,13 @@ function OrdemCompraPickerModal({ onSelect, onClose }) {
       <div className="space-y-3">
         {/* Busca */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400" />
           <input
             value={busca}
             onChange={e => setBusca(e.target.value)}
             placeholder="Buscar por número, objeto, fornecedor ou secretaria..."
             autoFocus
-            className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500"
+            className="w-full pl-9 pr-4 py-2 border border-ink-300 rounded-lg text-sm bg-surface text-ink-900 focus:ring-2 focus:ring-amber-500"
           />
         </div>
 
@@ -69,7 +69,7 @@ function OrdemCompraPickerModal({ onSelect, onClose }) {
         {loading ? (
           <LoadingBar label="Carregando ordens..." />
         ) : filtradas.length === 0 ? (
-          <div className="text-center py-10 text-gray-400 text-sm">
+          <div className="text-center py-10 text-ink-400 text-sm">
             <ClipboardList className="h-8 w-8 mx-auto mb-2 opacity-40" />
             {busca ? 'Nenhuma ordem encontrada para essa busca' : 'Nenhuma ordem de compra disponível para entrada'}
           </div>
@@ -80,38 +80,38 @@ function OrdemCompraPickerModal({ onSelect, onClose }) {
                 key={ordem.id}
                 type="button"
                 onClick={() => onSelect(ordem)}
-                className="w-full text-left border border-gray-200 dark:border-gray-600 rounded-lg p-3 hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors"
+                className="w-full text-left border border-ink-200 rounded-lg p-3 hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-amber-700 dark:text-amber-400 text-sm font-mono">{ordem.numero}</span>
                       {ordem.data_emissao && (
-                        <span className="text-xs text-gray-400">{new Date(ordem.data_emissao + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
+                        <span className="text-xs text-ink-400">{new Date(ordem.data_emissao + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
                       )}
                       {ordem.secretaria && (
-                        <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded">{ordem.secretaria}</span>
+                        <span className="text-xs bg-info-100 dark:bg-info-900/30 text-brand-700 dark:text-info-300 px-1.5 py-0.5 rounded-sm">{ordem.secretaria}</span>
                       )}
                     </div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 line-clamp-1">{ordem.objeto}</p>
+                    <p className="text-xs text-ink-600 mt-0.5 line-clamp-1">{ordem.objeto}</p>
                     {ordem.contrato?.credor && (
-                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
+                      <p className="text-xs text-ink-500 mt-0.5">
                         <Truck className="inline h-3 w-3 mr-0.5" />{ordem.contrato.credor.razao_social}
                       </p>
                     )}
                     {/* Itens com saldo */}
                     <div className="flex flex-wrap gap-1 mt-1.5">
                       {ordem.itens?.slice(0, 3).map(oi => (
-                        <span key={oi.id} className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 rounded">
+                        <span key={oi.id} className="text-xs bg-ink-100 text-ink-600 px-1.5 py-0.5 rounded-sm">
                           {oi.codigo_item ? `[${oi.codigo_item}] ` : ''}{oi.descricao?.slice(0, 30)}{oi.descricao?.length > 30 ? '…' : ''} · saldo: {oi.saldo} {oi.unidade}
                         </span>
                       ))}
                       {(ordem.itens?.length || 0) > 3 && (
-                        <span className="text-xs text-gray-400">+{ordem.itens.length - 3} mais</span>
+                        <span className="text-xs text-ink-400">+{ordem.itens.length - 3} mais</span>
                       )}
                     </div>
                   </div>
-                  <span className="text-xs font-medium text-amber-600 dark:text-amber-400 flex-shrink-0 mt-1">Selecionar →</span>
+                  <span className="text-xs font-medium text-amber-600 dark:text-amber-400 shrink-0 mt-1">Selecionar →</span>
                 </div>
               </button>
             ))}
@@ -218,7 +218,7 @@ function NovaEntradaModal({ itens, onClose, onSave, saving, erro }) {
         {showPicker && (
           <OrdemCompraPickerModal onSelect={aplicarOrdem} onClose={() => setShowPicker(false)} />
         )}
-        <div className={`border rounded-lg p-3 space-y-2 ${ordemData ? 'border-green-400 dark:border-green-600 bg-green-50 dark:bg-green-900/10' : 'border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/10'}`}>
+        <div className={`border rounded-lg p-3 space-y-2 ${ordemData ? 'border-success-400 dark:border-success-600 bg-success-50 dark:bg-success-900/10' : 'border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/10'}`}>
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide flex items-center gap-1">
               <FileText className="h-3.5 w-3.5" /> Ordem de Compra
@@ -237,7 +237,7 @@ function NovaEntradaModal({ itens, onClose, onSave, saving, erro }) {
               <button
                 type="button"
                 onClick={limparOrdem}
-                className="text-gray-400 hover:text-red-500 p-1"
+                className="text-ink-400 hover:text-danger-500 p-1"
                 title="Limpar ordem selecionada"
               >
                 <X className="h-4 w-4" />
@@ -249,26 +249,26 @@ function NovaEntradaModal({ itens, onClose, onSave, saving, erro }) {
             <div className="space-y-2">
               {/* Card da ordem selecionada */}
               <div>
-                <p className="font-semibold text-green-800 dark:text-green-300 text-sm">{ordemData.numero}</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">{ordemData.objeto}</p>
+                <p className="font-semibold text-success-800 dark:text-success-300 text-sm">{ordemData.numero}</p>
+                <p className="text-xs text-ink-600 line-clamp-1">{ordemData.objeto}</p>
                 {ordemData.contrato?.credor && (
-                  <p className="text-xs text-gray-500 dark:text-gray-500">
+                  <p className="text-xs text-ink-500">
                     Fornecedor: <span className="font-medium">{ordemData.contrato.credor.razao_social}</span>
                   </p>
                 )}
                 {ordemData.secretaria && (
-                  <p className="text-xs text-gray-500 dark:text-gray-500">Secretaria: {ordemData.secretaria}</p>
+                  <p className="text-xs text-ink-500">Secretaria: {ordemData.secretaria}</p>
                 )}
               </div>
               {/* Seleção do item da ordem */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-xs font-medium text-ink-700 mb-1">
                   Item da Ordem *
                 </label>
                 <select
                   value={ordemItemSel}
                   onChange={e => selecionarOrdemItem(e.target.value)}
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500"
+                  className="w-full border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900 focus:ring-2 focus:ring-success-500"
                 >
                   <option value="">Selecione o item a receber...</option>
                   {ordemData.itens.map(oi => (
@@ -278,7 +278,7 @@ function NovaEntradaModal({ itens, onClose, onSave, saving, erro }) {
                   ))}
                 </select>
                 {itemOC && (
-                  <p className="text-xs text-green-700 dark:text-green-400 mt-1">
+                  <p className="text-xs text-success-700 dark:text-success-400 mt-1">
                     Saldo disponível: <strong>{itemOC.saldo} {itemOC.unidade}</strong>
                     {' '}· Recebido: {itemOC.quantidade_recebida} de {itemOC.quantidade}
                   </p>
@@ -289,7 +289,7 @@ function NovaEntradaModal({ itens, onClose, onSave, saving, erro }) {
         </div>
 
         {erro && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg px-4 py-2 text-sm">
+          <div className="bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-700 text-danger-700 dark:text-danger-300 rounded-lg px-4 py-2 text-sm">
             {erro}
           </div>
         )}
@@ -297,12 +297,12 @@ function NovaEntradaModal({ itens, onClose, onSave, saving, erro }) {
         {/* Item + Quantidade */}
         <div className="grid grid-cols-2 gap-4">
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Item *</label>
+            <label className="block text-sm font-medium text-ink-700 mb-1">Item *</label>
             {ordemData && ordemItemSel ? (
               /* Item bloqueado pela OC */
-              <div className="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300">
+              <div className="w-full border border-ink-200 rounded-lg px-3 py-2 text-sm bg-ink-50 text-ink-700">
                 {form._codigo_item ? `[${form._codigo_item}] ` : ''}{form._descricao_item || '—'}
-                <span className="ml-2 text-xs text-gray-400">(definido pela ordem)</span>
+                <span className="ml-2 text-xs text-ink-400">(definido pela ordem)</span>
               </div>
             ) : !ordemData ? (
               <select
@@ -312,7 +312,7 @@ function NovaEntradaModal({ itens, onClose, onSave, saving, erro }) {
                   set('item_id', e.target.value)
                   if (it) set('valor_unitario', it.valor_unitario || '')
                 }}
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500"
+                className="w-full border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900 focus:ring-2 focus:ring-amber-500"
               >
                 <option value="">Selecione o item...</option>
                 {itens.map(i => (
@@ -324,11 +324,11 @@ function NovaEntradaModal({ itens, onClose, onSave, saving, erro }) {
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-ink-700 mb-1">
               Quantidade *{' '}
               {form._unidade_item ? `(${form._unidade_item})` : itemSelecionado ? `(${itemSelecionado.unidade})` : ''}
               {form._saldo_item != null && (
-                <span className="ml-1 text-xs text-green-600 dark:text-green-400 font-normal">máx: {form._saldo_item}</span>
+                <span className="ml-1 text-xs text-success-600 dark:text-success-400 font-normal">máx: {form._saldo_item}</span>
               )}
             </label>
             <input
@@ -336,23 +336,23 @@ function NovaEntradaModal({ itens, onClose, onSave, saving, erro }) {
               max={form._saldo_item != null ? form._saldo_item : undefined}
               value={form.quantidade}
               onChange={e => set('quantidade', e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500"
+              className="w-full border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900 focus:ring-2 focus:ring-amber-500"
             />
             {form._saldo_item != null && parseFloat(form.quantidade) > form._saldo_item && (
-              <p className="text-xs text-red-600 mt-0.5">Excede o saldo da ordem ({form._saldo_item})</p>
+              <p className="text-xs text-danger-600 mt-0.5">Excede o saldo da ordem ({form._saldo_item})</p>
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Valor Unitário (R$)</label>
+            <label className="block text-sm font-medium text-ink-700 mb-1">Valor Unitário (R$)</label>
             <input
               type="number" step="0.01" min="0"
               value={form.valor_unitario}
               onChange={e => set('valor_unitario', e.target.value)}
               readOnly={ordemData && ordemItemSel && !!form.valor_unitario && !!itemOC}
-              className={`w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 ${
+              className={`w-full border border-ink-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 ${
                 ordemData && ordemItemSel && itemOC
-                  ? 'bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300'
-                  : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100'
+                  ? 'bg-ink-50 text-ink-700'
+                  : 'bg-surface text-ink-900'
               }`}
             />
           </div>
@@ -361,23 +361,23 @@ function NovaEntradaModal({ itens, onClose, onSave, saving, erro }) {
         {/* Datas */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Data de Entrada *</label>
+            <label className="block text-sm font-medium text-ink-700 mb-1">Data de Entrada *</label>
             <input
               type="date"
               value={form.data_entrada}
               onChange={e => set('data_entrada', e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500"
+              className="w-full border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900 focus:ring-2 focus:ring-amber-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Data de Validade <span className="text-gray-400 font-normal">(opcional)</span>
+            <label className="block text-sm font-medium text-ink-700 mb-1">
+              Data de Validade <span className="text-ink-400 font-normal">(opcional)</span>
             </label>
             <input
               type="date"
               value={form.data_validade}
               onChange={e => set('data_validade', e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500"
+              className="w-full border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900 focus:ring-2 focus:ring-amber-500"
             />
           </div>
         </div>
@@ -385,68 +385,68 @@ function NovaEntradaModal({ itens, onClose, onSave, saving, erro }) {
         {/* Empenho / NF / Contrato */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Número do Empenho *</label>
+            <label className="block text-sm font-medium text-ink-700 mb-1">Número do Empenho *</label>
             <input
               value={form.numero_empenho}
               onChange={e => set('numero_empenho', e.target.value)}
               placeholder="ex: 2026NE001234"
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500"
+              className="w-full border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900 focus:ring-2 focus:ring-amber-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Número da NF</label>
+            <label className="block text-sm font-medium text-ink-700 mb-1">Número da NF</label>
             <input
               value={form.numero_nf}
               onChange={e => set('numero_nf', e.target.value)}
               placeholder="ex: 000123"
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500"
+              className="w-full border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900 focus:ring-2 focus:ring-amber-500"
             />
           </div>
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Chave NF-e (44 dígitos)</label>
+            <label className="block text-sm font-medium text-ink-700 mb-1">Chave NF-e (44 dígitos)</label>
             <input
               value={form.chave_nfe}
               onChange={e => set('chave_nfe', e.target.value)}
               placeholder="00000000000000000000000000000000000000000000"
               maxLength={44}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500"
+              className="w-full border border-ink-300 rounded-lg px-3 py-2 text-sm font-mono bg-surface text-ink-900 focus:ring-2 focus:ring-amber-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Número do Contrato</label>
+            <label className="block text-sm font-medium text-ink-700 mb-1">Número do Contrato</label>
             <input
               value={form.numero_contrato}
               onChange={e => set('numero_contrato', e.target.value)}
               placeholder="ex: 001/2026"
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500"
+              className="w-full border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900 focus:ring-2 focus:ring-amber-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CNPJ do Fornecedor</label>
+            <label className="block text-sm font-medium text-ink-700 mb-1">CNPJ do Fornecedor</label>
             <input
               value={form.fornecedor_cnpj}
               onChange={e => set('fornecedor_cnpj', e.target.value)}
               placeholder="00.000.000/0000-00"
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500"
+              className="w-full border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900 focus:ring-2 focus:ring-amber-500"
             />
           </div>
         </div>
 
         {/* Fornecedor */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fornecedor</label>
+          <label className="block text-sm font-medium text-ink-700 mb-1">Fornecedor</label>
           <input
             value={form.fornecedor_nome}
             onChange={e => set('fornecedor_nome', e.target.value)}
             placeholder="Razão social ou nome"
-            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500"
+            className="w-full border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900 focus:ring-2 focus:ring-amber-500"
           />
         </div>
 
         {/* Conferência Cega */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Conferência Cega — Qtd contada <span className="text-gray-400 font-normal">(opcional)</span>
+          <label className="block text-sm font-medium text-ink-700 mb-1">
+            Conferência Cega — Qtd contada <span className="text-ink-400 font-normal">(opcional)</span>
           </label>
           <div className="flex items-center gap-2">
             <input
@@ -454,17 +454,17 @@ function NovaEntradaModal({ itens, onClose, onSave, saving, erro }) {
               value={form.conferencia_cega_qtd}
               onChange={e => set('conferencia_cega_qtd', e.target.value)}
               placeholder="Qtd contada fisicamente"
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500"
+              className="w-full border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900 focus:ring-2 focus:ring-amber-500"
             />
             {form.conferencia_cega_qtd && form.quantidade && (
               parseFloat(form.conferencia_cega_qtd) === parseFloat(form.quantidade)
-                ? <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" title="Qtds conferem" />
-                : <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0" title="Divergência!" />
+                ? <CheckCircle2 className="h-5 w-5 text-success-500 shrink-0" title="Qtds conferem" />
+                : <AlertTriangle className="h-5 w-5 text-danger-500 shrink-0" title="Divergência!" />
             )}
           </div>
           {form.conferencia_cega_qtd && form.quantidade &&
             parseFloat(form.conferencia_cega_qtd) !== parseFloat(form.quantidade) && (
-            <p className="text-xs text-red-600 mt-1">
+            <p className="text-xs text-danger-600 mt-1">
               Divergência: NF={fmt(form.quantidade)}, contado={fmt(form.conferencia_cega_qtd)}
             </p>
           )}
@@ -472,62 +472,62 @@ function NovaEntradaModal({ itens, onClose, onSave, saving, erro }) {
 
         {/* Observação */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Observação</label>
+          <label className="block text-sm font-medium text-ink-700 mb-1">Observação</label>
           <textarea
             value={form.observacao}
             onChange={e => set('observacao', e.target.value)}
             rows={2}
-            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500 resize-none"
+            className="w-full border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900 focus:ring-2 focus:ring-amber-500 resize-none"
           />
         </div>
 
         {/* Localização do Item no Almoxarifado */}
-        <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-3 space-y-3">
-          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-1">
+        <div className="border border-ink-200 rounded-lg p-3 space-y-3">
+          <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide flex items-center gap-1">
             <MapPin className="h-3 w-3 text-amber-500" /> Localização no Almoxarifado
-            <span className="text-gray-400 font-normal normal-case ml-1">(opcional — atualiza o cadastro do item)</span>
+            <span className="text-ink-400 font-normal normal-case ml-1">(opcional — atualiza o cadastro do item)</span>
           </p>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Corredor</label>
+              <label className="block text-xs font-medium text-ink-600 mb-1">Corredor</label>
               <input
                 value={form.corredor}
                 onChange={e => set('corredor', e.target.value)}
                 placeholder="Ex: A"
                 maxLength={20}
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500"
+                className="w-full border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900 focus:ring-2 focus:ring-amber-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Prateleira</label>
+              <label className="block text-xs font-medium text-ink-600 mb-1">Prateleira</label>
               <input
                 value={form.prateleira}
                 onChange={e => set('prateleira', e.target.value)}
                 placeholder="Ex: 3"
                 maxLength={20}
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500"
+                className="w-full border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900 focus:ring-2 focus:ring-amber-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Gaveta</label>
+              <label className="block text-xs font-medium text-ink-600 mb-1">Gaveta</label>
               <input
                 value={form.gaveta}
                 onChange={e => set('gaveta', e.target.value)}
                 placeholder="Ex: G1"
                 maxLength={20}
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500"
+                className="w-full border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900 focus:ring-2 focus:ring-amber-500"
               />
             </div>
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 flex items-center gap-1">
-              <Building2 className="h-3 w-3 text-blue-500" /> Secretaria / Departamento
+            <label className="text-xs font-medium text-ink-600 mb-1 flex items-center gap-1">
+              <Building2 className="h-3 w-3 text-info-500" /> Secretaria / Departamento
             </label>
             <input
               value={form.secretaria}
               onChange={e => set('secretaria', e.target.value)}
               placeholder="Ex: Secretaria de Saúde"
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500 mt-1"
+              className="w-full border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900 focus:ring-2 focus:ring-amber-500 mt-1"
             />
           </div>
         </div>
@@ -615,7 +615,7 @@ export default function AlmoxLotes() {
           <select
             value={filtroItem}
             onChange={e => { setFiltroItem(e.target.value); setPage(1) }}
-            className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            className="border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900"
           >
             <option value="">Todos os itens</option>
             {itens.map(i => <option key={i.id} value={i.id}>{i.codigo} — {i.nome}</option>)}
@@ -623,12 +623,12 @@ export default function AlmoxLotes() {
           <select
             value={filtroAtivo}
             onChange={e => { setFiltroAtivo(e.target.value); setPage(1) }}
-            className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            className="border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900"
           >
             <option value="true">Com saldo</option>
             <option value="">Todos os lotes</option>
           </select>
-          <button onClick={() => load(page)} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+          <button onClick={() => load(page)} className="p-2 text-ink-400 hover:text-ink-600 rounded-lg hover:bg-ink-100">
             <RefreshCw className="h-4 w-4" />
           </button>
         </div>
@@ -644,22 +644,22 @@ export default function AlmoxLotes() {
       {loading ? (
         <LoadingBar label="Carregando lotes..." />
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="bg-surface rounded-xl border border-ink-200 overflow-hidden">
           <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+            <thead className="bg-ink-50 border-b border-ink-200">
               <tr>
                 {['Item', 'Empenho / NF', 'Fornecedor', 'Entrada', 'Validade', 'Qtd Inicial', 'Saldo', 'Valor Unit.'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-ink-500 uppercase tracking-wide">
                     {h}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+            <tbody className="divide-y divide-ink-100">
               {lotes.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-gray-400 dark:text-gray-500">
+                  <td colSpan={8} className="px-4 py-10 text-center text-ink-400">
                     <Package className="h-8 w-8 mx-auto mb-2 opacity-40" />
                     Nenhum lote encontrado
                   </td>
@@ -670,19 +670,19 @@ export default function AlmoxLotes() {
                   ? (parseFloat(lote.quantidade_atual) / parseFloat(lote.quantidade_inicial)) * 100
                   : 0
                 return (
-                  <tr key={lote.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+                  <tr key={lote.id} className="hover:bg-ink-50">
                     <td className="px-4 py-3">
-                      <p className="font-medium text-gray-900 dark:text-white text-sm">{lote.item?.nome || '—'}</p>
-                      <p className="text-xs text-gray-400">{lote.item?.codigo} · {lote.item?.categoria}</p>
+                      <p className="font-medium text-ink-900 dark:text-white text-sm">{lote.item?.nome || '—'}</p>
+                      <p className="text-xs text-ink-400">{lote.item?.codigo} · {lote.item?.categoria}</p>
                     </td>
                     <td className="px-4 py-3">
                       {lote.numero_empenho && (
-                        <div className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
+                        <div className="flex items-center gap-1 text-xs text-brand-600 dark:text-info-400">
                           <FileText className="h-3 w-3" /> {lote.numero_empenho}
                         </div>
                       )}
                       {lote.numero_nf && (
-                        <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                        <div className="flex items-center gap-1 text-xs text-ink-500">
                           NF {lote.numero_nf}
                         </div>
                       )}
@@ -692,47 +692,47 @@ export default function AlmoxLotes() {
                         </div>
                       )}
                       {lote.chave_nfe && (
-                        <div className="text-xs text-gray-400 font-mono truncate max-w-[180px]" title={lote.chave_nfe}>
+                        <div className="text-xs text-ink-400 font-mono truncate max-w-[180px]" title={lote.chave_nfe}>
                           {lote.chave_nfe.slice(0, 12)}...
                         </div>
                       )}
                       {lote.conferencia_cega_ok === false && (
-                        <div className="flex items-center gap-1 text-xs text-red-500">
+                        <div className="flex items-center gap-1 text-xs text-danger-500">
                           <AlertTriangle className="h-3 w-3" /> Diverg. cega
                         </div>
                       )}
-                      {!lote.numero_empenho && !lote.numero_nf && <span className="text-gray-400">—</span>}
+                      {!lote.numero_empenho && !lote.numero_nf && <span className="text-ink-400">—</span>}
                     </td>
                     <td className="px-4 py-3">
                       {lote.fornecedor_nome ? (
-                        <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300">
-                          <Truck className="h-3 w-3 flex-shrink-0" />
+                        <div className="flex items-center gap-1 text-xs text-ink-600">
+                          <Truck className="h-3 w-3 shrink-0" />
                           <span className="truncate max-w-[140px]">{lote.fornecedor_nome}</span>
                         </div>
-                      ) : <span className="text-gray-400 text-xs">—</span>}
+                      ) : <span className="text-ink-400 text-xs">—</span>}
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+                    <td className="px-4 py-3 text-xs text-ink-500">
                       {lote.data_entrada ? new Date(lote.data_entrada + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
                     </td>
                     <td className="px-4 py-3">
                       <ValidadeBadge data={lote.data_validade} />
                     </td>
-                    <td className="px-4 py-3 text-right text-xs text-gray-500 dark:text-gray-400">
+                    <td className="px-4 py-3 text-right text-xs text-ink-500">
                       {fmt(lote.quantidade_inicial)} {lote.item?.unidade}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                      <div className="text-xs font-semibold text-ink-900 dark:text-white">
                         {fmt(lote.quantidade_atual)} {lote.item?.unidade}
                       </div>
                       {/* Barra de progresso do saldo */}
-                      <div className="mt-1 h-1.5 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden w-20">
+                      <div className="mt-1 h-1.5 bg-ink-200 rounded-full overflow-hidden w-20">
                         <div
-                          className={`h-full rounded-full transition-all ${pct > 50 ? 'bg-green-500' : pct > 15 ? 'bg-orange-400' : 'bg-red-500'}`}
+                          className={`h-full rounded-full transition-all ${pct > 50 ? 'bg-success-500' : pct > 15 ? 'bg-orange-400' : 'bg-danger-500'}`}
                           style={{ width: `${Math.max(pct, 2)}%` }}
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right text-xs text-gray-500 dark:text-gray-400">
+                    <td className="px-4 py-3 text-right text-xs text-ink-500">
                       {fmtMoney(lote.valor_unitario)}
                     </td>
                   </tr>
@@ -743,14 +743,14 @@ export default function AlmoxLotes() {
           </div>
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Total: {total} lotes</span>
+            <div className="flex items-center justify-between px-4 py-3 border-t border-ink-200">
+              <span className="text-sm text-ink-500">Total: {total} lotes</span>
               <div className="flex items-center gap-2">
-                <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-1 rounded hover:bg-gray-100 disabled:opacity-40">
+                <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-1 rounded-sm hover:bg-ink-100 disabled:opacity-40">
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 <span className="text-sm">{page} / {totalPages}</span>
-                <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="p-1 rounded hover:bg-gray-100 disabled:opacity-40">
+                <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="p-1 rounded-sm hover:bg-ink-100 disabled:opacity-40">
                   <ChevronRight className="h-4 w-4" />
                 </button>
               </div>

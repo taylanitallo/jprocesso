@@ -49,7 +49,7 @@ export default function PatDashboard() {
         title="Painel"
         subtitle="Visão geral do acervo patrimonial, indicadores e últimos tombamentos"
         actions={
-          <button onClick={load} className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+          <button onClick={load} className="flex items-center gap-2 px-3 py-2 border border-ink-300 text-ink-600 rounded-lg text-sm hover:bg-ink-50">
             <RefreshCw className="h-4 w-4" /> Atualizar
           </button>
         }
@@ -65,21 +65,21 @@ export default function PatDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Por grupo */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+        <div className="bg-surface rounded-xl border border-ink-200 p-5">
           <SectionTitle icon={BarChart2} title="Distribuição por Grupo" />
           {(!porGrupo || porGrupo.length === 0) ? (
             <EmptyState icon={Landmark} title="Nenhum bem cadastrado" />
           ) : (
             <div className="space-y-2">
               {porGrupo.map(g => (
-                <div key={g.grupo_id || 'sem-grupo'} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                <div key={g.grupo_id || 'sem-grupo'} className="flex items-center justify-between py-2 border-b border-ink-100 last:border-0">
                   <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    <p className="text-sm font-medium text-ink-900 dark:text-white">
                       {g.grupo?.nome || 'Sem grupo'}
                     </p>
-                    <p className="text-xs text-gray-500">{g.dataValues?.total || 0} bens</p>
+                    <p className="text-xs text-ink-500">{g.dataValues?.total || 0} bens</p>
                   </div>
-                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  <span className="text-sm font-semibold text-ink-700">
                     {fmtMoney(g.dataValues?.valor)}
                   </span>
                 </div>
@@ -89,21 +89,21 @@ export default function PatDashboard() {
         </div>
 
         {/* Últimos tombamentos */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+        <div className="bg-surface rounded-xl border border-ink-200 p-5">
           <SectionTitle icon={Landmark} title="Últimos Tombamentos" />
           {(!ultimosTombamentos || ultimosTombamentos.length === 0) ? (
             <EmptyState icon={Landmark} title="Nenhum tombamento registrado" />
           ) : (
             <div className="space-y-2">
               {ultimosTombamentos.map(b => (
-                <div key={b.id} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                <div key={b.id} className="flex items-center justify-between py-2 border-b border-ink-100 last:border-0">
                   <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white font-mono">
+                    <p className="text-sm font-medium text-ink-900 dark:text-white font-mono">
                       {b.numero_tombamento}
                     </p>
-                    <p className="text-xs text-gray-500 truncate max-w-[180px]">{b.descricao}</p>
+                    <p className="text-xs text-ink-500 truncate max-w-[180px]">{b.descricao}</p>
                   </div>
-                  <span className="text-xs text-gray-500 whitespace-nowrap">
+                  <span className="text-xs text-ink-500 whitespace-nowrap">
                     {b.secretaria?.sigla || '–'}
                   </span>
                 </div>

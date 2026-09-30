@@ -66,7 +66,7 @@ export default function UpdateNotifier() {
 
   return (
     <div className="fixed top-0 inset-x-0 z-[10001] flex justify-center px-4 pt-3 pointer-events-none">
-      <div className="pointer-events-auto flex items-center gap-3 bg-blue-600 text-white rounded-xl shadow-2xl px-4 py-3 max-w-2xl w-full">
+      <div className="pointer-events-auto flex items-center gap-3 bg-brand-600 text-white rounded-xl shadow-2xl px-4 py-3 max-w-2xl w-full">
         <RefreshCw className="w-5 h-5 shrink-0" />
         <div className="flex-1 text-sm">
           <strong className="font-semibold">Nova versão disponível.</strong>{' '}
@@ -74,14 +74,14 @@ export default function UpdateNotifier() {
         </div>
         <button
           onClick={() => window.location.reload()}
-          className="shrink-0 px-3 py-1.5 rounded-lg bg-white text-blue-700 text-sm font-semibold hover:bg-blue-50 transition-colors"
+          className="shrink-0 px-3 py-1.5 rounded-lg bg-surface text-brand-700 text-sm font-semibold hover:bg-info-50 transition-colors"
         >
           Atualizar agora
         </button>
         <button
           onClick={() => setUpdateReady(false)}
           title="Agora não"
-          className="shrink-0 p-1 rounded-lg hover:bg-white/20 transition-colors"
+          className="shrink-0 p-1 rounded-lg hover:bg-surface/20 transition-colors"
         >
           <X className="w-4 h-4" />
         </button>

@@ -50,26 +50,26 @@ export default function LoginAdmin() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-900 to-ink-800 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         {/* Login Card */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
+        <div className="bg-surface rounded-2xl shadow-2xl p-8">
 
           {/* Header */}
           <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4 shadow-lg">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-600 rounded-2xl mb-4 shadow-lg">
               <Shield className="h-8 w-8 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-1">Administrador Geral</h1>
-            <p className="text-gray-500 text-sm">Acesso ao painel de gerenciamento de prefeituras</p>
+            <h1 className="text-2xl font-bold text-ink-900 mb-1">Administrador Geral</h1>
+            <p className="text-ink-500 text-sm">Acesso ao painel de gerenciamento de prefeituras</p>
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-              <div className="text-red-600 mt-0.5">⚠️</div>
+            <div className="mb-4 p-3 bg-danger-50 border border-danger-200 rounded-lg flex items-start gap-3">
+              <div className="text-danger-600 mt-0.5">⚠️</div>
               <div className="flex-1">
-                <p className="text-sm text-red-800 font-medium">Erro de autenticação</p>
-                <p className="text-sm text-red-700 mt-0.5">{error}</p>
+                <p className="text-sm text-danger-800 font-medium">Erro de autenticação</p>
+                <p className="text-sm text-danger-700 mt-0.5">{error}</p>
               </div>
             </div>
           )}
@@ -77,7 +77,7 @@ export default function LoginAdmin() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* E-mail */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-ink-700 mb-1.5">
                 E-mail
               </label>
               <input
@@ -85,14 +85,14 @@ export default function LoginAdmin() {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="Digite seu e-mail"
-                className="block w-full px-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="block w-full px-3 py-2.5 border border-ink-300 rounded-lg bg-surface text-ink-900 focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                 required
               />
             </div>
 
             {/* Senha */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-ink-700 mb-1.5">
                 Senha
               </label>
               <input
@@ -100,7 +100,7 @@ export default function LoginAdmin() {
                 value={formData.senha}
                 onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
                 placeholder="••••••••"
-                className="block w-full px-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="block w-full px-3 py-2.5 border border-ink-300 rounded-lg bg-surface text-ink-900 focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                 required
               />
             </div>
@@ -109,7 +109,7 @@ export default function LoginAdmin() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 text-white py-2.5 px-4 rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-brand-600 text-white py-2.5 px-4 rounded-lg hover:bg-brand-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Autenticando...' : 'Entrar'}
             </button>

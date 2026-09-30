@@ -12,8 +12,8 @@ export default function FilterBar({ children, actions }) {
     <div className="
       flex flex-col gap-3 sm:flex-row sm:items-end sm:flex-wrap
       p-4
-      bg-white dark:bg-slate-800/70
-      rounded-2xl border border-gray-200 dark:border-slate-700/50
+      bg-surface
+      rounded-2xl border border-ink-200
       shadow-sm
       mb-5
     ">

@@ -12,12 +12,12 @@ import LoadingBar from '../components/LoadingBar'
 const TIPO_LABEL = {
   did:        { label: 'DID',           cor: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300' },
   despacho:   { label: 'Despacho',      cor: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' },
-  oficio:     { label: 'Ofício',        cor: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
+  oficio:     { label: 'Ofício',        cor: 'bg-info-100 text-brand-700 dark:bg-info-900/40 dark:text-info-300' },
   pauta:      { label: 'Pauta',         cor: 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300' },
   protocolo:  { label: 'Protocolo',     cor: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
   requisicao: { label: 'Requisição',    cor: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300' },
   ordem:      { label: 'Ordem',         cor: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
-  gerado:     { label: 'Gerado',        cor: 'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-300' },
+  gerado:     { label: 'Gerado',        cor: 'bg-ink-100 text-ink-600' },
 }
 
 const TIPOS = ['Did', 'Despacho', 'Pauta', 'Protocolo', 'Requisição', 'Geral']
@@ -43,16 +43,16 @@ function TreeRow({ depth, open, onToggle, icon, label, right }) {
     <button
       onClick={onToggle}
       className="w-full flex items-center gap-2 py-1.5 rounded-lg
-                 hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors"
+                 hover:bg-ink-100 transition-colors"
       style={{ paddingLeft: 12 + depth * 18, paddingRight: 8 }}
     >
       {open
-        ? <ChevronDown  className="h-3.5 w-3.5 flex-shrink-0 text-gray-400" />
-        : <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 text-gray-400" />
+        ? <ChevronDown  className="h-3.5 w-3.5 shrink-0 text-ink-400" />
+        : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-ink-400" />
       }
       {icon}
-      <span className="text-sm text-gray-700 dark:text-slate-300 font-medium flex-1 text-left truncate">{label}</span>
-      {right && <span className="flex-shrink-0 text-[11px] text-gray-400 dark:text-slate-500">{right}</span>}
+      <span className="text-sm text-ink-700 font-medium flex-1 text-left truncate">{label}</span>
+      {right && <span className="shrink-0 text-[11px] text-ink-400">{right}</span>}
     </button>
   )
 }
@@ -79,23 +79,23 @@ function MoveModal({ modal, processos, onConfirm, onClose, loading }) {
         onClick={onClose}
       >
         <div
-          className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+          className="bg-surface rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
           onClick={e => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-start justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700/50">
+          <div className="flex items-start justify-between px-5 py-4 border-b border-ink-100">
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-100">Mover Processo</h3>
-              <p className="text-[11px] text-gray-400 dark:text-slate-500 mt-0.5">{modal.processoNumero}</p>
+              <h3 className="text-sm font-semibold text-ink-900">Mover Processo</h3>
+              <p className="text-[11px] text-ink-400 mt-0.5">{modal.processoNumero}</p>
             </div>
-            <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-400 transition-colors">
+            <button onClick={onClose} className="p-1 rounded-lg hover:bg-ink-100 text-ink-400 transition-colors">
               <X className="h-4 w-4" />
             </button>
           </div>
 
           {/* Árvore de pastas de destino */}
           <div className="px-3 py-3">
-            <p className="text-xs font-medium text-gray-500 dark:text-slate-400 px-2 mb-2">
+            <p className="text-xs font-medium text-ink-500 px-2 mb-2">
               Selecione a pasta de destino:
             </p>
 
@@ -122,21 +122,21 @@ function MoveModal({ modal, processos, onConfirm, onClose, loading }) {
                         disabled={isCurrent}
                         onClick={() => !isCurrent && setSelected(tipo)}
                         className={`w-full flex items-center gap-2 py-2 rounded-xl text-sm transition-colors
-                          ${isSel     ? 'bg-blue-600 text-white' :
-                            isCurrent ? 'text-gray-300 dark:text-slate-600 cursor-not-allowed' :
-                                        'hover:bg-gray-100 dark:hover:bg-slate-700/60 text-gray-700 dark:text-slate-300'}
+                          ${isSel     ? 'bg-brand-600 text-white' :
+                            isCurrent ? 'text-ink-300 cursor-not-allowed' :
+                                        'hover:bg-ink-100 text-ink-700'}
                         `}
                         style={{ paddingLeft: 12 + 18 + 8, paddingRight: 10 }}
                       >
                         {isSel
-                          ? <FolderOpen className="h-4 w-4 flex-shrink-0 text-white" />
-                          : <Folder    className={`h-4 w-4 flex-shrink-0 ${isCurrent ? 'text-gray-300 dark:text-slate-600' : 'text-blue-400'}`} />
+                          ? <FolderOpen className="h-4 w-4 shrink-0 text-white" />
+                          : <Folder    className={`h-4 w-4 shrink-0 ${isCurrent ? 'text-ink-300' : 'text-info-400'}`} />
                         }
                         <span className="flex-1 text-left font-medium">{tipo}</span>
                         {isCurrent && (
                           <span className="text-[10px] opacity-60">pasta atual</span>
                         )}
-                        <span className={`text-[11px] tabular-nums ${isSel ? 'text-blue-100' : 'text-gray-400 dark:text-slate-500'}`}>
+                        <span className={`text-[11px] tabular-nums ${isSel ? 'text-info-100' : 'text-ink-400'}`}>
                           {count} proc.
                         </span>
                       </button>
@@ -149,8 +149,8 @@ function MoveModal({ modal, processos, onConfirm, onClose, loading }) {
 
           {/* Destino selecionado */}
           {selected && (
-            <div className="mx-5 mb-3 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800/40">
-              <p className="text-[11px] text-blue-500 dark:text-blue-400 font-medium">
+            <div className="mx-5 mb-3 px-3 py-2 bg-info-50 dark:bg-info-900/20 rounded-xl border border-info-100 dark:border-info-800/40">
+              <p className="text-[11px] text-info-500 dark:text-info-400 font-medium">
                 Mover para: <span className="font-bold">{selected}</span>
               </p>
             </div>
@@ -160,16 +160,16 @@ function MoveModal({ modal, processos, onConfirm, onClose, loading }) {
           <div className="px-5 pb-5 flex gap-2">
             <button
               onClick={onClose}
-              className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-slate-600 rounded-xl
-                         text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+              className="flex-1 px-3 py-2 text-sm border border-ink-200 rounded-xl
+                         text-ink-600 hover:bg-ink-50 transition-colors"
             >
               Cancelar
             </button>
             <button
               onClick={() => onConfirm(selected)}
               disabled={!selected || loading}
-              className="flex-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-xl
-                         hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              className="flex-1 px-3 py-2 text-sm bg-brand-600 text-white rounded-xl
+                         hover:bg-brand-700 disabled:opacity-50 transition-colors"
             >
               {loading ? 'Movendo…' : 'Mover'}
             </button>
@@ -191,23 +191,23 @@ function MoveModal({ modal, processos, onConfirm, onClose, loading }) {
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+        className="bg-surface rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-start justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700/50">
+        <div className="flex items-start justify-between px-5 py-4 border-b border-ink-100">
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-100">Mover Arquivo</h3>
-            <p className="text-[11px] text-gray-400 dark:text-slate-500 mt-0.5 max-w-[280px] truncate">{modal.docName}</p>
+            <h3 className="text-sm font-semibold text-ink-900">Mover Arquivo</h3>
+            <p className="text-[11px] text-ink-400 mt-0.5 max-w-[280px] truncate">{modal.docName}</p>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-400 transition-colors">
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-ink-100 text-ink-400 transition-colors">
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* Instrução */}
         <div className="px-5 pt-3 pb-1">
-          <p className="text-xs text-gray-500 dark:text-slate-400">
+          <p className="text-xs text-ink-500">
             Navegue pelas pastas e selecione o processo de destino:
           </p>
         </div>
@@ -230,7 +230,7 @@ function MoveModal({ modal, processos, onConfirm, onClose, loading }) {
                     depth={1}
                     open={isOpen(`t-${ano}-${tipo}`)}
                     onToggle={() => toggle(`t-${ano}-${tipo}`)}
-                    icon={<Folder className="h-4 w-4 text-blue-500" />}
+                    icon={<Folder className="h-4 w-4 text-info-500" />}
                     label={tipo}
                   />
 
@@ -255,18 +255,18 @@ function MoveModal({ modal, processos, onConfirm, onClose, loading }) {
                               onClick={() => setSelected(p.id)}
                               className={`w-full flex items-center gap-2 py-2 rounded-xl text-xs transition-colors
                                 ${isSel
-                                  ? 'bg-blue-600 text-white'
-                                  : 'hover:bg-gray-100 dark:hover:bg-slate-700/60 text-gray-700 dark:text-slate-300'
+                                  ? 'bg-brand-600 text-white'
+                                  : 'hover:bg-ink-100 text-ink-700'
                                 }
                               `}
                               style={{ paddingLeft: 12 + 3 * 18, paddingRight: 8 }}
                             >
                               {isSel
-                                ? <FolderOpen className="h-4 w-4 flex-shrink-0 text-white" />
-                                : <Folder    className="h-4 w-4 flex-shrink-0 text-indigo-400" />
+                                ? <FolderOpen className="h-4 w-4 shrink-0 text-white" />
+                                : <Folder    className="h-4 w-4 shrink-0 text-indigo-400" />
                               }
-                              <span className="font-semibold flex-shrink-0">{p.numero}</span>
-                              <span className={`truncate flex-1 ${isSel ? 'text-blue-100' : 'text-gray-400 dark:text-slate-500'}`}>
+                              <span className="font-semibold shrink-0">{p.numero}</span>
+                              <span className={`truncate flex-1 ${isSel ? 'text-info-100' : 'text-ink-400'}`}>
                                 {p.assunto}
                               </span>
                             </button>
@@ -283,11 +283,11 @@ function MoveModal({ modal, processos, onConfirm, onClose, loading }) {
 
         {/* Destino selecionado */}
         {selectedProcesso && (
-          <div className="mx-5 mb-3 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800/40">
-            <p className="text-[11px] text-blue-500 dark:text-blue-400">
+          <div className="mx-5 mb-3 px-3 py-2 bg-info-50 dark:bg-info-900/20 rounded-xl border border-info-100 dark:border-info-800/40">
+            <p className="text-[11px] text-info-500 dark:text-info-400">
               Mover para: <span className="font-bold">{selectedProcesso.numero}</span>
             </p>
-            <p className="text-[11px] text-blue-400 dark:text-blue-500 truncate">{selectedProcesso.assunto}</p>
+            <p className="text-[11px] text-info-400 dark:text-info-500 truncate">{selectedProcesso.assunto}</p>
           </div>
         )}
 
@@ -295,16 +295,16 @@ function MoveModal({ modal, processos, onConfirm, onClose, loading }) {
         <div className="px-5 pb-5 flex gap-2">
           <button
             onClick={onClose}
-            className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-slate-600 rounded-xl
-                       text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+            className="flex-1 px-3 py-2 text-sm border border-ink-200 rounded-xl
+                       text-ink-600 hover:bg-ink-50 transition-colors"
           >
             Cancelar
           </button>
           <button
             onClick={() => onConfirm(selected)}
             disabled={!selected || loading}
-            className="flex-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-xl
-                       hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="flex-1 px-3 py-2 text-sm bg-brand-600 text-white rounded-xl
+                       hover:bg-brand-700 disabled:opacity-50 transition-colors"
           >
             {loading ? 'Movendo…' : 'Mover'}
           </button>
@@ -318,20 +318,20 @@ function MoveModal({ modal, processos, onConfirm, onClose, loading }) {
 function FolderNode({ label, badge, depth, children }) {
   const [open, setOpen] = useState(false)
   const pl  = 12 + depth * 20
-  const clr = ['text-amber-500','text-blue-500','text-emerald-500','text-purple-500'][Math.min(depth, 3)]
+  const clr = ['text-amber-500','text-info-500','text-emerald-500','text-purple-500'][Math.min(depth, 3)]
 
   return (
     <div>
       <button
         onClick={() => setOpen(v => !v)}
         className="w-full flex items-center gap-2 py-1.5 rounded-lg text-sm
-                   hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors"
+                   hover:bg-ink-100 transition-colors"
         style={{ paddingLeft: pl, paddingRight: 8 }}
       >
-        {open ? <ChevronDown className="h-3.5 w-3.5 flex-shrink-0 text-gray-400" /> : <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 text-gray-400" />}
-        {open ? <FolderOpen className={`h-4 w-4 flex-shrink-0 ${clr}`} /> : <Folder className={`h-4 w-4 flex-shrink-0 ${clr}`} />}
-        <span className="font-medium text-gray-700 dark:text-slate-300 truncate flex-1 text-left">{label}</span>
-        {badge !== undefined && <span className="flex-shrink-0 text-[11px] text-gray-400 dark:text-slate-500 tabular-nums">{badge}</span>}
+        {open ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-ink-400" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-ink-400" />}
+        {open ? <FolderOpen className={`h-4 w-4 shrink-0 ${clr}`} /> : <Folder className={`h-4 w-4 shrink-0 ${clr}`} />}
+        <span className="font-medium text-ink-700 truncate flex-1 text-left">{label}</span>
+        {badge !== undefined && <span className="shrink-0 text-[11px] text-ink-400 tabular-nums">{badge}</span>}
       </button>
       {open && <div className="ml-1">{children}</div>}
     </div>
@@ -345,7 +345,7 @@ function FileNode({ doc, currentProcessoId, depth, onView, onMove }) {
 
   return (
     <div
-      className="flex items-center rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group"
+      className="flex items-center rounded-lg hover:bg-info-50 dark:hover:bg-info-900/20 transition-colors group"
       style={{ paddingLeft: pl, paddingRight: 8 }}
     >
       <button
@@ -353,20 +353,20 @@ function FileNode({ doc, currentProcessoId, depth, onView, onMove }) {
         className="flex-1 flex items-center gap-2 py-1 text-xs text-left"
         title="Abrir em nova aba"
       >
-        <FileText className={`h-3.5 w-3.5 flex-shrink-0 ${isPdf ? 'text-red-400' : 'text-gray-400'}`} />
-        <span className="truncate flex-1 text-gray-600 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+        <FileText className={`h-3.5 w-3.5 shrink-0 ${isPdf ? 'text-danger-400' : 'text-ink-400'}`} />
+        <span className="truncate flex-1 text-ink-600 group-hover:text-brand-600 dark:group-hover:text-info-400 transition-colors">
           {doc.nome_arquivo}
         </span>
-        <span className="flex-shrink-0 text-gray-400 dark:text-slate-500 tabular-nums">{(doc.tamanho_bytes / 1024).toFixed(0)} KB</span>
-        <ExternalLink className="h-3 w-3 flex-shrink-0 opacity-0 group-hover:opacity-60 text-blue-500 transition-opacity" />
+        <span className="shrink-0 text-ink-400 tabular-nums">{(doc.tamanho_bytes / 1024).toFixed(0)} KB</span>
+        <ExternalLink className="h-3 w-3 shrink-0 opacity-0 group-hover:opacity-60 text-info-500 transition-opacity" />
       </button>
       <button
         onClick={() => onMove({ type: 'file', docId: doc.id, docName: doc.nome_arquivo, currentProcessoId })}
-        className="flex-shrink-0 p-1 rounded opacity-0 group-hover:opacity-70 hover:!opacity-100
-                   hover:bg-gray-200 dark:hover:bg-slate-600 transition-all"
+        className="shrink-0 p-1 rounded-sm opacity-0 group-hover:opacity-70 hover:!opacity-100
+                   hover:bg-ink-200 transition-all"
         title="Mover para outra pasta"
       >
-        <FolderInput className="h-3.5 w-3.5 text-gray-500 dark:text-slate-400" />
+        <FolderInput className="h-3.5 w-3.5 text-ink-500" />
       </button>
     </div>
   )
@@ -381,35 +381,35 @@ function ProcessoNode({ processo, depth, onView, onDownloadZip, onMove }) {
   return (
     <div>
       <div
-        className="flex items-center rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors group"
+        className="flex items-center rounded-lg hover:bg-ink-100 transition-colors group"
         style={{ paddingLeft: pl, paddingRight: 8 }}
       >
         <button
           onClick={() => setOpen(v => !v)}
           className="flex-1 flex items-center gap-2 py-1.5 text-sm text-left"
         >
-          {open ? <ChevronDown className="h-3.5 w-3.5 flex-shrink-0 text-gray-400" /> : <ChevronRight className="h-3.5 w-3.5 flex-shrink-0 text-gray-400" />}
-          {open ? <FolderOpen className="h-4 w-4 flex-shrink-0 text-indigo-500" /> : <Folder className="h-4 w-4 flex-shrink-0 text-indigo-400" />}
-          <span className="text-xs font-semibold text-gray-800 dark:text-slate-200 flex-shrink-0">{processo.numero}</span>
-          <span className="text-[11px] text-gray-400 dark:text-slate-500 truncate flex-1">{processo.assunto}</span>
-          <span className="flex-shrink-0 text-[11px] text-gray-400 dark:text-slate-500 tabular-nums">{processo.documentos?.length || 0} arq.</span>
+          {open ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-ink-400" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-ink-400" />}
+          {open ? <FolderOpen className="h-4 w-4 shrink-0 text-indigo-500" /> : <Folder className="h-4 w-4 shrink-0 text-indigo-400" />}
+          <span className="text-xs font-semibold text-ink-800 shrink-0">{processo.numero}</span>
+          <span className="text-[11px] text-ink-400 truncate flex-1">{processo.assunto}</span>
+          <span className="shrink-0 text-[11px] text-ink-400 tabular-nums">{processo.documentos?.length || 0} arq.</span>
         </button>
         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all ml-1">
           {hasDocs && (
             <button
               onClick={() => onDownloadZip(processo.id, processo.numero)}
-              className="p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+              className="p-1 rounded-sm hover:bg-ink-200 transition-colors"
               title="Baixar ZIP"
             >
-              <Download className="h-3.5 w-3.5 text-gray-500 dark:text-slate-400" />
+              <Download className="h-3.5 w-3.5 text-ink-500" />
             </button>
           )}
           <button
             onClick={() => onMove({ type: 'processo', processoId: processo.id, processoNumero: processo.numero, currentTipo: processo.tipo_processo })}
-            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+            className="p-1 rounded-sm hover:bg-ink-200 transition-colors"
             title="Mover para outra pasta"
           >
-            <FolderInput className="h-3.5 w-3.5 text-gray-500 dark:text-slate-400" />
+            <FolderInput className="h-3.5 w-3.5 text-ink-500" />
           </button>
         </div>
       </div>
@@ -425,7 +425,7 @@ function ProcessoNode({ processo, depth, onView, onDownloadZip, onMove }) {
               onMove={onMove}
             />
           )) : (
-            <p className="text-xs text-gray-400 dark:text-slate-500 py-1" style={{ paddingLeft: 12 + (depth + 1) * 20 }}>
+            <p className="text-xs text-ink-400 py-1" style={{ paddingLeft: 12 + (depth + 1) * 20 }}>
               Nenhum documento
             </p>
           )}
@@ -545,7 +545,7 @@ export default function Arquivo() {
       )}
 
       {/* Abas */}
-      <div className="flex gap-1 bg-gray-100 dark:bg-slate-800/50 p-1 rounded-xl w-fit">
+      <div className="flex gap-1 bg-ink-100 p-1 rounded-xl w-fit">
         {[
           { id: 'processos', label: 'Processos Concluídos', icon: Archive },
           { id: 'gerados',   label: 'Documentos Gerados',  icon: Zap     },
@@ -555,14 +555,14 @@ export default function Arquivo() {
             onClick={() => setAba(id)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               aba === id
-                ? 'bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 shadow-sm'
-                : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'
+                ? 'bg-surface text-ink-900 shadow-sm'
+                : 'text-ink-500 hover:text-ink-700'
             }`}
           >
             <Icon className="h-4 w-4" />
             {label}
             <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-              aba === id ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'bg-gray-200 dark:bg-slate-600 text-gray-500 dark:text-slate-400'
+              aba === id ? 'bg-info-100 dark:bg-info-900/40 text-brand-700 dark:text-info-300' : 'bg-ink-200 text-ink-500'
             }`}>
               {id === 'processos' ? processos.length : docsGerados.length}
             </span>
@@ -577,31 +577,31 @@ export default function Arquivo() {
             <LoadingBar label="Carregando documentos gerados..." />
           ) : docsGerados.length === 0 ? (
             <div className="text-center py-14 space-y-3">
-              <Zap className="h-10 w-10 text-gray-200 dark:text-slate-700 mx-auto" />
-              <p className="text-sm text-gray-500 dark:text-slate-400">Nenhum documento gerado ainda</p>
-              <p className="text-xs text-gray-400 dark:text-slate-500">
+              <Zap className="h-10 w-10 text-ink-200 mx-auto" />
+              <p className="text-sm text-ink-500">Nenhum documento gerado ainda</p>
+              <p className="text-xs text-ink-400">
                 Documentos são salvos automaticamente ao gerar PDFs de DID, despacho, ofício e outros.
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-100 dark:divide-slate-700/50">
+            <div className="divide-y divide-ink-100">
               {docsGerados.map(doc => {
                 const meta = TIPO_LABEL[doc.tipo_origem] || TIPO_LABEL.gerado
                 const data = doc.created_at || doc.data_upload
                 return (
                   <div key={doc.id} className="flex items-center gap-3 py-2.5 group">
-                    <div className="shrink-0 flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/30">
-                      <FileText className="h-4 w-4 text-red-400" />
+                    <div className="shrink-0 flex items-center justify-center w-8 h-8 rounded-lg bg-danger-50 dark:bg-danger-900/20 border border-danger-100 dark:border-danger-800/30">
+                      <FileText className="h-4 w-4 text-danger-400" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <button
                         onClick={() => handleViewDoc(doc)}
-                        className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline truncate block text-left max-w-full"
+                        className="text-sm font-medium text-brand-600 dark:text-info-400 hover:underline truncate block text-left max-w-full"
                         title="Abrir em nova aba"
                       >
                         {doc.nome_arquivo}
                       </button>
-                      <p className="text-xs text-gray-400 dark:text-slate-500">
+                      <p className="text-xs text-ink-400">
                         {data ? new Date(data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
                         {doc.uploadPor?.nome && ` · ${doc.uploadPor.nome}`}
                         {' · '}{(doc.tamanho_bytes / 1024).toFixed(0)} KB
@@ -611,12 +611,12 @@ export default function Arquivo() {
                       {meta.label}
                     </span>
                     <ExternalLink
-                      className="h-3.5 w-3.5 text-gray-300 dark:text-slate-600 group-hover:text-blue-400 transition-colors cursor-pointer shrink-0"
+                      className="h-3.5 w-3.5 text-ink-300 group-hover:text-info-400 transition-colors cursor-pointer shrink-0"
                       onClick={() => handleViewDoc(doc)}
                     />
                     {isAdmin && (
                       <Trash2
-                        className="h-3.5 w-3.5 text-gray-300 dark:text-slate-600 hover:text-red-500 transition-colors cursor-pointer shrink-0"
+                        className="h-3.5 w-3.5 text-ink-300 hover:text-danger-500 transition-colors cursor-pointer shrink-0"
                         title="Excluir documento"
                         onClick={() => setConfirmarExcluirDoc(doc)}
                       />
@@ -642,19 +642,19 @@ export default function Arquivo() {
       {/* ── ABA: Processos Concluídos ── */}
       {aba === 'processos' && (anos.length === 0 ? (
         <div className="card p-16 text-center space-y-3">
-          <Archive className="h-14 w-14 text-gray-200 dark:text-slate-700 mx-auto" />
-          <p className="text-gray-500 dark:text-slate-400 font-medium">Nenhum processo concluído encontrado</p>
+          <Archive className="h-14 w-14 text-ink-200 mx-auto" />
+          <p className="text-ink-500 font-medium">Nenhum processo concluído encontrado</p>
         </div>
       ) : (
         <div className="card p-4">
           {/* Legenda */}
-          <div className="flex flex-wrap items-center gap-4 px-3 pb-3 mb-3 border-b border-gray-100 dark:border-slate-700/50 text-[11px] text-gray-400 dark:text-slate-500">
+          <div className="flex flex-wrap items-center gap-4 px-3 pb-3 mb-3 border-b border-ink-100 text-[11px] text-ink-400">
             <span className="flex items-center gap-1"><Folder className="h-3.5 w-3.5 text-amber-400" /> Ano</span>
-            <span className="flex items-center gap-1"><Folder className="h-3.5 w-3.5 text-blue-400" /> Tipo</span>
+            <span className="flex items-center gap-1"><Folder className="h-3.5 w-3.5 text-info-400" /> Tipo</span>
             <span className="flex items-center gap-1"><Folder className="h-3.5 w-3.5 text-emerald-400" /> Secretaria</span>
             <span className="flex items-center gap-1"><Folder className="h-3.5 w-3.5 text-indigo-400" /> Processo</span>
-            <span className="flex items-center gap-1"><FileText className="h-3.5 w-3.5 text-red-400" /> Arquivo</span>
-            <span className="flex items-center gap-1 ml-auto text-gray-300 dark:text-slate-600">
+            <span className="flex items-center gap-1"><FileText className="h-3.5 w-3.5 text-danger-400" /> Arquivo</span>
+            <span className="flex items-center gap-1 ml-auto text-ink-300">
               <FolderInput className="h-3.5 w-3.5" /> hover para mover
             </span>
           </div>

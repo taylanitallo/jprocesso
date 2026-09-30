@@ -48,38 +48,38 @@ function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full flex flex-col" style={{ maxWidth: '1100px', maxHeight: '90vh' }}>
+      <div className="bg-surface rounded-2xl shadow-2xl w-full flex flex-col" style={{ maxWidth: '1100px', maxHeight: '90vh' }}>
 
         {/* Cabeçalho */}
-        <div className="flex items-center justify-between bg-slate-900 px-5 py-3.5 rounded-t-2xl shrink-0">
+        <div className="flex items-center justify-between bg-ink-900 px-5 py-3.5 rounded-t-2xl shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl bg-indigo-500/20 flex items-center justify-center">
               <Search className="w-4 h-4 text-indigo-300" />
             </div>
             <div>
               <span className="text-sm font-semibold text-white">Selecionar Item do Catálogo</span>
-              <p className="text-xs text-slate-400 mt-0.5">Pesquise e selecione o item para adicionar ao contrato</p>
+              <p className="text-xs text-ink-400 mt-0.5">Pesquise e selecione o item para adicionar ao contrato</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-colors">
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-surface/10 text-white/70 hover:text-white transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Filtros */}
-        <div className="px-5 pt-4 pb-3.5 border-b border-gray-200 dark:border-slate-700/50 shrink-0 space-y-3 bg-gray-50 dark:bg-slate-800/50">
+        <div className="px-5 pt-4 pb-3.5 border-b border-ink-200 shrink-0 space-y-3 bg-ink-50">
           {/* Busca principal */}
           <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400" />
             <input
               autoFocus
               value={busca}
               onChange={e => setBusca(e.target.value)}
               placeholder="Buscar por código, descrição, especificação, palavras-chave ou código CNBS..."
-              className="w-full h-11 pl-10 pr-9 text-sm rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900 dark:text-white shadow-sm"
+              className="w-full h-11 pl-10 pr-9 text-sm rounded-xl border border-ink-200 bg-surface focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-hidden text-ink-900 dark:text-white shadow-sm"
             />
             {busca && (
-              <button onClick={() => setBusca('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-slate-300">
+              <button onClick={() => setBusca('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-600">
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
@@ -89,14 +89,14 @@ function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
           <div className="flex flex-wrap items-center gap-4">
             {/* Categoria */}
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Categoria:</span>
+              <span className="text-xs font-bold text-ink-500 uppercase tracking-wide whitespace-nowrap">Categoria:</span>
               <div className="flex items-center gap-1 flex-wrap">
                 {['', ...categorias].map(cat => (
                   <button key={cat} type="button" onClick={() => setCatFiltro(cat)}
                     className={`px-2.5 py-1 text-xs font-semibold rounded-full border transition-all ${
                       catFiltro === cat
                         ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
-                        : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 bg-white dark:bg-slate-700'
+                        : 'border-ink-300 text-ink-600 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 bg-surface'
                     }`}>
                     {cat || 'Todas'}
                   </button>
@@ -107,9 +107,9 @@ function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
             {/* Unidade */}
             {unidades.length > 0 && (
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">Unidade:</span>
+                <span className="text-xs font-bold text-ink-500 uppercase tracking-wide whitespace-nowrap">Unidade:</span>
                 <select value={unidFiltro} onChange={e => setUnidFiltro(e.target.value)}
-                  className="text-xs border border-gray-300 dark:border-slate-600 rounded-lg px-2.5 py-1.5 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 focus:ring-1 focus:ring-indigo-500 outline-none">
+                  className="text-xs border border-ink-300 rounded-lg px-2.5 py-1.5 bg-surface text-ink-700 focus:ring-1 focus:ring-indigo-500 outline-hidden">
                   <option value="">Todas</option>
                   {unidades.map(u => <option key={u} value={u}>{u}</option>)}
                 </select>
@@ -117,7 +117,7 @@ function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
             )}
 
             {/* Contador */}
-            <span className="text-xs text-gray-400 dark:text-slate-500 ml-auto font-medium">
+            <span className="text-xs text-ink-400 ml-auto font-medium">
               {filtrados.length} item(ns) encontrado(s)
             </span>
           </div>
@@ -126,7 +126,7 @@ function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
         {/* Lista */}
         <div className="flex-1 overflow-y-auto overflow-x-auto">
           {filtrados.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-gray-400 dark:text-slate-500">
+            <div className="flex flex-col items-center justify-center py-16 text-ink-400">
               <PackageOpen className="w-12 h-12 mb-3 opacity-30" />
               <p className="font-medium text-sm">{busca || catFiltro || unidFiltro ? 'Nenhum item encontrado para os filtros aplicados.' : 'Nenhum item cadastrado no sistema.'}</p>
               {(busca || catFiltro || unidFiltro) && (
@@ -138,26 +138,26 @@ function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
             </div>
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-slate-100 dark:bg-slate-800/80 sticky top-0 z-10 border-b border-slate-200 dark:border-slate-700">
+              <thead className="bg-ink-100 sticky top-0 z-10 border-b border-ink-200">
                 <tr>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-500 dark:text-slate-400 text-xs w-24 uppercase tracking-wider">Código</th>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Descrição / Especificação</th>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-500 dark:text-slate-400 text-xs w-32 uppercase tracking-wider">Unidade</th>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-500 dark:text-slate-400 text-xs w-32 uppercase tracking-wider">Categoria</th>
+                  <th className="text-left px-4 py-3 font-semibold text-ink-500 text-xs w-24 uppercase tracking-wider">Código</th>
+                  <th className="text-left px-4 py-3 font-semibold text-ink-500 text-xs uppercase tracking-wider">Descrição / Especificação</th>
+                  <th className="text-left px-4 py-3 font-semibold text-ink-500 text-xs w-32 uppercase tracking-wider">Unidade</th>
+                  <th className="text-left px-4 py-3 font-semibold text-ink-500 text-xs w-32 uppercase tracking-wider">Categoria</th>
                   <th className="w-28 px-4 py-3"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
+              <tbody className="divide-y divide-ink-200">
                 {filtrados.map(item => (
                   <tr key={item.id}
                     className="hover:bg-indigo-50 dark:hover:bg-indigo-900/20 cursor-pointer group transition-colors"
                     onClick={() => onSelect(item)}>
                     <td className="px-4 py-3 font-mono text-xs text-indigo-600 dark:text-indigo-400 font-bold align-top">{item.codigo || '—'}</td>
                     <td className="px-4 py-3 align-top">
-                      <p className="text-gray-800 dark:text-slate-200 font-medium leading-snug">{item.descricao}</p>
+                      <p className="text-ink-800 font-medium leading-snug">{item.descricao}</p>
                       {item.especificacao && (
                         <>
-                          <p className={`text-xs text-gray-400 dark:text-slate-500 mt-0.5 leading-snug ${expId === item.id ? '' : 'line-clamp-2'}`}>
+                          <p className={`text-xs text-ink-400 mt-0.5 leading-snug ${expId === item.id ? '' : 'line-clamp-2'}`}>
                             {item.especificacao}
                           </p>
                           {item.especificacao.length > 100 && (
@@ -172,22 +172,22 @@ function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
                       {(item.palavra1 || item.palavra2 || item.palavra3 || item.palavra4) && (
                         <div className="flex flex-wrap gap-1 mt-1.5">
                           {[item.palavra1, item.palavra2, item.palavra3, item.palavra4].filter(Boolean).map((p, i) => (
-                            <span key={i} className="text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 rounded border border-gray-200 dark:border-slate-600">{p}</span>
+                            <span key={i} className="text-[10px] px-1.5 py-0.5 bg-ink-100 text-ink-500 rounded-sm border border-ink-200">{p}</span>
                           ))}
                         </div>
                       )}
                       {item.catalogo && (
-                        <p className="text-[10px] text-gray-400 mt-0.5 font-mono">CNBS: {item.catalogo}</p>
+                        <p className="text-[10px] text-ink-400 mt-0.5 font-mono">CNBS: {item.catalogo}</p>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-slate-300 text-xs align-top whitespace-nowrap font-semibold">{item.unidade_medida || '—'}</td>
+                    <td className="px-4 py-3 text-ink-600 text-xs align-top whitespace-nowrap font-semibold">{item.unidade_medida || '—'}</td>
                     <td className="px-4 py-3 align-top">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
                         (item.categoria || '').toUpperCase() === 'COMPRAS'
-                          ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                          ? 'bg-info-100 dark:bg-info-900/30 text-brand-700 dark:text-info-300'
                           : (item.categoria || '').toUpperCase() === 'SERVIÇOS'
                           ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                          : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400'
+                          : 'bg-ink-100 text-ink-600'
                       }`}>{item.categoria || '—'}</span>
                     </td>
                     <td className="px-4 py-3 text-right align-top">
@@ -203,10 +203,10 @@ function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
         </div>
 
         {/* Rodapé */}
-        <div className="border-t border-gray-200 dark:border-slate-700/50 px-5 py-3 shrink-0 flex items-center justify-between bg-gray-50 dark:bg-slate-800/50">
-          <p className="text-xs text-gray-400 dark:text-slate-500">Clique em um item para selecioná-lo e preencher os detalhes do contrato</p>
+        <div className="border-t border-ink-200 px-5 py-3 shrink-0 flex items-center justify-between bg-ink-50">
+          <p className="text-xs text-ink-400">Clique em um item para selecioná-lo e preencher os detalhes do contrato</p>
           <button type="button" onClick={onClose}
-            className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors">
+            className="px-4 py-1.5 bg-ink-200 hover:bg-ink-300 text-ink-700 rounded-lg text-sm font-medium transition-colors">
             Fechar
           </button>
         </div>
@@ -267,16 +267,16 @@ function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full flex flex-col" style={{ maxWidth: '560px' }}>
+      <div className="bg-surface rounded-2xl shadow-2xl w-full flex flex-col" style={{ maxWidth: '560px' }}>
         {/* Header */}
-        <div className="flex items-center justify-between bg-slate-900 px-5 py-3.5 rounded-t-2xl">
+        <div className="flex items-center justify-between bg-ink-900 px-5 py-3.5 rounded-t-2xl">
           <div className="flex items-center gap-3">
             <ShoppingBag className="w-4 h-4 text-white/80" />
             <span className="text-sm font-semibold text-white">
               {item?.descricao ? 'Editar Item' : 'Novo Item'}
             </span>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded hover:bg-white/10 text-white/70 hover:text-white">
+          <button onClick={onClose} className="p-1.5 rounded-sm hover:bg-surface/10 text-white/70 hover:text-white">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -285,18 +285,18 @@ function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
           {/* Lote + Nº Item */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Lote</label>
+              <label className="block text-xs font-semibold text-ink-500 mb-1.5">Lote</label>
               <PremiumInput value={form.lote} onChange={e => set('lote', e.target.value)} placeholder="Ex: 01, A..." />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Nº do Item</label>
+              <label className="block text-xs font-semibold text-ink-500 mb-1.5">Nº do Item</label>
               <PremiumInput value={form.codigo_item} onChange={e => set('codigo_item', e.target.value)} placeholder="Ex: 1, A-01..." />
             </div>
           </div>
 
           {/* Descrição com busca no catálogo */}
           <div>
-            <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Descrição *</label>
+            <label className="block text-xs font-semibold text-ink-500 mb-1.5">Descrição *</label>
             <div className="relative">
               <input
                 value={busca}
@@ -304,18 +304,18 @@ function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
                 onFocus={e => { setDrop(true); setDropRef(e.currentTarget.closest('.relative')) }}
                 onBlur={() => setTimeout(() => { setDrop(false); setDropRef(null) }, 150)}
                 placeholder="Buscar no catálogo ou digitar livremente..."
-                className="w-full h-11 px-3.5 text-sm rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 dark:text-white"
+                className="w-full h-11 px-3.5 text-sm rounded-xl border border-ink-200 bg-surface focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-hidden text-ink-900 dark:text-white"
               />
               {drop && dropRef && createPortal(
                 <div style={{ position: 'fixed', zIndex: 10001, top: dropRef.getBoundingClientRect().bottom + 4, left: dropRef.getBoundingClientRect().left, width: dropRef.getBoundingClientRect().width }}
-                  className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl shadow-2xl max-h-44 overflow-y-auto">
+                  className="bg-surface border border-ink-200 rounded-xl shadow-2xl max-h-44 overflow-y-auto">
                   {itensFiltrados.length === 0
-                    ? <p className="px-3 py-2 text-xs text-gray-400">Nenhum item do catálogo — descrição livre</p>
+                    ? <p className="px-3 py-2 text-xs text-ink-400">Nenhum item do catálogo — descrição livre</p>
                     : itensFiltrados.map(i => (
                       <button key={i.id} type="button" onMouseDown={() => selecionarCatalogo(i)}
-                        className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b border-gray-100 dark:border-slate-700/50 last:border-0">
-                        <p className="font-medium text-gray-800 dark:text-slate-200 truncate">{i.descricao}</p>
-                        <p className="text-gray-400 mt-0.5 font-mono text-[10px]">{i.codigo} · {i.unidade_medida} · {i.categoria}</p>
+                        className="w-full text-left px-3 py-2 text-xs hover:bg-info-50 dark:hover:bg-info-900/20 border-b border-ink-100 last:border-0">
+                        <p className="font-medium text-ink-800 truncate">{i.descricao}</p>
+                        <p className="text-ink-400 mt-0.5 font-mono text-[10px]">{i.codigo} · {i.unidade_medida} · {i.categoria}</p>
                       </button>
                     ))
                   }
@@ -328,23 +328,23 @@ function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
           {/* Unidade + Qtd + V. Unit */}
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Unidade</label>
+              <label className="block text-xs font-semibold text-ink-500 mb-1.5">Unidade</label>
               <PremiumInput value={form.unidade} onChange={e => set('unidade', e.target.value)} placeholder="UNID, KG..." />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Quantidade *</label>
+              <label className="block text-xs font-semibold text-ink-500 mb-1.5">Quantidade *</label>
               <PremiumInput type="number" min={0} value={form.quantidade} onChange={e => set('quantidade', e.target.value)} placeholder="0" className="text-right font-mono" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">V. Unitário *</label>
+              <label className="block text-xs font-semibold text-ink-500 mb-1.5">V. Unitário *</label>
               <PremiumInput type="number" min={0} step="0.01" value={form.valor_unitario} onChange={e => set('valor_unitario', e.target.value)} placeholder="0,00" className="text-right font-mono" />
             </div>
           </div>
 
           {/* V. Total */}
           {form.valor_total && (
-            <div className="flex items-center justify-end gap-2 text-sm font-bold text-blue-700 dark:text-blue-400">
-              <span className="text-xs font-medium text-gray-500 dark:text-slate-400">Valor total:</span>
+            <div className="flex items-center justify-end gap-2 text-sm font-bold text-brand-700 dark:text-info-400">
+              <span className="text-xs font-medium text-ink-500">Valor total:</span>
               R$ {parseFloat(form.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
           )}
@@ -353,11 +353,11 @@ function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
         {/* Footer */}
         <div className="px-5 pb-5 flex items-center justify-between gap-3">
           <button onClick={onClose}
-            className="px-4 py-2 text-sm rounded-xl border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+            className="px-4 py-2 text-sm rounded-xl border border-ink-200 text-ink-600 hover:bg-ink-50 transition-colors">
             Cancelar
           </button>
           <button onClick={salvar}
-            className="flex items-center gap-2 px-5 py-2 text-sm rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm transition-colors">
+            className="flex items-center gap-2 px-5 py-2 text-sm rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-sm transition-colors">
             <Check className="w-4 h-4" /> Confirmar Item
           </button>
         </div>
@@ -528,9 +528,9 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
   })()
 
   const alertaCor = {
-    vencido: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-300',
+    vencido: 'bg-danger-100 text-danger-700 dark:bg-danger-900/30 dark:text-danger-400 border border-danger-300',
     proximo: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-300',
-    vigente: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border border-green-300',
+    vigente: 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400 border border-success-300',
   }
 
   // ── Credor search ─────────────────────────────────────────────────────────
@@ -664,29 +664,29 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
       : <CheckCircle2 className="w-3.5 h-3.5" />
 
   const alertaBadgeCls = {
-    vencido: 'bg-red-100 text-red-700 border-red-200',
+    vencido: 'bg-danger-100 text-danger-700 border-danger-200',
     proximo: 'bg-amber-100 text-amber-700 border-amber-200',
-    vigente: 'bg-green-100 text-green-700 border-green-200',
+    vigente: 'bg-success-100 text-success-700 border-success-200',
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-gray-50 dark:bg-slate-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+      <div className="bg-ink-50 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
         style={{ width: '1000px', maxWidth: '96vw', maxHeight: '92vh' }}>
 
         {/* ── Header ───────────────────────────────────────────────────── */}
-        <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-6 py-4 flex items-center gap-4 shrink-0">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg shrink-0">
+        <div className="bg-surface border-b border-ink-200 px-6 py-4 flex items-center gap-4 shrink-0">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-info-600 flex items-center justify-center shadow-lg shrink-0">
             <FileText className="w-6 h-6 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white truncate">
+            <h2 className="text-lg font-bold text-ink-900 dark:text-white truncate">
               {form.numero_contrato ? form.numero_contrato : 'Novo Contrato'}
               {form.tipo_contrato && form.tipo_contrato !== 'CONTRATO' && (
-                <span className="ml-2 text-sm font-normal text-gray-500">· {form.tipo_contrato}</span>
+                <span className="ml-2 text-sm font-normal text-ink-500">· {form.tipo_contrato}</span>
               )}
             </h2>
-            <p className="text-sm text-gray-500 dark:text-slate-400 truncate">
+            <p className="text-sm text-ink-500 truncate">
               {form.objeto ? form.objeto.substring(0, 80) + (form.objeto.length > 80 ? '…' : '') : 'Contrato — ' + titulo}
             </p>
           </div>
@@ -694,7 +694,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
             {form.status && (
               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
                 form.status === 'ATIVO' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                form.status === 'ENCERRADO' ? 'bg-gray-100 text-gray-600 border-gray-200' :
+                form.status === 'ENCERRADO' ? 'bg-ink-100 text-ink-600 border-ink-200' :
                 'bg-amber-50 text-amber-700 border-amber-200'
               }`}>{form.status}</span>
             )}
@@ -703,7 +703,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                 {alertaIcone} {alertaVencimento.texto}
               </span>
             )}
-            <button onClick={onClose} className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
+            <button onClick={onClose} className="p-2 rounded-xl text-ink-400 hover:text-ink-600 hover:bg-ink-100 transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -730,18 +730,18 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                 ) : (
                   <div className="grid grid-cols-12 gap-4">
                     <div className="col-span-4">
-                      <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Tipo *</label>
+                      <label className="block text-xs font-medium text-ink-500 mb-1.5">Tipo *</label>
                       <PremiumSelect value={form.tipo_contrato} onChange={e => set('tipo_contrato', e.target.value)}>
                         {TIPOS_CONTRATO.map(t => <option key={t} value={t}>{t}</option>)}
                       </PremiumSelect>
                     </div>
                     <div className="col-span-4">
-                      <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Nº Contrato *</label>
+                      <label className="block text-xs font-medium text-ink-500 mb-1.5">Nº Contrato *</label>
                       <PremiumInput value={form.numero_contrato} onChange={e => set('numero_contrato', e.target.value.toUpperCase())}
                         className="uppercase" placeholder="Ex: 001/2026" autoFocus />
                     </div>
                     <div className="col-span-4">
-                      <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Data Assinatura</label>
+                      <label className="block text-xs font-medium text-ink-500 mb-1.5">Data Assinatura</label>
                       <PremiumInput type="date" value={form.data_assinatura} onChange={e => set('data_assinatura', e.target.value)} />
                     </div>
                   </div>
@@ -760,27 +760,27 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                 ) : (
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Objeto *</label>
+                      <label className="block text-xs font-medium text-ink-500 mb-1.5">Objeto *</label>
                       <PremiumTextarea value={form.objeto} onChange={e => set('objeto', e.target.value.toUpperCase())}
                         rows={3} className="uppercase resize-none" placeholder="Descrição do objeto do contrato..." />
                     </div>
                     <div className="grid grid-cols-3 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Tipo de Objeto *</label>
+                        <label className="block text-xs font-medium text-ink-500 mb-1.5">Tipo de Objeto *</label>
                         <PremiumSelect value={form.tipo_objeto} onChange={e => set('tipo_objeto', e.target.value)}>
                           <option value="">Selecione...</option>
                           {TIPOS_OBJETO.map(t => <option key={t} value={t}>{t}</option>)}
                         </PremiumSelect>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Modalidade</label>
+                        <label className="block text-xs font-medium text-ink-500 mb-1.5">Modalidade</label>
                         <PremiumSelect value={form.modalidade} onChange={e => set('modalidade', e.target.value)}>
                           <option value="">Selecione...</option>
                           {MODALIDADES.map(m => <option key={m} value={m}>{m}</option>)}
                         </PremiumSelect>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Nº Licitação</label>
+                        <label className="block text-xs font-medium text-ink-500 mb-1.5">Nº Licitação</label>
                         <PremiumInput value={form.numero_licitacao} onChange={e => set('numero_licitacao', e.target.value.toUpperCase())}
                           className="uppercase" placeholder="Ex: PE 012/2026" />
                       </div>
@@ -807,16 +807,16 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                         <div className="flex items-center gap-2">
                           <div className="flex-1 h-11 px-3 rounded-xl border border-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-700 flex items-center gap-2 text-sm">
                             <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                            <span className="font-medium text-gray-800 dark:text-slate-100 truncate">{credorSel.razao_social}</span>
-                            <span className="text-gray-400 font-mono text-xs shrink-0">{credorSel.cnpj_cpf}</span>
+                            <span className="font-medium text-ink-800 truncate">{credorSel.razao_social}</span>
+                            <span className="text-ink-400 font-mono text-xs shrink-0">{credorSel.cnpj_cpf}</span>
                           </div>
-                          <button type="button" onClick={limparCredor} className="p-2 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                          <button type="button" onClick={limparCredor} className="p-2 rounded-xl border border-ink-200 text-ink-400 hover:text-danger-500 hover:bg-danger-50 dark:hover:bg-danger-900/20 transition-colors">
                             <X className="w-4 h-4" />
                           </button>
                         </div>
                       ) : (
                         <div className="relative" ref={credorAnchorRef}>
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400" />
                           <PremiumInput
                             value={buscaCredor}
                             onChange={e => { setBuscaCredor(e.target.value); setDropdownCredor(true) }}
@@ -826,15 +826,15 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                           />
                           <PortalDropdown anchorRef={credorAnchorRef} open={dropdownCredor}>
                             {credoresFiltradosModal.length === 0 ? (
-                              <p className="px-4 py-3 text-sm text-gray-400">Nenhum credor encontrado.</p>
+                              <p className="px-4 py-3 text-sm text-ink-400">Nenhum credor encontrado.</p>
                             ) : credoresFiltradosModal.map(c => (
                               <button key={c.id} type="button" onMouseDown={() => selecionarCredor(c)}
-                                className="w-full text-left px-4 py-3 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-3 border-b border-gray-100 dark:border-slate-700/50 last:border-0">
+                                className="w-full text-left px-4 py-3 text-sm hover:bg-info-50 dark:hover:bg-info-900/20 flex items-center gap-3 border-b border-ink-100 last:border-0">
                                 <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-gray-800 dark:text-slate-200 truncate">{c.razao_social}</p>
-                                  <p className="text-xs text-gray-400 mt-0.5 font-mono">{c.cnpj_cpf}</p>
+                                  <p className="font-medium text-ink-800 truncate">{c.razao_social}</p>
+                                  <p className="text-xs text-ink-400 mt-0.5 font-mono">{c.cnpj_cpf}</p>
                                 </div>
-                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.status === 'ATIVO' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>{c.status}</span>
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.status === 'ATIVO' ? 'bg-emerald-100 text-emerald-700' : 'bg-ink-100 text-ink-500'}`}>{c.status}</span>
                               </button>
                             ))}
                           </PortalDropdown>
@@ -844,8 +844,8 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
 
                     {/* Dados bancários do credor (para pagamento deste contrato) */}
                     <div>
-                      <label className="flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">
-                        <Landmark className="w-3.5 h-3.5" /> Dados Bancários <span className="font-normal text-gray-400">(opcional)</span>
+                      <label className="flex items-center gap-1.5 text-xs font-medium text-ink-500 mb-1.5">
+                        <Landmark className="w-3.5 h-3.5" /> Dados Bancários <span className="font-normal text-ink-400">(opcional)</span>
                       </label>
                       <div className="grid grid-cols-3 gap-4">
                         <PremiumInput value={form.banco} onChange={e => set('banco', e.target.value)} placeholder="Banco" />
@@ -868,15 +868,15 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                 ) : (
                   <div className="grid grid-cols-12 gap-4">
                     <div className="col-span-4">
-                      <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Início</label>
+                      <label className="block text-xs font-medium text-ink-500 mb-1.5">Início</label>
                       <PremiumInput type="date" value={form.vigencia_inicio} onChange={e => set('vigencia_inicio', e.target.value)} />
                     </div>
                     <div className="col-span-4">
-                      <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Fim</label>
+                      <label className="block text-xs font-medium text-ink-500 mb-1.5">Fim</label>
                       <PremiumInput type="date" value={form.vigencia_fim} onChange={e => set('vigencia_fim', e.target.value)} />
                     </div>
                     <div className="col-span-4">
-                      <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Alerta (dias)</label>
+                      <label className="block text-xs font-medium text-ink-500 mb-1.5">Alerta (dias)</label>
                       <PremiumInput type="number" min={0} value={form.dias_alerta}
                         onChange={e => set('dias_alerta', Number(e.target.value))} placeholder="30" />
                     </div>
@@ -894,21 +894,21 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                 ) : (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div className="min-w-0">
-                      <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Secretaria</label>
+                      <label className="block text-xs font-medium text-ink-500 mb-1.5">Secretaria</label>
                       {secSel ? (
                         <div className="flex items-center gap-2 min-w-0">
                           <div className="flex-1 min-w-0 h-11 px-3 rounded-xl border border-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-700 flex items-center gap-2 text-sm overflow-hidden">
                             <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                            <span className="font-medium text-gray-800 dark:text-slate-100 truncate">{secSel.nome}</span>
-                            {secSel.sigla && <span className="text-gray-400 text-xs shrink-0 whitespace-nowrap">({secSel.sigla})</span>}
+                            <span className="font-medium text-ink-800 truncate">{secSel.nome}</span>
+                            {secSel.sigla && <span className="text-ink-400 text-xs shrink-0 whitespace-nowrap">({secSel.sigla})</span>}
                           </div>
-                          <button type="button" onClick={limparSecretaria} className="shrink-0 p-2 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors">
+                          <button type="button" onClick={limparSecretaria} className="shrink-0 p-2 rounded-xl border border-ink-200 text-ink-400 hover:text-danger-500 hover:bg-danger-50 transition-colors">
                             <X className="w-4 h-4" />
                           </button>
                         </div>
                       ) : (
                         <div className="relative" ref={secAnchorRef}>
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400" />
                           <PremiumInput
                             value={buscaSec}
                             onChange={e => { setBuscaSec(e.target.value); set('secretaria', e.target.value.toUpperCase()); setDropdownSec(true) }}
@@ -918,13 +918,13 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                           />
                           <PortalDropdown anchorRef={secAnchorRef} open={dropdownSec && secretarias.length > 0}>
                             {secFiltradas.length === 0 ? (
-                              <p className="px-4 py-3 text-sm text-gray-400">Nenhuma encontrada.</p>
+                              <p className="px-4 py-3 text-sm text-ink-400">Nenhuma encontrada.</p>
                             ) : secFiltradas.map(s => (
                               <button key={s.id} type="button" onMouseDown={() => selecionarSecretaria(s)}
-                                className="w-full text-left px-4 py-3 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-3 border-b border-gray-100 dark:border-slate-700/50 last:border-0">
+                                className="w-full text-left px-4 py-3 text-sm hover:bg-info-50 dark:hover:bg-info-900/20 flex items-center gap-3 border-b border-ink-100 last:border-0">
                                 <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-gray-800 dark:text-slate-200 truncate">{s.nome}</p>
-                                  {s.sigla && <p className="text-xs text-gray-400 font-mono mt-0.5">{s.sigla}</p>}
+                                  <p className="font-medium text-ink-800 truncate">{s.nome}</p>
+                                  {s.sigla && <p className="text-xs text-ink-400 font-mono mt-0.5">{s.sigla}</p>}
                                 </div>
                               </button>
                             ))}
@@ -933,7 +933,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                       )}
                     </div>
                     <div className="min-w-0">
-                      <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Fiscal</label>
+                      <label className="block text-xs font-medium text-ink-500 mb-1.5">Fiscal</label>
                       <div className="flex items-center gap-2 min-w-0">
                         <PremiumSelect value={form.fiscal} onChange={e => set('fiscal', e.target.value)} disabled={!secSel}
                           className={!secSel ? 'opacity-50 cursor-not-allowed' : ''}>
@@ -946,7 +946,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                         </PremiumSelect>
                         {form.fiscal && (
                           <button type="button" onClick={() => set('fiscal', '')}
-                            className="p-2 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0">
+                            className="p-2 rounded-xl border border-ink-200 text-ink-400 hover:text-danger-500 hover:bg-danger-50 transition-colors shrink-0">
                             <X className="w-4 h-4" />
                           </button>
                         )}
@@ -959,21 +959,21 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
               {/* SectionCard — Itens do Contrato */}
               <SectionCard icon={ShoppingBag} title="Itens do Contrato" subtitle="Produtos e serviços contratados">
                 {itensContrato.length === 0 ? (
-                  <div className="text-center py-6 text-gray-400 dark:text-slate-500">
+                  <div className="text-center py-6 text-ink-400">
                     <ShoppingBag className="w-8 h-8 mx-auto mb-2 opacity-40" />
                     <p className="text-sm">Nenhum item adicionado</p>
                     {!readonly && (
                       <button type="button" onClick={() => setShowAddPicker(true)}
-                        className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors">
+                        className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-medium transition-colors">
                         <Plus className="w-4 h-4" /> Adicionar Item
                       </button>
                     )}
                   </div>
                 ) : (
                   <>
-                    <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-slate-700">
+                    <div className="overflow-x-auto rounded-xl border border-ink-200">
                       <table className="w-full text-xs">
-                        <thead className="bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 uppercase tracking-wide">
+                        <thead className="bg-ink-100 text-ink-600 uppercase tracking-wide">
                           <tr>
                             <th className="px-3 py-2 text-left font-semibold w-8">#</th>
                             <th className="px-3 py-2 text-left font-semibold">Lote</th>
@@ -986,21 +986,21 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                             <th className="px-3 py-2 w-20" />
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
+                        <tbody className="divide-y divide-ink-100">
                           {itensContrato.map((it, idx) => (
-                            <tr key={it._id || idx} className="bg-white dark:bg-slate-900/50 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors group">
-                              <td className="px-3 py-2 text-gray-400 font-mono">{idx + 1}</td>
-                              <td className="px-3 py-2 font-mono text-gray-500">{it.lote || '—'}</td>
-                              <td className="px-3 py-2 font-mono text-gray-500">{it.codigo_item || '—'}</td>
+                            <tr key={it._id || idx} className="bg-surface hover:bg-info-50/30 dark:hover:bg-info-900/10 transition-colors group">
+                              <td className="px-3 py-2 text-ink-400 font-mono">{idx + 1}</td>
+                              <td className="px-3 py-2 font-mono text-ink-500">{it.lote || '—'}</td>
+                              <td className="px-3 py-2 font-mono text-ink-500">{it.codigo_item || '—'}</td>
                               <td className="px-3 py-2 max-w-xs">
-                                <p className="truncate text-gray-800 dark:text-slate-200 font-medium">{it.descricao || '—'}</p>
+                                <p className="truncate text-ink-800 font-medium">{it.descricao || '—'}</p>
                               </td>
-                              <td className="px-3 py-2 text-gray-500">{it.unidade || '—'}</td>
+                              <td className="px-3 py-2 text-ink-500">{it.unidade || '—'}</td>
                               <td className="px-3 py-2 text-right font-mono">{it.quantidade || '—'}</td>
                               <td className="px-3 py-2 text-right font-mono">
                                 {it.valor_unitario ? `R$ ${parseFloat(it.valor_unitario).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}
                               </td>
-                              <td className="px-3 py-2 text-right font-mono font-semibold text-blue-700 dark:text-blue-400 whitespace-nowrap">
+                              <td className="px-3 py-2 text-right font-mono font-semibold text-brand-700 dark:text-info-400 whitespace-nowrap">
                                 {it.valor_total ? `R$ ${parseFloat(it.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}
                               </td>
                               <td className="px-2 py-1.5">
@@ -1009,12 +1009,12 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                                     <>
                                       <button type="button" title="Editar item"
                                         onClick={() => setItemContratoModal({ idx, data: { ...it } })}
-                                        className="p-1.5 rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                                        className="p-1.5 rounded-lg text-info-500 hover:text-brand-700 hover:bg-info-50 dark:hover:bg-info-900/20 transition-colors">
                                         <Edit3 className="w-3.5 h-3.5" />
                                       </button>
                                       <button type="button" title="Remover item"
                                         onClick={() => removerItem(idx)}
-                                        className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                                        className="p-1.5 rounded-lg text-danger-400 hover:text-danger-600 hover:bg-danger-50 dark:hover:bg-danger-900/20 transition-colors">
                                         <X className="w-3.5 h-3.5" />
                                       </button>
                                     </>
@@ -1022,7 +1022,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                                   {readonly && (
                                     <button type="button" title="Ver item"
                                       onClick={() => setItemContratoModal({ idx, data: { ...it }, readonly: true })}
-                                      className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                                      className="p-1.5 rounded-lg text-ink-400 hover:text-ink-600 hover:bg-ink-50 transition-colors">
                                       <Eye className="w-3.5 h-3.5" />
                                     </button>
                                   )}
@@ -1031,10 +1031,10 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                             </tr>
                           ))}
                         </tbody>
-                        <tfoot className="bg-gray-100 dark:bg-slate-800 border-t-2 border-gray-200 dark:border-slate-700">
+                        <tfoot className="bg-ink-100 border-t-2 border-ink-200">
                           <tr>
-                            <td colSpan={7} className="px-3 py-2 text-right text-xs font-bold text-gray-600 dark:text-slate-300 uppercase tracking-wide">Total do Contrato:</td>
-                            <td className="px-3 py-2 text-right font-bold text-blue-700 dark:text-blue-400 font-mono whitespace-nowrap">{fmtBRL(valorTotalItens) || '—'}</td>
+                            <td colSpan={7} className="px-3 py-2 text-right text-xs font-bold text-ink-600 uppercase tracking-wide">Total do Contrato:</td>
+                            <td className="px-3 py-2 text-right font-bold text-brand-700 dark:text-info-400 font-mono whitespace-nowrap">{fmtBRL(valorTotalItens) || '—'}</td>
                             <td />
                           </tr>
                         </tfoot>
@@ -1042,7 +1042,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                     </div>
                     {!readonly && (
                       <button type="button" onClick={() => setShowAddPicker(true)}
-                        className="mt-3 flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors">
+                        className="mt-3 flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm font-medium transition-colors">
                         <Plus className="w-4 h-4" /> Adicionar Item
                       </button>
                     )}
@@ -1068,10 +1068,10 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
               )}
               {itemContratoModal?.readonly && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
-                  <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full p-6 space-y-3" style={{ maxWidth: '480px' }}>
+                  <div className="bg-surface rounded-2xl shadow-2xl w-full p-6 space-y-3" style={{ maxWidth: '480px' }}>
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-sm font-bold text-gray-900 dark:text-white">Detalhes do Item</h3>
-                      <button onClick={() => setItemContratoModal(null)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-400"><X className="w-4 h-4" /></button>
+                      <h3 className="text-sm font-bold text-ink-900 dark:text-white">Detalhes do Item</h3>
+                      <button onClick={() => setItemContratoModal(null)} className="p-1.5 rounded-lg hover:bg-ink-100 text-ink-400"><X className="w-4 h-4" /></button>
                     </div>
                     {[
                       ['Lote', itemContratoModal.data.lote],
@@ -1082,13 +1082,13 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                       ['Valor Unitário', itemContratoModal.data.valor_unitario ? `R$ ${parseFloat(itemContratoModal.data.valor_unitario).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : null],
                       ['Valor Total', itemContratoModal.data.valor_total ? `R$ ${parseFloat(itemContratoModal.data.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : null],
                     ].map(([label, val]) => val ? (
-                      <div key={label} className="flex justify-between text-sm border-b border-gray-100 dark:border-slate-700 pb-2">
-                        <span className="text-gray-500 dark:text-slate-400">{label}</span>
-                        <span className="font-medium text-gray-800 dark:text-slate-200">{val}</span>
+                      <div key={label} className="flex justify-between text-sm border-b border-ink-100 pb-2">
+                        <span className="text-ink-500">{label}</span>
+                        <span className="font-medium text-ink-800">{val}</span>
                       </div>
                     ) : null)}
                     <div className="flex justify-end pt-1">
-                      <button onClick={() => setItemContratoModal(null)} className="px-4 py-2 text-sm rounded-xl border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700">Fechar</button>
+                      <button onClick={() => setItemContratoModal(null)} className="px-4 py-2 text-sm rounded-xl border border-ink-200 text-ink-600 hover:bg-ink-50">Fechar</button>
                     </div>
                   </div>
                 </div>
@@ -1099,7 +1099,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                 <div className="space-y-4">
                   {/* Valor */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Valor Total</label>
+                    <label className="block text-xs font-medium text-ink-500 mb-1.5">Valor Total</label>
                     {readonly ? (
                       <ViewField label="" value={valorExibido || '—'} mono />
                     ) : (
@@ -1107,10 +1107,10 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                         <PremiumInput value={valorExibido}
                           onChange={e => { if (itensContrato.length === 0) set('valor', e.target.value) }}
                           readOnly={itensContrato.length > 0}
-                          className={`w-52 font-mono ${itensContrato.length > 0 ? 'bg-gray-100 dark:bg-slate-700 cursor-default font-bold text-blue-700 dark:text-blue-400' : ''}`}
+                          className={`w-52 font-mono ${itensContrato.length > 0 ? 'bg-ink-100 cursor-default font-bold text-brand-700 dark:text-info-400' : ''}`}
                           placeholder="R$ 0,00" />
                         {itensContrato.length > 0 && (
-                          <span className="text-xs text-gray-500">Calculado pelos itens</span>
+                          <span className="text-xs text-ink-500">Calculado pelos itens</span>
                         )}
                       </div>
                     )}
@@ -1118,13 +1118,13 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
 
                   {/* Fontes de Recurso */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Fontes de Recurso</label>
+                    <label className="block text-xs font-medium text-ink-500 mb-1.5">Fontes de Recurso</label>
                     {readonly ? (
                       <div className="flex flex-wrap gap-2">
                         {fontesRecurso.filter(Boolean).length === 0
-                          ? <span className="text-sm text-gray-400">—</span>
+                          ? <span className="text-sm text-ink-400">—</span>
                           : fontesRecurso.filter(Boolean).map((f, i) => (
-                            <span key={i} className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full text-xs font-medium">{f}</span>
+                            <span key={i} className="px-3 py-1 bg-info-100 dark:bg-info-900/30 text-brand-700 dark:text-info-400 rounded-full text-xs font-medium">{f}</span>
                           ))}
                       </div>
                     ) : (
@@ -1136,14 +1136,14 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                               className="flex-1 uppercase" placeholder="Ex: PRÓPRIO, FEDERAL, CONVÊNIO..." />
                             {fontesRecurso.length > 1 && (
                               <button type="button" onClick={() => setFontesRecurso(p => p.filter((_, j) => j !== i))}
-                                className="p-2 rounded-xl border border-gray-200 dark:border-slate-600 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                                className="p-2 rounded-xl border border-ink-200 text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-900/20 transition-colors">
                                 <X className="w-4 h-4" />
                               </button>
                             )}
                           </div>
                         ))}
                         <button type="button" onClick={() => setFontesRecurso(p => [...p, ''])}
-                          className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                          className="flex items-center gap-1 text-xs text-brand-600 dark:text-info-400 hover:underline">
                           <Plus className="w-3 h-3" /> Adicionar fonte
                         </button>
                       </div>
@@ -1152,11 +1152,11 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
 
                   {/* Dotações */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1.5">Dotações Orçamentárias</label>
+                    <label className="block text-xs font-medium text-ink-500 mb-1.5">Dotações Orçamentárias</label>
                     {readonly ? (
                       <div className="flex flex-wrap gap-2">
                         {dotacoes.filter(Boolean).length === 0
-                          ? <span className="text-sm text-gray-400">—</span>
+                          ? <span className="text-sm text-ink-400">—</span>
                           : dotacoes.filter(Boolean).map((d, i) => (
                             <span key={i} className="px-3 py-1 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 rounded-full text-xs font-mono">{d}</span>
                           ))}
@@ -1170,14 +1170,14 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                               className="flex-1 font-mono" placeholder="Ex: 3.3.90.39.00" />
                             {dotacoes.length > 1 && (
                               <button type="button" onClick={() => setDotacoes(p => p.filter((_, j) => j !== i))}
-                                className="p-2 rounded-xl border border-gray-200 dark:border-slate-600 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                                className="p-2 rounded-xl border border-ink-200 text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-900/20 transition-colors">
                                 <X className="w-4 h-4" />
                               </button>
                             )}
                           </div>
                         ))}
                         <button type="button" onClick={() => setDotacoes(p => [...p, ''])}
-                          className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                          className="flex items-center gap-1 text-xs text-brand-600 dark:text-info-400 hover:underline">
                           <Plus className="w-3 h-3" /> Adicionar dotação
                         </button>
                       </div>
@@ -1221,14 +1221,14 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
         )}
 
         {/* ── Footer ───────────────────────────────────────────────────── */}
-        <div className="bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 px-6 py-3 flex items-center gap-3 shrink-0">
+        <div className="bg-surface border-t border-ink-200 px-6 py-3 flex items-center gap-3 shrink-0">
           <div className="flex-1 min-w-0">
             {contrato?.id && (
-              <span className="text-xs text-gray-400 font-mono">ID #{contrato.id}</span>
+              <span className="text-xs text-ink-400 font-mono">ID #{contrato.id}</span>
             )}
             {itensContrato.length > 0 && (
-              <span className="text-xs text-gray-500 ml-3">
-                {itensContrato.length} item(ns) · <strong className="text-blue-700 dark:text-blue-400">{fmtBRL(valorTotalItens)}</strong>
+              <span className="text-xs text-ink-500 ml-3">
+                {itensContrato.length} item(ns) · <strong className="text-brand-700 dark:text-info-400">{fmtBRL(valorTotalItens)}</strong>
               </span>
             )}
           </div>
@@ -1239,7 +1239,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
             </button>
           )}
           <button onClick={onClose}
-            className="flex items-center gap-2 px-5 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 rounded-xl text-sm font-semibold transition-all">
+            className="flex items-center gap-2 px-5 py-2 bg-ink-100 hover:bg-ink-200 text-ink-700 rounded-xl text-sm font-semibold transition-all">
             {readonly ? 'Fechar' : 'Cancelar'}
           </button>
         </div>
@@ -1264,45 +1264,45 @@ function ConfirmModalContrato({ contrato, onConfirm, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md">
+      <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-md">
         <div className="p-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${temVinculo ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
-              <AlertTriangle className={`w-5 h-5 ${temVinculo ? 'text-amber-600' : 'text-red-600'}`} />
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${temVinculo ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-danger-100 dark:bg-danger-900/30'}`}>
+              <AlertTriangle className={`w-5 h-5 ${temVinculo ? 'text-amber-600' : 'text-danger-600'}`} />
             </div>
             <div>
-              <h3 className="font-bold text-gray-800 dark:text-slate-100">
+              <h3 className="font-bold text-ink-800">
                 {loading ? 'Excluir Contrato' : temVinculo ? 'Contrato Vinculado — Não é possível excluir' : 'Excluir Contrato'}
               </h3>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-ink-500">
                 {loading ? 'Verificando vínculos...' : temVinculo ? 'Exclua as ordens abaixo antes de excluir o contrato.' : 'Esta ação não pode ser desfeita.'}
               </p>
             </div>
           </div>
 
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-3 mb-4">
-            <p className="text-sm text-red-700 dark:text-red-300 font-medium">{contrato.numero_contrato}</p>
-            <p className="text-xs text-red-500 mt-1 truncate">{contrato.objeto}</p>
+          <div className="bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-700 rounded-lg p-3 mb-4">
+            <p className="text-sm text-danger-700 dark:text-danger-300 font-medium">{contrato.numero_contrato}</p>
+            <p className="text-xs text-danger-500 mt-1 truncate">{contrato.objeto}</p>
           </div>
 
           {loading ? (
-            <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-slate-500 py-2 mb-2">
-              <span className="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
+            <div className="flex items-center gap-2 text-sm text-ink-400 py-2 mb-2">
+              <span className="w-4 h-4 border-2 border-ink-300 border-t-blue-500 rounded-full animate-spin" />
               Verificando ordens vinculadas...
             </div>
           ) : erro ? (
-            <p className="text-sm text-red-500 mb-2">{erro}</p>
+            <p className="text-sm text-danger-500 mb-2">{erro}</p>
           ) : temVinculo && (
             <div className="mb-4 max-h-56 overflow-y-auto">
-              <p className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">
+              <p className="text-xs font-bold text-ink-500 uppercase tracking-wide mb-1.5">
                 Ordens de Compra/Serviço ({ordens.length})
               </p>
               <div className="space-y-1">
                 {ordens.map((o, i) => (
-                  <div key={i} className="text-xs bg-gray-50 dark:bg-slate-700/50 rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2">
+                  <div key={i} className="text-xs bg-ink-50 rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2">
                     <span className="font-semibold text-purple-600 dark:text-purple-400">{o.numero}</span>
-                    <span className="text-gray-500 dark:text-slate-400 truncate">{o.tipo === 'COMPRA' ? 'Compra' : 'Serviço'}</span>
-                    <span className="text-gray-400 dark:text-slate-500 shrink-0">{o.status}</span>
+                    <span className="text-ink-500 truncate">{o.tipo === 'COMPRA' ? 'Compra' : 'Serviço'}</span>
+                    <span className="text-ink-400 shrink-0">{o.status}</span>
                   </div>
                 ))}
               </div>
@@ -1315,7 +1315,7 @@ function ConfirmModalContrato({ contrato, onConfirm, onClose }) {
             </button>
             {!loading && !temVinculo && (
               <button onClick={onConfirm}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-colors">
+                className="px-4 py-2 bg-danger-600 hover:bg-danger-700 text-white rounded-lg text-sm font-semibold transition-colors">
                 Sim, Excluir
               </button>
             )}
@@ -1433,11 +1433,11 @@ function TabContratos() {
   }
 
   const statusCor = (s) => {
-    if (s === 'ATIVO')      return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-    if (s === 'ENCERRADO')  return 'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-400'
+    if (s === 'ATIVO')      return 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400'
+    if (s === 'ENCERRADO')  return 'bg-ink-100 text-ink-600'
     if (s === 'SUSPENSO')   return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-    if (s === 'RESCINDIDO') return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-    return 'bg-gray-100 text-gray-600'
+    if (s === 'RESCINDIDO') return 'bg-danger-100 text-danger-700 dark:bg-danger-900/30 dark:text-danger-400'
+    return 'bg-ink-100 text-ink-600'
   }
 
   return (
@@ -1445,16 +1445,16 @@ function TabContratos() {
 
       {/* ── Filtros ── */}
       <div className="card p-4 space-y-3">
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Opções para filtro</p>
+        <p className="text-[10px] font-bold text-ink-400 uppercase tracking-widest">Opções para filtro</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">N° Contrato</label>
+            <label className="block text-xs font-medium text-ink-500 mb-1">N° Contrato</label>
             <input value={filtros.numero} onChange={e => setF('numero', e.target.value)}
               onKeyDown={e => e.key === 'Enter' && pesquisar()}
               placeholder="Ex: 001/2026" className="input-field text-sm" />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Objeto</label>
+            <label className="block text-xs font-medium text-ink-500 mb-1">Objeto</label>
             <input value={filtros.objeto} onChange={e => setF('objeto', e.target.value)}
               onKeyDown={e => e.key === 'Enter' && pesquisar()}
               placeholder="Pesquisar pelo objeto" className="input-field text-sm" />
@@ -1462,20 +1462,20 @@ function TabContratos() {
         </div>
         <div className="flex flex-wrap gap-3 items-end">
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Credor</label>
+            <label className="block text-xs font-medium text-ink-500 mb-1">Credor</label>
             <input value={filtros.credor} onChange={e => setF('credor', e.target.value)}
               onKeyDown={e => e.key === 'Enter' && pesquisar()}
               placeholder="Nome do credor..." className="input-field text-sm" />
           </div>
           <div className="w-48">
-            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Modalidade</label>
+            <label className="block text-xs font-medium text-ink-500 mb-1">Modalidade</label>
             <select value={filtros.modalidade} onChange={e => setF('modalidade', e.target.value)} className="input-field text-sm">
               <option value="">Todas</option>
               {MODALIDADES.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
           </div>
           <div className="w-36">
-            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Status</label>
+            <label className="block text-xs font-medium text-ink-500 mb-1">Status</label>
             <select value={filtros.status} onChange={e => setF('status', e.target.value)} className="input-field text-sm">
               <option value="">Todos</option>
               {STATUS_CONTRATO.map(s => <option key={s} value={s}>{s}</option>)}
@@ -1483,11 +1483,11 @@ function TabContratos() {
           </div>
           <div className="flex gap-2 pb-0.5 ml-auto">
             <button onClick={limpar}
-              className="px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
+              className="px-3 py-1.5 text-xs rounded-lg border border-ink-300 text-ink-600 hover:bg-ink-100 transition-colors">
               Limpar
             </button>
             <button onClick={pesquisar}
-              className="flex items-center gap-1.5 px-4 py-1.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm transition-colors">
+              className="flex items-center gap-1.5 px-4 py-1.5 text-xs rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-sm transition-colors">
               <Search className="w-3.5 h-3.5" /> Pesquisar
             </button>
           </div>
@@ -1499,7 +1499,7 @@ function TabContratos() {
         <div className="overflow-x-auto" style={{ maxHeight: '380px', overflowY: 'auto' }}>
           <table className="w-full text-sm">
             <thead className="sticky top-0 z-10">
-              <tr className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs select-none uppercase tracking-wider">
+              <tr className="bg-ink-100 text-ink-600 text-xs select-none uppercase tracking-wider">
                 {[
                   { col: 'tipo_contrato',   label: 'Tipo',        cls: 'text-left px-3 py-2.5 font-semibold whitespace-nowrap w-24' },
                   { col: 'numero_contrato', label: 'N° Contrato', cls: 'text-left px-3 py-2.5 font-semibold whitespace-nowrap w-32' },
@@ -1517,10 +1517,10 @@ function TabContratos() {
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
+            <tbody className="divide-y divide-ink-200">
               {contratosFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="text-center py-14 text-gray-400 dark:text-slate-500">
+                  <td colSpan={9} className="text-center py-14 text-ink-400">
                     <FileText className="w-10 h-10 mx-auto mb-2 opacity-30" />
                     Nenhum contrato encontrado
                   </td>
@@ -1535,23 +1535,23 @@ function TabContratos() {
                     onDoubleClick={() => { setSelecionado(c.id); setModal('visualizar') }}
                     className={`cursor-pointer transition-colors text-xs ${
                       sel
-                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 text-gray-700 dark:text-slate-300'
+                        ? 'bg-info-100 dark:bg-info-900/30 text-info-900 dark:text-info-100'
+                        : 'hover:bg-ink-50 text-ink-700'
                     }`}
                   >
-                    <td className="px-3 py-2 text-gray-500">{c.tipo_contrato || '—'}</td>
-                    <td className="px-3 py-2 font-mono font-semibold text-blue-600 dark:text-blue-400">{c.numero_contrato}</td>
+                    <td className="px-3 py-2 text-ink-500">{c.tipo_contrato || '—'}</td>
+                    <td className="px-3 py-2 font-mono font-semibold text-brand-600 dark:text-info-400">{c.numero_contrato}</td>
                     <td className="px-3 py-2 max-w-[200px] truncate font-medium">{nomeCredor(c.credor_id)}</td>
                     <td className="px-3 py-2 max-w-[200px] truncate">{c.objeto || '—'}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{c.modalidade || '—'}</td>
                     <td className="px-3 py-2 text-right font-semibold whitespace-nowrap">{fmtValor(c.valor)}</td>
                     <td className="px-3 py-2 whitespace-nowrap hidden sm:table-cell">{fmtData(c.vigencia_fim)}</td>
                     <td className="px-3 py-2 text-center hidden sm:table-cell">
-                      {dv === null ? <span className="text-gray-300 dark:text-slate-600">—</span>
-                        : dv < 0   ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">{Math.abs(dv)}d exp.</span>
-                        : dv === 0 ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-600">Hoje</span>
-                        : dv <= 30 ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">{dv}d</span>
-                        :            <span className="text-xs text-gray-400 dark:text-slate-500">{dv}d</span>}
+                      {dv === null ? <span className="text-ink-300">—</span>
+                        : dv < 0   ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-danger-100 text-danger-600 dark:bg-danger-900/30 dark:text-danger-400">{Math.abs(dv)}d exp.</span>
+                        : dv === 0 ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-danger-100 text-danger-600">Hoje</span>
+                        : dv <= 30 ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-warning-100 text-warning-700 dark:bg-warning-900/30 dark:text-warning-400">{dv}d</span>
+                        :            <span className="text-xs text-ink-400">{dv}d</span>}
                     </td>
                     <td className="px-3 py-2 text-center">
                       <span className={`font-bold px-2 py-0.5 rounded-full text-xs ${statusCor(c.status)}`}>
@@ -1565,13 +1565,13 @@ function TabContratos() {
           </table>
         </div>
 
-        <div className="px-4 py-2 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700/50 flex items-center justify-between">
-          <span className="text-xs text-gray-500">
+        <div className="px-4 py-2 bg-ink-50 border-t border-ink-200 flex items-center justify-between">
+          <span className="text-xs text-ink-500">
             {contratoSelecionado
-              ? <span className="text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1"><Check className="w-3 h-3" /> {contratoSelecionado.numero_contrato}</span>
-              : <span className="text-gray-400">Clique para selecionar · Duplo clique para visualizar</span>}
+              ? <span className="text-brand-600 dark:text-info-400 font-medium flex items-center gap-1"><Check className="w-3 h-3" /> {contratoSelecionado.numero_contrato}</span>
+              : <span className="text-ink-400">Clique para selecionar · Duplo clique para visualizar</span>}
           </span>
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-ink-500">
             Foram encontrados <strong>{contratosFiltrados.length}</strong> registro(s)
           </span>
         </div>
@@ -1580,16 +1580,16 @@ function TabContratos() {
       {/* ── Paginação ── */}
       {totalPagsCtr > 1 && (
         <div className="flex flex-wrap items-center justify-between gap-3 mt-1">
-          <p className="text-xs text-gray-500 dark:text-slate-400">
+          <p className="text-xs text-ink-500">
             Mostrando{' '}
-            <span className="font-semibold text-gray-700 dark:text-slate-300">
+            <span className="font-semibold text-ink-700">
               {(paginaCtr - 1) * PER_PAGE_CTR + 1}–{Math.min(paginaCtr * PER_PAGE_CTR, contratosFiltrados.length)}
             </span>{' '}de{' '}
-            <span className="font-semibold text-gray-700 dark:text-slate-300">{contratosFiltrados.length}</span>{' '}contratos
+            <span className="font-semibold text-ink-700">{contratosFiltrados.length}</span>{' '}contratos
           </p>
           <div className="flex items-center gap-1">
             <button onClick={() => setPaginaCtr(p => Math.max(1, p - 1))} disabled={paginaCtr === 1}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              className="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-ink-200 text-ink-600 hover:bg-ink-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
               ← Anterior
             </button>
             {(() => {
@@ -1599,15 +1599,15 @@ function TabContratos() {
                 else if (pages[pages.length - 1] !== '...') pages.push('...')
               }
               return pages.map((p, idx) => p === '...'
-                ? <span key={`dots-${idx}`} className="px-1.5 text-xs text-gray-400 dark:text-slate-500">…</span>
+                ? <span key={`dots-${idx}`} className="px-1.5 text-xs text-ink-400">…</span>
                 : <button key={p} onClick={() => setPaginaCtr(p)}
                     className={`min-w-[32px] px-2 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                      paginaCtr === p ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700'
+                      paginaCtr === p ? 'bg-brand-600 border-brand-600 text-white shadow-sm' : 'border-ink-200 text-ink-600 hover:bg-ink-100'
                     }`}>{p}</button>
               )
             })()}
             <button onClick={() => setPaginaCtr(p => Math.min(totalPagsCtr, p + 1))} disabled={paginaCtr === totalPagsCtr}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              className="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-ink-200 text-ink-600 hover:bg-ink-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
               Próximo →
             </button>
           </div>
@@ -1617,7 +1617,7 @@ function TabContratos() {
       {/* ── Barra de Ações ── */}
       <div className="flex flex-wrap items-center gap-2 pb-2">
         <button onClick={() => setModal('novo')}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
           <Plus className="w-4 h-4" /> Incluir
         </button>
         <button onClick={() => podeAgir && setModal('editar')} disabled={!podeAgir}
@@ -1625,11 +1625,11 @@ function TabContratos() {
           <Edit3 className="w-4 h-4" /> Alterar
         </button>
         <button onClick={() => podeAgir && setModal('excluir')} disabled={!podeAgir}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-danger-600 hover:bg-danger-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
           <Trash2 className="w-4 h-4" /> Excluir
         </button>
         <button onClick={() => podeAgir && setModal('visualizar')} disabled={!podeAgir}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-ink-600 hover:bg-ink-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
           <Eye className="w-4 h-4" /> Visualizar
         </button>
       </div>

@@ -11,7 +11,7 @@ import { fmt, fmtMoney, STATUS_INVENTARIO } from './almoxConstants'
 
 // ─── Badge de status ──────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
-  const cfg = STATUS_INVENTARIO[status] || { label: status, color: 'bg-gray-100 text-gray-600' }
+  const cfg = STATUS_INVENTARIO[status] || { label: status, color: 'bg-ink-100 text-ink-600' }
   return (
     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${cfg.color}`}>{cfg.label}</span>
   )
@@ -75,17 +75,17 @@ function InventarioDetalheModal({ inventario, onClose, onRefresh }) {
       <div className="space-y-4">
         {/* Resumo */}
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 text-center">
-            <p className="text-xl font-bold text-blue-700 dark:text-blue-300">{itens.length}</p>
-            <p className="text-xs text-blue-600 dark:text-blue-400">Total de itens</p>
+          <div className="bg-info-50 dark:bg-info-900/20 rounded-lg p-3 text-center">
+            <p className="text-xl font-bold text-brand-700 dark:text-info-300">{itens.length}</p>
+            <p className="text-xs text-brand-600 dark:text-info-400">Total de itens</p>
           </div>
-          <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 text-center">
-            <p className="text-xl font-bold text-green-700 dark:text-green-300">{totalContados}</p>
-            <p className="text-xs text-green-600 dark:text-green-400">Contados</p>
+          <div className="bg-success-50 dark:bg-success-900/20 rounded-lg p-3 text-center">
+            <p className="text-xl font-bold text-success-700 dark:text-success-300">{totalContados}</p>
+            <p className="text-xs text-success-600 dark:text-success-400">Contados</p>
           </div>
-          <div className={`rounded-lg p-3 text-center ${totalDiverg > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-gray-50 dark:bg-gray-700/40'}`}>
-            <p className={`text-xl font-bold ${totalDiverg > 0 ? 'text-red-700 dark:text-red-300' : 'text-gray-500'}`}>{totalDiverg}</p>
-            <p className={`text-xs ${totalDiverg > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400'}`}>Divergencias</p>
+          <div className={`rounded-lg p-3 text-center ${totalDiverg > 0 ? 'bg-danger-50 dark:bg-danger-900/20' : 'bg-ink-50'}`}>
+            <p className={`text-xl font-bold ${totalDiverg > 0 ? 'text-danger-700 dark:text-danger-300' : 'text-ink-500'}`}>{totalDiverg}</p>
+            <p className={`text-xs ${totalDiverg > 0 ? 'text-danger-600 dark:text-danger-400' : 'text-ink-400'}`}>Divergencias</p>
           </div>
         </div>
 
@@ -94,32 +94,32 @@ function InventarioDetalheModal({ inventario, onClose, onRefresh }) {
           value={busca}
           onChange={e => setBusca(e.target.value)}
           placeholder="Buscar item..."
-          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+          className="w-full border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900 focus:ring-2 focus:ring-brand-500"
         />
 
         {/* Lista de itens */}
         {loading ? (
           <LoadingBar label="Carregando itens do inventário..." />
         ) : (
-          <div className="max-h-[50vh] overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg">
+          <div className="max-h-[50vh] overflow-y-auto border border-ink-200 rounded-lg">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-700/50 sticky top-0">
+              <thead className="bg-ink-50 sticky top-0">
                 <tr>
                   {['Item', 'Qtd Sistema', 'Qtd Contada', 'Diferenca', ''].map(h => (
-                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{h}</th>
+                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-ink-500 uppercase">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              <tbody className="divide-y divide-ink-100">
                 {itensFiltrados.map(linha => {
                   const diverg = linha.contado && parseFloat(linha.diferenca) !== 0
                   return (
-                    <tr key={linha.id} className={`${diverg ? 'bg-red-50/50 dark:bg-red-900/10' : ''} hover:bg-gray-50 dark:hover:bg-gray-700/40`}>
+                    <tr key={linha.id} className={`${diverg ? 'bg-danger-50/50 dark:bg-danger-900/10' : ''} hover:bg-ink-50`}>
                       <td className="px-3 py-2">
-                        <p className="font-medium text-gray-900 dark:text-white text-xs">{linha.item?.nome}</p>
-                        <p className="text-xs text-gray-400">{linha.item?.codigo} · {linha.item?.corredor && `${linha.item.corredor}-${linha.item.prateleira ?? ''}`}</p>
+                        <p className="font-medium text-ink-900 dark:text-white text-xs">{linha.item?.nome}</p>
+                        <p className="text-xs text-ink-400">{linha.item?.codigo} · {linha.item?.corredor && `${linha.item.corredor}-${linha.item.prateleira ?? ''}`}</p>
                       </td>
-                      <td className="px-3 py-2 text-right text-xs text-gray-600 dark:text-gray-400">
+                      <td className="px-3 py-2 text-right text-xs text-ink-600">
                         {fmt(linha.quantidade_sistema)} {linha.item?.unidade}
                       </td>
                       <td className="px-3 py-2">
@@ -129,25 +129,25 @@ function InventarioDetalheModal({ inventario, onClose, onRefresh }) {
                             defaultValue={linha.quantidade_contada ?? ''}
                             onBlur={e => handleContar(linha, e.target.value)}
                             disabled={salvando === linha.id}
-                            className="w-28 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
+                            className="w-28 border border-ink-300 rounded-sm px-2 py-1 text-xs bg-surface text-ink-900 focus:ring-1 focus:ring-brand-500"
                           />
                         ) : (
-                          <span className="text-xs text-gray-600 dark:text-gray-400">{linha.contado ? fmt(linha.quantidade_contada) : '—'}</span>
+                          <span className="text-xs text-ink-600">{linha.contado ? fmt(linha.quantidade_contada) : '—'}</span>
                         )}
                       </td>
                       <td className="px-3 py-2 text-right">
                         {linha.contado ? (
-                          <span className={`text-xs font-semibold ${parseFloat(linha.diferenca) === 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          <span className={`text-xs font-semibold ${parseFloat(linha.diferenca) === 0 ? 'text-success-600' : 'text-danger-600'}`}>
                             {parseFloat(linha.diferenca) > 0 ? '+' : ''}{fmt(linha.diferenca)}
                           </span>
-                        ) : <span className="text-xs text-gray-300">—</span>}
+                        ) : <span className="text-xs text-ink-300">—</span>}
                       </td>
                       <td className="px-3 py-2 text-center">
                         {linha.contado && parseFloat(linha.diferenca) === 0 && (
-                          <CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" />
+                          <CheckCircle2 className="h-4 w-4 text-success-500 mx-auto" />
                         )}
                         {linha.contado && parseFloat(linha.diferenca) !== 0 && (
-                          <AlertTriangle className="h-4 w-4 text-red-500 mx-auto" />
+                          <AlertTriangle className="h-4 w-4 text-danger-500 mx-auto" />
                         )}
                       </td>
                     </tr>
@@ -165,7 +165,7 @@ function InventarioDetalheModal({ inventario, onClose, onRefresh }) {
             <button
               onClick={() => setConfirmarConcluir(true)}
               disabled={concluindo || totalContados === 0}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
+              className="px-4 py-2 bg-success-600 text-white rounded-lg text-sm font-medium hover:bg-success-700 disabled:opacity-50 transition-colors"
             >
               {concluindo ? 'Concluindo...' : 'Concluir Inventario'}
             </button>
@@ -192,20 +192,20 @@ function NovoInventarioModal({ onClose, onSave, saving, erro }) {
     <AlmoxModal title="Iniciar Novo Inventario" onClose={onClose}>
       <div className="space-y-4">
         {erro && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 rounded-lg px-4 py-2 text-sm">{erro}</div>
+          <div className="bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-700 text-danger-700 dark:text-danger-400 rounded-lg px-4 py-2 text-sm">{erro}</div>
         )}
-        <p className="text-sm text-gray-600 dark:text-gray-300">
+        <p className="text-sm text-ink-600">
           Sera criado um novo inventario com foto do estoque atual de todos os itens ativos.
           Voce podera lancar as contagens fisicas em seguida.
         </p>
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Observacao</label>
+          <label className="block text-sm font-medium text-ink-700 mb-1">Observacao</label>
           <textarea
             value={obs}
             onChange={e => setObs(e.target.value)}
             rows={2}
             placeholder="Ex: Inventario anual 2026"
-            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 resize-none"
+            className="w-full border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900 focus:ring-2 focus:ring-brand-500 resize-none"
           />
         </div>
         <div className="flex justify-end gap-3 pt-2">
@@ -213,7 +213,7 @@ function NovoInventarioModal({ onClose, onSave, saving, erro }) {
           <button
             onClick={() => onSave({ observacao: obs })}
             disabled={saving}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 disabled:opacity-50 transition-colors"
           >
             {saving ? 'Criando...' : 'Iniciar Inventario'}
           </button>
@@ -231,16 +231,16 @@ function EditarInventarioModal({ inventario, onClose, onSave, saving, erro }) {
     <AlmoxModal title={`Editar Inventário ${inventario.numero}`} onClose={onClose}>
       <div className="space-y-4">
         {erro && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 rounded-lg px-4 py-2 text-sm">{erro}</div>
+          <div className="bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-700 text-danger-700 dark:text-danger-400 rounded-lg px-4 py-2 text-sm">{erro}</div>
         )}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Observação</label>
+          <label className="block text-sm font-medium text-ink-700 mb-1">Observação</label>
           <textarea
             value={obs}
             onChange={e => setObs(e.target.value)}
             rows={3}
             placeholder="Observação do inventário..."
-            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 resize-none"
+            className="w-full border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900 focus:ring-2 focus:ring-brand-500 resize-none"
           />
         </div>
         <div className="flex justify-end gap-3 pt-2">
@@ -248,7 +248,7 @@ function EditarInventarioModal({ inventario, onClose, onSave, saving, erro }) {
           <button
             onClick={() => onSave({ observacao: obs })}
             disabled={saving}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 disabled:opacity-50 transition-colors"
           >
             {saving ? 'Salvando...' : 'Salvar'}
           </button>
@@ -262,16 +262,16 @@ function EditarInventarioModal({ inventario, onClose, onSave, saving, erro }) {
 function ConfirmarExclusaoModal({ inventario, onClose, onConfirm, deleting }) {
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm">
+      <div className="bg-surface rounded-xl shadow-xl w-full max-w-sm">
         <div className="p-6">
           <div className="flex items-start gap-4">
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-              <Trash2 className="h-5 w-5 text-red-600 dark:text-red-400" />
+            <div className="shrink-0 w-10 h-10 rounded-full bg-danger-100 dark:bg-danger-900/30 flex items-center justify-center">
+              <Trash2 className="h-5 w-5 text-danger-600 dark:text-danger-400" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-gray-900 dark:text-white">Excluir inventário</h3>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Tem certeza que deseja excluir o inventário <span className="font-semibold text-gray-700 dark:text-gray-300">{inventario.numero}</span>? Esta ação não pode ser desfeita.
+              <h3 className="text-base font-semibold text-ink-900 dark:text-white">Excluir inventário</h3>
+              <p className="mt-1 text-sm text-ink-500">
+                Tem certeza que deseja excluir o inventário <span className="font-semibold text-ink-700">{inventario.numero}</span>? Esta ação não pode ser desfeita.
               </p>
             </div>
           </div>
@@ -280,14 +280,14 @@ function ConfirmarExclusaoModal({ inventario, onClose, onConfirm, deleting }) {
           <button
             onClick={onClose}
             disabled={deleting}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-ink-700 bg-surface border border-ink-300 rounded-lg hover:bg-ink-50 disabled:opacity-50 transition-colors"
           >
             Cancelar
           </button>
           <button
             onClick={onConfirm}
             disabled={deleting}
-            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+            className="px-4 py-2 text-sm font-medium text-white bg-danger-600 rounded-lg hover:bg-danger-700 disabled:opacity-50 transition-colors flex items-center gap-2"
           >
             {deleting ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
             {deleting ? 'Excluindo...' : 'Excluir'}
@@ -366,20 +366,20 @@ export default function AlmoxInventario() {
           <select
             value={filtroStatus}
             onChange={e => setFiltroStatus(e.target.value)}
-            className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            className="border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900"
           >
             <option value="">Todos os status</option>
             {Object.entries(STATUS_INVENTARIO).map(([k, v]) => (
               <option key={k} value={k}>{v.label}</option>
             ))}
           </select>
-          <button onClick={load} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+          <button onClick={load} className="p-2 text-ink-400 hover:text-ink-600 rounded-lg hover:bg-ink-100">
             <RefreshCw className="h-4 w-4" />
           </button>
         </div>
         <button
           onClick={() => { setNovoModal(true); setErro('') }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors"
         >
           <Plus className="h-4 w-4" /> Novo Inventario
         </button>
@@ -389,45 +389,45 @@ export default function AlmoxInventario() {
       {loading ? (
         <LoadingBar label="Carregando inventários..." />
       ) : inventarios.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-gray-400 dark:text-gray-500">
+        <div className="flex flex-col items-center justify-center py-16 text-ink-400">
           <ClipboardList className="h-12 w-12 mb-3 opacity-30" />
           <p className="font-medium">Nenhum inventario encontrado</p>
           <p className="text-sm mt-1">Clique em "Novo Inventario" para iniciar a contagem periodica.</p>
         </div>
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="bg-surface rounded-xl border border-ink-200 overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+            <thead className="bg-ink-50 border-b border-ink-200">
               <tr>
                 {['Numero', 'Data Inicio', 'Data Conclusao', 'Status', 'Itens', 'Divergencias', 'Responsavel', ''].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{h}</th>
+                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-ink-500 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+            <tbody className="divide-y divide-ink-100">
               {inventarios.map(inv => (
-                <tr key={inv.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/40">
-                  <td className="px-4 py-3 font-mono text-xs font-medium text-gray-800 dark:text-gray-200">{inv.numero}</td>
-                  <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+                <tr key={inv.id} className="hover:bg-ink-50">
+                  <td className="px-4 py-3 font-mono text-xs font-medium text-ink-800">{inv.numero}</td>
+                  <td className="px-4 py-3 text-xs text-ink-500">
                     {inv.data_inicio ? new Date(inv.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+                  <td className="px-4 py-3 text-xs text-ink-500">
                     {inv.data_conclusao ? new Date(inv.data_conclusao + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
                   </td>
                   <td className="px-4 py-3"><StatusBadge status={inv.status} /></td>
-                  <td className="px-4 py-3 text-center text-gray-600 dark:text-gray-400">{inv.total_itens || 0}</td>
+                  <td className="px-4 py-3 text-center text-ink-600">{inv.total_itens || 0}</td>
                   <td className="px-4 py-3 text-center">
                     {(inv.total_divergencias || 0) > 0
-                      ? <span className="font-semibold text-red-600">{inv.total_divergencias}</span>
-                      : <span className="text-gray-300 dark:text-gray-600">0</span>
+                      ? <span className="font-semibold text-danger-600">{inv.total_divergencias}</span>
+                      : <span className="text-ink-300">0</span>
                     }
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">{inv.responsavel?.nome || '—'}</td>
+                  <td className="px-4 py-3 text-xs text-ink-500">{inv.responsavel?.nome || '—'}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => setDetalhe(inv)}
-                        className="p-1.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600"
+                        className="p-1.5 rounded-sm hover:bg-info-50 dark:hover:bg-info-900/30 text-brand-600"
                         title="Ver / contar"
                       >
                         <Eye className="h-4 w-4" />
@@ -435,7 +435,7 @@ export default function AlmoxInventario() {
                       {inv.status !== 'CONCLUIDO' && (
                         <button
                           onClick={() => { setEditando(inv); setErro('') }}
-                          className="p-1.5 rounded hover:bg-amber-50 dark:hover:bg-amber-900/30 text-amber-600"
+                          className="p-1.5 rounded-sm hover:bg-amber-50 dark:hover:bg-amber-900/30 text-amber-600"
                           title="Editar observação"
                         >
                           <Pencil className="h-4 w-4" />
@@ -444,7 +444,7 @@ export default function AlmoxInventario() {
                       {inv.status !== 'CONCLUIDO' && (
                         <button
                           onClick={() => setConfirmDelete(inv)}
-                          className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/30 text-red-400"
+                          className="p-1.5 rounded-sm hover:bg-danger-50 dark:hover:bg-danger-900/30 text-danger-400"
                           title="Excluir inventário"
                         >
                           <Trash2 className="h-4 w-4" />

@@ -16,12 +16,12 @@ const moduloConfig = {
 }
 
 const corClasses = {
-  blue:    'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+  blue:    'bg-info-100 dark:bg-info-900/30 text-brand-700 dark:text-info-300',
   emerald: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300',
   orange:  'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300',
-  yellow:  'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300',
+  yellow:  'bg-warning-100 dark:bg-warning-900/30 text-warning-700 dark:text-warning-300',
   purple:  'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
-  gray:    'bg-gray-100 dark:bg-slate-700/30 text-gray-600 dark:text-slate-300',
+  gray:    'bg-ink-100 text-ink-600',
 }
 
 const tipoUsuarioLabel = {
@@ -186,7 +186,7 @@ export default function Registros() {
           title="Registros de Atividade"
           subtitle="Histórico completo de ações realizadas no sistema"
         />
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => buscarLogs(page)}
             className="btn-secondary flex items-center gap-2"
@@ -207,13 +207,13 @@ export default function Registros() {
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${
               filtrosAtivos > 0
                 ? 'bg-teal-600 text-white border-teal-600'
-                : 'bg-white dark:bg-slate-900 text-gray-700 dark:text-slate-300 border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700/50'
+                : 'bg-surface text-ink-700 border-ink-300 hover:bg-ink-50'
             }`}
           >
             <Filter className="h-4 w-4" />
             <span>Filtros</span>
             {filtrosAtivos > 0 && (
-              <span className="bg-white text-teal-700 rounded-full px-1.5 text-xs font-bold">{filtrosAtivos}</span>
+              <span className="bg-surface text-teal-700 rounded-full px-1.5 text-xs font-bold">{filtrosAtivos}</span>
             )}
           </button>
         </div>
@@ -223,45 +223,45 @@ export default function Registros() {
       {!isLoading && total > 0 && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="card p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-              <Activity className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <div className="h-10 w-10 rounded-xl bg-info-100 dark:bg-info-900/30 flex items-center justify-center shrink-0">
+              <Activity className="h-5 w-5 text-brand-600 dark:text-info-400" />
             </div>
             <div className="min-w-0">
-              <p className="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">{total.toLocaleString('pt-BR')}</p>
-              <p className="text-xs text-gray-500 dark:text-slate-400 truncate">Total de registros</p>
+              <p className="text-2xl font-bold text-ink-900 dark:text-white tabular-nums">{total.toLocaleString('pt-BR')}</p>
+              <p className="text-xs text-ink-500 truncate">Total de registros</p>
             </div>
           </div>
           <div className="card p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
+            <div className="h-10 w-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
               <Users className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div className="min-w-0">
-              <p className="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">
+              <p className="text-2xl font-bold text-ink-900 dark:text-white tabular-nums">
                 {new Set(logs.map(l => l.usuario?.id).filter(Boolean)).size}
               </p>
-              <p className="text-xs text-gray-500 dark:text-slate-400 truncate">Usuários na página</p>
+              <p className="text-xs text-ink-500 truncate">Usuários na página</p>
             </div>
           </div>
           <div className="card p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center flex-shrink-0">
+            <div className="h-10 w-10 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center shrink-0">
               <LayoutGrid className="h-5 w-5 text-violet-600 dark:text-violet-400" />
             </div>
             <div className="min-w-0">
-              <p className="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">
+              <p className="text-2xl font-bold text-ink-900 dark:text-white tabular-nums">
                 {new Set(logs.map(l => l.modulo).filter(Boolean)).size}
               </p>
-              <p className="text-xs text-gray-500 dark:text-slate-400 truncate">Módulos ativos</p>
+              <p className="text-xs text-ink-500 truncate">Módulos ativos</p>
             </div>
           </div>
           <div className="card p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+            <div className="h-10 w-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
               <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
+              <p className="text-sm font-semibold text-ink-900 dark:text-white leading-tight">
                 {logs[0]?.created_at ? formatarData(logs[0].created_at) : '—'}
               </p>
-              <p className="text-xs text-gray-500 dark:text-slate-400 truncate">Última atividade</p>
+              <p className="text-xs text-ink-500 truncate">Última atividade</p>
             </div>
           </div>
         </div>
@@ -275,7 +275,7 @@ export default function Registros() {
 
               {/* Tipo de Usuário */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">
+                <label className="block text-xs font-medium text-ink-600 mb-1">
                   <User className="inline h-3.5 w-3.5 mr-1" />Tipo de Usuário
                 </label>
                 <select
@@ -292,7 +292,7 @@ export default function Registros() {
 
               {/* Usuário */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">
+                <label className="block text-xs font-medium text-ink-600 mb-1">
                   <User className="inline h-3.5 w-3.5 mr-1" />Usuário
                 </label>
                 <select
@@ -309,7 +309,7 @@ export default function Registros() {
 
               {/* Secretaria */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">
+                <label className="block text-xs font-medium text-ink-600 mb-1">
                   <Building2 className="inline h-3.5 w-3.5 mr-1" />Secretaria
                 </label>
                 <select
@@ -326,7 +326,7 @@ export default function Registros() {
 
               {/* Setor */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">
+                <label className="block text-xs font-medium text-ink-600 mb-1">
                   <Layers className="inline h-3.5 w-3.5 mr-1" />Setor
                 </label>
                 <select
@@ -344,7 +344,7 @@ export default function Registros() {
 
               {/* Módulo */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">
+                <label className="block text-xs font-medium text-ink-600 mb-1">
                   Módulo
                 </label>
                 <select
@@ -361,7 +361,7 @@ export default function Registros() {
 
               {/* Data Início */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">
+                <label className="block text-xs font-medium text-ink-600 mb-1">
                   <Clock className="inline h-3.5 w-3.5 mr-1" />Data Início
                 </label>
                 <input
@@ -374,7 +374,7 @@ export default function Registros() {
 
               {/* Data Fim */}
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">
+                <label className="block text-xs font-medium text-ink-600 mb-1">
                   <Clock className="inline h-3.5 w-3.5 mr-1" />Data Fim
                 </label>
                 <input
@@ -386,7 +386,7 @@ export default function Registros() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 pt-2 border-t dark:border-slate-700/50">
+            <div className="flex items-center gap-3 pt-2 border-t">
               <button type="submit" className="btn-primary flex items-center gap-2">
                 <Search className="h-4 w-4" />
                 Aplicar Filtros
@@ -395,7 +395,7 @@ export default function Registros() {
                 <X className="h-4 w-4" />
                 Limpar
               </button>
-              <span className="text-sm text-gray-500 dark:text-slate-400 ml-auto">
+              <span className="text-sm text-ink-500 ml-auto">
                 {total.toLocaleString('pt-BR')} registro(s) encontrado(s)
               </span>
             </div>
@@ -405,7 +405,7 @@ export default function Registros() {
 
       {/* Erro */}
       {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg text-red-700 dark:text-red-300 text-sm">
+        <div className="p-4 bg-danger-50 dark:bg-danger-900/30 border border-danger-200 dark:border-danger-700 rounded-lg text-danger-700 dark:text-danger-300 text-sm">
           {error}
         </div>
       )}
@@ -416,40 +416,40 @@ export default function Registros() {
           <LoadingBar label="Carregando registros de atividade..." />
         ) : logs.length === 0 ? (
           <div className="text-center py-20">
-            <p className="text-gray-400 dark:text-slate-600 text-sm">Nenhum registro encontrado para os filtros selecionados.</p>
+            <p className="text-ink-400 text-sm">Nenhum registro encontrado para os filtros selecionados.</p>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-950/50">
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">Data/Hora</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Usuário</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider hidden md:table-cell">Secretaria / Setor</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Módulo</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Ação / Descrição</th>
+                  <tr className="border-b border-ink-200 bg-ink-50">
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-ink-500 uppercase tracking-wider whitespace-nowrap">Data/Hora</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-ink-500 uppercase tracking-wider">Usuário</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-ink-500 uppercase tracking-wider hidden md:table-cell">Secretaria / Setor</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-ink-500 uppercase tracking-wider">Módulo</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-ink-500 uppercase tracking-wider">Ação / Descrição</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
+                <tbody className="divide-y divide-ink-100">
                   {logs.map((log) => {
                     const modCfg = moduloConfig[log.modulo] || { cor: 'gray', label: log.modulo }
                     return (
-                      <tr key={log.id} className="group hover:bg-blue-50/40 dark:hover:bg-slate-700/40 transition-colors cursor-pointer">
+                      <tr key={log.id} className="group hover:bg-info-50/40 transition-colors cursor-pointer">
                         {/* Data */}
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <p className="text-xs text-gray-500 dark:text-slate-400 font-mono">
+                          <p className="text-xs text-ink-500 font-mono">
                             {formatarData(log.created_at)}
                           </p>
                         </td>
 
                         {/* Usuário */}
                         <td className="px-4 py-3">
-                          <p className="font-medium text-gray-900 dark:text-white text-sm leading-tight">
-                            {log.usuario?.nomeReduzido || log.usuario?.nome || <span className="text-gray-400 italic">Sistema</span>}
+                          <p className="font-medium text-ink-900 dark:text-white text-sm leading-tight">
+                            {log.usuario?.nomeReduzido || log.usuario?.nome || <span className="text-ink-400 italic">Sistema</span>}
                           </p>
                           {log.usuario?.tipo && (
-                            <p className="text-xs text-gray-400 dark:text-slate-500">
+                            <p className="text-xs text-ink-400">
                               {tipoUsuarioLabel[log.usuario.tipo] || log.usuario.tipo}
                             </p>
                           )}
@@ -459,23 +459,23 @@ export default function Registros() {
                         <td className="px-4 py-3 hidden md:table-cell">
                           {log.secretaria ? (
                             <div>
-                              <p className="text-xs font-medium text-gray-700 dark:text-slate-300">{log.secretaria.sigla || log.secretaria.nome}</p>
-                              {log.setor && <p className="text-xs text-gray-400 dark:text-slate-500">{log.setor.nome}</p>}
+                              <p className="text-xs font-medium text-ink-700">{log.secretaria.sigla || log.secretaria.nome}</p>
+                              {log.setor && <p className="text-xs text-ink-400">{log.setor.nome}</p>}
                             </div>
-                          ) : <span className="text-gray-300 dark:text-slate-600">—</span>}
+                          ) : <span className="text-ink-300">—</span>}
                         </td>
 
                         {/* Módulo */}
                         <td className="px-4 py-3">
                           <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${corClasses[modCfg.cor] || corClasses.gray}`}>
-                            <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70 flex-shrink-0" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70 shrink-0" />
                             {modCfg.label}
                           </span>
                         </td>
 
                         {/* Ação / Descrição */}
                         <td className="px-4 py-3">
-                          <p className="text-sm font-medium text-gray-800 dark:text-slate-200">
+                          <p className="text-sm font-medium text-ink-800">
                             {log.descricao || acaoLabel[log.acao] || log.acao}
                           </p>
                         </td>
@@ -488,15 +488,15 @@ export default function Registros() {
 
             {/* Paginação */}
             {pages > 1 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-slate-700/50">
-                <p className="text-sm text-gray-500 dark:text-slate-400">
+              <div className="flex items-center justify-between px-4 py-3 border-t border-ink-100">
+                <p className="text-sm text-ink-500">
                   Página {page} de {pages} &nbsp;·&nbsp; {total.toLocaleString('pt-BR')} registros
                 </p>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => buscarLogs(page - 1)}
                     disabled={page <= 1}
-                    className="p-1 rounded hover:bg-gray-100 dark:hover:bg-slate-700/50 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="p-1 rounded-sm hover:bg-ink-100 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </button>
@@ -511,10 +511,10 @@ export default function Registros() {
                       <button
                         key={pg}
                         onClick={() => buscarLogs(pg)}
-                        className={`w-8 h-8 rounded text-sm font-medium transition-colors ${
+                        className={`w-8 h-8 rounded-sm text-sm font-medium transition-colors ${
                           pg === page
                             ? 'bg-teal-600 text-white'
-                            : 'hover:bg-gray-100 dark:hover:bg-slate-700/50 text-gray-600 dark:text-slate-400'
+                            : 'hover:bg-ink-100 text-ink-600'
                         }`}
                       >
                         {pg}
@@ -524,7 +524,7 @@ export default function Registros() {
                   <button
                     onClick={() => buscarLogs(page + 1)}
                     disabled={page >= pages}
-                    className="p-1 rounded hover:bg-gray-100 dark:hover:bg-slate-700/50 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="p-1 rounded-sm hover:bg-ink-100 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <ChevronRight className="h-5 w-5" />
                   </button>

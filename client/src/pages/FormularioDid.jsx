@@ -30,7 +30,7 @@ import DidVariaveisSecaoXII from './did/variaveis/DidVariaveisSecaoXII'
 function Field({ label, children, half }) {
   return (
     <div className={half ? 'col-span-1' : 'col-span-2'}>
-      <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">{label}</label>
+      <label className="block text-xs font-medium text-ink-500 mb-1">{label}</label>
       {children}
     </div>
   )
@@ -43,9 +43,9 @@ function Input({ value, onChange, type = 'text', placeholder }) {
       value={value ?? ''}
       onChange={onChange}
       placeholder={placeholder}
-      className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-slate-600
-        bg-white dark:bg-slate-700/30 text-gray-900 dark:text-slate-100
-        focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+      className="w-full px-3 py-2 text-sm rounded-lg border border-ink-200
+        bg-surface text-ink-900
+        focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-hidden"
     />
   )
 }
@@ -57,18 +57,18 @@ function Textarea({ value, onChange, placeholder }) {
       value={value ?? ''}
       onChange={onChange}
       placeholder={placeholder}
-      className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-slate-600
-        bg-white dark:bg-slate-700/30 text-gray-900 dark:text-slate-100
-        focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+      className="w-full px-3 py-2 text-sm rounded-lg border border-ink-200
+        bg-surface text-ink-900
+        focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-hidden resize-none"
     />
   )
 }
 
 function Checkbox({ label, checked, onChange }) {
   return (
-    <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-slate-300">
+    <label className="flex items-center gap-2 cursor-pointer text-sm text-ink-700">
       <input type="checkbox" checked={!!checked} onChange={onChange}
-        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+        className="w-4 h-4 rounded-sm border-ink-300 text-brand-600 focus:ring-brand-500" />
       {label}
     </label>
   )
@@ -131,54 +131,54 @@ function ModalItensContrato({ contrato, itensDid, onConfirm, onClose }) {
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-3xl flex flex-col" style={{ maxHeight: '85vh' }}>
-        <div className="flex items-center justify-between bg-gray-800 dark:bg-slate-950 px-4 py-3 rounded-t-xl shrink-0">
+      <div className="bg-surface rounded-xl shadow-2xl w-full max-w-3xl flex flex-col" style={{ maxHeight: '85vh' }}>
+        <div className="flex items-center justify-between bg-ink-800 px-4 py-3 rounded-t-xl shrink-0">
           <div>
             <span className="text-sm font-semibold text-white">Selecionar Itens para o DID</span>
-            {contrato && <span className="ml-3 text-xs text-gray-400 font-mono">{contrato.numero_contrato} — {contrato.tipo_contrato}</span>}
+            {contrato && <span className="ml-3 text-xs text-ink-400 font-mono">{contrato.numero_contrato} — {contrato.tipo_contrato}</span>}
           </div>
-          <button onClick={onClose} className="p-0.5 rounded hover:bg-gray-700 text-white/80 hover:text-white">
+          <button onClick={onClose} className="p-0.5 rounded-sm hover:bg-ink-700 text-white/80 hover:text-white">
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {itensContrato.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-10 text-gray-400">
+          <div className="flex-1 flex flex-col items-center justify-center p-10 text-ink-400">
             <p className="text-sm font-medium">Nenhum item encontrado no contrato.</p>
             <p className="text-xs mt-1">Adicione itens ao contrato em Contratos antes de criar o DID.</p>
           </div>
         ) : (
           <>
-            <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-300 shrink-0">
+            <div className="px-4 py-2 bg-info-50 dark:bg-info-900/20 border-b border-info-100 dark:border-info-800 text-xs text-brand-700 dark:text-info-300 shrink-0">
               Marque os itens e informe a quantidade desejada para este DID (função de ordem de compra).
             </div>
             <div className="flex-1 overflow-y-auto overflow-x-auto">
               <table className="w-full text-xs">
-                <thead className="bg-gray-50 dark:bg-slate-700/30 sticky top-0">
+                <thead className="bg-ink-50 sticky top-0">
                   <tr>
                     <th className="px-3 py-2 w-10"></th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-500 dark:text-slate-400">Descrição</th>
-                    <th className="px-3 py-2 text-center font-semibold text-gray-500 dark:text-slate-400 w-20">Unid.</th>
-                    <th className="px-3 py-2 text-right font-semibold text-gray-500 dark:text-slate-400 w-32">Vlr. Unit. (R$)</th>
-                    <th className="px-3 py-2 text-right font-semibold text-gray-500 dark:text-slate-400 w-28">Qtd. DID</th>
-                    <th className="px-3 py-2 text-right font-semibold text-gray-500 dark:text-slate-400 w-32">Subtotal</th>
+                    <th className="px-3 py-2 text-left font-semibold text-ink-500">Descrição</th>
+                    <th className="px-3 py-2 text-center font-semibold text-ink-500 w-20">Unid.</th>
+                    <th className="px-3 py-2 text-right font-semibold text-ink-500 w-32">Vlr. Unit. (R$)</th>
+                    <th className="px-3 py-2 text-right font-semibold text-ink-500 w-28">Qtd. DID</th>
+                    <th className="px-3 py-2 text-right font-semibold text-ink-500 w-32">Subtotal</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
+                <tbody className="divide-y divide-ink-100">
                   {selecao.map((it, idx) => {
                     const q = parseFloat(it.qtd_did) || 0
                     const u = parseFloat(it.valor_unit_did) || 0
                     const sub = q * u
                     return (
                       <tr key={idx} onClick={() => toggle(idx)}
-                        className={`cursor-pointer transition-colors ${it.selecionado ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-slate-700/30'}`}>
+                        className={`cursor-pointer transition-colors ${it.selecionado ? 'bg-info-50 dark:bg-info-900/20' : 'hover:bg-ink-50'}`}>
                         <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                           <input type="checkbox" checked={it.selecionado} onChange={() => toggle(idx)}
-                            className="w-4 h-4 accent-blue-600 cursor-pointer" />
+                            className="w-4 h-4 accent-info-600 cursor-pointer" />
                         </td>
-                        <td className="px-3 py-2 text-gray-800 dark:text-slate-200 font-medium">{it.descricao || '—'}</td>
-                        <td className="px-3 py-2 text-center text-gray-500">{it.unidade || '—'}</td>
-                        <td className="px-3 py-2 text-right font-mono text-gray-600 dark:text-slate-300">
+                        <td className="px-3 py-2 text-ink-800 font-medium">{it.descricao || '—'}</td>
+                        <td className="px-3 py-2 text-center text-ink-500">{it.unidade || '—'}</td>
+                        <td className="px-3 py-2 text-right font-mono text-ink-600">
                           {it.valor_unit_did
                             ? parseFloat(it.valor_unit_did).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
                             : '—'}
@@ -186,14 +186,14 @@ function ModalItensContrato({ contrato, itensDid, onConfirm, onClose }) {
                         <td className="px-2 py-1.5" onClick={e => e.stopPropagation()}>
                           <input type="number" min="0" step="any" value={it.qtd_did}
                             onChange={e => { if (!it.selecionado) toggle(idx); setQtd(idx, e.target.value) }}
-                            className={`w-full px-2 py-1 text-xs rounded border text-right font-mono outline-none
-                              ${it.selecionado ? 'border-blue-300 dark:border-blue-600 bg-white dark:bg-slate-700/30 focus:ring-1 focus:ring-blue-500' : 'border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-900 opacity-50'}`}
+                            className={`w-full px-2 py-1 text-xs rounded-sm border text-right font-mono outline-hidden
+                              ${it.selecionado ? 'border-info-300 dark:border-brand-600 bg-surface focus:ring-1 focus:ring-brand-500' : 'border-ink-200 bg-ink-50 opacity-50'}`}
                             placeholder="0" />
                         </td>
                         <td className="px-3 py-2 text-right font-semibold font-mono">
                           {sub > 0
-                            ? <span className="text-blue-700 dark:text-blue-400">{sub.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-                            : <span className="text-gray-400">—</span>}
+                            ? <span className="text-brand-700 dark:text-info-400">{sub.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                            : <span className="text-ink-400">—</span>}
                         </td>
                       </tr>
                     )
@@ -204,18 +204,18 @@ function ModalItensContrato({ contrato, itensDid, onConfirm, onClose }) {
           </>
         )}
 
-        <div className="border-t border-gray-200 dark:border-slate-700/50 px-4 py-3 flex items-center gap-3 shrink-0">
+        <div className="border-t border-ink-200 px-4 py-3 flex items-center gap-3 shrink-0">
           <button onClick={confirmar} disabled={!selecao.some(it => it.selecionado)}
-            className="flex items-center gap-1.5 px-5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+            className="flex items-center gap-1.5 px-5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-sm text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
             <Check className="w-4 h-4" /> Confirmar Seleção
           </button>
           <button onClick={onClose}
-            className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-slate-700/30 dark:hover:bg-slate-700/50 text-gray-700 dark:text-slate-200 rounded text-sm font-semibold transition-colors">
+            className="px-4 py-1.5 bg-ink-200 hover:bg-ink-300 text-ink-700 rounded-sm text-sm font-semibold transition-colors">
             Cancelar
           </button>
           {totalSelecionado > 0 && (
-            <span className="ml-auto text-xs text-gray-500">
-              {selecao.filter(it => it.selecionado).length} item(ns) · Total: <strong className="text-blue-700 dark:text-blue-400">{totalSelecionado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
+            <span className="ml-auto text-xs text-ink-500">
+              {selecao.filter(it => it.selecionado).length} item(ns) · Total: <strong className="text-brand-700 dark:text-info-400">{totalSelecionado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
             </span>
           )}
         </div>
@@ -648,7 +648,7 @@ export default function FormularioDid() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
     </div>
   )
 
@@ -659,7 +659,7 @@ export default function FormularioDid() {
       {/* Banner somente leitura */}
       {readOnly && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-300 px-4 py-3 rounded-lg flex items-center gap-2">
-          <Eye className="h-5 w-5 flex-shrink-0" />
+          <Eye className="h-5 w-5 shrink-0" />
           <span className="text-sm font-medium">Modo somente leitura — o processo está em outro setor. Você pode visualizar e gerar PDF, mas não pode editar.</span>
         </div>
       )}
@@ -667,14 +667,14 @@ export default function FormularioDid() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <button onClick={() => navigate(-1)}
-          className="p-2 rounded-lg text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors">
+          className="p-2 rounded-lg text-ink-500 hover:bg-ink-100 transition-colors">
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div>
           <h1 className="page-title">📋 {numeroDIDFmt}</h1>
           <div className="flex items-center gap-1.5 mt-0.5">
-            <FileCheck className="h-4 w-4 text-blue-500" />
-            <span className="text-sm font-semibold text-blue-500">
+            <FileCheck className="h-4 w-4 text-info-500" />
+            <span className="text-sm font-semibold text-info-500">
               {processoId === 'novo' ? 'Novo DID' : (processo?.numero || `Processo ${processoId}`)}
               {secretariaNome ? ` · ${secretariaNome}` : ''}
             </span>
@@ -684,7 +684,7 @@ export default function FormularioDid() {
         <div className="ml-auto flex items-center gap-2">
           <button type="button" onClick={handleGerarPDF} disabled={gerandoPDF || !did}
             title={!did ? 'Salve o DID antes de gerar o PDF' : 'Gerar PDF do DID'}
-            className="flex items-center gap-2 px-3 py-1.5 bg-gray-700 hover:bg-gray-800 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+            className="flex items-center gap-2 px-3 py-1.5 bg-ink-700 hover:bg-ink-800 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
             {gerandoPDF ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
             {gerandoPDF ? 'Gerando...' : 'Gerar PDF'}
           </button>
@@ -694,7 +694,7 @@ export default function FormularioDid() {
             type="button"
             onClick={() => setEditando(true)}
             disabled={editando}
-            className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+            className="flex items-center gap-2 px-3 py-1.5 bg-warning-500 hover:bg-warning-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
             ✏️ Alterar
           </button>
           <button onClick={handleSaveDid} disabled={savingDid || !editando} className="btn-primary flex items-center gap-2 py-1.5 text-sm">
@@ -709,8 +709,8 @@ export default function FormularioDid() {
       {/* Mensagem feedback */}
       {msg && (
         <div className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium
-          ${msg.ok ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-                   : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'}`}>
+          ${msg.ok ? 'bg-success-50 text-success-700 dark:bg-success-900/20 dark:text-success-400'
+                   : 'bg-danger-50 text-danger-700 dark:bg-danger-900/20 dark:text-danger-400'}`}>
           {msg.ok ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
           {msg.text}
         </div>
@@ -719,18 +719,18 @@ export default function FormularioDid() {
       {/* Tipo DID */}
       <div className="card p-4">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-semibold text-gray-700 dark:text-slate-300">Tipo de DID</p>
+          <p className="text-sm font-semibold text-ink-700">Tipo de DID</p>
           <div className="flex items-center gap-2">
             {did !== null && !alterandoTipo && (
               <>
-                <span className="text-xs text-gray-500 dark:text-slate-400 bg-gray-100 dark:bg-slate-700/30 px-2.5 py-1 rounded-full">
+                <span className="text-xs text-ink-500 bg-ink-100 px-2.5 py-1 rounded-full">
                   🔒 Bloqueado — DID salvo
                 </span>
                 {!readOnly && (
                   <button type="button" onClick={handleAlterarTipo}
-                    className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300
-                      flex items-center gap-1 px-2.5 py-1 rounded-lg border border-blue-200 dark:border-blue-700
-                      hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                    className="text-xs text-brand-600 dark:text-info-400 hover:text-brand-700 dark:hover:text-info-300
+                      flex items-center gap-1 px-2.5 py-1 rounded-lg border border-info-200 dark:border-info-700
+                      hover:bg-info-50 dark:hover:bg-info-900/20 transition-colors">
                     ↺ Alterar Tipo
                   </button>
                 )}
@@ -738,9 +738,9 @@ export default function FormularioDid() {
             )}
             {did !== null && alterandoTipo && (
               <button type="button" onClick={() => setAlterandoTipo(false)}
-                className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700
-                  flex items-center gap-1 px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600
-                  hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                className="text-xs text-ink-600 hover:text-ink-700
+                  flex items-center gap-1 px-2.5 py-1 rounded-lg border border-ink-200
+                  hover:bg-ink-50 transition-colors">
                 ✕ Cancelar
               </button>
             )}
@@ -770,11 +770,11 @@ export default function FormularioDid() {
               checked={tipoDid === 'fixas'}
               onChange={() => alterandoTipo ? handleTrocarTipo('fixas') : setTipoDid('fixas')}
               disabled={tipoBloqueado || (hasAnyData && tipoDid !== 'fixas')}
-              className="w-4 h-4 accent-blue-600"
+              className="w-4 h-4 accent-info-600"
             />
             <div>
-              <span className="text-sm font-medium text-gray-800 dark:text-slate-200">DID Contas Fixas</span>
-              <p className="text-xs text-gray-400 dark:text-slate-500">Valor fixo mensal · vinculado a contrato</p>
+              <span className="text-sm font-medium text-ink-800">DID Contas Fixas</span>
+              <p className="text-xs text-ink-400">Valor fixo mensal · vinculado a contrato</p>
             </div>
           </label>
 
@@ -789,17 +789,17 @@ export default function FormularioDid() {
               checked={tipoDid === 'variaveis'}
               onChange={() => alterandoTipo ? handleTrocarTipo('variaveis') : setTipoDid('variaveis')}
               disabled={tipoBloqueado || (hasAnyData && tipoDid !== 'variaveis')}
-              className="w-4 h-4 accent-blue-600"
+              className="w-4 h-4 accent-info-600"
             />
             <div>
-              <span className="text-sm font-medium text-gray-800 dark:text-slate-200">DID Contas Variáveis</span>
-              <p className="text-xs text-gray-400 dark:text-slate-500">Quantidade × Vlr. Unit. · inclui atestado de recebimento</p>
+              <span className="text-sm font-medium text-ink-800">DID Contas Variáveis</span>
+              <p className="text-xs text-ink-400">Quantidade × Vlr. Unit. · inclui atestado de recebimento</p>
             </div>
           </label>
         </div>
 
         {alterandoTipo && (
-          <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+          <p className="text-xs text-brand-600 dark:text-info-400 mt-2">
             Selecione o novo tipo de DID acima. A alteração será salva imediatamente.
           </p>
         )}
@@ -866,13 +866,13 @@ export default function FormularioDid() {
 
       {/* Indicador de próxima etapa — aparece enquanto houver seções bloqueadas */}
       {maxSecaoVisivel < (TOTAL_SECOES[tipoDid] ?? 7) && (
-        <div className="flex items-center gap-3 px-5 py-4 rounded-xl border-2 border-dashed border-gray-200 dark:border-slate-700 text-center justify-center">
+        <div className="flex items-center gap-3 px-5 py-4 rounded-xl border-2 border-dashed border-ink-200 text-center justify-center">
           <span className="text-2xl">🔒</span>
           <div className="text-left">
-            <p className="text-sm font-semibold text-gray-600 dark:text-slate-300">
+            <p className="text-sm font-semibold text-ink-600">
               Seção {['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'][maxSecaoVisivel]} — próxima etapa
             </p>
-            <p className="text-xs text-gray-400 dark:text-slate-500">
+            <p className="text-xs text-ink-400">
               Salve a Seção {['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'][maxSecaoVisivel - 1]} para liberar
             </p>
           </div>
@@ -886,7 +886,7 @@ export default function FormularioDid() {
         </button>
         <button type="button" onClick={handleGerarPDF} disabled={gerandoPDF || !did}
           title={!did ? 'Salve o DID antes de gerar o PDF' : 'Gerar PDF do DID'}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+          className="flex items-center gap-2 px-4 py-2 bg-ink-700 hover:bg-ink-800 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
           {gerandoPDF ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
           {gerandoPDF ? 'Gerando...' : 'Gerar PDF'}
         </button>
@@ -896,7 +896,7 @@ export default function FormularioDid() {
           type="button"
           onClick={() => setEditando(true)}
           disabled={editando}
-          className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+          className="flex items-center gap-2 px-4 py-2 bg-warning-500 hover:bg-warning-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
           ✏️ Alterar
         </button>
         <button onClick={handleSaveDid} disabled={savingDid || !editando} className="btn-primary flex items-center gap-2">

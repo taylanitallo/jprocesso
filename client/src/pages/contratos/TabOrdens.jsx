@@ -82,37 +82,37 @@ function SelecionarContratoModal({ contratos, tipoOrdem, onSelect, onClose }) {
   const vigenciaInfo = (c) => {
     const dias = calcDiasVigencia(c.vigencia_fim)
     if (dias === null) return null
-    if (dias < 0)   return { cor: 'text-red-500',    bg: 'bg-red-50 dark:bg-red-900/20',     texto: 'Vencido',       icone: '🔴' }
+    if (dias < 0)   return { cor: 'text-danger-500',    bg: 'bg-danger-50 dark:bg-danger-900/20',     texto: 'Vencido',       icone: '🔴' }
     if (dias <= 30) return { cor: 'text-amber-600',  bg: 'bg-amber-50 dark:bg-amber-900/20',  texto: `Vence em ${dias}d`, icone: '🟡' }
     return           { cor: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/20', texto: `${dias}d restantes`, icone: '🟢' }
   }
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full flex flex-col" style={{ maxWidth: '920px', maxHeight: '88vh' }}>
+      <div className="bg-surface rounded-2xl shadow-2xl w-full flex flex-col" style={{ maxWidth: '920px', maxHeight: '88vh' }}>
 
         {/* Header */}
-        <div className="flex items-center justify-between bg-slate-900 px-5 py-3.5 rounded-t-2xl shrink-0">
+        <div className="flex items-center justify-between bg-ink-900 px-5 py-3.5 rounded-t-2xl shrink-0">
           <div className="flex items-center gap-3">
             <FileText className="w-4 h-4 text-white/80" />
             <span className="text-sm font-semibold text-white">Selecionar Contrato</span>
             <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-              tipoOrdem === 'COMPRA' ? 'bg-blue-500/30 text-blue-200' : 'bg-amber-500/30 text-amber-200'
+              tipoOrdem === 'COMPRA' ? 'bg-info-500/30 text-info-200' : 'bg-amber-500/30 text-amber-200'
             }`}>
               {tipoOrdem === 'COMPRA' ? '🛒 Materiais' : '🔧 Serviços'}
             </span>
             <span className="text-[10px] text-white/40">{filtrados.length} resultado(s)</span>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded hover:bg-white/10 text-white/70 hover:text-white">
+          <button onClick={onClose} className="p-1.5 rounded-sm hover:bg-surface/10 text-white/70 hover:text-white">
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Filtros */}
-        <div className="px-4 py-3 shrink-0 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+        <div className="px-4 py-3 shrink-0 border-b border-ink-100 bg-ink-50">
           <div className="grid grid-cols-12 gap-2">
             <div className="col-span-4 relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-ink-400" />
               <input autoFocus value={filtros.q} onChange={e => setF('q', e.target.value)}
                 placeholder="Nº contrato ou objeto..." className="input-field pl-7 text-xs w-full" />
             </div>
@@ -136,13 +136,13 @@ function SelecionarContratoModal({ contratos, tipoOrdem, onSelect, onClose }) {
             </div>
             <div className="col-span-1 flex items-center justify-end">
               <button onClick={() => setFiltros({ q: '', credorQ: '', modalidade: '', vigencia: '' })}
-                className="text-xs text-gray-400 hover:text-gray-600 underline whitespace-nowrap">Limpar</button>
+                className="text-xs text-ink-400 hover:text-ink-600 underline whitespace-nowrap">Limpar</button>
             </div>
           </div>
         </div>
 
         {/* Cabeçalho da tabela */}
-        <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-slate-100/70 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700 shrink-0 text-[10px] font-bold text-gray-400 uppercase tracking-wide">
+        <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-ink-100/70 border-b border-ink-200 shrink-0 text-[10px] font-bold text-ink-400 uppercase tracking-wide">
           <div className="col-span-2">Nº Contrato</div>
           <div className="col-span-3">Objeto / Credor</div>
           <div className="col-span-2">Modalidade</div>
@@ -152,9 +152,9 @@ function SelecionarContratoModal({ contratos, tipoOrdem, onSelect, onClose }) {
         </div>
 
         {/* Lista */}
-        <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700/50">
+        <div className="flex-1 overflow-y-auto divide-y divide-ink-100">
           {filtrados.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-14 text-gray-400">
+            <div className="flex flex-col items-center justify-center py-14 text-ink-400">
               <FileText className="w-8 h-8 mb-2 opacity-30" />
               <p className="text-sm">Nenhum contrato encontrado</p>
             </div>
@@ -167,32 +167,32 @@ function SelecionarContratoModal({ contratos, tipoOrdem, onSelect, onClose }) {
 
             return (
               <button key={c.id} onClick={() => onSelect(c)}
-                className="w-full text-left grid grid-cols-12 gap-2 px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors items-center group">
+                className="w-full text-left grid grid-cols-12 gap-2 px-4 py-3 hover:bg-info-50 dark:hover:bg-info-900/20 transition-colors items-center group">
 
                 {/* Nº + tipo */}
                 <div className="col-span-2">
-                  <p className="text-xs font-bold text-blue-600 dark:text-blue-400 group-hover:underline">{c.numero_contrato}</p>
+                  <p className="text-xs font-bold text-brand-600 dark:text-info-400 group-hover:underline">{c.numero_contrato}</p>
                   {c.tipo_objeto && (
-                    <span className="text-[9px] px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-gray-500 mt-0.5 inline-block">{c.tipo_objeto}</span>
+                    <span className="text-[9px] px-1 py-0.5 rounded-sm bg-ink-100 text-ink-500 mt-0.5 inline-block">{c.tipo_objeto}</span>
                   )}
                 </div>
 
                 {/* Objeto / Credor */}
                 <div className="col-span-3 min-w-0">
-                  <p className="text-xs text-gray-800 dark:text-slate-200 line-clamp-2 leading-tight">{c.objeto}</p>
+                  <p className="text-xs text-ink-800 line-clamp-2 leading-tight">{c.objeto}</p>
                   {c.credor?.razao_social && (
-                    <p className="text-[10px] text-gray-400 truncate mt-0.5">{c.credor.razao_social}</p>
+                    <p className="text-[10px] text-ink-400 truncate mt-0.5">{c.credor.razao_social}</p>
                   )}
                 </div>
 
                 {/* Modalidade */}
                 <div className="col-span-2">
-                  <p className="text-[10px] text-gray-500 dark:text-slate-400 leading-tight">{c.modalidade || '—'}</p>
+                  <p className="text-[10px] text-ink-500 leading-tight">{c.modalidade || '—'}</p>
                 </div>
 
                 {/* Valor total */}
                 <div className="col-span-2 text-right">
-                  <p className="text-xs font-bold text-gray-800 dark:text-slate-200 whitespace-nowrap">{fmtBRL(c.valor)}</p>
+                  <p className="text-xs font-bold text-ink-800 whitespace-nowrap">{fmtBRL(c.valor)}</p>
                 </div>
 
                 {/* Saldo disponível */}
@@ -200,18 +200,18 @@ function SelecionarContratoModal({ contratos, tipoOrdem, onSelect, onClose }) {
                   {saldo ? (
                     <div>
                       <p className={`text-xs font-bold whitespace-nowrap ${
-                        saldo.sem_saldo ? 'text-red-600' : saldo.alerta_baixo ? 'text-amber-600' : 'text-emerald-600'
+                        saldo.sem_saldo ? 'text-danger-600' : saldo.alerta_baixo ? 'text-amber-600' : 'text-emerald-600'
                       }`}>{fmtBRL(saldoV)}</p>
                       {/* Barra de uso */}
-                      <div className="w-full h-1.5 bg-gray-200 dark:bg-slate-600 rounded-full mt-1 overflow-hidden">
+                      <div className="w-full h-1.5 bg-ink-200 rounded-full mt-1 overflow-hidden">
                         <div className={`h-full rounded-full transition-all ${
-                          saldo.sem_saldo ? 'bg-red-500' : saldo.alerta_baixo ? 'bg-amber-500' : 'bg-emerald-500'
+                          saldo.sem_saldo ? 'bg-danger-500' : saldo.alerta_baixo ? 'bg-amber-500' : 'bg-emerald-500'
                         }`} style={{ width: `${Math.min(100, pct || 0)}%` }} />
                       </div>
-                      <p className="text-[9px] text-gray-400 mt-0.5">{(pct || 0).toFixed(0)}% utilizado</p>
+                      <p className="text-[9px] text-ink-400 mt-0.5">{(pct || 0).toFixed(0)}% utilizado</p>
                     </div>
                   ) : (
-                    <p className="text-[10px] text-gray-300">...</p>
+                    <p className="text-[10px] text-ink-300">...</p>
                   )}
                 </div>
 
@@ -222,10 +222,10 @@ function SelecionarContratoModal({ contratos, tipoOrdem, onSelect, onClose }) {
                       {vig.texto}
                     </span>
                   ) : (
-                    <span className="text-[10px] text-gray-400">—</span>
+                    <span className="text-[10px] text-ink-400">—</span>
                   )}
                   {c.vigencia_fim && (
-                    <p className="text-[9px] text-gray-400 mt-0.5">{fmtData(c.vigencia_fim)}</p>
+                    <p className="text-[9px] text-ink-400 mt-0.5">{fmtData(c.vigencia_fim)}</p>
                   )}
                 </div>
               </button>
@@ -234,9 +234,9 @@ function SelecionarContratoModal({ contratos, tipoOrdem, onSelect, onClose }) {
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-2.5 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between shrink-0">
-          <span className="text-xs text-gray-400">Clique em um contrato para selecioná-lo</span>
-          <button onClick={onClose} className="px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700">
+        <div className="px-4 py-2.5 border-t border-ink-100 flex items-center justify-between shrink-0">
+          <span className="text-xs text-ink-400">Clique em um contrato para selecioná-lo</span>
+          <button onClick={onClose} className="px-3 py-1.5 text-xs rounded-lg border border-ink-300 text-ink-600 hover:bg-ink-50">
             Fechar
           </button>
         </div>
@@ -303,10 +303,10 @@ function SelecionarItemModal({ contrato_id, itensBase = [], onSelect, onClose })
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full flex flex-col" style={{ maxWidth: '680px', maxHeight: '82vh' }}>
+      <div className="bg-surface rounded-2xl shadow-2xl w-full flex flex-col" style={{ maxWidth: '680px', maxHeight: '82vh' }}>
 
         {/* Header */}
-        <div className="flex items-center justify-between bg-slate-900 px-5 py-3.5 rounded-t-2xl shrink-0">
+        <div className="flex items-center justify-between bg-ink-900 px-5 py-3.5 rounded-t-2xl shrink-0">
           <div className="flex items-center gap-3">
             <PackageOpen className="w-4 h-4 text-white/80" />
             <span className="text-sm font-semibold text-white">
@@ -316,7 +316,7 @@ function SelecionarItemModal({ contrato_id, itensBase = [], onSelect, onClose })
               <span className="text-[10px] text-white/40">{filtrados.length} item(ns)</span>
             )}
           </div>
-          <button onClick={onClose} className="p-1.5 rounded hover:bg-white/10 text-white/70 hover:text-white">
+          <button onClick={onClose} className="p-1.5 rounded-sm hover:bg-surface/10 text-white/70 hover:text-white">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -325,26 +325,26 @@ function SelecionarItemModal({ contrato_id, itensBase = [], onSelect, onClose })
           <>
             {/* Tela de confirmação de quantidade */}
             <div className="px-5 py-5 flex-1 overflow-y-auto">
-              <p className="text-sm font-medium text-gray-800 dark:text-slate-200 leading-tight">{itemQtd.descricao}</p>
+              <p className="text-sm font-medium text-ink-800 leading-tight">{itemQtd.descricao}</p>
               <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                 {itemQtd.lote && (
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 font-medium">
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-sm bg-ink-100 text-ink-500 font-medium">
                     Lote {itemQtd.lote}
                   </span>
                 )}
-                <span className="text-[10px] text-gray-500 dark:text-slate-400">{itemQtd.unidade || '—'}</span>
-                <span className="text-[10px] text-gray-500 dark:text-slate-400">{fmtBRL(itemQtd.valor_unitario)}/un.</span>
+                <span className="text-[10px] text-ink-500">{itemQtd.unidade || '—'}</span>
+                <span className="text-[10px] text-ink-500">{fmtBRL(itemQtd.valor_unitario)}/un.</span>
                 <span className="text-[10px] text-emerald-600 font-semibold">
                   {itemQtd.qtd_disponivel % 1 === 0 ? itemQtd.qtd_disponivel : itemQtd.qtd_disponivel.toFixed(2)} disponível
                 </span>
               </div>
 
               <div className="mt-4">
-                <label className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1 block">Quantidade</label>
+                <label className="text-xs font-semibold text-ink-600 mb-1 block">Quantidade</label>
                 <MaskedInput value={qtd} onChange={setQtd} placeholder="0,00"
                   className="input-field text-sm w-full font-mono" />
                 {qtdInvalida && (
-                  <p className="text-[11px] text-red-500 mt-1.5">
+                  <p className="text-[11px] text-danger-500 mt-1.5">
                     {qtdNum <= 0 ? 'Informe uma quantidade maior que zero.' : `Quantidade maior que o disponível (${itemQtd.qtd_disponivel}).`}
                   </p>
                 )}
@@ -352,12 +352,12 @@ function SelecionarItemModal({ contrato_id, itensBase = [], onSelect, onClose })
             </div>
 
             {/* Footer */}
-            <div className="px-4 py-2.5 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between shrink-0">
-              <button onClick={() => setItemQtd(null)} className="px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700">
+            <div className="px-4 py-2.5 border-t border-ink-100 flex items-center justify-between shrink-0">
+              <button onClick={() => setItemQtd(null)} className="px-3 py-1.5 text-xs rounded-lg border border-ink-300 text-ink-600 hover:bg-ink-50">
                 Voltar
               </button>
               <button onClick={confirmarQtd} disabled={qtdInvalida}
-                className="px-3 py-1.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold">
+                className="px-3 py-1.5 text-xs rounded-lg bg-brand-600 hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold">
                 Adicionar à Ordem
               </button>
             </div>
@@ -365,9 +365,9 @@ function SelecionarItemModal({ contrato_id, itensBase = [], onSelect, onClose })
         ) : (
         <>
         {/* Busca */}
-        <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 shrink-0">
+        <div className="px-4 py-3 border-b border-ink-100 shrink-0">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-400" />
             <input
               autoFocus value={busca} onChange={e => setBusca(e.target.value)}
               placeholder="Buscar por descrição..."
@@ -377,7 +377,7 @@ function SelecionarItemModal({ contrato_id, itensBase = [], onSelect, onClose })
         </div>
 
         {/* Cabeçalho da tabela */}
-        <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700 shrink-0 text-[10px] font-bold text-gray-400 uppercase tracking-wide">
+        <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-ink-50 border-b border-ink-200 shrink-0 text-[10px] font-bold text-ink-400 uppercase tracking-wide">
           <div className="col-span-5">Descrição</div>
           <div className="col-span-1 text-center">Unid.</div>
           <div className="col-span-2 text-right">V. Unit.</div>
@@ -385,23 +385,23 @@ function SelecionarItemModal({ contrato_id, itensBase = [], onSelect, onClose })
         </div>
 
         {/* Lista */}
-        <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700/40">
+        <div className="flex-1 overflow-y-auto divide-y divide-ink-100">
           {carregando && filtrados.length === 0 && (
             <LoadingBar label="Carregando dados de uso..." />
           )}
           {!carregando && filtrados.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+            <div className="flex flex-col items-center justify-center py-10 text-ink-400">
               <PackageOpen className="w-8 h-8 mb-2 opacity-30" />
               <p className="text-sm">Nenhum item encontrado</p>
               {itens.length === 0 && (
-                <p className="text-xs text-gray-400 mt-1">Este contrato não possui itens vinculados</p>
+                <p className="text-xs text-ink-400 mt-1">Este contrato não possui itens vinculados</p>
               )}
             </div>
           )}
           {filtrados.map((it, idx) => {
             const pct = it.percentual_uso
-            const cor = it.esgotado ? 'bg-red-500' : pct >= 80 ? 'bg-amber-500' : 'bg-emerald-500'
-            const corTexto = it.esgotado ? 'text-red-600' : pct >= 80 ? 'text-amber-600' : 'text-emerald-600'
+            const cor = it.esgotado ? 'bg-danger-500' : pct >= 80 ? 'bg-amber-500' : 'bg-emerald-500'
+            const corTexto = it.esgotado ? 'text-danger-600' : pct >= 80 ? 'text-amber-600' : 'text-emerald-600'
 
             return (
               <button key={idx}
@@ -409,35 +409,35 @@ function SelecionarItemModal({ contrato_id, itensBase = [], onSelect, onClose })
                 disabled={it.esgotado}
                 className={`w-full text-left grid grid-cols-12 gap-2 px-4 py-3 transition-colors items-center
                   ${it.esgotado
-                    ? 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-slate-800/30'
-                    : 'hover:bg-blue-50 dark:hover:bg-blue-900/20 group'
+                    ? 'opacity-50 cursor-not-allowed bg-ink-50'
+                    : 'hover:bg-info-50 dark:hover:bg-info-900/20 group'
                   }`}
               >
                 {/* Descrição */}
                 <div className="col-span-5 min-w-0">
-                  <p className={`text-xs font-medium leading-tight line-clamp-2 ${it.esgotado ? 'text-gray-400' : 'text-gray-800 dark:text-slate-200 group-hover:text-blue-700 dark:group-hover:text-blue-300'}`}>
+                  <p className={`text-xs font-medium leading-tight line-clamp-2 ${it.esgotado ? 'text-ink-400' : 'text-ink-800 group-hover:text-brand-700 dark:group-hover:text-info-300'}`}>
                     {it.descricao}
                   </p>
                   <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                     {it.lote && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 font-medium">
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-sm bg-ink-100 text-ink-500 font-medium">
                         Lote {it.lote}
                       </span>
                     )}
                     {it.esgotado && (
-                      <span className="text-[9px] text-red-500 font-semibold">ESGOTADO</span>
+                      <span className="text-[9px] text-danger-500 font-semibold">ESGOTADO</span>
                     )}
                   </div>
                 </div>
 
                 {/* Unidade */}
                 <div className="col-span-1 text-center">
-                  <span className="text-[10px] text-gray-500 dark:text-slate-400">{it.unidade || '—'}</span>
+                  <span className="text-[10px] text-ink-500">{it.unidade || '—'}</span>
                 </div>
 
                 {/* Valor unitário */}
                 <div className="col-span-2 text-right">
-                  <span className="text-xs text-gray-700 dark:text-slate-300 font-medium">{fmtBRL(it.valor_unitario)}</span>
+                  <span className="text-xs text-ink-700 font-medium">{fmtBRL(it.valor_unitario)}</span>
                 </div>
 
                 {/* Consumo visual */}
@@ -445,14 +445,14 @@ function SelecionarItemModal({ contrato_id, itensBase = [], onSelect, onClose })
                   <div className="flex items-center justify-between mb-1">
                     <span className={`text-[10px] font-bold ${corTexto}`}>
                       {it.qtd_usada % 1 === 0 ? it.qtd_usada : it.qtd_usada.toFixed(2)}
-                      <span className="text-gray-400 font-normal">/{it.qtd_contratada % 1 === 0 ? it.qtd_contratada : it.qtd_contratada.toFixed(2)}</span>
+                      <span className="text-ink-400 font-normal">/{it.qtd_contratada % 1 === 0 ? it.qtd_contratada : it.qtd_contratada.toFixed(2)}</span>
                     </span>
                     <span className={`text-[9px] font-semibold ${corTexto}`}>{pct.toFixed(0)}%</span>
                   </div>
-                  <div className="w-full h-1.5 bg-gray-200 dark:bg-slate-600 rounded-full overflow-hidden">
+                  <div className="w-full h-1.5 bg-ink-200 rounded-full overflow-hidden">
                     <div className={`h-full rounded-full ${cor}`} style={{ width: `${pct}%` }} />
                   </div>
-                  <p className="text-[9px] text-gray-400 mt-0.5">
+                  <p className="text-[9px] text-ink-400 mt-0.5">
                     {it.qtd_disponivel % 1 === 0 ? it.qtd_disponivel : it.qtd_disponivel.toFixed(2)} disponível
                   </p>
                 </div>
@@ -462,9 +462,9 @@ function SelecionarItemModal({ contrato_id, itensBase = [], onSelect, onClose })
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-2.5 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between shrink-0">
-          <span className="text-xs text-gray-400">Clique no item para informar a quantidade</span>
-          <button onClick={onClose} className="px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700">
+        <div className="px-4 py-2.5 border-t border-ink-100 flex items-center justify-between shrink-0">
+          <span className="text-xs text-ink-400">Clique no item para informar a quantidade</span>
+          <button onClick={onClose} className="px-3 py-1.5 text-xs rounded-lg border border-ink-300 text-ink-600 hover:bg-ink-50">
             Fechar
           </button>
         </div>
@@ -481,28 +481,28 @@ function SaldoBar({ saldo }) {
   const pct = Math.min(100, saldo.percentual_usado || 0)
   const livre = 100 - pct
   const cor = saldo.sem_saldo
-    ? 'bg-red-500'
+    ? 'bg-danger-500'
     : saldo.alerta_baixo
       ? 'bg-amber-500'
       : 'bg-emerald-500'
 
   return (
-    <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-3 bg-white dark:bg-slate-800 flex flex-col gap-2">
+    <div className="rounded-xl border border-ink-200 p-3 bg-surface flex flex-col gap-2">
       <div className="flex items-center justify-between text-xs">
-        <span className="font-semibold text-gray-700 dark:text-slate-300">Saldo do Contrato</span>
-        <span className={`font-bold ${saldo.sem_saldo ? 'text-red-600' : saldo.alerta_baixo ? 'text-amber-600' : 'text-emerald-600'}`}>
+        <span className="font-semibold text-ink-700">Saldo do Contrato</span>
+        <span className={`font-bold ${saldo.sem_saldo ? 'text-danger-600' : saldo.alerta_baixo ? 'text-amber-600' : 'text-emerald-600'}`}>
           {fmtBRL(saldo.saldo)} disponível
         </span>
       </div>
-      <div className="w-full h-2 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
+      <div className="w-full h-2 bg-ink-100 rounded-full overflow-hidden">
         <div className={`h-full rounded-full transition-all ${cor}`} style={{ width: `${pct}%` }} />
       </div>
-      <div className="flex justify-between text-[10px] text-gray-400">
+      <div className="flex justify-between text-[10px] text-ink-400">
         <span>Usado: {fmtBRL(saldo.total_usado)}</span>
         <span>Total: {fmtBRL(saldo.valor_contrato)}</span>
       </div>
       {saldo.sem_saldo && (
-        <div className="flex items-center gap-1.5 text-xs text-red-600 font-semibold">
+        <div className="flex items-center gap-1.5 text-xs text-danger-600 font-semibold">
           <XCircle className="w-3.5 h-3.5" /> Saldo esgotado — emissão bloqueada
         </div>
       )}
@@ -580,7 +580,7 @@ function ItemRow({ item, idx, onChange, onRemove, onConfirm, onEdit, editing, re
   const isEditing = !readonly && editing
 
   return (
-    <div className={`grid grid-cols-12 gap-2 items-center py-1.5 border-b border-slate-100 dark:border-slate-700/50 ${isEditing ? 'bg-blue-50/40 dark:bg-blue-900/10' : ''}`}>
+    <div className={`grid grid-cols-12 gap-2 items-center py-1.5 border-b border-ink-100 ${isEditing ? 'bg-info-50/40 dark:bg-info-900/10' : ''}`}>
       <div className="col-span-3">
         {isEditing ? (
           <>
@@ -598,29 +598,29 @@ function ItemRow({ item, idx, onChange, onRemove, onConfirm, onEdit, editing, re
             </datalist>
           </>
         ) : (
-          <p className="text-xs text-gray-800 dark:text-slate-200 truncate px-1">{item.descricao || '—'}</p>
+          <p className="text-xs text-ink-800 truncate px-1">{item.descricao || '—'}</p>
         )}
       </div>
       <div className="col-span-2">
         {isEditing
           ? <input value={item.unidade} onChange={e => onChange(idx, 'unidade', e.target.value)}
               placeholder="Unidade" className="input-field text-xs w-full text-center" />
-          : <p className="text-xs text-center text-gray-600 dark:text-slate-400">{item.unidade || '—'}</p>
+          : <p className="text-xs text-center text-ink-600">{item.unidade || '—'}</p>
         }
       </div>
       <div className="col-span-2">
         {isEditing
           ? <MaskedInput value={item.quantidade} onChange={v => onChange(idx, 'quantidade', v)}
               placeholder="0,00" className="input-field text-xs w-full text-center font-mono" />
-          : <p className="text-xs text-right font-mono text-gray-700 dark:text-slate-300 px-1">{fmtQtd(item.quantidade)}</p>
+          : <p className="text-xs text-right font-mono text-ink-700 px-1">{fmtQtd(item.quantidade)}</p>
         }
       </div>
       <div className="col-span-2">
         {/* V. Unitário: sempre somente leitura — vem do catálogo/contrato */}
-        <p className="text-xs text-right font-mono text-gray-700 dark:text-slate-300 px-1">{fmtVUnit(item.valor_unitario)}</p>
+        <p className="text-xs text-right font-mono text-ink-700 px-1">{fmtVUnit(item.valor_unitario)}</p>
       </div>
       <div className="col-span-2">
-        <p className="text-xs text-right font-mono font-semibold text-gray-700 dark:text-slate-300 px-1">
+        <p className="text-xs text-right font-mono font-semibold text-ink-700 px-1">
           {vTotal > 0 ? fmtVUnit(vTotal) : '—'}
         </p>
       </div>
@@ -629,22 +629,22 @@ function ItemRow({ item, idx, onChange, onRemove, onConfirm, onEdit, editing, re
           isEditing ? (
             <>
               <button title="Confirmar" onClick={() => onConfirm(idx)}
-                className="p-1 rounded hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600">
+                className="p-1 rounded-sm hover:bg-success-100 dark:hover:bg-success-900/30 text-success-600">
                 <CheckCircle2 className="w-3.5 h-3.5" />
               </button>
               <button title="Excluir" onClick={() => onRemove(idx)}
-                className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500">
+                className="p-1 rounded-sm hover:bg-danger-100 dark:hover:bg-danger-900/30 text-danger-500">
                 <X className="w-3.5 h-3.5" />
               </button>
             </>
           ) : (
             <>
               <button title="Editar" onClick={() => onEdit(idx)}
-                className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-500">
+                className="p-1 rounded-sm hover:bg-info-100 dark:hover:bg-info-900/30 text-info-500">
                 <Pencil className="w-3 h-3" />
               </button>
               <button title="Excluir" onClick={() => onRemove(idx)}
-                className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500">
+                className="p-1 rounded-sm hover:bg-danger-100 dark:hover:bg-danger-900/30 text-danger-500">
                 <X className="w-3.5 h-3.5" />
               </button>
             </>
@@ -809,19 +809,19 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in duration-150">
-      <div className="bg-gray-50 dark:bg-slate-900 rounded-3xl shadow-2xl w-full flex flex-col overflow-hidden"
+      <div className="bg-ink-50 rounded-3xl shadow-2xl w-full flex flex-col overflow-hidden"
         style={{ maxWidth: '90vw', maxHeight: '92vh', width: '760px' }}>
 
         {/* Header */}
-        <div className="bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700/60 px-6 py-4 shrink-0">
+        <div className="bg-surface border-b border-ink-100 px-6 py-4 shrink-0">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
               <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-md ${
                 form.tipo === 'COMPRA'
-                  ? 'bg-gradient-to-br from-blue-500 to-indigo-600'
+                  ? 'bg-gradient-to-br from-info-500 to-indigo-600'
                   : form.tipo === 'SERVICO'
                     ? 'bg-gradient-to-br from-orange-500 to-amber-600'
-                    : 'bg-gradient-to-br from-slate-500 to-slate-600'
+                    : 'bg-gradient-to-br from-ink-500 to-ink-600'
               }`}>
                 {form.tipo === 'SERVICO'
                   ? <Wrench className="w-5 h-5 text-white" />
@@ -829,15 +829,15 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
                 }
               </div>
               <div>
-                <h2 className="text-base font-bold text-gray-900 dark:text-white">
+                <h2 className="text-base font-bold text-ink-900 dark:text-white">
                   {readonly ? 'Detalhes da Ordem' : modo === 'novo' ? 'Nova Ordem' : `Editar — ${ordem?.numero}`}
                 </h2>
-                <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+                <p className="text-xs text-ink-500 mt-0.5">
                   {readonly ? ordem?.numero : 'Preencha os dados da ordem de compra/serviço'}
                 </p>
               </div>
             </div>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-400">
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-ink-100 text-ink-400">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -850,11 +850,11 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
           <SectionCard icon={ClipboardList} title="Tipo de Ordem" subtitle="Selecione o tipo antes de preencher os demais campos">
             {readonly
               ? <div className="space-y-1">
-                  <p className="text-sm font-semibold text-gray-800 dark:text-slate-200">
+                  <p className="text-sm font-semibold text-ink-800">
                     {form.tipo === 'COMPRA' ? '🛒 Ordem de Compra' : '🔧 Ordem de Serviço'}
                   </p>
                   {form.tipo === 'SERVICO' && (
-                    <p className="text-xs text-gray-500 dark:text-slate-400">
+                    <p className="text-xs text-ink-500">
                       Destino: {form.destino_did === 'FIXA' ? 'DID Contas Fixas' : form.destino_did === 'VARIAVEL' ? 'DID Contas Variáveis' : 'Não definido (aparece nos dois DIDs)'}
                     </p>
                   )}
@@ -872,9 +872,9 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
                         className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
                           form.tipo === value
                             ? cor === 'blue'
-                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                              ? 'border-brand-500 bg-info-50 dark:bg-info-900/20 text-brand-700 dark:text-info-300'
                               : 'border-amber-500 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300'
-                            : 'border-gray-200 dark:border-slate-600 hover:border-gray-300 dark:hover:border-slate-500 text-gray-600 dark:text-slate-400'
+                            : 'border-ink-200 hover:border-ink-300 text-ink-600'
                         }`}
                       >
                         <Icon className="w-5 h-5 shrink-0" />
@@ -886,7 +886,7 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
                   {/* Destino do DID — só para Ordem de Serviço (OC é sempre conta variável) */}
                   {form.tipo === 'SERVICO' && (
                     <div>
-                      <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">
+                      <p className="text-xs font-semibold text-ink-500 mb-1.5">
                         Destino da Ordem — em qual DID esta ordem vai aparecer?
                       </p>
                       <div className="grid grid-cols-2 gap-3">
@@ -902,7 +902,7 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
                                 ? cor === 'purple'
                                   ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300'
                                   : 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300'
-                                : 'border-gray-200 dark:border-slate-600 hover:border-gray-300 dark:hover:border-slate-500 text-gray-600 dark:text-slate-400'
+                                : 'border-ink-200 hover:border-ink-300 text-ink-600'
                             }`}
                           >
                             <span className="font-semibold text-sm">{label}</span>
@@ -921,26 +921,26 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
             <SectionCard icon={ClipboardList} title="Contrato" subtitle="Selecione o contrato vinculado">
               <div className="space-y-3">
                 {readonly
-                  ? <p className="text-sm font-medium text-gray-800 dark:text-slate-200">
+                  ? <p className="text-sm font-medium text-ink-800">
                       {contratoSel ? `${contratoSel.numero_contrato} — ${contratoSel.objeto}` : '—'}
                     </p>
                   : (
                     <div className="space-y-2">
                       {/* Contrato selecionado */}
                       {form.contrato_id && contratoSel ? (
-                        <div className="flex items-start gap-3 px-3 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700">
-                          <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+                        <div className="flex items-start gap-3 px-3 py-2.5 rounded-xl bg-info-50 dark:bg-info-900/20 border border-info-200 dark:border-info-700">
+                          <CheckCircle2 className="w-4 h-4 text-brand-600 dark:text-info-400 mt-0.5 shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-bold text-blue-700 dark:text-blue-300">{contratoSel.numero_contrato}</p>
-                            <p className="text-xs text-blue-600 dark:text-blue-400 truncate">{contratoSel.objeto}</p>
+                            <p className="text-xs font-bold text-brand-700 dark:text-info-300">{contratoSel.numero_contrato}</p>
+                            <p className="text-xs text-brand-600 dark:text-info-400 truncate">{contratoSel.objeto}</p>
                             {contratoSel.credor?.razao_social && (
-                              <p className="text-[10px] text-blue-500 dark:text-blue-500">{contratoSel.credor.razao_social}</p>
+                              <p className="text-[10px] text-info-500 dark:text-info-500">{contratoSel.credor.razao_social}</p>
                             )}
                           </div>
                           <div className="text-right shrink-0">
-                            <p className="text-xs font-bold text-blue-700 dark:text-blue-300">{fmtBRL(contratoSel.valor)}</p>
+                            <p className="text-xs font-bold text-brand-700 dark:text-info-300">{fmtBRL(contratoSel.valor)}</p>
                             <button onClick={() => { set('contrato_id', ''); setSaldo(null) }}
-                              className="text-[10px] text-blue-400 hover:text-red-500 mt-1 underline">
+                              className="text-[10px] text-info-400 hover:text-danger-500 mt-1 underline">
                               Trocar
                             </button>
                           </div>
@@ -948,7 +948,7 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
                       ) : (
                         <button
                           onClick={() => setModalContrato(true)}
-                          className="w-full flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-gray-300 dark:border-slate-600 text-gray-500 dark:text-slate-400 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-sm">
+                          className="w-full flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-ink-300 text-ink-500 hover:border-info-400 dark:hover:border-brand-500 hover:text-brand-600 dark:hover:text-info-400 transition-colors text-sm">
                           <Search className="w-4 h-4" />
                           Clique para selecionar um contrato...
                         </button>
@@ -970,7 +970,7 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
                   />
                 )}
                 {carregandoSaldo && (
-                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                  <div className="flex items-center gap-2 text-xs text-ink-400">
                     <RefreshCw className="w-3 h-3 animate-spin" /> Calculando saldo...
                   </div>
                 )}
@@ -984,55 +984,55 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
             <SectionCard icon={ClipboardList} title="Dados da Ordem" subtitle="Informações gerais">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Data de Emissão *</label>
+                  <label className="block text-xs font-semibold text-ink-500 mb-1.5">Data de Emissão *</label>
                   {readonly
-                    ? <p className="text-sm font-medium text-gray-800 dark:text-slate-200">{fmtData(form.data_emissao)}</p>
+                    ? <p className="text-sm font-medium text-ink-800">{fmtData(form.data_emissao)}</p>
                     : <PremiumInput type="date" value={form.data_emissao} onChange={e => set('data_emissao', e.target.value)} />
                   }
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">
+                  <label className="block text-xs font-semibold text-ink-500 mb-1.5">
                     {form.tipo === 'COMPRA' ? 'Data de Entrega Prevista' : 'Data de Conclusão Prevista'}
                   </label>
                   {readonly
-                    ? <p className="text-sm font-medium text-gray-800 dark:text-slate-200">{fmtData(form.data_entrega_prevista)}</p>
+                    ? <p className="text-sm font-medium text-ink-800">{fmtData(form.data_entrega_prevista)}</p>
                     : <PremiumInput type="date" value={form.data_entrega_prevista} onChange={e => set('data_entrega_prevista', e.target.value)} />
                   }
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Objeto / Descrição *</label>
+                  <label className="block text-xs font-semibold text-ink-500 mb-1.5">Objeto / Descrição *</label>
                   {readonly
-                    ? <p className="text-sm font-medium text-gray-800 dark:text-slate-200">{form.objeto}</p>
+                    ? <p className="text-sm font-medium text-ink-800">{form.objeto}</p>
                     : <PremiumTextarea value={form.objeto} onChange={e => set('objeto', e.target.value)} rows={2} placeholder="Descreva o objeto desta ordem..." />
                   }
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Justificativa</label>
+                  <label className="block text-xs font-semibold text-ink-500 mb-1.5">Justificativa</label>
                   {readonly
-                    ? <p className="text-sm text-gray-700 dark:text-slate-300 whitespace-pre-wrap">{form.justificativa || '—'}</p>
+                    ? <p className="text-sm text-ink-700 whitespace-pre-wrap">{form.justificativa || '—'}</p>
                     : <PremiumTextarea value={form.justificativa} onChange={e => set('justificativa', e.target.value)} rows={2} placeholder="Justificativa para a aquisição/contratação..." />
                   }
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Secretaria</label>
+                  <label className="block text-xs font-semibold text-ink-500 mb-1.5">Secretaria</label>
                   {readonly
-                    ? <p className="text-sm text-gray-700 dark:text-slate-300">{form.secretaria || '—'}</p>
+                    ? <p className="text-sm text-ink-700">{form.secretaria || '—'}</p>
                     : <PremiumInput value={form.secretaria} onChange={e => set('secretaria', e.target.value)} placeholder="Secretaria solicitante" />
                   }
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">Fiscal / Responsável</label>
+                  <label className="block text-xs font-semibold text-ink-500 mb-1.5">Fiscal / Responsável</label>
                   {readonly
-                    ? <p className="text-sm text-gray-700 dark:text-slate-300">{form.fiscal_responsavel || '—'}</p>
+                    ? <p className="text-sm text-ink-700">{form.fiscal_responsavel || '—'}</p>
                     : <PremiumInput value={form.fiscal_responsavel} onChange={e => set('fiscal_responsavel', e.target.value)} placeholder="Nome do fiscal" />
                   }
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5">
+                  <label className="block text-xs font-semibold text-ink-500 mb-1.5">
                     {form.tipo === 'COMPRA' ? 'Local de Entrega' : 'Local de Execução'}
                   </label>
                   {readonly
-                    ? <p className="text-sm text-gray-700 dark:text-slate-300">{form.local_entrega || '—'}</p>
+                    ? <p className="text-sm text-ink-700">{form.local_entrega || '—'}</p>
                     : <PremiumInput value={form.local_entrega} onChange={e => set('local_entrega', e.target.value)} placeholder="Endereço / local" />
                   }
                 </div>
@@ -1053,7 +1053,7 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
             const usarGrupos = lotesOrdem.length > 1
 
             const cabecalho = (
-              <div className="grid grid-cols-12 gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest pb-1 border-b border-slate-200 dark:border-slate-700">
+              <div className="grid grid-cols-12 gap-2 text-[10px] font-bold text-ink-400 uppercase tracking-widest pb-1 border-b border-ink-200">
                 <div className="col-span-3">Descrição</div>
                 <div className="col-span-2">Unidade</div>
                 <div className="col-span-2 text-right">Qtd</div>
@@ -1071,7 +1071,7 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
               >
                 <div>
                   {itens.length === 0 && (
-                    <p className="text-xs text-gray-400 text-center py-4">Nenhum item adicionado.</p>
+                    <p className="text-xs text-ink-400 text-center py-4">Nenhum item adicionado.</p>
                   )}
 
                   {usarGrupos
@@ -1084,10 +1084,10 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
                           <div key={lote} className="mb-4">
                             {/* Sub-título do lote */}
                             <div className="flex items-center justify-between mb-1">
-                              <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 rounded">
+                              <span className="text-[10px] font-bold text-brand-600 dark:text-info-400 uppercase tracking-wider px-2 py-0.5 bg-info-50 dark:bg-info-900/20 rounded-sm">
                                 {lote ? `Lote ${lote}` : 'Sem Lote'}
                               </span>
-                              <span className="text-[10px] text-gray-500 dark:text-slate-400 font-semibold">
+                              <span className="text-[10px] text-ink-500 font-semibold">
                                 Subtotal: {fmtBRL(totalLote)}
                               </span>
                             </div>
@@ -1123,13 +1123,13 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
                   {!readonly && (
                     <div className="mt-3 flex items-center gap-3">
                       <button onClick={() => setModalItens(true)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm transition-colors">
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-sm transition-colors">
                         <Search className="w-3.5 h-3.5" /> Buscar item do contrato
                       </button>
                     </div>
                   )}
                   {itens.length > 0 && (
-                    <div className="mt-3 pt-2 border-t border-slate-200 dark:border-slate-700 text-right text-sm font-bold text-gray-800 dark:text-white">
+                    <div className="mt-3 pt-2 border-t border-ink-200 text-right text-sm font-bold text-ink-800 dark:text-white">
                       Total: {fmtBRL(valorTotal)}
                     </div>
                   )}
@@ -1162,7 +1162,7 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
           {form.tipo && form.contrato_id && (
             <SectionCard icon={ClipboardList} title="Observações" subtitle="Informações adicionais">
               {readonly
-                ? <p className="text-sm text-gray-700 dark:text-slate-300 whitespace-pre-wrap">{form.observacoes || '—'}</p>
+                ? <p className="text-sm text-ink-700 whitespace-pre-wrap">{form.observacoes || '—'}</p>
                 : <PremiumTextarea value={form.observacoes} onChange={e => set('observacoes', e.target.value)} rows={2} placeholder="Observações gerais..." />
               }
             </SectionCard>
@@ -1170,15 +1170,15 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
         </div>
 
         {/* Footer */}
-        <div className="bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700/60 px-6 py-3 shrink-0 flex items-center justify-between">
+        <div className="bg-surface border-t border-ink-100 px-6 py-3 shrink-0 flex items-center justify-between">
           <button onClick={onClose}
-            className="px-4 py-2 text-sm rounded-xl border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+            className="px-4 py-2 text-sm rounded-xl border border-ink-200 text-ink-600 hover:bg-ink-50 transition-colors">
             {readonly ? 'Fechar' : 'Cancelar'}
           </button>
           {!readonly && (
             <button onClick={salvar}
               disabled={saldo?.sem_saldo}
-              className="px-6 py-2 text-sm rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-sm transition-colors">
+              className="px-6 py-2 text-sm rounded-xl bg-brand-600 hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-sm transition-colors">
               Salvar Ordem
             </button>
           )}
@@ -1433,17 +1433,17 @@ async function gerarPdf(ordemRaw, contratos = []) {
 function ConfirmModal({ numero, onConfirm, onClose }) {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center">
-        <XCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
-        <h3 className="text-base font-bold text-gray-900 dark:text-white mb-1">Cancelar Ordem?</h3>
-        <p className="text-sm text-gray-500 dark:text-slate-400 mb-5">
+      <div className="bg-surface rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center">
+        <XCircle className="w-12 h-12 text-danger-500 mx-auto mb-3" />
+        <h3 className="text-base font-bold text-ink-900 dark:text-white mb-1">Cancelar Ordem?</h3>
+        <p className="text-sm text-ink-500 mb-5">
           A ordem <strong>{numero}</strong> será marcada como cancelada e o saldo será devolvido ao contrato.
         </p>
         <div className="flex gap-3 justify-center">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 text-sm text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700">
+          <button onClick={onClose} className="px-4 py-2 rounded-lg border border-ink-300 text-sm text-ink-600 hover:bg-ink-50">
             Não
           </button>
-          <button onClick={onConfirm} className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold">
+          <button onClick={onConfirm} className="px-4 py-2 rounded-lg bg-danger-600 hover:bg-danger-700 text-white text-sm font-semibold">
             Sim, cancelar
           </button>
         </div>
@@ -1456,17 +1456,17 @@ function ConfirmModal({ numero, onConfirm, onClose }) {
 function ConfirmExcluirModal({ numero, onConfirm, onClose }) {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center">
-        <Trash2 className="w-12 h-12 text-red-500 mx-auto mb-3" />
-        <h3 className="text-base font-bold text-gray-900 dark:text-white mb-1">Excluir Ordem Definitivamente?</h3>
-        <p className="text-sm text-gray-500 dark:text-slate-400 mb-5">
+      <div className="bg-surface rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center">
+        <Trash2 className="w-12 h-12 text-danger-500 mx-auto mb-3" />
+        <h3 className="text-base font-bold text-ink-900 dark:text-white mb-1">Excluir Ordem Definitivamente?</h3>
+        <p className="text-sm text-ink-500 mb-5">
           A ordem <strong>{numero}</strong> será removida da listagem permanentemente. Esta ação não pode ser desfeita.
         </p>
         <div className="flex gap-3 justify-center">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 text-sm text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700">
+          <button onClick={onClose} className="px-4 py-2 rounded-lg border border-ink-300 text-sm text-ink-600 hover:bg-ink-50">
             Cancelar
           </button>
-          <button onClick={onConfirm} className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold">
+          <button onClick={onConfirm} className="px-4 py-2 rounded-lg bg-danger-600 hover:bg-danger-700 text-white text-sm font-semibold">
             Sim, excluir
           </button>
         </div>
@@ -1553,30 +1553,30 @@ function TabOrdens() {
   }
 
   const statusCor = (s) => {
-    if (s === 'EMITIDA')   return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-    if (s === 'ATENDIDA')  return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-    if (s === 'CANCELADA') return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-    return 'bg-gray-100 text-gray-600'
+    if (s === 'EMITIDA')   return 'bg-info-100 text-brand-700 dark:bg-info-900/30 dark:text-info-400'
+    if (s === 'ATENDIDA')  return 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400'
+    if (s === 'CANCELADA') return 'bg-danger-100 text-danger-700 dark:bg-danger-900/30 dark:text-danger-400'
+    return 'bg-ink-100 text-ink-600'
   }
 
   return (
     <div className="space-y-4">
 
       {/* Filtros */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 space-y-3">
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Opções para filtro</p>
+      <div className="bg-surface rounded-2xl border border-ink-200 p-4 space-y-3">
+        <p className="text-[10px] font-bold text-ink-400 uppercase tracking-widest">Opções para filtro</p>
         <div className="flex flex-wrap gap-3 items-end">
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Buscar</label>
+            <label className="block text-xs font-medium text-ink-500 mb-1">Buscar</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-400" />
               <input value={filtros.q} onChange={e => setFiltros(p => ({ ...p, q: e.target.value }))}
                 onKeyDown={e => e.key === 'Enter' && carregar()}
                 placeholder="Nº da ordem ou objeto..." className="input-field pl-8 text-sm" />
             </div>
           </div>
           <div className="w-36">
-            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Tipo</label>
+            <label className="block text-xs font-medium text-ink-500 mb-1">Tipo</label>
             <select value={filtros.tipo} onChange={e => setFiltros(p => ({ ...p, tipo: e.target.value }))} className="input-field text-sm">
               <option value="">Todos</option>
               <option value="COMPRA">Compra</option>
@@ -1584,7 +1584,7 @@ function TabOrdens() {
             </select>
           </div>
           <div className="w-36">
-            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Status</label>
+            <label className="block text-xs font-medium text-ink-500 mb-1">Status</label>
             <select value={filtros.status} onChange={e => setFiltros(p => ({ ...p, status: e.target.value }))} className="input-field text-sm">
               <option value="">Todos</option>
               <option value="EMITIDA">Emitida</option>
@@ -1594,11 +1594,11 @@ function TabOrdens() {
           </div>
           <div className="ml-auto flex gap-2 pb-0.5">
             <button onClick={() => { setFiltros({ tipo: '', status: '', q: '', contrato_id: '' }); setTimeout(carregar, 0) }}
-              className="px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
+              className="px-3 py-1.5 text-xs rounded-lg border border-ink-300 text-ink-600 hover:bg-ink-100 transition-colors">
               Limpar
             </button>
             <button onClick={carregar}
-              className="flex items-center gap-1.5 px-4 py-1.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm transition-colors">
+              className="flex items-center gap-1.5 px-4 py-1.5 text-xs rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-sm transition-colors">
               <Search className="w-3.5 h-3.5" /> Pesquisar
             </button>
           </div>
@@ -1606,10 +1606,10 @@ function TabOrdens() {
       </div>
 
       {/* Tabela */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="bg-surface rounded-2xl border border-ink-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
-            <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+            <thead className="bg-ink-50 border-b border-ink-200">
               <tr>
                 {[
                   { label: 'Nº Ordem',  cls: 'text-left px-3 py-2.5 font-semibold w-28' },
@@ -1621,18 +1621,18 @@ function TabOrdens() {
                   { label: 'Saldo',     cls: 'text-right px-3 py-2.5 font-semibold whitespace-nowrap' },
                   { label: 'Status',    cls: 'text-center px-3 py-2.5 font-semibold' },
                 ].map(({ label, cls }) => (
-                  <th key={label} className={`${cls} text-gray-500 dark:text-slate-400 text-[11px] uppercase tracking-wide`}>{label}</th>
+                  <th key={label} className={`${cls} text-ink-500 text-[11px] uppercase tracking-wide`}>{label}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
+            <tbody className="divide-y divide-ink-200">
               {loading && (
-                <tr><td colSpan={8} className="text-center py-10 text-gray-400">
+                <tr><td colSpan={8} className="text-center py-10 text-ink-400">
                   <LoadingBar label="Carregando ordens..." />
                 </td></tr>
               )}
               {!loading && ordens.length === 0 && (
-                <tr><td colSpan={8} className="text-center py-14 text-gray-400 dark:text-slate-500">
+                <tr><td colSpan={8} className="text-center py-14 text-ink-400">
                   <ClipboardList className="w-10 h-10 mx-auto mb-2 opacity-30" />
                   Nenhuma ordem encontrada
                 </td></tr>
@@ -1646,15 +1646,15 @@ function TabOrdens() {
                     onDoubleClick={() => { setSelecionada(o.id); setModal('visualizar') }}
                     className={`cursor-pointer transition-colors text-xs ${
                       sel
-                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100'
-                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 text-gray-700 dark:text-slate-300'
+                        ? 'bg-info-100 dark:bg-info-900/30 text-info-900 dark:text-info-100'
+                        : 'hover:bg-ink-50 text-ink-700'
                     } ${o.status === 'CANCELADA' ? 'opacity-50 line-through' : ''}`}
                   >
-                    <td className="px-3 py-2 font-mono font-semibold text-blue-600 dark:text-blue-400">{o.numero}</td>
+                    <td className="px-3 py-2 font-mono font-semibold text-brand-600 dark:text-info-400">{o.numero}</td>
                     <td className="px-3 py-2">
                       <div className="flex flex-col gap-1 w-fit">
                         <span className={`flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md w-fit ${
-                          o.tipo === 'COMPRA' ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'
+                          o.tipo === 'COMPRA' ? 'bg-info-50 text-brand-700 dark:bg-info-900/20 dark:text-info-400' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'
                         }`}>
                           {o.tipo === 'COMPRA' ? <ShoppingCart className="w-3 h-3" /> : <Wrench className="w-3 h-3" />}
                           {o.tipo === 'COMPRA' ? 'Compra' : 'Serviço'}
@@ -1677,11 +1677,11 @@ function TabOrdens() {
                     <td className="px-3 py-2 text-right">
                       {saldoInfo ? (
                         <div className="text-right">
-                          <p className={`text-[10px] font-bold ${saldoInfo.sem_saldo ? 'text-red-600' : saldoInfo.alerta_baixo ? 'text-amber-600' : 'text-emerald-600'}`}>
+                          <p className={`text-[10px] font-bold ${saldoInfo.sem_saldo ? 'text-danger-600' : saldoInfo.alerta_baixo ? 'text-amber-600' : 'text-emerald-600'}`}>
                             {fmtBRL(saldoInfo.saldo)}
                           </p>
                         </div>
-                      ) : <span className="text-gray-300">—</span>}
+                      ) : <span className="text-ink-300">—</span>}
                     </td>
                     <td className="px-3 py-2 text-center">
                       <div className="flex flex-col items-center gap-1">
@@ -1694,7 +1694,7 @@ function TabOrdens() {
                           </span>
                         )}
                         {(o.dataValues?.numero_processo_vinculado || o.numero_processo_vinculado) && (
-                          <span className="text-[9px] text-slate-500 dark:text-slate-400 whitespace-nowrap font-medium">
+                          <span className="text-[9px] text-ink-500 whitespace-nowrap font-medium">
                             Proc. {o.dataValues?.numero_processo_vinculado || o.numero_processo_vinculado}
                           </span>
                         )}
@@ -1707,9 +1707,9 @@ function TabOrdens() {
           </table>
         </div>
         {/* Rodapé */}
-        <div className="border-t border-slate-200 dark:border-slate-700 px-4 py-2 text-[11px] text-gray-400">
+        <div className="border-t border-ink-200 px-4 py-2 text-[11px] text-ink-400">
           {selecionada && ordemSel && (
-            <span className="text-blue-600 dark:text-blue-400 font-medium">✓ {ordemSel.numero}</span>
+            <span className="text-brand-600 dark:text-info-400 font-medium">✓ {ordemSel.numero}</span>
           )}
           <span className="float-right">
             {ordens.length} registro(s)
@@ -1730,20 +1730,20 @@ function TabOrdens() {
         </button>
         <button onClick={() => ordemSel && ordemSel.status !== 'CANCELADA' && !(ordemSel.status === 'EMITIDA' && (ordemSel.did_vinculado || ordemSel.dataValues?.did_vinculado)) && setModal('cancelar')}
           disabled={!selecionada || ordemSel?.status === 'CANCELADA' || (ordemSel?.status === 'EMITIDA' && (ordemSel?.did_vinculado || ordemSel?.dataValues?.did_vinculado))}
-          className="flex items-center gap-1.5 px-4 py-2 text-xs rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-sm transition-colors">
+          className="flex items-center gap-1.5 px-4 py-2 text-xs rounded-xl bg-danger-600 hover:bg-danger-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-sm transition-colors">
           <Trash2 className="w-3.5 h-3.5" /> Cancelar
         </button>
         {isAdmin && (
           <button onClick={() => ordemSel && ordemSel.status === 'CANCELADA' && setModal('excluir')}
             disabled={!selecionada || ordemSel?.status !== 'CANCELADA'}
             title="Excluir definitivamente (somente ordens já canceladas)"
-            className="flex items-center gap-1.5 px-4 py-2 text-xs rounded-xl bg-red-800 hover:bg-red-900 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-sm transition-colors">
+            className="flex items-center gap-1.5 px-4 py-2 text-xs rounded-xl bg-danger-800 hover:bg-danger-900 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-sm transition-colors">
             <Trash2 className="w-3.5 h-3.5" /> Excluir
           </button>
         )}
         <button onClick={() => ordemSel && setModal('visualizar')}
           disabled={!selecionada}
-          className="flex items-center gap-1.5 px-4 py-2 text-xs rounded-xl bg-slate-600 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-sm transition-colors">
+          className="flex items-center gap-1.5 px-4 py-2 text-xs rounded-xl bg-ink-600 hover:bg-ink-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-sm transition-colors">
           <Eye className="w-3.5 h-3.5" /> Visualizar
         </button>
         <button onClick={() => ordemSel && gerarPdf(ordemSel, contratos)}

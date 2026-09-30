@@ -70,9 +70,9 @@ function PDFLoadingOverlay() {
   if (!loading) return null
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl px-10 py-7 flex flex-col items-center gap-4">
-        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-        <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">Gerando documento...</span>
+      <div className="bg-surface rounded-2xl shadow-2xl px-10 py-7 flex flex-col items-center gap-4">
+        <div className="w-10 h-10 border-4 border-brand-600 border-t-transparent rounded-full animate-spin" />
+        <span className="text-sm font-semibold text-ink-700">Gerando documento...</span>
       </div>
     </div>
   )

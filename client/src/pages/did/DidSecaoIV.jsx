@@ -28,7 +28,7 @@ export default function DidSecaoIV({ form, inp, saving, didId, onSave }) {
       </Field>
       <Field label="Tipo de Empenho" half>
         <select value={form.tipo_empenho} onChange={inp('tipo_empenho')} disabled={locked}
-          className={`input-field text-sm${locked ? ' opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800' : ''}`}>
+          className={`input-field text-sm${locked ? ' opacity-60 cursor-not-allowed bg-ink-50' : ''}`}>
           <option value="">Selecione...</option>
           <option value="ordinario">Ordinário</option>
           <option value="estimativo">Estimativo</option>
