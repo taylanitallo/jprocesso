@@ -95,7 +95,7 @@ const defineProcessoModel = (sequelize) => {
     tipo_processo: {
       type: DataTypes.STRING(30),
       allowNull: true,
-      comment: 'Tipo do processo: Requisição, Did, Pauta, Despacho'
+      comment: 'Tipo do processo: Requisição, Did, Pauta, Despacho, Protocolo'
     },
     observacoes: {
       type: DataTypes.TEXT,
@@ -105,6 +105,11 @@ const defineProcessoModel = (sequelize) => {
       type: DataTypes.JSONB,
       defaultValue: null,
       comment: 'Dados do documento de despacho (para, cargo_emissor, data_despacho, texto)'
+    },
+    protocolo_doc: {
+      type: DataTypes.JSONB,
+      defaultValue: null,
+      comment: 'Dados do protocolo digital (origem, natureza, orgao_externo, documento_tipo, prazo_dias, atendente)'
     }
   }, {
     tableName: 'processos',

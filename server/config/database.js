@@ -87,7 +87,8 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
     // 0a. Processos — colunas opcionais adicionadas após criação inicial
     run(`
       ALTER TABLE processos
-        ADD COLUMN IF NOT EXISTS tipo_processo VARCHAR(50)
+        ADD COLUMN IF NOT EXISTS tipo_processo  VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS protocolo_doc  JSONB
     `),
 
     // 0a-bis. Anexos — colunas adicionadas após criação inicial (tenants antigos)

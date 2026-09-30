@@ -14,12 +14,13 @@ const TIPO_LABEL = {
   despacho:   { label: 'Despacho',      cor: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' },
   oficio:     { label: 'Ofício',        cor: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
   pauta:      { label: 'Pauta',         cor: 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300' },
+  protocolo:  { label: 'Protocolo',     cor: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
   requisicao: { label: 'Requisição',    cor: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300' },
   ordem:      { label: 'Ordem',         cor: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
   gerado:     { label: 'Gerado',        cor: 'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-300' },
 }
 
-const TIPOS = ['Did', 'Despacho', 'Pauta', 'Requisição', 'Geral']
+const TIPOS = ['Did', 'Despacho', 'Pauta', 'Protocolo', 'Requisição', 'Geral']
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function buildTree(processos) {

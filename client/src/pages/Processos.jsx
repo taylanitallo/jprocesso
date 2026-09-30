@@ -17,6 +17,7 @@ const TIPO_CLS = {
   Despacho:   'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 ring-indigo-200 dark:ring-indigo-800/40',
   Pauta:      'bg-teal-50   dark:bg-teal-900/30   text-teal-600   dark:text-teal-300   ring-teal-200   dark:ring-teal-800/40',
   Requisição: 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-300 ring-orange-200 dark:ring-orange-800/40',
+  Protocolo:  'bg-amber-50  dark:bg-amber-900/30  text-amber-600  dark:text-amber-300  ring-amber-200  dark:ring-amber-800/40',
 }
 
 const STATUS_INFO = {
@@ -281,6 +282,7 @@ export default function Processos() {
                       <option value="Did">Did</option>
                       <option value="Despacho">Despacho</option>
                       <option value="Pauta">Pauta</option>
+                      <option value="Protocolo">Protocolo</option>
                       <option value="Requisição">Requisição</option>
                     </select>
                   </div>
@@ -454,6 +456,7 @@ export default function Processos() {
                       <option value="Did">Did</option>
                       <option value="Despacho">Despacho</option>
                       <option value="Pauta">Pauta</option>
+                      <option value="Protocolo">Protocolo</option>
                       <option value="Requisição">Requisição</option>
                     </select>
                   </div>

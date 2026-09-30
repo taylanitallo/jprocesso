@@ -4,6 +4,7 @@ import { salvarDocumentoGerado } from './salvarDocumentoGerado'
 import { applyTimbradoToPage } from './timbradoStore'
 import { getMargens } from './margensStore'
 import { setPDFLoading } from './pdfLoadingStore'
+import { ORIGEM_PROTOCOLO_LABEL, NATUREZA_PROTOCOLO_LABEL } from './protocoloConstants'
 
 function _download(blob, nome) {
   const url = URL.createObjectURL(blob)
@@ -602,6 +603,166 @@ export async function gerarPautaPDF(processo) {
   const blobPauta = doc.output('blob')
   salvarDocumentoGerado(blobPauta, { nome: nomeArqPauta, processoId: processo.id, tipoOrigem: 'pauta' })
   _download(blobPauta, nomeArqPauta)
+  } finally { setPDFLoading(false) }
+}
+
+// ─── PROTOCOLO ────────────────────────────────────────────────────────────────
+export async function gerarProtocoloPDF(processo, { consultaUrl } = {}) {
+  setPDFLoading(true)
+  try {
+  refreshM()
+  const p = processo.protocolo_doc || {}
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  let y = cabecalho(doc, 'COMPROVANTE DE PROTOCOLO', processo.numero, processo.secretaria?.sigla || processo.secretariaSigla)
+
+  // Destaque do assunto (âmbar)
+  doc.setFillColor(255, 251, 235)
+  doc.setDrawColor(253, 230, 138)
+  doc.roundedRect(M, y, UW, 18, 2, 2, 'FD')
+  doc.setFontSize(11)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(22, 28, 36)
+  const assuntoLines = doc.splitTextToSize(fmt(processo.assunto), UW - 6)
+  doc.text(assuntoLines, M + 3, y + 7)
+  y += 22
+
+  // ─ Identificação
+  y = secao(doc, y, 'Identificação do Protocolo')
+  y = campo(doc, y, 'Número do Processo', processo.numero)
+  y = campo(doc, y + 2, 'Data e Hora do Protocolo', fmtData(processo.data_abertura || processo.created_at))
+  y = campo(doc, y + 2, 'Origem', ORIGEM_PROTOCOLO_LABEL[p.origem])
+  y = campo(doc, y + 2, 'Natureza do Atendimento', NATUREZA_PROTOCOLO_LABEL[p.natureza])
+  if (p.documento_apresentado) y = campo(doc, y + 2, 'Documento Apresentado', p.documento_apresentado)
+  if (p.prazo_dias)            y = campo(doc, y + 2, 'Prazo de Atendimento', `${p.prazo_dias} dia(s)`)
+  y = campo(doc, y + 2, 'Secretaria', processo.secretaria?.nome || processo.secretariaNome)
+  y = campo(doc, y + 2, 'Setor Atual', processo.setorAtual?.nome)
+  y = campo(doc, y + 2, 'Status', processo.status)
+
+  // ─ Interessado
+  y = secao(doc, y + 4, p.origem === 'interno' ? 'Servidor / Unidade Solicitante' : 'Interessado / Requerente')
+  y = campo(doc, y, 'Nome', processo.interessado_nome || processo.interessadoNome)
+  y = campo(doc, y + 2, 'CPF / CNPJ', processo.interessado_cpf_cnpj || processo.interessadoCpfCnpj)
+  if (processo.interessado_email || processo.interessadoEmail)
+    y = campo(doc, y + 2, 'E-mail', processo.interessado_email || processo.interessadoEmail)
+  if (processo.interessado_telefone || processo.interessadoTelefone)
+    y = campo(doc, y + 2, 'Telefone', processo.interessado_telefone || processo.interessadoTelefone)
+  if (p.orgao_externo)
+    y = campo(doc, y + 2, 'Órgão / Empresa Representada', p.orgao_externo)
+
+  // ─ Documento protocolado
+  y = secao(doc, y + 4, 'Documento Protocolado / Descrição')
+  doc.setFillColor(255, 251, 235)
+  doc.setDrawColor(253, 230, 138)
+  const linhasDesc = doc.splitTextToSize(fmt(processo.descricao), UW - 6)
+  const boxH = Math.max(22, linhasDesc.length * 5.5 + 8)
+  y = checkPage(doc, y, boxH + 4)
+  doc.roundedRect(M, y, UW, boxH, 2, 2, 'FD')
+  doc.setFontSize(10)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(22, 28, 36)
+  doc.text(linhasDesc, M + 3, y + 7)
+  y += boxH + 6
+
+  // ─ Anexos recebidos (somente anexos — documentos gerados ficam de fora)
+  const anexos = (processo.documentos || []).filter(d => !d.tipo_origem || d.tipo_origem === 'anexo')
+  if (anexos.length) {
+    y = secao(doc, y + 2, 'Documentos Recebidos')
+    anexos.forEach((d, i) => {
+      y = checkPage(doc, y, 8)
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(22, 28, 36)
+      doc.text(`${i + 1}. ${fmt(d.nome_arquivo)}`, M + 2, y + 4)
+      y += 7
+    })
+    y += 2
+  }
+
+  // ─ Tramitações
+  if (processo.tramitacoes?.length) {
+    y = secao(doc, y + 2, 'Histórico de Tramitações')
+    processo.tramitacoes.forEach((t) => {
+      y = checkPage(doc, y, 16)
+      doc.setFillColor(255, 251, 235)
+      doc.roundedRect(M, y, UW, 13, 1.5, 1.5, 'F')
+      doc.setFontSize(8.5)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(22, 28, 36)
+      const acao = { abertura: 'Abertura', tramite: 'Tramitação', devolucao: 'Devolução', conclusao: 'Conclusão' }[t.tipo_acao] || t.tipo_acao
+      doc.text(acao, M + 3, y + 5.5)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(7.5)
+      doc.setTextColor(90, 100, 115)
+      const data = t.data_hora ? new Date(t.data_hora).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'
+      doc.text(data, 210 - M - 3, y + 5.5, { align: 'right' })
+      if (t.despacho || t.observacao) {
+        const obs = doc.splitTextToSize(fmt(t.despacho || t.observacao), UW - 12)
+        doc.text(obs, M + 3, y + 10)
+      }
+      y += 16
+    })
+  }
+
+  // ─ Acompanhamento (consulta pública + QR code)
+  y = secao(doc, y + 2, 'Acompanhamento do Protocolo')
+  const boxAcompH = 34
+  y = checkPage(doc, y, boxAcompH + 4)
+  doc.setFillColor(255, 251, 235)
+  doc.setDrawColor(253, 230, 138)
+  doc.roundedRect(M, y, UW, boxAcompH, 2, 2, 'FD')
+
+  let txtX = M + 4
+  if (processo.qrcode) {
+    try {
+      doc.addImage(processo.qrcode, 'PNG', M + 3, y + 3, 28, 28)
+      txtX = M + 35
+    } catch { /* QR ausente ou inválido — segue sem a imagem */ }
+  }
+
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(22, 28, 36)
+  doc.text('Guarde este comprovante.', txtX, y + 8)
+  doc.setFontSize(8.5)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(60, 70, 90)
+  const instrucoes = doc.splitTextToSize(
+    `Consulte a situação e a tramitação deste protocolo informando o número ${fmt(processo.numero)} `
+    + `na consulta pública${consultaUrl ? `: ${consultaUrl}` : ' do portal do município'}.`,
+    UW - (txtX - M) - 6
+  )
+  doc.text(instrucoes, txtX, y + 14)
+  y += boxAcompH + 6
+
+  // ─ Assinaturas
+  y = checkPage(doc, y + 4, 40)
+  doc.setFillColor(220, 225, 233)
+  doc.rect(M, y, UW, 0.4, 'F')
+  y += 8
+  const cw = UW / 2
+  const blocos = [
+    ['Servidor Responsável pelo Recebimento', 'Assinatura / Matrícula'],
+    ['Interessado / Portador', 'Assinatura'],
+  ]
+  blocos.forEach(([label, sub], i) => {
+    const bx = i === 0 ? M : M + cw + 4
+    doc.setFillColor(243, 245, 248)
+    doc.roundedRect(bx, y, cw - 4, 28, 2, 2, 'F')
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(90, 100, 115)
+    const labelLines = doc.splitTextToSize(label, cw - 10)
+    doc.text(labelLines, bx + 3, y + 7)
+    doc.setFillColor(100, 110, 125)
+    doc.rect(bx + 6, y + 20, cw - 18, 0.3, 'F')
+    doc.setFontSize(7.5)
+    doc.text(sub, bx + (cw - 4) / 2 - 10, y + 24)
+  })
+
+  const nomeArqProt = `Protocolo_${processo.numero || 'processo'}.pdf`
+  const blobProt = doc.output('blob')
+  salvarDocumentoGerado(blobProt, { nome: nomeArqProt, processoId: processo.id, tipoOrigem: 'protocolo' })
+  _download(blobProt, nomeArqProt)
   } finally { setPDFLoading(false) }
 }
 

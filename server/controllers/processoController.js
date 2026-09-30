@@ -4,9 +4,29 @@ const { Op, Sequelize } = require('sequelize');
 const { registrarLog } = require('../middleware/activityLogger');
 const { getScopeSetorInclude, getScopeSecretariaInclude } = require('../utils/scopeFilter');
 
+// ── Protocolo digital: normaliza o bloco protocolo_doc vindo do cliente ───────
+// Só campos conhecidos são persistidos — o JSONB nunca recebe payload arbitrário.
+const ORIGENS_PROTOCOLO  = ['interno', 'externo'];
+const NATUREZAS_PROTOCOLO = ['fluxo_despesa', 'atendimento', 'emissao_documento', 'outros'];
+
+const sanitizarProtocoloDoc = (raw) => {
+  if (!raw || typeof raw !== 'object') return null;
+  const texto = (v, max) => (typeof v === 'string' && v.trim()) ? v.trim().slice(0, max) : null;
+  const prazo = parseInt(raw.prazo_dias, 10);
+
+  return {
+    origem:               ORIGENS_PROTOCOLO.includes(raw.origem) ? raw.origem : 'externo',
+    natureza:             NATUREZAS_PROTOCOLO.includes(raw.natureza) ? raw.natureza : 'atendimento',
+    orgao_externo:        texto(raw.orgao_externo, 150),
+    documento_apresentado: texto(raw.documento_apresentado, 200),
+    prazo_dias:           Number.isInteger(prazo) && prazo > 0 && prazo <= 365 ? prazo : null,
+    registrado_em:        new Date().toISOString(),
+  };
+};
+
 const createProcesso = async (req, res) => {
   const transaction = await req.tenantDb.transaction();
-  
+
   try {
     const {
       assunto,
@@ -16,7 +36,11 @@ const createProcesso = async (req, res) => {
       interessado_email,
       interessado_telefone,
       prioridade,
-      tipo_processo
+      tipo_processo,
+      protocolo_doc,
+      destinoSetorId,
+      destinoUsuarioId,
+      despachoEncaminhamento
     } = req.body;
 
     const { Processo, Tramitacao, User, Setor, Secretaria } = req.models;
@@ -57,6 +81,7 @@ const createProcesso = async (req, res) => {
       interessado_telefone: interessado_telefone?.replace(/\D/g, ''),
       prioridade: prioridade || 'normal',
       tipo_processo: tipo_processo || null,
+      protocolo_doc: tipo_processo === 'Protocolo' ? sanitizarProtocoloDoc(protocolo_doc) : null,
       status: 'aberto',
       qrcode: qrcodeData,
       setor_atual_id: user.setorId,
@@ -80,12 +105,64 @@ const createProcesso = async (req, res) => {
       assinatura_digital: assinaturaDigital
     }, { transaction });
 
+    // ── Encaminhamento no ato do protocolo ───────────────────────────────────
+    // O balcão de protocolo registra e já encaminha ao setor competente. É o
+    // mesmo ato autenticado da abertura (assinado pela sessão, como a abertura),
+    // por isso não repete a confirmação de senha exigida em /tramitar.
+    let encaminhadoPara = null;
+    if (tipo_processo === 'Protocolo' && destinoSetorId && destinoSetorId !== user.setorId) {
+      const destinoSetor = await Setor.findByPk(destinoSetorId, {
+        include: [{ model: Secretaria, as: 'secretaria' }],
+        transaction
+      });
+
+      if (!destinoSetor) {
+        await transaction.rollback();
+        return res.status(404).json({ error: 'Setor de destino não encontrado' });
+      }
+
+      const timestampEnc = new Date().toISOString();
+      const assinaturaEnc = crypto
+        .createHash('sha256')
+        .update(`${processo.id}|${req.user.id}|${user.cpf}|protocolo|${destinoSetorId}|${timestampEnc}`)
+        .digest('hex');
+
+      const despachoEnc = (despachoEncaminhamento && despachoEncaminhamento.trim().length >= 10)
+        ? despachoEncaminhamento.trim()
+        : `Protocolo registrado por ${user.nome} e encaminhado a ${destinoSetor.nome} para providências.`;
+
+      await Tramitacao.create({
+        processo_id: processo.id,
+        tipo_acao: 'tramite',
+        despacho: despachoEnc,
+        origem_usuario_id: req.user.id,
+        origem_setor_id: user.setorId,
+        destino_setor_id: destinoSetorId,
+        destino_usuario_id: destinoUsuarioId || null,
+        data_hora: timestampEnc,
+        ip_origem: req.ip || req.connection.remoteAddress,
+        assinatura_digital: assinaturaEnc
+      }, { transaction });
+
+      await processo.update({
+        status: 'em_analise',
+        setor_atual_id: destinoSetorId,
+        usuario_atual_id: destinoUsuarioId || null
+      }, { transaction });
+
+      encaminhadoPara = {
+        setor: destinoSetor.nome,
+        secretaria: destinoSetor.secretaria?.nome || null,
+      };
+    }
+
     await transaction.commit();
 
     await registrarLog(req, {
       acao: 'criar_processo',
       modulo: 'processos',
-      descricao: `Processo ${processo.numero} criado — assunto: ${processo.assunto}`,
+      descricao: `Processo ${processo.numero} criado — assunto: ${processo.assunto}`
+        + (encaminhadoPara ? ` — encaminhado a ${encaminhadoPara.setor}` : ''),
       referencia_id: processo.id,
       referencia_numero: processo.numero
     });
@@ -98,6 +175,8 @@ const createProcesso = async (req, res) => {
         assunto: processo.assunto,
         status: processo.status,
         qrcode: processo.qrcode,
+        protocolo_doc: processo.protocolo_doc,
+        encaminhado_para: encaminhadoPara,
         assinatura_digital: assinaturaDigital
       }
     });
@@ -1045,7 +1124,7 @@ const moverProcessoTipo = async (req, res) => {
     const { tipo_processo } = req.body;
     const { Processo } = req.models;
 
-    const TIPOS_VALIDOS = ['Did', 'Despacho', 'Pauta', 'Requisição', 'Geral'];
+    const TIPOS_VALIDOS = ['Did', 'Despacho', 'Pauta', 'Protocolo', 'Requisição', 'Geral'];
     if (tipo_processo !== null && !TIPOS_VALIDOS.includes(tipo_processo)) {
       return res.status(400).json({ error: 'Tipo de processo inválido' });
     }

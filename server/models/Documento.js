@@ -16,7 +16,7 @@ const defineDocumentoModel = (sequelize) => {
       type: DataTypes.STRING(30),
       allowNull: true,
       defaultValue: 'anexo',
-      comment: 'Origem do documento: anexo | did | ordem | despacho | oficio | pauta | requisicao'
+      comment: 'Origem do documento: anexo | did | ordem | despacho | oficio | pauta | protocolo | requisicao'
     },
     nome_arquivo: {
       type: DataTypes.STRING,

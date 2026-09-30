@@ -8,12 +8,13 @@ import LoadingBar from '../components/LoadingBar'
 import ModalDevolver from '../components/ModalDevolver'
 import ModalConcluir from '../components/ModalConcluir'
 import ModalDespacho from '../components/ModalDespacho'
-import { gerarPautaPDF, gerarRequisicaoPDF } from '../utils/gerarDocumentoPDF'
+import { gerarPautaPDF, gerarProtocoloPDF, gerarRequisicaoPDF } from '../utils/gerarDocumentoPDF'
+import { ORIGEM_PROTOCOLO_LABEL, NATUREZA_PROTOCOLO_LABEL } from '../utils/protocoloConstants'
 import {
   ArrowLeft, Send, ArrowLeftCircle, CheckCircle, Paperclip,
   FileText, Calendar, User, Clock, MapPin, AlertCircle, Download,
   ClipboardList, FileDown, Trash2, QrCode, Shield, Zap, ChevronRight,
-  Plus, X, Upload, ExternalLink, Archive, FilePlus2, GripVertical, Inbox,
+  Plus, X, Upload, ExternalLink, Archive, FilePlus2, GripVertical, Inbox, Stamp,
 } from 'lucide-react'
 import { PageHeader, SectionTitle, EmptyState, ConfirmModal } from '../components/ui'
 
@@ -734,6 +735,45 @@ export default function DetalhesProcesso() {
         {/* ── Sidebar (1/3) ── */}
         <div className="space-y-5">
 
+          {/* Dados do Protocolo */}
+          {processo.tipo_processo === 'Protocolo' && processo.protocolo_doc && (
+            <div className="card p-4">
+              <SectionTitle icon={Stamp} title="Dados do Protocolo" />
+              <dl className="space-y-2.5 text-sm">
+                <div>
+                  <dt className="text-xs text-gray-500 dark:text-slate-400">Origem</dt>
+                  <dd className="font-medium text-gray-800 dark:text-slate-100">
+                    {ORIGEM_PROTOCOLO_LABEL[processo.protocolo_doc.origem] || '—'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-gray-500 dark:text-slate-400">Natureza do atendimento</dt>
+                  <dd className="font-medium text-gray-800 dark:text-slate-100">
+                    {NATUREZA_PROTOCOLO_LABEL[processo.protocolo_doc.natureza] || '—'}
+                  </dd>
+                </div>
+                {processo.protocolo_doc.documento_apresentado && (
+                  <div>
+                    <dt className="text-xs text-gray-500 dark:text-slate-400">Documento apresentado</dt>
+                    <dd className="font-medium text-gray-800 dark:text-slate-100">{processo.protocolo_doc.documento_apresentado}</dd>
+                  </div>
+                )}
+                {processo.protocolo_doc.orgao_externo && (
+                  <div>
+                    <dt className="text-xs text-gray-500 dark:text-slate-400">Órgão / Empresa</dt>
+                    <dd className="font-medium text-gray-800 dark:text-slate-100">{processo.protocolo_doc.orgao_externo}</dd>
+                  </div>
+                )}
+                {processo.protocolo_doc.prazo_dias && (
+                  <div>
+                    <dt className="text-xs text-gray-500 dark:text-slate-400">Prazo de atendimento</dt>
+                    <dd className="font-medium text-gray-800 dark:text-slate-100">{processo.protocolo_doc.prazo_dias} dia(s)</dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+          )}
+
           {/* QR Code */}
           {processo.qrcode && (
             <div className="card p-4">
@@ -839,6 +879,19 @@ export default function DetalhesProcesso() {
                   Gerar Pauta (PDF)
                 </button>
               )}
+              {processo.tipo_processo === 'Protocolo' && (
+                <button
+                  onClick={() => gerarProtocoloPDF(processo, {
+                    consultaUrl: `${window.location.origin}/${subdomain}/consulta/${encodeURIComponent(processo.numero)}`
+                  })}
+                  className="w-full inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
+                             bg-amber-600 text-white hover:bg-amber-700 shadow-sm hover:shadow-md
+                             active:scale-95 justify-start"
+                >
+                  <FileDown className="h-4 w-4" />
+                  Gerar Comprovante de Protocolo (PDF)
+                </button>
+              )}
               {processo.tipo_processo === 'Requisição' && (
                 <button
                   onClick={() => gerarRequisicaoPDF(processo)}
@@ -877,6 +930,7 @@ export default function DetalhesProcesso() {
                 && processo.tipo_processo !== 'Did'
                 && processo.tipo_processo !== 'Despacho'
                 && processo.tipo_processo !== 'Pauta'
+                && processo.tipo_processo !== 'Protocolo'
                 && processo.tipo_processo !== 'Requisição' && (
                 <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed text-center py-2">
                   Processo concluído. Nenhuma ação disponível.
