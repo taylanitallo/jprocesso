@@ -5,6 +5,7 @@ import {
   PackageX, ClipboardList, Settings
 } from 'lucide-react'
 import { hasPerm } from '../utils/permissions'
+import { conferirAbasDoModulo } from '../utils/permissoesSchema'
 import PatDashboard from '../almoxarifado/PatDashboard'
 import PatBens from '../almoxarifado/PatBens'
 import PatEntrada from '../almoxarifado/PatEntrada'
@@ -28,6 +29,7 @@ export default function Patrimonio() {
   const { subdomain, tab: tabParam } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
+  conferirAbasDoModulo('patrimonio', TABS.map(t => t.permPath[1]))
   const visibleTabs = TABS.filter(t => hasPerm(user, ...t.permPath))
   const VALID_TABS = visibleTabs.map(t => t.id)
   const activeTab = VALID_TABS.includes(tabParam) ? tabParam : (visibleTabs[0]?.id || 'painel')

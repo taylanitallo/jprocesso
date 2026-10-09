@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
+import { MODULOS } from '../utils/permissoesSchema'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 const getIn = (obj, path) => path.reduce((o, k) => (o == null ? undefined : o[k]), obj)
@@ -8,91 +9,6 @@ const setIn = (obj, path, value) => {
   if (path.length === 1) return { ...obj, [path[0]]: value }
   return { ...obj, [path[0]]: setIn(obj?.[path[0]] ?? {}, path.slice(1), value) }
 }
-
-// ── schema de módulos / abas / ações ─────────────────────────────────────────
-const MODULOS = [
-  {
-    key: 'processos', label: 'Processos',
-    acoes: [
-      { key: 'ver',               label: 'Ver' },
-      { key: 'criar',             label: 'Criar' },
-      { key: 'editar',            label: 'Editar' },
-      { key: 'excluir',           label: 'Excluir' },
-      { key: 'tramitar',          label: 'Tramitar' },
-      { key: 'devolver',          label: 'Devolver' },
-      { key: 'concluir',          label: 'Concluir' },
-      { key: 'arquivar',          label: 'Arquivar' },
-      { key: 'anexar_documento',  label: 'Anexar doc.' },
-      { key: 'excluir_documento', label: 'Excluir doc.' },
-    ],
-  },
-  {
-    key: 'arquivo', label: 'Ger. de Arquivos', comAcesso: true,
-  },
-  {
-    key: 'almoxarifado', label: 'Almoxarifado', comAcesso: true,
-    abas: [
-      { key: 'painel',      label: 'Painel',      acoes: [{ key: 'ver', label: 'Ver' }] },
-      { key: 'estoque',     label: 'Estoque',     acoes: [{ key: 'ver', label: 'Ver' }, { key: 'editar', label: 'Editar' }] },
-      { key: 'entradas',    label: 'Entradas',    acoes: [{ key: 'ver', label: 'Ver' }, { key: 'registrar', label: 'Registrar' }] },
-      { key: 'saidas',      label: 'Saídas',      acoes: [{ key: 'ver', label: 'Ver' }, { key: 'registrar', label: 'Registrar' }] },
-      { key: 'requisicoes', label: 'Requisições', acoes: [{ key: 'ver', label: 'Ver' }, { key: 'criar', label: 'Criar' }, { key: 'aprovar', label: 'Aprovar' }, { key: 'cancelar', label: 'Cancelar' }] },
-      { key: 'cotas',       label: 'Cotas',       acoes: [{ key: 'ver', label: 'Ver' }, { key: 'gerenciar', label: 'Gerenciar' }] },
-      { key: 'inventario',  label: 'Inventário',  acoes: [{ key: 'ver', label: 'Ver' }, { key: 'realizar', label: 'Realizar' }] },
-      { key: 'auditoria',   label: 'Auditoria',   acoes: [{ key: 'ver', label: 'Ver' }] },
-    ],
-  },
-  {
-    key: 'patrimonio', label: 'Patrimônio', comAcesso: true,
-    abas: [
-      { key: 'painel',        label: 'Painel',        acoes: [{ key: 'ver', label: 'Ver' }] },
-      { key: 'bens',          label: 'Bens',          acoes: [{ key: 'ver', label: 'Ver' }, { key: 'criar', label: 'Criar' }, { key: 'editar', label: 'Editar' }, { key: 'excluir', label: 'Excluir' }] },
-      { key: 'tombamento',    label: 'Tombamento',    acoes: [{ key: 'ver', label: 'Ver' }, { key: 'realizar', label: 'Realizar' }] },
-      { key: 'transferencia', label: 'Transferência', acoes: [{ key: 'ver', label: 'Ver' }, { key: 'realizar', label: 'Realizar' }] },
-      { key: 'baixa',         label: 'Baixa',         acoes: [{ key: 'ver', label: 'Ver' }, { key: 'realizar', label: 'Realizar' }] },
-      { key: 'inventario',    label: 'Inventário',    acoes: [{ key: 'ver', label: 'Ver' }, { key: 'realizar', label: 'Realizar' }] },
-      { key: 'grupos',        label: 'Grupos',        acoes: [{ key: 'ver', label: 'Ver' }, { key: 'gerenciar', label: 'Gerenciar' }] },
-    ],
-  },
-  {
-    key: 'financeiro', label: 'Financeiro', comAcesso: true,
-    abas: [
-      { key: 'painel',        label: 'Painel',        acoes: [{ key: 'ver', label: 'Ver' }] },
-      { key: 'processos_did', label: 'Processos DID', acoes: [{ key: 'ver', label: 'Ver' }] },
-      { key: 'relatorio',     label: 'Relatório',     acoes: [{ key: 'ver', label: 'Ver' }] },
-    ],
-  },
-  {
-    key: 'contratos', label: 'Contratos', comAcesso: true,
-    abas: [
-      { key: 'licitacoes', label: 'Licitação',  acoes: [{ key: 'ver', label: 'Ver' }, { key: 'criar', label: 'Criar' }, { key: 'editar', label: 'Editar' }, { key: 'excluir', label: 'Excluir' }] },
-      { key: 'credores',   label: 'Credores',   acoes: [{ key: 'ver', label: 'Ver' }, { key: 'criar', label: 'Criar' }, { key: 'editar', label: 'Editar' }, { key: 'excluir', label: 'Excluir' }] },
-      { key: 'itens',      label: 'Itens',      acoes: [{ key: 'ver', label: 'Ver' }, { key: 'criar', label: 'Criar' }, { key: 'editar', label: 'Editar' }, { key: 'excluir', label: 'Excluir' }] },
-      { key: 'contratos',  label: 'Contratos',  acoes: [{ key: 'ver', label: 'Ver' }, { key: 'criar', label: 'Criar' }, { key: 'editar', label: 'Editar' }, { key: 'excluir', label: 'Excluir' }] },
-      { key: 'ordens',     label: 'Ordens',     acoes: [{ key: 'ver', label: 'Ver' }, { key: 'criar', label: 'Criar' }, { key: 'editar', label: 'Editar' }, { key: 'excluir', label: 'Excluir' }] },
-      { key: 'relatorios', label: 'Relatórios', acoes: [{ key: 'ver', label: 'Ver' }] },
-    ],
-  },
-  {
-    key: 'tesouraria', label: 'Tesouraria', comAcesso: true,
-    abas: [
-      { key: 'contas',    label: 'Contas',    acoes: [{ key: 'ver', label: 'Ver' }, { key: 'criar', label: 'Criar' }, { key: 'editar', label: 'Editar' }, { key: 'excluir', label: 'Excluir' }] },
-      { key: 'receitas',  label: 'Receitas',  acoes: [{ key: 'ver', label: 'Ver' }, { key: 'criar', label: 'Criar' }, { key: 'editar', label: 'Editar' }, { key: 'excluir', label: 'Excluir' }] },
-      { key: 'despesas',  label: 'Despesas',  acoes: [{ key: 'ver', label: 'Ver' }, { key: 'criar', label: 'Criar' }, { key: 'editar', label: 'Editar' }, { key: 'excluir', label: 'Excluir' }] },
-      { key: 'relatorios', label: 'Relatórios', acoes: [{ key: 'ver', label: 'Ver' }] },
-    ],
-  },
-  {
-    key: 'administracao', label: 'Administração',
-    acoes: [
-      { key: 'gerenciar_usuarios',     label: 'Gerenciar Usuários' },
-      { key: 'gerenciar_secretarias',  label: 'Gerenciar Organização' },
-      { key: 'gerenciar_configuracoes',label: 'Configurações' },
-      { key: 'visualizar_relatorios',  label: 'Relatórios' },
-      { key: 'visualizar_registros',   label: 'Registros' },
-    ],
-  },
-]
 
 // ── Toggle switch ─────────────────────────────────────────────────────────────
 function Toggle({ checked, onChange }) {
@@ -246,11 +162,11 @@ export default function PermissoesEditor({ permissoes, onChange, secretariasList
                   return (
                     <div key={aba.key} className="space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="w-28 shrink-0 text-xs text-ink-500 font-medium">{aba.label}</span>
+                        <span className="w-40 shrink-0 text-xs text-ink-500 font-medium">{aba.label}</span>
                         <div className="flex flex-wrap gap-3 items-center">
                           {aba.acoes.map(acao => (
                             <div key={acao.key} className="flex items-center gap-1.5">
-                              {acao.key === 'ver' ? (
+                              {acao.key === 'ver' && aba.escopo !== false ? (
                                 <ScopeSelect
                                   value={verScope}
                                   onChange={s => setVerScope(mod.key, s, s === 'algumas' ? secretariaIds : [], aba.key)}
@@ -263,8 +179,8 @@ export default function PermissoesEditor({ permissoes, onChange, secretariasList
                           ))}
                         </div>
                       </div>
-                      {verScope === 'algumas' && (
-                        <div className="ml-30 pl-1 pb-1">
+                      {aba.escopo !== false && verScope === 'algumas' && (
+                        <div className="ml-42 pl-1 pb-1">
                           <SecretariasCheckboxes
                             secretariaIds={secretariaIds}
                             secretariasList={secretariasList}

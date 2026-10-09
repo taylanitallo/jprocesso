@@ -4,6 +4,7 @@ import { PageHeader } from '../components/ui'
 import { TABS } from './contratos/ContratosShared'
 import { useAuth } from '../context/AuthContext'
 import { hasPerm } from '../utils/permissions'
+import { conferirAbasDoModulo } from '../utils/permissoesSchema'
 import TabItens from './contratos/TabItens'
 import TabCredor from './contratos/TabCredor'
 import TabLicitacoes from './contratos/TabLicitacoes'
@@ -15,7 +16,9 @@ export default function Contratos() {
   const { subdomain, tab: tabParam } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
+  conferirAbasDoModulo('contratos', [...TABS.map(t => t.permPath[1]), 'dashboard'])
   const visibleTabsCtr = TABS.filter(t => hasPerm(user, ...t.permPath))
+  const podeDashboard = hasPerm(user, 'contratos', 'dashboard', 'ver')
   const VALID_TABS_CTR = visibleTabsCtr.map(t => t.key)
   const tab = VALID_TABS_CTR.includes(tabParam) ? tabParam : (visibleTabsCtr[0]?.key || TABS[0].key)
   const setTab = (key) => navigate(`/${subdomain}/contratos/${key}`)
@@ -26,7 +29,7 @@ export default function Contratos() {
         icon={FileText}
         title="Gestão Contratual"
         subtitle="Monitoramento de contratos, vigências, credores e execução financeira"
-        actions={
+        actions={podeDashboard &&
           <button
             onClick={() => navigate(`/${subdomain}/contratos/dashboard`)}
             className="h-9 inline-flex items-center gap-2 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-sm transition-all"

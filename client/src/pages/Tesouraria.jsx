@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, Fragment } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { hasPerm } from '../utils/permissions';
+import { conferirAbasDoModulo } from '../utils/permissoesSchema';
 import api from '../services/api';
 import PageHeader from '../components/ui/PageHeader';
 import SectionTitle from '../components/ui/SectionTitle';
@@ -50,6 +51,7 @@ export default function Tesouraria() {
   const { tab, subdomain } = useParams();
   const navigate = useNavigate();
   const { tenant, user } = useAuth();
+  conferirAbasDoModulo('tesouraria', TABS.map(t => t.permPath[1]));
   const visibleTabsTes = TABS.filter(t => hasPerm(user, ...t.permPath));
   const [activeTab, setActiveTab] = useState(() => {
     const validKeys = visibleTabsTes.map(t => t.key);

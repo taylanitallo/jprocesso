@@ -217,7 +217,7 @@ function App() {
 
                 {/* Contratos */}
                 <Route path="contratos"           element={<PermissionRoute permissao="contratos.acessar"><Contratos /></PermissionRoute>} />
-                <Route path="contratos/dashboard" element={<PermissionRoute permissao="contratos.acessar"><ContratosDashboard /></PermissionRoute>} />
+                <Route path="contratos/dashboard" element={<PermissionRoute permissao="contratos.acessar"><PermissionRoute permissao="contratos.dashboard.ver"><ContratosDashboard /></PermissionRoute></PermissionRoute>} />
                 <Route path="contratos/:tab"      element={<PermissionRoute permissao="contratos.acessar"><Contratos /></PermissionRoute>} />
 
                 {/* Admin */}

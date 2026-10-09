@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { hasPerm } from '../utils/permissions';
+import { conferirAbasDoModulo } from '../utils/permissoesSchema';
 import PageHeader from '../components/ui/PageHeader';
 import SectionTitle from '../components/ui/SectionTitle';
 import EmptyState from '../components/ui/EmptyState';
@@ -186,12 +187,23 @@ export default function Secretarias() {
   const podeSecretarias = hasPerm(user, 'administracao', 'gerenciar_secretarias')
   const podeUsuarios     = hasPerm(user, 'administracao', 'gerenciar_usuarios')
 
-  // Aba
-  const [activeTab, setActiveTab] = useState(tabParam || (podeSecretarias ? 'secretarias' : 'usuarios'))
+  // Abas — visíveis conforme Administração (acesso) + Organização (aba a aba)
+  const abasOrganizacao = [
+    { key: 'entidade',     label: 'Entidade',              Icon: Building2, acesso: podeSecretarias },
+    { key: 'secretarias',  label: 'Secretarias e Setores', Icon: Network,   acesso: podeSecretarias },
+    { key: 'agentes',      label: 'Cadastro de Agentes',   Icon: Users,     acesso: podeSecretarias },
+    { key: 'responsaveis', label: 'Responsáveis',          Icon: UserCheck, acesso: podeSecretarias },
+    { key: 'usuarios',     label: 'Usuários',              Icon: UserCog,   acesso: podeUsuarios    },
+  ]
+  conferirAbasDoModulo('organizacao', abasOrganizacao.map(t => t.key))
+  const abasVisiveis = abasOrganizacao.filter(t => t.acesso && hasPerm(user, 'organizacao', t.key, 'ver'))
+  const abaPermitida = (key) => abasVisiveis.some(t => t.key === key)
+
+  const [activeTab, setActiveTab] = useState(abaPermitida(tabParam) ? tabParam : (abasVisiveis[0]?.key || 'entidade'))
 
   useEffect(() => {
     if (!tabParam || tabParam === activeTab) return
-    if (tabParam === 'usuarios' ? podeUsuarios : podeSecretarias) setActiveTab(tabParam)
+    if (abaPermitida(tabParam)) setActiveTab(tabParam)
   }, [tabParam])
 
   // Secretarias
@@ -839,13 +851,7 @@ export default function Secretarias() {
         style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
       >
         <nav className="flex min-w-max">
-          {[
-            { key: 'entidade',     label: 'Entidade',              Icon: Building2, visivel: podeSecretarias },
-            { key: 'secretarias',  label: 'Secretarias e Setores', Icon: Network,   visivel: podeSecretarias },
-            { key: 'agentes',      label: 'Cadastro de Agentes',   Icon: Users,     visivel: podeSecretarias },
-            { key: 'responsaveis', label: 'Responsáveis',          Icon: UserCheck, visivel: podeSecretarias },
-            { key: 'usuarios',     label: 'Usuários',              Icon: UserCog,   visivel: podeUsuarios    },
-          ].filter(tab => tab.visivel).map(tab => (
+          {abasVisiveis.map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
               className={`flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-5 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab.key

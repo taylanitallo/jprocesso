@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { hasPerm } from '../utils/permissions'
+import { conferirAbasDoModulo } from '../utils/permissoesSchema'
 import {
   LayoutDashboard, FileText, BarChart3,
   Calendar, FolderOpen, Tag, Building2, Landmark, DollarSign,
@@ -675,6 +676,7 @@ export default function Financeiro() {
   const { subdomain, tab: tabParam } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
+  conferirAbasDoModulo('financeiro', TABS.map(t => t.permPath[1]))
   const visibleTabsFin = TABS.filter(t => hasPerm(user, ...t.permPath))
   const VALID_TABS_FIN = visibleTabsFin.map(t => t.id)
   const tab = VALID_TABS_FIN.includes(tabParam) ? tabParam : (visibleTabsFin[0]?.id || 'painel')
