@@ -1187,7 +1187,8 @@ const getTenantLogo = async (req, res) => {
       : ext === 'webp' ? 'image/webp'
       : 'image/png';
     res.setHeader('Content-Type', mime);
-    res.setHeader('Cache-Control', 'public, max-age=300');
+    // URL fixa por tenant: revalidar sempre (ETag → 304) para a troca de logo aparecer na hora
+    res.setHeader('Cache-Control', 'no-cache');
     res.send(buffer);
   } catch (error) {
     console.error('Erro ao servir logo do tenant:', error);

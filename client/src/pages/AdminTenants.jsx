@@ -804,8 +804,9 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
       await api.put(`/superadmin/tenants/${tenant.id}/config`, {
         nome: editNome,
         ativo: editAtivo,
+        // Só os campos editados aqui — o servidor faz o merge. Reenviar o objeto
+        // inteiro (possivelmente desatualizado) apagaria logos enviadas há pouco.
         configuracoes: {
-          ...(tenant.configuracoes || {}),
           cor_primaria: cor,
           modulos_habilitados: modulosHabilitados
         }
@@ -2085,6 +2086,11 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                                 }}
                                 className="block w-full text-xs text-ink-500 file:mr-2 file:py-1 file:px-3 file:rounded-sm file:border-0 file:text-xs file:font-medium file:bg-info-50 file:text-brand-700" />
                               <p className="text-[11px] text-ink-400">PNG em proporção A4 (210×297mm). A imagem será exibida como fundo do documento PDF.</p>
+                              {file && (
+                                <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                                  Pré-visualização — ainda não enviado. Clique em "Enviar" para aplicar.
+                                </p>
+                              )}
                               <div className="flex gap-2">
                                 <button onClick={() => handleUploadLogo(tipo, file, () => setFile(null))}
                                   disabled={!file || logoLoading === tipo}
@@ -2116,8 +2122,13 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                                   setLocalPreview(prev => ({ ...prev, [tipo]: f ? URL.createObjectURL(f) : undefined }));
                                 }}
                                 className="block w-full text-xs text-ink-500 file:mr-2 file:py-1 file:px-3 file:rounded-sm file:border-0 file:text-xs file:font-medium file:bg-info-50 file:text-brand-700" />
+                              {file && (
+                                <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                                  Pré-visualização — ainda não enviada. Clique em "Enviar" para aplicar.
+                                </p>
+                              )}
                               <div className="flex gap-2">
-                                <button onClick={() => { handleUploadLogo(tipo, file); setFile(null); }}
+                                <button onClick={() => handleUploadLogo(tipo, file, () => setFile(null))}
                                   disabled={!file || logoLoading === tipo}
                                   className="flex items-center gap-1 text-xs bg-brand-600 text-white px-2 py-1 rounded-sm hover:bg-brand-700 disabled:opacity-50">
                                   {logoLoading === tipo ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
