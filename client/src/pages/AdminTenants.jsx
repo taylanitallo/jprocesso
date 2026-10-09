@@ -2122,9 +2122,13 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                                   setLocalPreview(prev => ({ ...prev, [tipo]: f ? URL.createObjectURL(f) : undefined }));
                                 }}
                                 className="block w-full text-xs text-ink-500 file:mr-2 file:py-1 file:px-3 file:rounded-sm file:border-0 file:text-xs file:font-medium file:bg-info-50 file:text-brand-700" />
-                              {file && (
+                              {file ? (
                                 <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
                                   Pré-visualização — ainda não enviada. Clique em "Enviar" para aplicar.
+                                </p>
+                              ) : currentUrl && (
+                                <p className="text-[11px] font-medium text-success-600 dark:text-success-400">
+                                  Logo atual salva no sistema.
                                 </p>
                               )}
                               <div className="flex gap-2">
@@ -2456,7 +2460,8 @@ export default function AdminTenants() {
       {/* Modal Painel de Gerenciamento */}
       {showPainel && selectedTenant && (
         <ModalGerenciar
-          tenant={selectedTenant}
+          // versão mais recente da lista (após refetch), para refletir logos/configs recém-salvas
+          tenant={tenants.find(t => t.id === selectedTenant.id) || selectedTenant}
           initialTab={painelTab}
           onClose={() => { setShowPainel(false); setSelectedTenant(null); }}
           onUpdate={() => refetch()}
