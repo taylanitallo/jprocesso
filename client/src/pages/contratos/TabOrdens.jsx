@@ -790,15 +790,27 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
     })
   }
 
+  // ── Campos obrigatórios: lista o que falta e destaca no formulário ──
+  const [tentouSalvar, setTentouSalvar] = useState(false)
+  const camposFaltando = () => {
+    const f = []
+    if (!form.tipo) f.push({ campo: 'tipo', label: 'Tipo de ordem' })
+    if (form.tipo === 'SERVICO' && !form.destino_did) f.push({ campo: 'destino_did', label: 'Destino da ordem (Conta Fixa ou Conta Variável)' })
+    if (!form.contrato_id) f.push({ campo: 'contrato_id', label: 'Contrato' })
+    if (!form.data_emissao) f.push({ campo: 'data_emissao', label: 'Data de emissão' })
+    if (!form.data_entrega_prevista) f.push({ campo: 'data_entrega_prevista', label: form.tipo === 'SERVICO' ? 'Data de conclusão prevista' : 'Data de entrega prevista' })
+    if (!form.objeto.trim()) f.push({ campo: 'objeto', label: 'Objeto / descrição' })
+    if (itens.length === 0) f.push({ campo: 'itens', label: 'Ao menos um item' })
+    else if (itens.some(it => !String(it.descricao || '').trim())) f.push({ campo: 'itens', label: 'Descrição de todos os itens' })
+    return f
+  }
+  const faltando = tentouSalvar ? camposFaltando() : []
+  const temErro = (campo) => faltando.some(f => f.campo === campo)
+  const clsErro = (campo) => temErro(campo) ? 'border-danger-400 ring-2 ring-danger-200 dark:ring-danger-900/40' : ''
+
   const salvar = () => {
-    if (!form.tipo)         { alert('Selecione o tipo de ordem.'); return }
-    if (form.tipo === 'SERVICO' && !form.destino_did) {
-      alert('Selecione o destino da ordem: Conta Fixa ou Conta Variável.'); return
-    }
-    if (!form.contrato_id)  { alert('Selecione o contrato.'); return }
-    if (!form.objeto.trim()){ alert('Informe o objeto/descrição da ordem.'); return }
-    if (!form.data_emissao) { alert('Informe a data de emissão.'); return }
-    if (itens.length === 0) { alert('Adicione ao menos um item.'); return }
+    setTentouSalvar(true)
+    if (camposFaltando().length > 0) return
     if (saldo?.sem_saldo)   { alert('Saldo insuficiente no contrato!'); return }
     // OC é sempre conta variável — não carrega destino
     const destino_did = form.tipo === 'SERVICO' ? form.destino_did : null
@@ -861,7 +873,7 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
                 </div>
               : (
                 <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className={`grid grid-cols-2 gap-3 rounded-xl ${temErro('tipo') ? 'ring-2 ring-danger-300 p-1' : ''}`}>
                     {[
                       { value: 'COMPRA',  label: 'Ordem de Compra',  icon: ShoppingCart, cor: 'blue'   },
                       { value: 'SERVICO', label: 'Ordem de Serviço', icon: Wrench,       cor: 'orange' },
@@ -889,9 +901,9 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
                       <p className="text-xs font-semibold text-ink-500 mb-1.5">
                         Destino da Ordem — em qual DID esta ordem vai aparecer?
                       </p>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className={`grid grid-cols-2 gap-3 rounded-xl ${temErro('destino_did') ? 'ring-2 ring-danger-300 p-1' : ''}`}>
                         {[
-                          { value: 'FIXA',     label: 'Conta Fixa',     desc: 'DID Contas Fixas',     cor: 'purple' },
+                          { value: 'FIXA',    label: 'Conta Fixa',     desc: 'DID Contas Fixas',     cor: 'purple' },
                           { value: 'VARIAVEL', label: 'Conta Variável', desc: 'DID Contas Variáveis', cor: 'emerald' },
                         ].map(({ value, label, desc, cor }) => (
                           <button
@@ -948,7 +960,7 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
                       ) : (
                         <button
                           onClick={() => setModalContrato(true)}
-                          className="w-full flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-ink-300 text-ink-500 hover:border-info-400 dark:hover:border-brand-500 hover:text-brand-600 dark:hover:text-info-400 transition-colors text-sm">
+                          className={`w-full flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed ${temErro('contrato_id') ? 'border-danger-400 text-danger-600' : 'border-ink-300 text-ink-500'} hover:border-info-400 dark:hover:border-brand-500 hover:text-brand-600 dark:hover:text-info-400 transition-colors text-sm`}>
                           <Search className="w-4 h-4" />
                           Clique para selecionar um contrato...
                         </button>
@@ -987,24 +999,29 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
                   <label className="block text-xs font-semibold text-ink-500 mb-1.5">Data de Emissão *</label>
                   {readonly
                     ? <p className="text-sm font-medium text-ink-800">{fmtData(form.data_emissao)}</p>
-                    : <PremiumInput type="date" value={form.data_emissao} onChange={e => set('data_emissao', e.target.value)} />
+                    : <PremiumInput type="date" value={form.data_emissao} onChange={e => set('data_emissao', e.target.value)} className={clsErro('data_emissao')} />
                   }
+                  {temErro('data_emissao') && <p className="text-xs text-danger-600 mt-1">Informe a data de emissão.</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-ink-500 mb-1.5">
-                    {form.tipo === 'COMPRA' ? 'Data de Entrega Prevista' : 'Data de Conclusão Prevista'}
+                    {form.tipo === 'COMPRA' ? 'Data de Entrega Prevista *' : 'Data de Conclusão Prevista *'}
                   </label>
                   {readonly
                     ? <p className="text-sm font-medium text-ink-800">{fmtData(form.data_entrega_prevista)}</p>
-                    : <PremiumInput type="date" value={form.data_entrega_prevista} onChange={e => set('data_entrega_prevista', e.target.value)} />
+                    : <PremiumInput type="date" value={form.data_entrega_prevista} onChange={e => set('data_entrega_prevista', e.target.value)} className={clsErro('data_entrega_prevista')} />
                   }
+                  {temErro('data_entrega_prevista') && (
+                    <p className="text-xs text-danger-600 mt-1">Informe a data de {form.tipo === 'SERVICO' ? 'conclusão' : 'entrega'} prevista.</p>
+                  )}
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-ink-500 mb-1.5">Objeto / Descrição *</label>
                   {readonly
                     ? <p className="text-sm font-medium text-ink-800">{form.objeto}</p>
-                    : <PremiumTextarea value={form.objeto} onChange={e => set('objeto', e.target.value)} rows={2} placeholder="Descreva o objeto desta ordem..." />
+                    : <PremiumTextarea value={form.objeto} onChange={e => set('objeto', e.target.value)} rows={2} placeholder="Descreva o objeto desta ordem..." className={clsErro('objeto')} />
                   }
+                  {temErro('objeto') && <p className="text-xs text-danger-600 mt-1">Informe o objeto/descrição da ordem.</p>}
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-ink-500 mb-1.5">Justificativa</label>
@@ -1168,6 +1185,21 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
             </SectionCard>
           )}
         </div>
+
+        {/* Aviso de campos obrigatórios */}
+        {!readonly && faltando.length > 0 && (
+          <div role="alert" className="mx-6 mb-3 shrink-0 flex items-start gap-3 px-4 py-3 rounded-xl border border-danger-200 dark:border-danger-700 bg-danger-50 dark:bg-danger-900/20">
+            <AlertTriangle className="w-4 h-4 text-danger-600 mt-0.5 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-danger-700 dark:text-danger-300">
+                Não foi possível salvar. Preencha {faltando.length === 1 ? 'o campo obrigatório' : `os ${faltando.length} campos obrigatórios`}:
+              </p>
+              <ul className="mt-1 text-xs text-danger-600 dark:text-danger-400 list-disc pl-4 space-y-0.5">
+                {faltando.map(f => <li key={f.label}>{f.label}</li>)}
+              </ul>
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="bg-surface border-t border-ink-100 px-6 py-3 shrink-0 flex items-center justify-between">

@@ -18,6 +18,42 @@ const gerarNumeroOrdem = async (ContratoOrdem, tipo) => {
   return `${prefixo} ${String(count + 1).padStart(3, '0')}/${ano}`;
 };
 
+/** Campos obrigatórios da ordem (rótulos exibidos ao usuário) */
+const vazio = (v) => v === undefined || v === null || String(v).trim() === '';
+const CAMPOS_OBRIGATORIOS_ORDEM = [
+  ['tipo',                  () => 'Tipo de ordem'],
+  ['contrato_id',           () => 'Contrato'],
+  ['data_emissao',          () => 'Data de emissão'],
+  ['data_entrega_prevista', (b) => b.tipo === 'SERVICO' ? 'Data de conclusão prevista' : 'Data de entrega prevista'],
+  ['objeto',                () => 'Objeto / descrição'],
+];
+
+/**
+ * Lista os campos obrigatórios ausentes.
+ * parcial=true (edição): só valida os campos enviados no corpo.
+ */
+const camposFaltandoOrdem = (body, itens, { parcial = false, tipoAtual } = {}) => {
+  const tipo = body.tipo ?? tipoAtual;
+  const faltando = [];
+  for (const [campo, rotulo] of CAMPOS_OBRIGATORIOS_ORDEM) {
+    if (parcial && !(campo in body)) continue;
+    if (vazio(body[campo])) faltando.push(rotulo({ ...body, tipo }));
+  }
+  if (tipo === 'SERVICO' && (!parcial || 'destino_did' in body) && vazio(body.destino_did)) {
+    faltando.push('Destino da ordem (Conta Fixa ou Conta Variável)');
+  }
+  if (itens !== undefined) {
+    if (!Array.isArray(itens) || itens.length === 0) faltando.push('Ao menos um item');
+    else if (itens.some(it => vazio(it.descricao))) faltando.push('Descrição de todos os itens');
+  }
+  return faltando;
+};
+
+const respostaCamposFaltando = (res, faltando) => res.status(400).json({
+  error: `Preencha os campos obrigatórios: ${faltando.join(', ')}.`,
+  campos_faltando: faltando,
+});
+
 /** Calcula saldo disponível de um contrato */
 const calcularSaldo = async (ContratoOrdem, contrato_id, ignorarOrdemId = null) => {
   const { Contrato } = global._tmpModels || {};
@@ -150,6 +186,8 @@ const createOrdem = async (req, res) => {
   try {
     const { ContratoOrdem, ContratoOrdemItem, Contrato } = req.models;
     const { itens = [], ...body } = req.body;
+    const faltando = camposFaltandoOrdem(body, itens);
+    if (faltando.length > 0) return respostaCamposFaltando(res, faltando);
 
     // Verificar contrato
     const contrato = await Contrato.findByPk(body.contrato_id);
@@ -224,6 +262,9 @@ const updateOrdem = async (req, res) => {
 
     const ordem = await ContratoOrdem.findByPk(req.params.id);
     if (!ordem) return notFound(res, 'Ordem');
+
+    const faltando = camposFaltandoOrdem(body, itens, { parcial: true, tipoAtual: ordem.tipo });
+    if (faltando.length > 0) return respostaCamposFaltando(res, faltando);
 
     const contrato = await Contrato.findByPk(ordem.contrato_id);
     const valorContrato = parseFloat(contrato?.valor || 0);
