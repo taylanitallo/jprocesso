@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import { hasPerm } from '../utils/permissions'
 import TabItens from './contratos/TabItens'
 import TabCredor from './contratos/TabCredor'
+import TabLicitacoes from './contratos/TabLicitacoes'
 import TabContratos from './contratos/TabContratos'
 import TabOrdens from './contratos/TabOrdens'
 import TabRelatorios from './contratos/TabRelatorios'
@@ -59,6 +60,7 @@ export default function Contratos() {
 
       {tab === 'contratos'  && <TabContratos />}
       {tab === 'credor'     && <TabCredor />}
+      {tab === 'licitacoes' && <TabLicitacoes />}
       {tab === 'itens'      && <TabItens />}
       {tab === 'ordens'     && <TabOrdens />}
       {tab === 'relatorios' && <TabRelatorios />}

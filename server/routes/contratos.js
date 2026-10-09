@@ -1,6 +1,7 @@
 ﻿const express = require('express');
 const router = express.Router();
 const {
+  listLicitacoes, createLicitacao, updateLicitacao, deleteLicitacao,
   listCredores, createCredor, updateCredor, deleteCredor,
   listItens, createItem, updateItem, deleteItem, getDnaItem,
   importarItensUrl, excluirItensInativos, contarItensSemVinculo, excluirItensSemVinculo, verificarItensUrl,
@@ -21,6 +22,12 @@ router.get('/credores',       listCredores);
 router.post('/credores',      createCredor);
 router.put('/credores/:id',   updateCredor);
 router.delete('/credores/:id', deleteCredor);
+
+// Licitações
+router.get('/licitacoes',        listLicitacoes);
+router.post('/licitacoes',       createLicitacao);
+router.put('/licitacoes/:id',    updateLicitacao);
+router.delete('/licitacoes/:id', deleteLicitacao);
 
 // Catálogo de Itens
 router.post('/itens/verificar-url',  authorize('admin', 'jeos'), verificarItensUrl);

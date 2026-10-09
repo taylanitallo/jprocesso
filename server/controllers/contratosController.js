@@ -1,4 +1,4 @@
-﻿// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //  CONTRATOS CONTROLLER  â€“  CRUD para Credores, Itens de CatÃ¡logo e Contratos
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const { Op } = require('sequelize');
@@ -659,7 +659,112 @@ const excluirItensSemVinculo = async (req, res) => {
   }
 };
 
+// ── LICITAÇÕES ───────────────────────────────────────────────────────────────
+
+const CAMPOS_LICITACAO = [
+  'numero_licitacao', 'numero_processo', 'modalidade', 'tipo_objeto', 'criterio_julgamento',
+  'registro_preco', 'objeto', 'secretaria', 'agente_contratacao', 'valor_estimado',
+  'valor_homologado', 'data_publicacao', 'data_abertura', 'data_homologacao',
+  'link_pncp', 'observacoes', 'status',
+];
+
+// Mantém apenas campos conhecidos e converte '' em null (datas/valores vazios)
+const sanitizeLicitacao = (body = {}) => {
+  const data = {};
+  for (const k of CAMPOS_LICITACAO) {
+    if (body[k] === undefined) continue;
+    data[k] = body[k] === '' ? null : body[k];
+  }
+  if (data.status === 'EXCLUÍDO') delete data.status;
+  return data;
+};
+
+const listLicitacoes = async (req, res) => {
+  try {
+    const { Licitacao, Contrato } = req.models;
+    const licitacoes = await Licitacao.findAll({
+      where: { status: { [Op.ne]: 'EXCLUÍDO' } },
+      order: [['data_abertura', 'DESC NULLS LAST'], ['numero_licitacao', 'DESC']],
+      raw: true,
+    });
+
+    // Quantidade de contratos vinculados (pelo nº da licitação informado no contrato)
+    const contagem = await Contrato.findAll({
+      attributes: ['numero_licitacao', [Contrato.sequelize.fn('COUNT', Contrato.sequelize.col('id')), 'total']],
+      where: { status: { [Op.ne]: 'EXCLUÍDO' }, numero_licitacao: { [Op.ne]: null } },
+      group: ['numero_licitacao'],
+      raw: true,
+    });
+    const porNumero = Object.fromEntries(contagem.map(c => [String(c.numero_licitacao).trim().toUpperCase(), Number(c.total)]));
+
+    res.json(licitacoes.map(l => ({
+      ...l,
+      total_contratos: porNumero[String(l.numero_licitacao).trim().toUpperCase()] || 0,
+    })));
+  } catch (err) {
+    console.error('listLicitacoes:', err);
+    res.status(500).json({ error: 'Erro ao listar licitações' });
+  }
+};
+
+const createLicitacao = async (req, res) => {
+  try {
+    const { Licitacao } = req.models;
+    const data = sanitizeLicitacao(req.body);
+    if (!data.numero_licitacao || !data.objeto) {
+      return res.status(400).json({ error: 'Nº da licitação e objeto são obrigatórios' });
+    }
+    const licitacao = await Licitacao.create(data);
+    registrarLog(req, { acao: 'criar_licitacao', modulo: 'contratos', referencia_id: String(licitacao.id), referencia_numero: licitacao.numero_licitacao, descricao: `Licitação ${licitacao.numero_licitacao} cadastrada` });
+    res.status(201).json({ ...licitacao.toJSON(), total_contratos: 0 });
+  } catch (err) {
+    if (err.name === 'SequelizeUniqueConstraintError') {
+      return res.status(409).json({ error: 'Já existe uma licitação com este número' });
+    }
+    console.error('createLicitacao:', err);
+    res.status(500).json({ error: 'Erro ao criar licitação' });
+  }
+};
+
+const updateLicitacao = async (req, res) => {
+  try {
+    const { Licitacao } = req.models;
+    const licitacao = await Licitacao.findByPk(req.params.id);
+    if (!licitacao || licitacao.status === 'EXCLUÍDO') return notFound(res, 'Licitação');
+    await licitacao.update(sanitizeLicitacao(req.body));
+    registrarLog(req, { acao: 'editar_licitacao', modulo: 'contratos', referencia_id: String(licitacao.id), referencia_numero: licitacao.numero_licitacao, descricao: `Licitação ${licitacao.numero_licitacao} alterada` });
+    res.json(licitacao);
+  } catch (err) {
+    if (err.name === 'SequelizeUniqueConstraintError') {
+      return res.status(409).json({ error: 'Já existe uma licitação com este número' });
+    }
+    console.error('updateLicitacao:', err);
+    res.status(500).json({ error: 'Erro ao atualizar licitação' });
+  }
+};
+
+const deleteLicitacao = async (req, res) => {
+  try {
+    const { Licitacao, Contrato } = req.models;
+    const licitacao = await Licitacao.findByPk(req.params.id);
+    if (!licitacao || licitacao.status === 'EXCLUÍDO') return notFound(res, 'Licitação');
+    const totalContratos = await Contrato.count({
+      where: { numero_licitacao: licitacao.numero_licitacao, status: { [Op.ne]: 'EXCLUÍDO' } }
+    });
+    if (totalContratos > 0) {
+      return res.status(409).json({ error: `Esta licitação está vinculada a ${totalContratos} contrato(s). Exclua ou desvincule os contratos primeiro.` });
+    }
+    await licitacao.update({ status: 'EXCLUÍDO' });
+    registrarLog(req, { acao: 'excluir_licitacao', modulo: 'contratos', referencia_id: String(licitacao.id), referencia_numero: licitacao.numero_licitacao, descricao: `Licitação ${licitacao.numero_licitacao} excluída` });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('deleteLicitacao:', err);
+    res.status(500).json({ error: 'Erro ao excluir licitação' });
+  }
+};
+
 module.exports = {
+  listLicitacoes, createLicitacao, updateLicitacao, deleteLicitacao,
   listCredores, createCredor, updateCredor, deleteCredor,
   listItens, createItem, updateItem, deleteItem, getDnaItem,
   importarItensUrl, excluirItensInativos, contarItensSemVinculo, excluirItensSemVinculo, verificarItensUrl,

@@ -65,8 +65,9 @@ const MODULOS = [
   {
     key: 'contratos', label: 'Contratos', comAcesso: true,
     abas: [
-      { key: 'itens',      label: 'Itens',      acoes: [{ key: 'ver', label: 'Ver' }, { key: 'criar', label: 'Criar' }, { key: 'editar', label: 'Editar' }, { key: 'excluir', label: 'Excluir' }] },
+      { key: 'licitacoes', label: 'Licitação',  acoes: [{ key: 'ver', label: 'Ver' }, { key: 'criar', label: 'Criar' }, { key: 'editar', label: 'Editar' }, { key: 'excluir', label: 'Excluir' }] },
       { key: 'credores',   label: 'Credores',   acoes: [{ key: 'ver', label: 'Ver' }, { key: 'criar', label: 'Criar' }, { key: 'editar', label: 'Editar' }, { key: 'excluir', label: 'Excluir' }] },
+      { key: 'itens',      label: 'Itens',      acoes: [{ key: 'ver', label: 'Ver' }, { key: 'criar', label: 'Criar' }, { key: 'editar', label: 'Editar' }, { key: 'excluir', label: 'Excluir' }] },
       { key: 'contratos',  label: 'Contratos',  acoes: [{ key: 'ver', label: 'Ver' }, { key: 'criar', label: 'Criar' }, { key: 'editar', label: 'Editar' }, { key: 'excluir', label: 'Excluir' }] },
       { key: 'ordens',     label: 'Ordens',     acoes: [{ key: 'ver', label: 'Ver' }, { key: 'criar', label: 'Criar' }, { key: 'editar', label: 'Editar' }, { key: 'excluir', label: 'Excluir' }] },
       { key: 'relatorios', label: 'Relatórios', acoes: [{ key: 'ver', label: 'Ver' }] },

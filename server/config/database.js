@@ -145,6 +145,34 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
         ADD COLUMN IF NOT EXISTS dotacoes TEXT[] NOT NULL DEFAULT '{}'
     `),
 
+    // 0h. Contratos — Licitações (processos licitatórios / contratações diretas)
+    run(`
+      CREATE TABLE IF NOT EXISTS licitacoes (
+        id                  SERIAL        PRIMARY KEY,
+        numero_licitacao    VARCHAR(100)  NOT NULL,
+        numero_processo     VARCHAR(100),
+        modalidade          VARCHAR(100),
+        tipo_objeto         VARCHAR(100),
+        criterio_julgamento VARCHAR(100),
+        registro_preco      BOOLEAN       NOT NULL DEFAULT false,
+        objeto              TEXT          NOT NULL,
+        secretaria          VARCHAR(200),
+        agente_contratacao  VARCHAR(300),
+        valor_estimado      NUMERIC(15,2),
+        valor_homologado    NUMERIC(15,2),
+        data_publicacao     DATE,
+        data_abertura       DATE,
+        data_homologacao    DATE,
+        link_pncp           VARCHAR(500),
+        observacoes         TEXT,
+        status              VARCHAR(20)   NOT NULL DEFAULT 'EM ANDAMENTO',
+        created_at          TIMESTAMP     NOT NULL DEFAULT NOW(),
+        updated_at          TIMESTAMP     NOT NULL DEFAULT NOW()
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS licitacoes_numero_uq
+        ON licitacoes (numero_licitacao) WHERE status <> 'EXCLUÍDO';
+    `),
+
     // 1. Secretarias — colunas extras
     run(`
       ALTER TABLE secretarias

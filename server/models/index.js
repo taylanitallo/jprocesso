@@ -21,6 +21,7 @@ const defineContratoItemVinculoModel = require('./ContratoItemVinculo');
 const defineContratoModel = require('./Contrato');
 const defineContratoOrdemModel = require('./ContratoOrdem');
 const defineContratoOrdemItemModel = require('./ContratoOrdemItem');
+const defineLicitacaoModel = require('./Licitacao');
 const definePatGrupoModel = require('./PatGrupo');
 const definePatBemModel = require('./PatBem');
 const definePatResponsabilidadeModel = require('./PatResponsabilidade');
@@ -58,6 +59,7 @@ const initTenantModels = (sequelize) => {
   const Contrato = defineContratoModel(sequelize);
   const ContratoOrdem = defineContratoOrdemModel(sequelize);
   const ContratoOrdemItem = defineContratoOrdemItemModel(sequelize);
+  const Licitacao = defineLicitacaoModel(sequelize);
   const PatGrupo = definePatGrupoModel(sequelize);
   const PatBem = definePatBemModel(sequelize);
   const PatResponsabilidade = definePatResponsabilidadeModel(sequelize);
@@ -229,6 +231,7 @@ const initTenantModels = (sequelize) => {
     Contrato,
     ContratoOrdem,
     ContratoOrdemItem,
+    Licitacao,
     PatGrupo,
     PatBem,
     PatResponsabilidade,

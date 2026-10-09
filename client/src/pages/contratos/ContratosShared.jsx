@@ -1,13 +1,14 @@
 ﻿import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { FileText, ShoppingBag, User, BarChart2, ClipboardList } from 'lucide-react'
+import { FileText, ShoppingBag, User, BarChart2, ClipboardList, Gavel } from 'lucide-react'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 export const TABS = [
-  { key: 'itens',      label: 'Itens',                   icon: ShoppingBag,   emoji: '📦', permPath: ['contratos', 'itens',     'ver'] },
+  { key: 'licitacoes', label: 'Licitação',               icon: Gavel,         emoji: '⚖️', permPath: ['contratos', 'licitacoes','ver'] },
   { key: 'credor',     label: 'Credores',                icon: User,          emoji: '🏢', permPath: ['contratos', 'credores',  'ver'] },
-  { key: 'contratos',  label: 'Contratos',               icon: FileText,      emoji: '📋', permPath: ['contratos', 'contratos', 'ver'] },
-  { key: 'ordens',     label: 'Ordem de Compra/Serviço', icon: ClipboardList, emoji: '🛒', permPath: ['contratos', 'ordens',    'ver'] },
+  { key: 'itens',      label: 'Itens',                   icon: ShoppingBag,   emoji: '📦', permPath: ['contratos', 'itens',     'ver'] },
+  { key: 'contratos',  label: 'Contratos',              icon: FileText,      emoji: '📋', permPath: ['contratos', 'contratos', 'ver'] },
+  { key: 'ordens',     label: 'Ordem de Serviço/Compra', icon: ClipboardList, emoji: '🛒', permPath: ['contratos', 'ordens',    'ver'] },
   { key: 'relatorios', label: 'Relatórios',              icon: BarChart2,     emoji: '📊', permPath: ['contratos', 'relatorios','ver'] },
 ]
 
