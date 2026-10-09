@@ -86,11 +86,19 @@ const REFRESH_COOKIE_OPTS = {
   path: '/api/auth', // restringe o cookie apenas às rotas de auth
 };
 
-const setRefreshTokenCookie = (res, token) =>
-  res.cookie('refreshToken', token, REFRESH_COOKIE_OPTS);
+// Sessões separadas: superadmin e município usam cookies distintos, para que
+// entrar num município no mesmo navegador não derrube a sessão do superadmin.
+// O front informa o contexto da página no header x-auth-context ('admin' | 'tenant').
+const REFRESH_COOKIE_TENANT = 'refreshToken';
+const REFRESH_COOKIE_ADMIN  = 'refreshTokenAdmin';
+const _cookieName = (isAdmin) => isAdmin ? REFRESH_COOKIE_ADMIN : REFRESH_COOKIE_TENANT;
+const _isAdminContext = (req) => req.headers['x-auth-context'] === 'admin';
 
-const clearRefreshTokenCookie = (res) =>
-  res.clearCookie('refreshToken', { ...REFRESH_COOKIE_OPTS, maxAge: 0 });
+const setRefreshTokenCookie = (res, token, isAdmin = false) =>
+  res.cookie(_cookieName(isAdmin), token, REFRESH_COOKIE_OPTS);
+
+const clearRefreshTokenCookie = (res, isAdmin = false) =>
+  res.clearCookie(_cookieName(isAdmin), { ...REFRESH_COOKIE_OPTS, maxAge: 0 });
 
 // ── Busca de municípios por e-mail ──────────────────────────────────────────
 // Usuários vivem em {schema}.usuarios (um schema por município) — o e-mail só
@@ -281,7 +289,7 @@ const login = async (req, res) => {
       await _saveRefreshToken(masterDb, true, {
         jti: jtiAdmin, userId: admin.id, tokenHash: hashAdmin, expiresAt: Date.now() + REFRESH_EXPIRE_MS,
       });
-      setRefreshTokenCookie(res, rtAdmin);
+      setRefreshTokenCookie(res, rtAdmin, true);
 
       return res.json({
         message: 'Login admin realizado com sucesso',
@@ -576,7 +584,8 @@ const deleteUser = async (req, res) => {
 // ── Refresh Token ─────────────────────────────────────────────────────────────
 const refreshToken = async (req, res) => {
   try {
-    const cookieToken = req.cookies?.refreshToken;
+    const adminCtx = _isAdminContext(req);
+    const cookieToken = req.cookies?.[_cookieName(adminCtx)];
     if (!cookieToken) {
       return res.status(401).json({ error: 'Refresh token não encontrado' });
     }
@@ -587,6 +596,11 @@ const refreshToken = async (req, res) => {
       decoded = jwt.verify(cookieToken, _getRefreshSecret(), { algorithms: ['HS256'] });
     } catch {
       return res.status(401).json({ error: 'Refresh token inválido ou expirado' });
+    }
+
+    // O token precisa ser do mesmo tipo do contexto (superadmin × município)
+    if (!!decoded.isAdmin !== adminCtx) {
+      return res.status(401).json({ error: 'Sessão não corresponde a este acesso' });
     }
 
     const { jti } = decoded;
@@ -647,8 +661,9 @@ const refreshToken = async (req, res) => {
 
 // ── Logout ────────────────────────────────────────────────────────────────────
 const logoutUser = async (req, res) => {
+  const adminCtx = _isAdminContext(req);
   try {
-    const cookieToken = req.cookies?.refreshToken;
+    const cookieToken = req.cookies?.[_cookieName(adminCtx)];
     let decoded = null;
     if (cookieToken) {
       try {
@@ -684,11 +699,11 @@ const logoutUser = async (req, res) => {
       } catch { /* não bloqueia o logout se o log falhar */ }
     }
 
-    clearRefreshTokenCookie(res);
+    clearRefreshTokenCookie(res, adminCtx);
     res.json({ success: true, message: 'Logout realizado com sucesso' });
   } catch (error) {
     console.error('[logoutUser] Erro:', error.message);
-    clearRefreshTokenCookie(res);
+    clearRefreshTokenCookie(res, adminCtx);
     res.status(500).json({ error: 'Erro ao fazer logout' });
   }
 };

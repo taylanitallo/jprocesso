@@ -2329,17 +2329,27 @@ export default function AdminTenants() {
 
   const handleLogout = async () => {
     try { await api.post('/auth/logout'); } catch {}
+    // Só a sessão do superadmin — a de município (localStorage 'subdomain') é independente
     localStorage.removeItem('token');
-    localStorage.removeItem('subdomain');
     localStorage.removeItem('isAdmin');
     navigate('/');
   };
 
-  const { data: tenantsData, refetch, isLoading } = useQuery(
+  const { data: tenantsData, refetch, isLoading, error: tenantsError } = useQuery(
     'sa-tenants',
     () => api.get('/superadmin/tenants').then(r => r.data),
     { staleTime: 30000, retry: false, refetchOnWindowFocus: false }
   );
+
+  // Sessão sem permissão de superadmin (403) → volta ao login do superadmin.
+  // (401 já é tratado pelo interceptor: renova a sessão ou redireciona.)
+  useEffect(() => {
+    if (tenantsError?.response?.status === 403) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('isAdmin');
+      navigate('/superadmin', { replace: true, state: { aviso: 'Sua sessão de superadmin expirou. Entre novamente.' } });
+    }
+  }, [tenantsError, navigate]);
 
   const ativarMutation = useMutation(
     id => api.patch(`/superadmin/tenants/${id}/ativar`).then(r => r.data),
@@ -2435,6 +2445,14 @@ export default function AdminTenants() {
           <div className="text-center py-12 text-ink-400">
             <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-3" />
             Carregando...
+          </div>
+        ) : tenantsError ? (
+          <div className="text-center py-16">
+            <p className="font-medium text-danger-600">Não foi possível carregar as prefeituras.</p>
+            <p className="text-sm text-ink-500 mt-1">{tenantsError.response?.data?.error || tenantsError.message}</p>
+            <button onClick={() => refetch()} className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-ink-200 text-sm text-ink-600 hover:bg-ink-50">
+              <RefreshCw className="h-4 w-4" /> Tentar novamente
+            </button>
           </div>
         ) : tenants.length === 0 ? (
           <div className="text-center py-16 text-ink-400">

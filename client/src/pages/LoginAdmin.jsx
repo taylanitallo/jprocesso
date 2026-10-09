@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Shield } from 'lucide-react';
 import api, { setAccessToken } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginAdmin() {
   const navigate = useNavigate();
+  const aviso = useLocation().state?.aviso;
   const { refreshUser } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
@@ -27,18 +28,14 @@ export default function LoginAdmin() {
         subdomain: 'admin' // Identificador especial para superadmin
       });
 
-      // Limpar qualquer sessão de tenant anterior antes de setar admin
-      localStorage.removeItem('subdomain');
-      delete api.defaults.headers.common['x-tenant-subdomain'];
-
-      // Salvar flags de sessão admin
+      // Flags da sessão admin. A sessão de município (localStorage 'subdomain' e
+      // cookie próprio) é independente e permanece intacta; o header
+      // x-tenant-subdomain=admin é definido pelo interceptor nas páginas /superadmin.
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('isAdmin', 'true');
-      localStorage.setItem('subdomain', 'admin');
 
-      // M-3: access token em memória + default header para SPA navigation
+      // M-3: access token em memória
       setAccessToken(response.data.token);
-      api.defaults.headers.common['x-tenant-subdomain'] = 'admin';
 
       // Redirecionar para área de gestão
       navigate('/superadmin/painel');
@@ -63,6 +60,12 @@ export default function LoginAdmin() {
             <h1 className="text-2xl font-bold text-ink-900 mb-1">Administrador Geral</h1>
             <p className="text-ink-500 text-sm">Acesso ao painel de gerenciamento de prefeituras</p>
           </div>
+
+          {aviso && !error && (
+            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+              {aviso}
+            </div>
+          )}
 
           {error && (
             <div className="mb-4 p-3 bg-danger-50 border border-danger-200 rounded-lg flex items-start gap-3">

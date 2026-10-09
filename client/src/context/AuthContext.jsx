@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import api, { setAccessToken, clearAccessToken } from '../services/api'
+import api, { setAccessToken, clearAccessToken, isAdminContext, getPageSubdomain } from '../services/api'
 
 const AuthContext = createContext({})
 
@@ -21,7 +21,9 @@ export default function AuthProvider({ children }) {
   }
 
   useEffect(() => {
-    const subdomain = localStorage.getItem('subdomain')
+    // Páginas do superadmin têm sessão própria (cookie admin) — não restaurar município aqui
+    const stored = localStorage.getItem('subdomain')
+    const subdomain = isAdminContext() ? null : ((stored && stored !== 'admin' ? stored : null) || getPageSubdomain())
 
     // Segurança: forçar loading=false em até 5s independente do que acontecer
     const safetyTimer = setTimeout(() => setLoading(false), 5000)
@@ -73,9 +75,7 @@ export default function AuthProvider({ children }) {
     // M-3: access token em memória — nunca no localStorage
     setAccessToken(data.token)
     localStorage.setItem('subdomain', data.tenant.subdominio)
-    // Limpar estado admin residual de sessão anterior
-    localStorage.removeItem('isAdmin')
-    localStorage.removeItem('token')
+    // isAdmin/token pertencem à sessão do superadmin, que é independente — não mexer
 
     setUser(data.user)
     setTenant(data.tenant)
@@ -97,8 +97,6 @@ export default function AuthProvider({ children }) {
 
     clearAccessToken()
     localStorage.removeItem('subdomain')
-    localStorage.removeItem('isAdmin')
-    localStorage.removeItem('token')
 
     setUser(null)
     setTenant(null)
@@ -108,7 +106,7 @@ export default function AuthProvider({ children }) {
     const currentPath = window.location.pathname
     if (!currentPath.includes('/login')) {
       window.location.href =
-        subdomain && subdomain !== 'admin' ? `/${subdomain}/login` : '/login'
+        subdomain && subdomain !== 'admin' ? `/${subdomain}/login` : '/'
     }
   }
 

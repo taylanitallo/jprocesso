@@ -8,6 +8,20 @@ export const setAccessToken   = (t) => { _accessToken = t }
 export const getAccessToken   = ()  => _accessToken
 export const clearAccessToken = ()  => { _accessToken = null }
 
+// ── Contexto de autenticação (superadmin × município) ─────────────────────────
+// Definido pelo endereço da página, não pelo localStorage (compartilhado entre
+// abas): assim superadmin e município podem ficar logados no mesmo navegador.
+const ROTAS_RESERVADAS = new Set(['', 'login', 'admin', 'superadmin', 'api', 'www', 'app', 'static', 'assets', 'public', 'health', 'ping'])
+export const isAdminContext = () => window.location.pathname.startsWith('/superadmin')
+export const getPageSubdomain = () => {
+  const seg = window.location.pathname.split('/')[1] || ''
+  return ROTAS_RESERVADAS.has(seg.toLowerCase()) ? null : seg
+}
+const getStoredTenantSubdomain = () => {
+  const s = localStorage.getItem('subdomain')
+  return s && s !== 'admin' ? s : null
+}
+
 // ── Instância axios ───────────────────────────────────────────────────────────
 const getApiUrl = () => import.meta.env.VITE_API_URL || '/api'
 
@@ -23,8 +37,10 @@ api.interceptors.request.use(
     // M-3: Authorization lido da memória — nunca do localStorage
     if (_accessToken) config.headers.Authorization = `Bearer ${_accessToken}`
 
-    // subdomain não é sensível — pode ficar em localStorage
-    const subdomain = localStorage.getItem('subdomain')
+    // Contexto da sessão: o servidor escolhe o cookie de refresh correspondente
+    const admin = isAdminContext()
+    config.headers['x-auth-context'] = admin ? 'admin' : 'tenant'
+    const subdomain = admin ? 'admin' : (getPageSubdomain() || getStoredTenantSubdomain())
     if (subdomain) config.headers['x-tenant-subdomain'] = subdomain
 
     // Progresso global — ignora refresh silencioso e download de blobs grandes
@@ -58,13 +74,21 @@ const _doRefresh = () => {
 // Limpa estado de autenticação e redireciona para login
 const _forceLogout = (subdomain) => {
   clearAccessToken()
+
+  // Superadmin: encerra só a sessão admin (não mexe na do município)
+  if (isAdminContext()) {
+    localStorage.removeItem('token')
+    localStorage.removeItem('isAdmin')
+    if (window.location.pathname !== '/superadmin') window.location.href = '/superadmin'
+    return
+  }
+
   localStorage.removeItem('subdomain')
   delete api.defaults.headers.common['x-tenant-subdomain']
 
   const currentPath = window.location.pathname
   if (!currentPath.includes('/login')) {
-    window.location.href =
-      subdomain && subdomain !== 'admin' ? `/${subdomain}/login` : '/login'
+    window.location.href = subdomain ? `/${subdomain}/login` : '/'
   }
 }
 
@@ -91,9 +115,7 @@ api.interceptors.response.use(
       // Marca para evitar loop infinito caso o retry também retorne 401
       originalRequest._retry = true
 
-      const subdomain =
-        localStorage.getItem('subdomain') ||
-        window.location.pathname.split('/')[1]
+      const subdomain = getPageSubdomain() || getStoredTenantSubdomain()
 
       try {
         const { data } = await _doRefresh()
