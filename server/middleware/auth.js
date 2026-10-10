@@ -29,10 +29,16 @@ const authenticate = async (req, res, next) => {
     // C-3: algoritmo fixado para prevenir ataques de confusão de algoritmo
     const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
 
-    // C-1: se o token pertence a um tenant específico, garantir que corresponde
-    // ao tenant resolvido pelo tenantMiddleware nesta requisição
-    if (decoded.subdomain && req.tenant) {
-      if (decoded.subdomain !== req.tenant.subdominio) {
+    // C-1 / SEC: binding token↔tenant. Um token emitido para um município jamais
+    // pode operar sobre outro. Enforçado sempre que a rota resolveu um tenant
+    // (req.tenant) e o token não é do admin global (isAdmin usa requireSuperAdmin).
+    // Verifica subdomain E tenantId — assim tokens sem subdomain (ex.: emitidos no
+    // /register) também ficam presos ao seu município de origem.
+    if (req.tenant && !decoded.isAdmin) {
+      if (decoded.subdomain && decoded.subdomain !== req.tenant.subdominio) {
+        return res.status(403).json({ error: 'Token não autorizado para este município' });
+      }
+      if (decoded.tenantId != null && String(decoded.tenantId) !== String(req.tenant.id)) {
         return res.status(403).json({ error: 'Token não autorizado para este município' });
       }
     }
@@ -121,10 +127,33 @@ const requireTenant = (req, res, next) => {
   next();
 };
 
+// Verifica permissão nested no JSONB do usuário. Ex: requirePermission('almoxarifado','estoque','criar')
+// Admin e jeos bypassam. undefined = permitido; false = negado.
+const requirePermission = (...path) => async (req, res, next) => {
+  if (!req.user) return res.status(401).json({ error: 'Não autenticado' });
+  if (req.user.tipo === 'admin' || req.user.tipo === 'jeos') return next();
+  try {
+    const { User } = req.models;
+    const u = await User.findByPk(req.user.id, { attributes: ['permissoes', 'tipo'] });
+    if (!u) return res.status(401).json({ error: 'Usuário não encontrado' });
+    if (u.tipo === 'admin' || u.tipo === 'jeos') return next();
+    let obj = u.permissoes;
+    for (const key of path) {
+      if (obj == null || typeof obj !== 'object') { obj = undefined; break; }
+      obj = obj[key];
+    }
+    if (obj === false) return res.status(403).json({ error: 'Sem permissão para esta ação' });
+    next();
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao verificar permissão' });
+  }
+};
+
 module.exports = {
   authenticate,
   tenantMiddleware,
   requireTenant,
   authorize,
   requireSuperAdmin,
+  requirePermission,
 };

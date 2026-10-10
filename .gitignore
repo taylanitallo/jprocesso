@@ -65,3 +65,13 @@ README.md
 SYSTEM_PROMPT.md
 
 *.sql
+
+.vercel
+.env*
+
+# Material de apresenta��o comercial — deve ser versionado.
+# O padr�o "README.md" acima casa em qualquer n�vel, inclusive dentro de apresentacao/.
+!apresentacao/README.md
+
+# Estado local do preparo da demo: aponta para valores de UMA m�quina/execu��o.
+server/scripts/seed_demo_tensao.backup.json

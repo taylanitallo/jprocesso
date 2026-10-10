@@ -9,8 +9,14 @@ const defineDocumentoModel = (sequelize) => {
     },
     processo_id: {
       type: DataTypes.UUID,
-      allowNull: false,
-      comment: 'FK: Processo ao qual o documento pertence'
+      allowNull: true,
+      comment: 'FK: Processo ao qual o documento pertence (null para documentos avulsos)'
+    },
+    tipo_origem: {
+      type: DataTypes.STRING(30),
+      allowNull: true,
+      defaultValue: 'anexo',
+      comment: 'Origem do documento: anexo | did | ordem | despacho | oficio | pauta | protocolo | requisicao'
     },
     nome_arquivo: {
       type: DataTypes.STRING,

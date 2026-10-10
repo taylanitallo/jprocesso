@@ -1,5 +1,9 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { salvarDocumentoGerado } from '../../utils/salvarDocumentoGerado'
+import { applyTimbradoToPage } from '../../utils/timbradoStore'
+import { getMargens } from '../../utils/margensStore'
+import { setPDFLoading } from '../../utils/pdfLoadingStore'
 
 // ─── Utilitários ──────────────────────────────────────────────────────────────
 const fmt     = v => (v && String(v).trim()) ? String(v).trim() : '—'
@@ -49,15 +53,24 @@ const C = {
   pendente:  [175, 82,   8],
 }
 
-// Margem padrão
-const M  = 12
-// Largura útil
-const UW = 186   // 210 - 2*12
+// Margens dinâmicas (atualizadas antes de cada geração)
+let M       = 12
+let UW      = 186
+let mTop    = 20
+let mBottom = 20
+
+function refreshM() {
+  const mg = getMargens()
+  M       = mg.left
+  UW      = 210 - mg.left - mg.right
+  mTop    = mg.top
+  mBottom = mg.bottom
+}
 
 // ─── Divisor de Seção — barra fina + rótulo inline ───────────────────────────
 // Retorna y após o divisor (compacto: só 6mm de altura total)
 function divSecao(doc, y, numero, titulo, acent, pageH) {
-  if (y > pageH - 20) { doc.addPage(); y = 16 }
+  if (y > pageH - 20) { doc.addPage(); applyTimbradoToPage(doc); y = mTop + 4 }
   // Linha tênue acima (separa do bloco anterior)
   doc.setDrawColor(...C.rule)
   doc.setLineWidth(0.15)
@@ -82,7 +95,7 @@ function divSecao(doc, y, numero, titulo, acent, pageH) {
 // cols: array de { label, value, width? } onde width é fração de UW
 // Retorna novo y
 function gridRow(doc, y, cols, pageH) {
-  if (y > pageH - 14) { doc.addPage(); y = 16 }
+  if (y > pageH - 14) { doc.addPage(); applyTimbradoToPage(doc); y = mTop + 4 }
   let x = M
   // Calcula larguras
   const total = cols.reduce((s, c) => s + (c.w || 1), 0)
@@ -107,10 +120,10 @@ function gridRow(doc, y, cols, pageH) {
 }
 
 // ─── Campo objeto — texto completo com wrap ───────────────────────────────────
-function campoObjeto(doc, y, valor, pageH) {
-  if (y > pageH - 16) { doc.addPage(); y = 16 }
+function campoObjeto(doc, y, valor, pageH, label = 'OBJETO') {
+  if (y > pageH - 16) { doc.addPage(); applyTimbradoToPage(doc); y = mTop + 4 }
   norm(doc, 5.5, C.muted)
-  doc.text('OBJETO', M + 1, y + 1.5)
+  doc.text(label.toUpperCase(), M + 1, y + 1.5)
   bold(doc, 7.5, C.ink)
   const linhas = doc.splitTextToSize(fmt(valor), UW - 2)
   doc.text(linhas, M + 1, y + 5.8)
@@ -123,7 +136,7 @@ function campoObjeto(doc, y, valor, pageH) {
 
 // ─── Linha de Checkboxes compacta ─────────────────────────────────────────────
 function checkRow(doc, y, label, itens, pageH) {
-  if (y > pageH - 10) { doc.addPage(); y = 16 }
+  if (y > pageH - 10) { doc.addPage(); applyTimbradoToPage(doc); y = mTop + 4 }
   norm(doc, 5.5, C.muted)
   doc.text(label.toUpperCase() + ':', M + 1, y + 3.5)
   let x = M + doc.getTextWidth(label.toUpperCase() + ':') + 4
@@ -147,14 +160,16 @@ function checkRow(doc, y, label, itens, pageH) {
   return y + 6
 }
 
-// ─── Carrega imagem base64 ────────────────────────────────────────────────────
+// ─── Carrega imagem base64 com cache em memória ───────────────────────────────
+const _imgCache = new Map()
 async function carregarImagem(url) {
+  if (_imgCache.has(url)) return _imgCache.get(url)
   try {
     const res  = await fetch(url)
     const blob = await res.blob()
     return new Promise(resolve => {
       const reader = new FileReader()
-      reader.onload  = () => resolve(reader.result)
+      reader.onload  = () => { _imgCache.set(url, reader.result); resolve(reader.result) }
       reader.onerror = () => resolve(null)
       reader.readAsDataURL(blob)
     })
@@ -162,10 +177,14 @@ async function carregarImagem(url) {
 }
 
 // ─── Geração Principal ────────────────────────────────────────────────────────
-export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid }) {
+export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, processoId }) {
+  setPDFLoading(true)
+  try {
+  refreshM()
   const doc   = new jsPDF({ unit: 'mm', format: 'a4' })
   const pageW = 210
-  const pageH = 297
+  const pageH = 297 - mBottom
+  applyTimbradoToPage(doc)
 
   const nomeMunicipio = tenant?.nome_municipio || 'Prefeitura Municipal'
   const cnpjPref      = fmtCNPJ(tenant?.cnpj || '')
@@ -176,39 +195,33 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid }) {
   // ══════════════════════════════════════════════════════════════════════════
   //  CABEÇALHO COMPACTO — 22mm de altura
   // ══════════════════════════════════════════════════════════════════════════
-  doc.setFillColor(...C.headerBg)
-  doc.rect(0, 0, pageW, 22, 'F')
-  // Linha de acento no rodapé do header
-  doc.setFillColor(...C.blue)
-  doc.rect(0, 21.2, pageW, 0.8, 'F')
-
   const textX = logoBase64 ? 38 : M
   if (logoBase64) {
-    try { doc.addImage(logoBase64, 'PNG', M, 2, 18, 18) } catch {}
+    try { doc.addImage(logoBase64, 'PNG', M, mTop, 18, 18) } catch {}
   }
 
   const tipoLabel    = tipoDid === 'variaveis' ? 'CONTAS VARIÁVEIS' : 'CONTAS FIXAS'
   const tipoAcent    = tipoDid === 'variaveis' ? C.teal : C.blue
 
-  bold(doc, 10.5, C.white)
-  doc.text(nomeMunicipio.toUpperCase(), textX, 9.5)
-  norm(doc, 6, [170,182,205])
-  doc.text(`CNPJ: ${cnpjPref}  ·  DOCUMENTO DE INSTRUÇÃO DE DESPESAS`, textX, 15)
+  bold(doc, 10.5, C.ink)
+  doc.text(nomeMunicipio.toUpperCase(), textX, mTop + 6)
+  norm(doc, 6, C.sub)
+  doc.text(`CNPJ: ${cnpjPref}  ·  DOCUMENTO DE INSTRUÇÃO DE DESPESAS`, textX, mTop + 12)
 
-  bold(doc, 13, C.white)
-  doc.text(`DID Nº ${fmt(form.numero_did)}`, pageW - M, 11, { align: 'right' })
-  norm(doc, 5.5, [150,163,185])
-  doc.text(fmt(form.secretaria_sec1), pageW - M, 16.5, { align: 'right' })
+  bold(doc, 13, C.ink)
+  doc.text(`DID Nº ${fmt(form.numero_did)}`, pageW - M, mTop + 8, { align: 'right' })
+  norm(doc, 5.5, C.muted)
+  doc.text(fmt(form.secretaria_sec1), pageW - M, mTop + 14, { align: 'right' })
 
   // Badge tipo — pill colorida no header (canto esquerdo inferior)
   const tpw = doc.getTextWidth(tipoLabel) + 8
   doc.setFontSize(6); doc.setFont('helvetica', 'bold')
   doc.setFillColor(...tipoAcent)
-  doc.roundedRect(textX, 17.5, tpw, 3.5, 1, 1, 'F')
+  doc.roundedRect(textX, mTop + 16, tpw, 3.5, 1, 1, 'F')
   doc.setTextColor(...C.white)
-  doc.text(tipoLabel, textX + 4, 20.2)
+  doc.text(tipoLabel, textX + 4, mTop + 18.7)
 
-  let y = 26
+  let y = mTop + 24
 
   // ══════════════════════════════════════════════════════════════════════════
   //  FAIXA META (credor + valor + badge) — 20mm — linha única compacta
@@ -279,6 +292,12 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid }) {
     { label: 'Credor',       value: form.credor_sec1,                   w: 2.5 },
     { label: 'CNPJ/CPF',     value: fmtCNPJ(form.cnpj_cpf_credor_sec1), w: 2   },
   ], pageH)
+  // Linha 3b — Dados bancários do credor
+  y = gridRow(doc, y, [
+    { label: 'Banco', value: form.banco_fornecedor, w: 2   },
+    { label: 'Ag.',   value: form.ag_fornecedor,    w: 1   },
+    { label: 'C/C',   value: form.cc_fornecedor,    w: 1.5 },
+  ], pageH)
   // Linha 4 — Licitação | Modalidade | Fonte | Valor DID
   y = gridRow(doc, y, [
     { label: 'Nº Licitação',     value: form.nro_licitacao_sec1,  w: 1.5 },
@@ -289,18 +308,19 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid }) {
 
   y = campoObjeto(doc, y, form.objeto, pageH)
   y = checkRow(doc, y, 'Certidões', [
-    { label: 'Municipal',   value: form.cert_sec1_municipal },
-    { label: 'Trabalhista', value: form.cert_sec1_trabalhista },
-    { label: 'FGTS',        value: form.cert_sec1_fgts },
-    { label: 'Estadual',    value: form.cert_sec1_estadual },
-    { label: 'Federal',     value: form.cert_sec1_federal },
+    { label: 'Municipal',        value: form.cert_sec1_municipal },
+    { label: 'Trabalhista',      value: form.cert_sec1_trabalhista },
+    { label: 'FGTS',             value: form.cert_sec1_fgts },
+    { label: 'Estadual',         value: form.cert_sec1_estadual },
+    { label: 'Federal',          value: form.cert_sec1_federal },
+    { label: 'Simples Nacional', value: form.cert_sec1_simples_nac },
   ], pageH)
   y += 3
 
   // ── Tabela de Itens — ultra-compacta ─────────────────────────────────────
   const itensFiltrados = (itensDid || []).filter(it => it.descricao)
   if (itensFiltrados.length > 0) {
-    if (y > pageH - 28) { doc.addPage(); y = 16 }
+    if (y > pageH - 28) { doc.addPage(); applyTimbradoToPage(doc); y = mTop + 4 }
     norm(doc, 5.5, C.muted)
     doc.text('ITENS / SERVIÇOS', M + 1, y)
     y += 2
@@ -333,6 +353,7 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid }) {
         4: { cellWidth: 38, halign: 'right', fontStyle: 'bold' },
       },
       margin: { left: M, right: M },
+      willDrawPage: (data) => { if (data.pageNumber > 1) applyTimbradoToPage(doc) },
     })
     y = doc.lastAutoTable.finalY + 4
   }
@@ -345,7 +366,7 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid }) {
     { label: 'Recebido em', value: fmtData(form.ci_recebido_em), w: 1.5 },
     { label: 'Responsável', value: form.ci_responsavel,          w: 3   },
   ], pageH)
-  y = campoObjeto(doc, y, form.despacho_ci, pageH)
+  y = campoObjeto(doc, y, form.despacho_ci, pageH, 'Despacho via C.I.')
   y += 1
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -373,9 +394,10 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid }) {
     // ── V — Contabilidade (Empenho) ───────────────────────────────────────
     y = divSecao(doc, y, 'V', 'Contabilidade (Empenho)', C.purple, pageH)
     y = gridRow(doc, y, [
-      { label: 'Recebido em', value: fmtData(form.contabil_recebido_em), w: 1.3 },
-      { label: 'Responsável', value: form.contabil_responsavel,          w: 2   },
-      { label: 'Auditor',     value: form.contabil_auditor,              w: 2   },
+      { label: 'Recebido em',       value: fmtData(form.contabil_recebido_em), w: 1.3 },
+      { label: 'Responsável',       value: form.contabil_responsavel,          w: 2   },
+      { label: 'Auditor',           value: form.contabil_auditor,              w: 1.7 },
+      { label: 'Está empenhado?',   value: simNao(form.contabil_empenhado),    w: 1.3 },
     ], pageH)
     y = gridRow(doc, y, [
       { label: 'Empenho Nº',   value: form.empenho_numero,        w: 1.5 },
@@ -397,6 +419,9 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid }) {
     // ── VII — Almoxarifado (Recebimento) ───────────────────────────────────
     y = divSecao(doc, y, 'VII', 'Almoxarifado (Recebimento)', C.navy, pageH)
     y = gridRow(doc, y, [
+      { label: 'Ordem Recebida?', value: simNao(form.receb_ordem_recebida), w: 1.3 },
+    ], pageH)
+    y = gridRow(doc, y, [
       { label: 'Data Recebimento',    value: fmtData(form.receb_data),               w: 1.5 },
       { label: 'Data NF',             value: fmtData(form.receb_nf_data),            w: 1.5 },
       { label: 'Enviado NF p/ Compras', value: fmtData(form.receb_nf_enviado_compras), w: 1.5 },
@@ -410,7 +435,7 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid }) {
       { label: 'Qtd. conferida',       value: form.receb_qtd_conferida },
       { label: 'Especificações ok',    value: form.receb_esp_conforme },
     ], pageH)
-    if (form.receb_obs) y = campoObjeto(doc, y, form.receb_obs, pageH)
+    if (form.receb_obs) y = campoObjeto(doc, y, form.receb_obs, pageH, 'Observações do Recebimento')
     y += 1
 
     // ── VIII — Setor de Compras (Ateste de NF) ────────────────────────────
@@ -425,9 +450,10 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid }) {
     // ── IX — Contabilidade (Liquidação) ────────────────────────────────────
     y = divSecao(doc, y, 'IX', 'Contabilidade (Liquidação)', C.purple, pageH)
     y = gridRow(doc, y, [
-      { label: 'Recebido em', value: fmtData(form.contabil_pc_recebido_em), w: 1.3 },
-      { label: 'Responsável', value: form.contabil_pc_responsavel,          w: 2   },
-      { label: 'Auditor',     value: form.contabil_pc_auditor,              w: 2   },
+      { label: 'Recebido em',      value: fmtData(form.contabil_pc_recebido_em), w: 1.3 },
+      { label: 'Responsável',      value: form.contabil_pc_responsavel,          w: 2   },
+      { label: 'Auditor',          value: form.contabil_pc_auditor,              w: 1.7 },
+      { label: 'Está liquidado?',  value: simNao(form.contabil_pc_liquidado),    w: 1.3 },
     ], pageH)
     y = gridRow(doc, y, [
       { label: 'Liquidação Nº',    value: form.contabil_pc_liquidacao_numero,        w: 2 },
@@ -449,7 +475,16 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid }) {
     y = gridRow(doc, y, [
       { label: 'Recebido em', value: fmtData(form.tesouraria_recebido_em), w: 1.5 },
       { label: 'Responsável', value: form.tesouraria_responsavel,          w: 2   },
-      { label: 'Banco',       value: form.banco_pagador,                   w: 2   },
+    ], pageH)
+    y = gridRow(doc, y, [
+      { label: 'Banco (pagador)', value: form.banco_pagador, w: 2   },
+      { label: 'Ag.',             value: form.ag_pagador,    w: 1   },
+      { label: 'C/C',             value: form.cc_pagador,    w: 1.5 },
+    ], pageH)
+    y = gridRow(doc, y, [
+      { label: 'Banco (credor)', value: form.banco_fornecedor, w: 2   },
+      { label: 'Ag.',            value: form.ag_fornecedor,    w: 1   },
+      { label: 'C/C',            value: form.cc_fornecedor,    w: 1.5 },
     ], pageH)
     y = checkRow(doc, y, 'Certidões', [
       { label: 'Unificada',   value: form.cert_teso_cnd },
@@ -461,7 +496,7 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid }) {
     y += 3
 
     // Demonstrativo de descontos
-    if (y > pageH - 50) { doc.addPage(); y = 16 }
+    if (y > pageH - 50) { doc.addPage(); applyTimbradoToPage(doc); y = mTop + 4 }
     norm(doc, 5.5, C.muted)
     doc.text('DEMONSTRATIVO DE DESCONTOS', M + 1, y)
     y += 2
@@ -494,6 +529,7 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid }) {
         1: { cellWidth: 56, halign: 'right' },
       },
       margin: { left: M, right: M },
+      willDrawPage: (data) => { if (data.pageNumber > 1) applyTimbradoToPage(doc) },
     })
     y = doc.lastAutoTable.finalY + 1.5
 
@@ -543,11 +579,15 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid }) {
       { label: 'Doc. Caixa',  value: form.doc_caixa,                     w: 1   },
     ], pageH)
     y = gridRow(doc, y, [
-      { label: 'Empenho Nº',       value: form.empenho_numero,           w: 1.2 },
-      { label: 'Tipo',             value: form.tipo_empenho,             w: 1.5 },
-      { label: 'Data Empenho',     value: fmtData(form.data_empenho),    w: 1.3 },
-      { label: 'Liquidação Nº',    value: form.liquidacao_numero,        w: 1.2 },
-      { label: 'Data Liquidação',  value: fmtData(form.data_liquidacao), w: 1.3 },
+      { label: 'Está empenhado?', value: simNao(form.contabil_empenhado), w: 1.5 },
+      { label: 'Empenho Nº',      value: form.empenho_numero,             w: 1.2 },
+      { label: 'Tipo',            value: form.tipo_empenho,               w: 1.5 },
+      { label: 'Data Empenho',    value: fmtData(form.data_empenho),      w: 1.3 },
+    ], pageH)
+    y = gridRow(doc, y, [
+      { label: 'Está liquidado?',  value: simNao(form.contabil_liquidado), w: 1.5 },
+      { label: 'Liquidação Nº',    value: form.liquidacao_numero,          w: 1.2 },
+      { label: 'Data Liquidação',  value: fmtData(form.data_liquidacao),   w: 1.3 },
     ], pageH)
     y += 1
 
@@ -565,21 +605,29 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid }) {
     y = gridRow(doc, y, [
       { label: 'Recebido em', value: fmtData(form.tesouraria_recebido_em), w: 1.5 },
       { label: 'Responsável', value: form.tesouraria_responsavel,          w: 2   },
-      { label: 'Banco',       value: form.banco_pagador,                   w: 2   },
-      { label: 'Ag.',         value: form.ag_pagador,                      w: 1   },
-      { label: 'C/C',         value: form.cc_pagador,                      w: 1.5 },
+    ], pageH)
+    y = gridRow(doc, y, [
+      { label: 'Banco (pagador)', value: form.banco_pagador, w: 2   },
+      { label: 'Ag.',             value: form.ag_pagador,    w: 1   },
+      { label: 'C/C',             value: form.cc_pagador,    w: 1.5 },
+    ], pageH)
+    y = gridRow(doc, y, [
+      { label: 'Banco (credor)', value: form.banco_fornecedor, w: 2   },
+      { label: 'Ag.',            value: form.ag_fornecedor,    w: 1   },
+      { label: 'C/C',            value: form.cc_fornecedor,    w: 1.5 },
     ], pageH)
     y = checkRow(doc, y, 'Certidões', [
-      { label: 'Unificada',   value: form.cert_teso_cnd },
-      { label: 'FGTS',        value: form.cert_teso_fgts },
-      { label: 'Estadual',    value: form.cert_teso_estadual },
-      { label: 'Trabalhista', value: form.cert_teso_trabalhista },
-      { label: 'Municipal',   value: form.cert_teso_municipal },
+      { label: 'Municipal',        value: form.cert_teso_municipal },
+      { label: 'Trabalhista',      value: form.cert_teso_trabalhista },
+      { label: 'FGTS',             value: form.cert_teso_fgts },
+      { label: 'Estadual',         value: form.cert_teso_estadual },
+      { label: 'Federal',          value: form.cert_teso_federal },
+      { label: 'Simples Nacional', value: form.cert_teso_simples_nac },
     ], pageH)
     y += 3
 
     // Demonstrativo de descontos
-    if (y > pageH - 50) { doc.addPage(); y = 16 }
+    if (y > pageH - 50) { doc.addPage(); applyTimbradoToPage(doc); y = mTop + 4 }
     norm(doc, 5.5, C.muted)
     doc.text('DEMONSTRATIVO DE DESCONTOS', M + 1, y)
     y += 2
@@ -612,6 +660,7 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid }) {
         1: { cellWidth: 56, halign: 'right' },
       },
       margin: { left: M, right: M },
+      willDrawPage: (data) => { if (data.pageNumber > 1) applyTimbradoToPage(doc) },
     })
     y = doc.lastAutoTable.finalY + 1.5
 
@@ -639,9 +688,7 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid }) {
   const emissao = new Date().toLocaleString('pt-BR')
   for (let i = 1; i <= total; i++) {
     doc.setPage(i)
-    doc.setFillColor(...C.headerBg)
-    doc.rect(0, pageH - 7, pageW, 7, 'F')
-    norm(doc, 6, [165,175,195])
+    norm(doc, 6, C.muted)
     doc.text(nomeMunicipio, M, pageH - 2.5)
     doc.text(`Emissão: ${emissao}`, pageW / 2, pageH - 2.5, { align: 'center' })
     doc.text(`Pág. ${i} / ${total}`, pageW - M, pageH - 2.5, { align: 'right' })
@@ -649,6 +696,14 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid }) {
 
   // ── Salvar ────────────────────────────────────────────────────────────────
   const nomeArq = `DID_${form.numero_did || 'rascunho'}_${(form.contrato_ref || 'sem-contrato').replace(/[\/\\]/g, '-')}.pdf`
-  doc.save(nomeArq)
+  const blobDid = doc.output('blob')
+  if (processoId && processoId !== 'novo') {
+    salvarDocumentoGerado(blobDid, { nome: nomeArq, processoId, tipoOrigem: 'did' })
+  }
+  const urlDid = URL.createObjectURL(blobDid)
+  const aDid = document.createElement('a')
+  aDid.href = urlDid; aDid.download = nomeArq; aDid.click()
+  setTimeout(() => URL.revokeObjectURL(urlDid), 10000)
+  } finally { setPDFLoading(false) }
 }
 

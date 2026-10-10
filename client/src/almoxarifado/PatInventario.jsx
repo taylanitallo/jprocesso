@@ -1,17 +1,19 @@
 import { useState, useEffect, useCallback } from 'react'
 import { RefreshCw, Plus, ClipboardList, CheckCircle, AlertCircle, XCircle } from 'lucide-react'
 import api from '../services/api'
+import LoadingBar from '../components/LoadingBar'
 import PageHeader from '../components/ui/PageHeader'
 import SectionTitle from '../components/ui/SectionTitle'
 import EmptyState from '../components/ui/EmptyState'
 import ActionBar from '../components/ui/ActionBar'
+import ConfirmModal from '../components/ui/ConfirmModal'
 
 const fmtDate = (d) => d ? new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') : '–'
 
 const statusInfo = {
-  EM_ANDAMENTO: { label: 'Em Andamento', color: 'bg-yellow-100 text-yellow-700' },
-  CONCLUIDO:    { label: 'Concluído',    color: 'bg-green-100 text-green-700' },
-  CANCELADO:    { label: 'Cancelado',    color: 'bg-red-100 text-red-700' },
+  EM_ANDAMENTO: { label: 'Em Andamento', color: 'bg-warning-100 text-warning-700' },
+  CONCLUIDO:    { label: 'Concluído',    color: 'bg-success-100 text-success-700' },
+  CANCELADO:    { label: 'Cancelado',    color: 'bg-danger-100 text-danger-700' },
 }
 
 const conservacaoOpts = ['OTIMO','BOM','REGULAR','RUIM','PESSIMO','INSERVIVEL']
@@ -28,6 +30,7 @@ export default function PatInventario({ userRole }) {
   const [criando, setCriando]         = useState(false)
   const [busca, setBusca]             = useState('')
   const [conferIndicador, setConf]    = useState({})
+  const [confirmarConcluir, setConfirmarConcluir] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -79,13 +82,13 @@ export default function PatInventario({ userRole }) {
   }
 
   const concluir = async (inventarioId) => {
-    if (!window.confirm('Confirma a conclusão do inventário?')) return
     try {
       const { data } = await api.put(`/patrimonio/inventarios/${inventarioId}/concluir`)
       alert(data.message)
       await load()
       setSelected(null)
       setInvDetail(null)
+      setConfirmarConcluir(false)
     } catch (err) {
       alert(err.response?.data?.error || 'Erro')
     }
@@ -109,7 +112,7 @@ export default function PatInventario({ userRole }) {
         subtitle="Conformidade TCE-Ceará"
         actions={podeEditar && (
           <button onClick={() => setShowNovo(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+            className="flex items-center gap-2 px-4 py-2 bg-brand-600 text-white rounded-lg text-sm hover:bg-brand-700">
             <Plus className="h-4 w-4" /> Novo Inventário
           </button>
         )}
@@ -117,21 +120,21 @@ export default function PatInventario({ userRole }) {
 
       {/* Formulário novo inventário */}
       {showNovo && (
-        <div className="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-xl p-5">
-          <h4 className="font-medium text-gray-900 dark:text-white mb-3">
+        <div className="bg-surface border rounded-xl p-5">
+          <h4 className="font-medium text-ink-900 dark:text-white mb-3">
             <SectionTitle icon={ClipboardList} title="Novo Inventário Patrimonial" />
           </h4>
           <form onSubmit={criarInventario} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ano</label>
-              <input type="number" className="w-full border rounded-lg px-3 py-2 text-sm dark:bg-gray-700 dark:border-gray-600"
+              <label className="block text-sm font-medium text-ink-700 mb-1">Ano</label>
+              <input type="number" className="w-full border rounded-lg px-3 py-2 text-sm"
                 value={novoForm.ano} onChange={e => setNovoForm(f => ({ ...f, ano: e.target.value }))} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-ink-700 mb-1">
                 Secretaria (vazio = todas)
               </label>
-              <select className="w-full border rounded-lg px-3 py-2 text-sm dark:bg-gray-700 dark:border-gray-600"
+              <select className="w-full border rounded-lg px-3 py-2 text-sm"
                 value={novoForm.secretaria_id} onChange={e => setNovoForm(f => ({ ...f, secretaria_id: e.target.value }))}>
                 <option value="">Todas as secretarias</option>
                 {secretarias.map(s => <option key={s.id} value={s.id}>{s.sigla || s.nome}</option>)}
@@ -139,12 +142,12 @@ export default function PatInventario({ userRole }) {
             </div>
             <div className="flex items-end gap-2">
               <button type="submit" disabled={criando}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-60">
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-brand-600 text-white rounded-lg text-sm hover:bg-brand-700 disabled:opacity-60">
                 {criando && <RefreshCw className="h-4 w-4 animate-spin" />}
                 Criar
               </button>
               <button type="button" onClick={() => setShowNovo(false)}
-                className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+                className="px-4 py-2 border rounded-lg text-sm hover:bg-ink-50">
                 Cancelar
               </button>
             </div>
@@ -153,11 +156,9 @@ export default function PatInventario({ userRole }) {
       )}
 
       {/* Lista de inventários */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="bg-surface rounded-xl border border-ink-200 overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center h-24">
-            <RefreshCw className="h-6 w-6 animate-spin text-blue-500" />
-          </div>
+          <LoadingBar label="Carregando inventários..." />
         ) : inventarios.length === 0 ? (
           <EmptyState
             icon={ClipboardList}
@@ -166,7 +167,7 @@ export default function PatInventario({ userRole }) {
           />
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+            <thead className="bg-ink-50 text-ink-600">
               <tr>
                 <th className="px-4 py-3 text-left font-medium">Número</th>
                 <th className="px-4 py-3 text-left font-medium">Ano</th>
@@ -177,28 +178,28 @@ export default function PatInventario({ userRole }) {
                 <th className="px-4 py-3 text-center font-medium">Ação</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+            <tbody className="divide-y divide-ink-100">
               {inventarios.map(inv => {
-                const si = statusInfo[inv.status] || { label: inv.status, color: 'bg-gray-100 text-gray-700' }
+                const si = statusInfo[inv.status] || { label: inv.status, color: 'bg-ink-100 text-ink-700' }
                 return (
-                  <tr key={inv.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <tr key={inv.id} className="hover:bg-ink-50">
                     <td className="px-4 py-3 font-mono text-xs font-semibold">{inv.numero}</td>
                     <td className="px-4 py-3">{inv.ano_exercicio}</td>
-                    <td className="px-4 py-3 hidden sm:table-cell text-gray-500 text-xs">{inv.secretaria?.sigla || 'Todas'}</td>
+                    <td className="px-4 py-3 hidden sm:table-cell text-ink-500 text-xs">{inv.secretaria?.sigla || 'Todas'}</td>
                     <td className="px-4 py-3">{inv.total_bens}</td>
                     <td className="px-4 py-3 hidden md:table-cell">
                       {inv.total_conferidos} / {inv.total_bens}
                       {inv.total_divergencias > 0 && (
-                        <span className="ml-2 text-red-500 text-xs">({inv.total_divergencias} diverg.)</span>
+                        <span className="ml-2 text-danger-500 text-xs">({inv.total_divergencias} diverg.)</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${si.color}`}>{si.label}</span>
+                      <span className={`px-2 py-0.5 rounded-sm text-xs font-medium ${si.color}`}>{si.label}</span>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <ActionBar align="left">
                         <button onClick={() => abrirInventario(inv)}
-                          className="p-1.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600"
+                          className="p-1.5 rounded-sm hover:bg-info-50 dark:hover:bg-info-900/30 text-brand-600"
                           title="Abrir">
                           <ClipboardList className="h-4 w-4" />
                         </button>
@@ -215,54 +216,52 @@ export default function PatInventario({ userRole }) {
       {/* Detalhe do inventário */}
       {selected && (
         <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-4 overflow-y-auto" onClick={() => setSelected(null)}>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-4xl my-8"
+          <div className="bg-surface rounded-2xl w-full max-w-4xl my-8"
             onClick={e => e.stopPropagation()}>
-            <div className="p-6 border-b dark:border-gray-700 flex items-start justify-between">
+            <div className="p-6 border-b flex items-start justify-between">
               <div>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white">{selected.numero}</h2>
-                <p className="text-sm text-gray-500">Ano {selected.ano_exercicio} — {selected.secretaria?.nome || 'Todas as secretarias'}</p>
+                <h2 className="text-lg font-bold text-ink-900 dark:text-white">{selected.numero}</h2>
+                <p className="text-sm text-ink-500">Ano {selected.ano_exercicio} — {selected.secretaria?.nome || 'Todas as secretarias'}</p>
               </div>
               <div className="flex items-center gap-2">
                 {invDetail && selected.status === 'EM_ANDAMENTO' && podeEditar && (
-                  <button onClick={() => concluir(selected.id)}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">
+                  <button onClick={() => setConfirmarConcluir(true)}
+                    className="px-4 py-2 bg-success-600 text-white rounded-lg text-sm hover:bg-success-700">
                     Concluir Inventário
                   </button>
                 )}
                 <button onClick={() => { setSelected(null); setInvDetail(null) }}
-                  className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500">
+                  className="p-1.5 rounded-sm hover:bg-ink-100 text-ink-500">
                   ✕
                 </button>
               </div>
             </div>
 
             {detLoading ? (
-              <div className="flex items-center justify-center h-40">
-                <RefreshCw className="h-7 w-7 animate-spin text-blue-500" />
-              </div>
+              <LoadingBar label="Carregando detalhes..." />
             ) : invDetail ? (
               <div className="p-6 space-y-4">
                 {/* Resumo */}
                 <div className="grid grid-cols-3 gap-3 text-center">
-                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
-                    <p className="text-2xl font-bold text-green-700">{invDetail.total_conferidos}</p>
-                    <p className="text-xs text-green-600">Conferidos</p>
+                  <div className="bg-success-50 dark:bg-success-900/20 border border-success-200 dark:border-success-800 rounded-lg p-3">
+                    <p className="text-2xl font-bold text-success-700">{invDetail.total_conferidos}</p>
+                    <p className="text-xs text-success-600">Conferidos</p>
                   </div>
-                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-                    <p className="text-2xl font-bold text-red-700">{invDetail.total_divergencias}</p>
-                    <p className="text-xs text-red-600">Divergências</p>
+                  <div className="bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-800 rounded-lg p-3">
+                    <p className="text-2xl font-bold text-danger-700">{invDetail.total_divergencias}</p>
+                    <p className="text-xs text-danger-600">Divergências</p>
                   </div>
-                  <div className="bg-gray-50 dark:bg-gray-700 border dark:border-gray-600 rounded-lg p-3">
-                    <p className="text-2xl font-bold text-gray-700 dark:text-gray-300">
+                  <div className="bg-ink-50 border rounded-lg p-3">
+                    <p className="text-2xl font-bold text-ink-700">
                       {invDetail.total_bens - invDetail.total_conferidos}
                     </p>
-                    <p className="text-xs text-gray-500">Pendentes</p>
+                    <p className="text-xs text-ink-500">Pendentes</p>
                   </div>
                 </div>
 
                 {/* Busca */}
                 <input
-                  className="w-full border rounded-lg px-3 py-2 text-sm dark:bg-gray-700 dark:border-gray-600"
+                  className="w-full border rounded-lg px-3 py-2 text-sm"
                   placeholder="Filtrar por tombamento ou descrição..."
                   value={busca}
                   onChange={e => setBusca(e.target.value)}
@@ -275,34 +274,34 @@ export default function PatInventario({ userRole }) {
                     return (
                       <div key={item.id}
                         className={`border rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-2 ${
-                          item.encontrado === true  ? 'border-green-200 bg-green-50 dark:bg-green-900/10' :
-                          item.encontrado === false ? 'border-red-200 bg-red-50 dark:bg-red-900/10' :
-                          'border-gray-200 dark:border-gray-700'
+                          item.encontrado === true  ? 'border-success-200 bg-success-50 dark:bg-success-900/10' :
+                          item.encontrado === false ? 'border-danger-200 bg-danger-50 dark:bg-danger-900/10' :
+                          'border-ink-200'
                         }`}>
                         <div className="flex-1">
-                          <p className="font-mono text-xs font-semibold text-gray-900 dark:text-white">
+                          <p className="font-mono text-xs font-semibold text-ink-900 dark:text-white">
                             {item.numero_tombamento || item.bem?.numero_tombamento}
                           </p>
-                          <p className="text-sm text-gray-700 dark:text-gray-300">{item.bem?.descricao}</p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-sm text-ink-700">{item.bem?.descricao}</p>
+                          <p className="text-xs text-ink-500">
                             {item.bem?.secretaria?.sigla || ''} {item.bem?.setor ? `/ ${item.bem.setor.sigla}` : ''}
                           </p>
                         </div>
                         {item.encontrado !== null && item.encontrado !== undefined ? (
                           <div className="flex items-center gap-2 text-sm">
                             {item.encontrado
-                              ? <span className="flex items-center gap-1 text-green-600"><CheckCircle className="h-4 w-4" /> Encontrado</span>
-                              : <span className="flex items-center gap-1 text-red-600"><XCircle className="h-4 w-4" /> Não encontrado</span>
+                              ? <span className="flex items-center gap-1 text-success-600"><CheckCircle className="h-4 w-4" /> Encontrado</span>
+                              : <span className="flex items-center gap-1 text-danger-600"><XCircle className="h-4 w-4" /> Não encontrado</span>
                             }
                             {item.estado_conservacao_encontrado && (
-                              <span className="text-xs text-gray-500">• {item.estado_conservacao_encontrado}</span>
+                              <span className="text-xs text-ink-500">• {item.estado_conservacao_encontrado}</span>
                             )}
                           </div>
                         ) : selected.status === 'EM_ANDAMENTO' ? (
                           <div className="flex items-center gap-2">
                             <select
                               id={`cons-${item.id}`}
-                              className="border rounded px-2 py-1 text-xs dark:bg-gray-700 dark:border-gray-600"
+                              className="border rounded-sm px-2 py-1 text-xs"
                               defaultValue="BOM"
                             >
                               {conservacaoOpts.map(c => <option key={c}>{c}</option>)}
@@ -313,7 +312,7 @@ export default function PatInventario({ userRole }) {
                                 const cons = document.getElementById(`cons-${item.id}`)?.value || 'BOM'
                                 conferirItem(invDetail.id, item.id, true, cons)
                               }}
-                              className="flex items-center gap-1 px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 disabled:opacity-60"
+                              className="flex items-center gap-1 px-2 py-1 bg-success-600 text-white rounded-sm text-xs hover:bg-success-700 disabled:opacity-60"
                             >
                               {conf ? <RefreshCw className="h-3 w-3 animate-spin" /> : <CheckCircle className="h-3 w-3" />}
                               Encontrado
@@ -321,14 +320,14 @@ export default function PatInventario({ userRole }) {
                             <button
                               disabled={conf}
                               onClick={() => conferirItem(invDetail.id, item.id, false, null)}
-                              className="flex items-center gap-1 px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 disabled:opacity-60"
+                              className="flex items-center gap-1 px-2 py-1 bg-danger-600 text-white rounded-sm text-xs hover:bg-danger-700 disabled:opacity-60"
                             >
                               {conf ? <RefreshCw className="h-3 w-3 animate-spin" /> : <AlertCircle className="h-3 w-3" />}
                               Não enc.
                             </button>
                           </div>
                         ) : (
-                          <span className="text-xs text-gray-400">Não conferido</span>
+                          <span className="text-xs text-ink-400">Não conferido</span>
                         )}
                       </div>
                     )
@@ -338,6 +337,15 @@ export default function PatInventario({ userRole }) {
             ) : null}
           </div>
         </div>
+      )}
+      {confirmarConcluir && (
+        <ConfirmModal
+          title="Concluir inventário?"
+          message="Esta ação não pode ser desfeita."
+          confirmLabel="Concluir"
+          onConfirm={() => concluir(selected.id)}
+          onClose={() => setConfirmarConcluir(false)}
+        />
       )}
     </div>
   )

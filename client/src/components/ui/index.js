@@ -1,6 +1,17 @@
 export { default as PageHeader  } from './PageHeader'
 export { default as StatCard    } from './StatCard'
+export { default as AutoFitValue} from './AutoFitValue'
 export { default as SectionTitle} from './SectionTitle'
 export { default as EmptyState  } from './EmptyState'
 export { default as FilterBar   } from './FilterBar'
 export { default as ActionBar   } from './ActionBar'
+export { default as ConfirmModal} from './ConfirmModal'
+
+// Primitivas do design system
+export { default as Button      } from './Button'
+export { default as Badge       } from './Badge'
+export { default as Modal       } from './Modal'
+export { default as Avatar, iniciais } from './Avatar'
+export { default as Skeleton, SkeletonText } from './Skeleton'
+export { default as Card, CardHeader, CardBody } from './Card'
+export { default as Input, Label, Textarea, Select } from './Input'

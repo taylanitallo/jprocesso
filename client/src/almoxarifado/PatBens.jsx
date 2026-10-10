@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Search, Eye, DownloadCloud, RefreshCw, ChevronLeft, ChevronRight, Landmark, ArrowLeftRight, ClipboardList } from 'lucide-react'
 import api from '../services/api'
+import LoadingBar from '../components/LoadingBar'
 import PageHeader from '../components/ui/PageHeader'
 import FilterBar from '../components/ui/FilterBar'
 import SectionTitle from '../components/ui/SectionTitle'
@@ -8,20 +9,20 @@ import EmptyState from '../components/ui/EmptyState'
 import ActionBar from '../components/ui/ActionBar'
 
 const statusColor = {
-  ATIVO:        'bg-green-100 text-green-700',
-  TRANSFERIDO:  'bg-blue-100 text-blue-700',
+  ATIVO:        'bg-success-100 text-success-700',
+  TRANSFERIDO:  'bg-info-100 text-brand-700',
   CEDIDO:       'bg-purple-100 text-purple-700',
-  BAIXADO:      'bg-red-100 text-red-700',
+  BAIXADO:      'bg-danger-100 text-danger-700',
   EXTRAVIADO:   'bg-orange-100 text-orange-700',
 }
 
 const conservacaoColor = {
-  OTIMO:      'bg-green-100 text-green-700',
-  BOM:        'bg-blue-100 text-blue-700',
-  REGULAR:    'bg-yellow-100 text-yellow-700',
+  OTIMO:      'bg-success-100 text-success-700',
+  BOM:        'bg-info-100 text-brand-700',
+  REGULAR:    'bg-warning-100 text-warning-700',
   RUIM:       'bg-orange-100 text-orange-700',
-  PESSIMO:    'bg-red-100 text-red-700',
-  INSERVIVEL: 'bg-gray-100 text-gray-700',
+  PESSIMO:    'bg-danger-100 text-danger-700',
+  INSERVIVEL: 'bg-ink-100 text-ink-700',
 }
 
 const fmtMoney = (v) =>
@@ -91,10 +92,10 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
         subtitle="Acervo de bens permanentes com rastreamento de tombamento, localização e responsabilidade"
         actions={
           <ActionBar>
-            <button onClick={exportCSV} className="flex items-center gap-1 px-3 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">
+            <button onClick={exportCSV} className="flex items-center gap-1 px-3 py-2 bg-success-600 text-white rounded-lg text-sm hover:bg-success-700">
               <DownloadCloud className="h-4 w-4" /> CSV
             </button>
-            <button onClick={load} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+            <button onClick={load} className="px-3 py-2 border border-ink-300 rounded-lg text-sm hover:bg-ink-50">
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </ActionBar>
@@ -103,16 +104,16 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
 
       <FilterBar>
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400" />
           <input
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 dark:text-white"
+            className="w-full pl-10 pr-4 py-2 border border-ink-300 rounded-lg text-sm bg-surface dark:text-white"
             placeholder="Buscar por tombamento, descrição, série, placa..."
             value={q}
             onChange={e => { setQ(e.target.value); setPage(1) }}
           />
         </div>
         <select
-          className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white"
+          className="border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface dark:text-white"
           value={statusFiltro}
           onChange={e => { setStatusF(e.target.value); setPage(1) }}
         >
@@ -124,7 +125,7 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
           <option value="EXTRAVIADO">Extraviado</option>
         </select>
         <select
-          className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white"
+          className="border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface dark:text-white"
           value={grupofiltro}
           onChange={e => { setGrupoF(e.target.value); setPage(1) }}
         >
@@ -132,7 +133,7 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
           {grupos.map(g => <option key={g.id} value={g.id}>{g.nome}</option>)}
         </select>
         <select
-          className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-white"
+          className="border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface dark:text-white"
           value={secFiltro}
           onChange={e => { setSecF(e.target.value); setPage(1) }}
         >
@@ -142,12 +143,13 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
       </FilterBar>
 
       {/* Tabela */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="bg-surface rounded-xl border border-ink-200 overflow-hidden">
         <div className="px-4 pt-4">
           <SectionTitle icon={Landmark} title="Lista de Bens" subtitle={`${total} bem(ns) encontrado(s)`} />
         </div>
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+          <thead className="bg-ink-50 text-ink-600">
             <tr>
               <th className="px-4 py-3 text-left font-medium">Tombamento</th>
               <th className="px-4 py-3 text-left font-medium">Descrição</th>
@@ -159,10 +161,10 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
               <th className="px-4 py-3 text-center font-medium">Ações</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+          <tbody className="divide-y divide-ink-100">
             {loading ? (
               <tr><td colSpan="8" className="text-center py-8">
-                <RefreshCw className="h-6 w-6 animate-spin text-blue-500 mx-auto" />
+                <LoadingBar label="Carregando bens..." />
               </td></tr>
             ) : bens.length === 0 ? (
               <tr><td colSpan="8" className="px-4 py-0">
@@ -173,30 +175,30 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
                 />
               </td></tr>
             ) : bens.map(b => (
-              <tr key={b.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                <td className="px-4 py-3 font-mono text-xs font-semibold text-gray-900 dark:text-white">
+              <tr key={b.id} className="hover:bg-ink-50">
+                <td className="px-4 py-3 font-mono text-xs font-semibold text-ink-900 dark:text-white">
                   {b.numero_tombamento}
                 </td>
                 <td className="px-4 py-3">
-                  <p className="font-medium text-gray-900 dark:text-white truncate max-w-[180px]">{b.descricao}</p>
-                  {b.marca && <p className="text-xs text-gray-500">{b.marca} {b.modelo || ''}</p>}
+                  <p className="font-medium text-ink-900 dark:text-white truncate max-w-[180px]">{b.descricao}</p>
+                  {b.marca && <p className="text-xs text-ink-500">{b.marca} {b.modelo || ''}</p>}
                 </td>
-                <td className="px-4 py-3 hidden sm:table-cell text-gray-600 dark:text-gray-300 text-xs">
+                <td className="px-4 py-3 hidden sm:table-cell text-ink-600 text-xs">
                   {b.grupo?.nome || '–'}
                 </td>
-                <td className="px-4 py-3 hidden md:table-cell text-gray-600 dark:text-gray-300 text-xs">
+                <td className="px-4 py-3 hidden md:table-cell text-ink-600 text-xs">
                   {b.secretaria?.sigla || '–'} {b.setor ? `/ ${b.setor.sigla}` : ''}
                 </td>
-                <td className="px-4 py-3 hidden lg:table-cell text-gray-700 dark:text-gray-300 text-xs">
+                <td className="px-4 py-3 hidden lg:table-cell text-ink-700 text-xs">
                   {fmtMoney(b.valor_aquisicao)}
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${conservacaoColor[b.estado_conservacao] || 'bg-gray-100 text-gray-700'}`}>
+                  <span className={`px-2 py-0.5 rounded-sm text-xs font-medium ${conservacaoColor[b.estado_conservacao] || 'bg-ink-100 text-ink-700'}`}>
                     {b.estado_conservacao}
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColor[b.status] || 'bg-gray-100 text-gray-700'}`}>
+                  <span className={`px-2 py-0.5 rounded-sm text-xs font-medium ${statusColor[b.status] || 'bg-ink-100 text-ink-700'}`}>
                     {b.status}
                   </span>
                 </td>
@@ -204,7 +206,7 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
                   <ActionBar align="left">
                     <button
                       onClick={() => abrirDetalhe(b)}
-                      className="p-1.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600"
+                      className="p-1.5 rounded-sm hover:bg-info-50 dark:hover:bg-info-900/30 text-brand-600"
                       title="Detalhe"
                     >
                       <Eye className="h-4 w-4" />
@@ -212,7 +214,7 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
                     {b.status !== 'BAIXADO' && onTransferir && (
                       <button
                         onClick={() => onTransferir(b)}
-                        className="p-1.5 rounded hover:bg-yellow-50 dark:hover:bg-yellow-900/30 text-yellow-600"
+                        className="p-1.5 rounded-sm hover:bg-warning-50 dark:hover:bg-warning-900/30 text-warning-600"
                         title="Transferir"
                       >
                         <ArrowLeftRight className="h-4 w-4" />
@@ -224,20 +226,21 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Paginação */}
       {pages > 1 && (
-        <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+        <div className="flex items-center justify-between text-sm text-ink-600">
           <span>{total} bens encontrados</span>
           <div className="flex items-center gap-2">
             <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
-              className="p-1 rounded hover:bg-gray-100 disabled:opacity-40">
+              className="p-1 rounded-sm hover:bg-ink-100 disabled:opacity-40">
               <ChevronLeft className="h-4 w-4" />
             </button>
             <span>Página {page} de {pages}</span>
             <button disabled={page === pages} onClick={() => setPage(p => p + 1)}
-              className="p-1 rounded hover:bg-gray-100 disabled:opacity-40">
+              className="p-1 rounded-sm hover:bg-ink-100 disabled:opacity-40">
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
@@ -248,19 +251,17 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
       {(detLoading || detalhe) && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setDetalhe(null)}>
           <div
-            className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto"
+            className="bg-surface rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto"
             onClick={e => e.stopPropagation()}
           >
             {detLoading ? (
-              <div className="flex items-center justify-center h-48">
-                <RefreshCw className="h-8 w-8 animate-spin text-blue-500" />
-              </div>
+              <LoadingBar label="Carregando bem..." />
             ) : detalhe && (
               <div className="p-6 space-y-4">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">{detalhe.descricao}</h2>
-                    <p className="text-sm text-gray-500 font-mono">Tombamento: {detalhe.numero_tombamento}</p>
+                    <h2 className="text-xl font-bold text-ink-900 dark:text-white">{detalhe.descricao}</h2>
+                    <p className="text-sm text-ink-500 font-mono">Tombamento: {detalhe.numero_tombamento}</p>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColor[detalhe.status]}`}>
                     {detalhe.status}
@@ -283,8 +284,8 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
                     ['N.F.',           detalhe.numero_nota_fiscal],
                   ].map(([l, v]) => v ? (
                     <div key={l}>
-                      <p className="text-xs text-gray-500">{l}</p>
-                      <p className="font-medium text-gray-900 dark:text-white">{v}</p>
+                      <p className="text-xs text-ink-500">{l}</p>
+                      <p className="font-medium text-ink-900 dark:text-white">{v}</p>
                     </div>
                   ) : null)}
                 </div>
@@ -294,17 +295,17 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
                     <SectionTitle icon={ClipboardList} title="Termos de Responsabilidade" />
                     <div className="space-y-2">
                       {detalhe.responsabilidades.map(r => (
-                        <div key={r.id} className="border rounded-lg p-3 text-sm bg-gray-50 dark:bg-gray-700/50">
+                        <div key={r.id} className="border rounded-lg p-3 text-sm bg-ink-50">
                           <div className="flex justify-between">
                             <span className="font-medium">{r.numero_termo}</span>
-                            <span className={`px-2 py-0.5 rounded text-xs ${r.status === 'VIGENTE' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                            <span className={`px-2 py-0.5 rounded-sm text-xs ${r.status === 'VIGENTE' ? 'bg-success-100 text-success-700' : 'bg-ink-100 text-ink-600'}`}>
                               {r.status}
                             </span>
                           </div>
-                          <p className="text-gray-600 dark:text-gray-400">
+                          <p className="text-ink-600">
                             {r.nome_responsavel} — {r.secretaria?.sigla || ''} {r.setor ? `/ ${r.setor.sigla}` : ''}
                           </p>
-                          <p className="text-xs text-gray-500">{fmtDate(r.data_inicio)} até {r.data_fim ? fmtDate(r.data_fim) : 'atual'}</p>
+                          <p className="text-xs text-ink-500">{fmtDate(r.data_inicio)} até {r.data_fim ? fmtDate(r.data_fim) : 'atual'}</p>
                         </div>
                       ))}
                     </div>
@@ -316,14 +317,14 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
                     <SectionTitle icon={ArrowLeftRight} title="Histórico de Movimentações" />
                     <div className="space-y-2">
                       {detalhe.movimentacoes.map(m => (
-                        <div key={m.id} className="border rounded-lg p-3 text-sm bg-gray-50 dark:bg-gray-700/50">
+                        <div key={m.id} className="border rounded-lg p-3 text-sm bg-ink-50">
                           <div className="flex justify-between">
-                            <span className="font-medium text-blue-700 dark:text-blue-400">{m.tipo}</span>
-                            <span className="text-xs text-gray-500">{fmtDate(m.data_movimentacao)}</span>
+                            <span className="font-medium text-brand-700 dark:text-info-400">{m.tipo}</span>
+                            <span className="text-xs text-ink-500">{fmtDate(m.data_movimentacao)}</span>
                           </div>
-                          {m.justificativa && <p className="text-gray-600 dark:text-gray-400">{m.justificativa}</p>}
+                          {m.justificativa && <p className="text-ink-600">{m.justificativa}</p>}
                           {m.secretariaDestino && (
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-ink-500">
                               → {m.secretariaDestino.sigla} {m.setorDestino ? `/ ${m.setorDestino.sigla}` : ''}
                             </p>
                           )}
@@ -337,7 +338,7 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
                   {detalhe.status !== 'BAIXADO' && onTransferir && (
                     <button
                       onClick={() => { setDetalhe(null); onTransferir(detalhe) }}
-                      className="px-4 py-2 bg-yellow-600 text-white rounded-lg text-sm hover:bg-yellow-700"
+                      className="px-4 py-2 bg-warning-600 dark:bg-warning-700 text-white rounded-lg text-sm hover:bg-warning-700 dark:hover:bg-warning-800"
                     >
                       Transferir
                     </button>
@@ -345,12 +346,12 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
                   {detalhe.status !== 'BAIXADO' && onBaixar && (
                     <button
                       onClick={() => { setDetalhe(null); onBaixar(detalhe) }}
-                      className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"
+                      className="px-4 py-2 bg-danger-600 text-white rounded-lg text-sm hover:bg-danger-700"
                     >
                       Baixar Bem
                     </button>
                   )}
-                  <button onClick={() => setDetalhe(null)} className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <button onClick={() => setDetalhe(null)} className="px-4 py-2 border rounded-lg text-sm hover:bg-ink-50">
                     Fechar
                   </button>
                 </div>

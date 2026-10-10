@@ -1,17 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { hasPerm } from '../utils/permissions';
+import { conferirAbasDoModulo } from '../utils/permissoesSchema';
 import PageHeader from '../components/ui/PageHeader';
 import SectionTitle from '../components/ui/SectionTitle';
 import EmptyState from '../components/ui/EmptyState';
 import FilterBar from '../components/ui/FilterBar';
-import { 
-  Plus, 
-  Building2, 
+import ConfirmModal from '../components/ui/ConfirmModal';
+import LoadingBar from '../components/LoadingBar';
+
+const Usuarios = lazy(() => import('./Usuarios'));
+import {
+  Plus,
+  Building2,
   Network,
   Users,
-  Edit2, 
-  Trash2, 
+  Edit2,
+  Trash2,
   Briefcase,
   AlertTriangle,
   CheckCircle,
@@ -28,7 +35,7 @@ import {
   Shield,
   User,
   Save,
-  ChevronRight
+  ChevronRight,
 } from 'lucide-react';
 
 
@@ -36,17 +43,17 @@ import {
 // ── SectionCard — card de seção para modais ───────────────────────────────────
 function SectionCard({ icon: Icon, title, subtitle, children }) {
   return (
-    <div className="rounded-2xl border border-gray-100 dark:border-slate-700/60 bg-white dark:bg-slate-800/50 shadow-sm overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-gray-100 dark:border-slate-700/60 bg-gradient-to-r from-gray-50 to-white dark:from-slate-800 dark:to-slate-800/80">
+    <div className="rounded-2xl border border-ink-100 bg-surface shadow-sm overflow-hidden">
+      <div className="px-5 py-3.5 border-b border-ink-100 bg-gradient-to-r from-ink-50 to-white">
         <div className="flex items-center gap-3">
           {Icon && (
-            <div className="w-7 h-7 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
-              <Icon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <div className="w-7 h-7 rounded-xl bg-info-50 dark:bg-info-900/30 flex items-center justify-center">
+              <Icon className="w-4 h-4 text-brand-600 dark:text-info-400" />
             </div>
           )}
           <div>
-            <p className="text-sm font-semibold text-gray-800 dark:text-slate-200">{title}</p>
-            {subtitle && <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{subtitle}</p>}
+            <p className="text-sm font-semibold text-ink-800">{title}</p>
+            {subtitle && <p className="text-xs text-ink-500 mt-0.5">{subtitle}</p>}
           </div>
         </div>
       </div>
@@ -56,30 +63,30 @@ function SectionCard({ icon: Icon, title, subtitle, children }) {
 }
 
 // ── ModalShell — shell padrão de modal ────────────────────────────────────────
-function ModalShell({ open, onClose, icon: Icon, iconBg = 'from-blue-500 to-blue-600', title, subtitle, badge, width = 640, children, footer }) {
+function ModalShell({ open, onClose, icon: Icon, iconBg = 'from-info-500 to-info-600', title, subtitle, badge, width = 640, children, footer }) {
   if (!open) return null
   return (
     <div className="fixed inset-0 z-[9990] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div
-        className="bg-gray-50 dark:bg-slate-900 rounded-3xl shadow-2xl w-full flex flex-col overflow-hidden"
+        className="bg-ink-50 rounded-3xl shadow-2xl w-full flex flex-col overflow-hidden"
         style={{ maxWidth: '90vw', maxHeight: '90vh', width }}
       >
         {/* Header */}
-        <div className="bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700/60 px-6 py-4 shrink-0">
+        <div className="bg-surface border-b border-ink-100 px-6 py-4 shrink-0">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
               <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${iconBg} flex items-center justify-center shadow-md`}>
                 {Icon && <Icon className="w-5 h-5 text-white" />}
               </div>
               <div>
-                <h2 className="text-base font-bold text-gray-900 dark:text-white">{title}</h2>
-                {subtitle && <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{subtitle}</p>}
+                <h2 className="text-base font-bold text-ink-900 dark:text-white">{title}</h2>
+                {subtitle && <p className="text-xs text-ink-500 mt-0.5">{subtitle}</p>}
               </div>
             </div>
             <div className="flex items-center gap-3">
               {badge}
               <button onClick={onClose}
-                className="w-8 h-8 flex items-center justify-center rounded-xl border border-gray-200 dark:border-slate-600 text-gray-400 hover:text-gray-600 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all">
+                className="w-8 h-8 flex items-center justify-center rounded-xl border border-ink-200 text-ink-400 hover:text-ink-600 hover:bg-ink-100 transition-all">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -93,7 +100,7 @@ function ModalShell({ open, onClose, icon: Icon, iconBg = 'from-blue-500 to-blue
 
         {/* Footer */}
         {footer && (
-          <div className="bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700/60 px-6 py-4 shrink-0 flex items-center justify-end gap-3">
+          <div className="bg-surface border-t border-ink-100 px-6 py-4 shrink-0 flex items-center justify-end gap-3">
             {footer}
           </div>
         )}
@@ -118,26 +125,26 @@ function PaginationBar({ total, page, setPage }) {
   };
 
   return (
-    <div className="flex items-center justify-between px-4 py-2 border-t border-gray-100 dark:border-slate-700/50 bg-white dark:bg-slate-900/50 text-xs">
-      <span className="text-gray-500 dark:text-slate-400">
+    <div className="flex items-center justify-between px-4 py-2 border-t border-ink-100 bg-surface text-xs">
+      <span className="text-ink-500">
         Mostrando {start}–{end} de {total} registro{total !== 1 ? 's' : ''}
       </span>
       {totalPages > 1 && (
         <div className="flex items-center gap-1">
           <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-            className="px-2 py-0.5 rounded border border-gray-200 dark:border-slate-600 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-slate-700/50 text-gray-600 dark:text-slate-300">
+            className="px-2 py-0.5 rounded-sm border border-ink-200 disabled:opacity-40 hover:bg-ink-50 text-ink-600">
             Anterior
           </button>
           {getPages().map((pg, i) =>
             pg === '...'
-              ? <span key={`dots-${i}`} className="px-1.5 text-gray-400">...</span>
+              ? <span key={`dots-${i}`} className="px-1.5 text-ink-400">...</span>
               : <button key={pg} onClick={() => setPage(pg)}
-                  className={`w-7 h-6 rounded border text-xs font-medium transition-colors ${pg === page ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700/50 text-gray-600 dark:text-slate-300'}`}>
+                  className={`w-7 h-6 rounded-sm border text-xs font-medium transition-colors ${pg === page ? 'bg-brand-600 text-white border-brand-600' : 'border-ink-200 hover:bg-ink-50 text-ink-600'}`}>
                   {pg}
                 </button>
           )}
           <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}
-            className="px-2 py-0.5 rounded border border-gray-200 dark:border-slate-600 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-slate-700/50 text-gray-600 dark:text-slate-300">
+            className="px-2 py-0.5 rounded-sm border border-ink-200 disabled:opacity-40 hover:bg-ink-50 text-ink-600">
             Próximo
           </button>
         </div>
@@ -158,13 +165,13 @@ function getStatusVigencia(dataInicio, dataFim) {
 
 function StatusBadge({ status }) {
   const cfg = {
-    ativo:     { label: 'Ativo',     cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
-    encerrado: { label: 'Encerrado', cls: 'bg-gray-100 text-gray-600 dark:bg-slate-700/40 dark:text-slate-400' },
-    futuro:    { label: 'Futuro',    cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-    ativa:     { label: 'Ativa',     cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
-    inativa:   { label: 'Inativa',   cls: 'bg-gray-100 text-gray-600 dark:bg-slate-700/40 dark:text-slate-400' },
+    ativo:     { label: 'Ativo',     cls: 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400' },
+    encerrado: { label: 'Encerrado', cls: 'bg-ink-100 text-ink-600' },
+    futuro:    { label: 'Futuro',    cls: 'bg-info-100 text-brand-700 dark:bg-info-900/30 dark:text-info-400' },
+    ativa:     { label: 'Ativa',     cls: 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400' },
+    inativa:   { label: 'Inativa',   cls: 'bg-ink-100 text-ink-600' },
   };
-  const cf = cfg[status] || { label: status || '—', cls: 'bg-gray-100 text-gray-600 dark:bg-slate-700/40 dark:text-slate-400' };
+  const cf = cfg[status] || { label: status || '—', cls: 'bg-ink-100 text-ink-600' };
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${cf.cls}`}>
       {cf.label}
@@ -175,12 +182,28 @@ function StatusBadge({ status }) {
 export default function Secretarias() {
   const { subdomain, tab: tabParam } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
 
-  // Aba
-  const [activeTab, setActiveTab] = useState(tabParam || 'secretarias')
+  const podeSecretarias = hasPerm(user, 'administracao', 'gerenciar_secretarias')
+  const podeUsuarios     = hasPerm(user, 'administracao', 'gerenciar_usuarios')
+
+  // Abas — visíveis conforme Administração (acesso) + Organização (aba a aba)
+  const abasOrganizacao = [
+    { key: 'entidade',     label: 'Entidade',              Icon: Building2, acesso: podeSecretarias },
+    { key: 'secretarias',  label: 'Secretarias e Setores', Icon: Network,   acesso: podeSecretarias },
+    { key: 'agentes',      label: 'Cadastro de Agentes',   Icon: Users,     acesso: podeSecretarias },
+    { key: 'responsaveis', label: 'Responsáveis',          Icon: UserCheck, acesso: podeSecretarias },
+    { key: 'usuarios',     label: 'Usuários',              Icon: UserCog,   acesso: podeUsuarios    },
+  ]
+  conferirAbasDoModulo('organizacao', abasOrganizacao.map(t => t.key))
+  const abasVisiveis = abasOrganizacao.filter(t => t.acesso && hasPerm(user, 'organizacao', t.key, 'ver'))
+  const abaPermitida = (key) => abasVisiveis.some(t => t.key === key)
+
+  const [activeTab, setActiveTab] = useState(abaPermitida(tabParam) ? tabParam : (abasVisiveis[0]?.key || 'entidade'))
 
   useEffect(() => {
-    if (tabParam && tabParam !== activeTab) setActiveTab(tabParam)
+    if (!tabParam || tabParam === activeTab) return
+    if (abaPermitida(tabParam)) setActiveTab(tabParam)
   }, [tabParam])
 
   // Secretarias
@@ -314,6 +337,8 @@ export default function Secretarias() {
   const [showDotacoesPanel, setShowDotacoesPanel] = useState(false);
   const [dotacoesList, setDotacoesList] = useState([]);
   const [selectedDotacao, setSelectedDotacao] = useState(null);
+  const [confirmarExcluirDotacao, setConfirmarExcluirDotacao] = useState(false);
+  const [confirmarExcluirResp, setConfirmarExcluirResp] = useState(null);
   const [showFormDotacao, setShowFormDotacao] = useState(false);
   const [editingDotacao, setEditingDotacao] = useState(null);
   const [formDotacao, setFormDotacao] = useState({ codigo: '', descricao: '', elemento_despesa: '', fonte_recurso: '', valor_previsto: '' });
@@ -357,10 +382,10 @@ export default function Secretarias() {
 
   const deleteDotacao = () => {
     if (!selectedDotacao) return;
-    if (!window.confirm(`Excluir a dotação "${selectedDotacao.codigo || selectedDotacao.descricao}"?`)) return;
     const nova = dotacoesList.filter(d => d.id !== selectedDotacao.id);
     saveDotacoes(nova);
     setSelectedDotacao(null);
+    setConfirmarExcluirDotacao(false);
   };
 
   const formatBRL = (v) => {
@@ -754,7 +779,6 @@ export default function Secretarias() {
   };
 
   const deleteResponsavel = async (resp) => {
-    if (!window.confirm(`Remover "${resp.nome}" como responsável de ${resp._secSigla}?`)) return;
     try {
       const sec = secretarias.find(s => s.id === resp._secId);
       if (!sec) return;
@@ -763,6 +787,7 @@ export default function Secretarias() {
         nome: sec.nome, sigla: sec.sigla, descricao: sec.descricao, ativo: sec.ativo, responsaveis
       });
       await fetchSecretarias();
+      setConfirmarExcluirResp(null);
       setSuccessMessage('Responsável removido com sucesso.');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch {
@@ -807,37 +832,31 @@ export default function Secretarias() {
     <div className="max-w-7xl mx-auto space-y-5 animate-fade-in">
       {/* Mensagem de Sucesso */}
       {successMessage && (
-        <div className="p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 rounded-lg flex items-center gap-3">
-          <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-          <p className="text-green-800 dark:text-green-300 font-medium">{successMessage}</p>
+        <div className="p-4 bg-success-50 dark:bg-success-900/30 border border-success-200 dark:border-success-700 rounded-lg flex items-center gap-3">
+          <CheckCircle className="h-5 w-5 text-success-600 dark:text-success-400" />
+          <p className="text-success-800 dark:text-success-300 font-medium">{successMessage}</p>
         </div>
       )}
 
       {/* Header */}
       <PageHeader
         icon={Building2}
-        eyebrow="Organização"
         title="Gestão de Organização"
-        subtitle="Gerencie secretarias, agentes e responsáveis do município"
+        subtitle="Gerencie secretarias, agentes, responsáveis e usuários do município"
       />
 
       {/* Abas do módulo */}
       <div
-        className="border-b border-gray-200 dark:border-slate-700/50 -mt-1 overflow-x-auto overflow-y-hidden scrollbar-none touch-pan-x"
+        className="border-b border-ink-200 -mt-1 overflow-x-auto overflow-y-hidden scrollbar-none touch-pan-x"
         style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
       >
         <nav className="flex min-w-max">
-          {[
-            { key: 'entidade',     label: 'Entidade',              Icon: Building2  },
-            { key: 'secretarias',  label: 'Secretarias e Setores', Icon: Network    },
-            { key: 'agentes',      label: 'Cadastro de Agentes',   Icon: Users      },
-            { key: 'responsaveis', label: 'Responsáveis',          Icon: UserCheck  },
-          ].map(tab => (
+          {abasVisiveis.map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
               className={`flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-5 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab.key
-                  ? 'border-blue-600 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200'
+                  ? 'border-brand-600 text-brand-600 dark:text-info-400'
+                  : 'border-transparent text-ink-500 hover:text-ink-700'
               }`}>
               <tab.Icon className="h-4 w-4" /> {tab.label}
             </button>
@@ -851,7 +870,7 @@ export default function Secretarias() {
           {/* Campos para pesquisa */}
           <FilterBar>
             <div className="flex-1 min-w-48">
-              <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Descrição</label>
+              <label className="block text-xs font-medium text-ink-600 mb-1">Descrição</label>
               <input
                 value={secFiltroDescricao}
                 onChange={e => setSecFiltroDescricao(e.target.value)}
@@ -860,7 +879,7 @@ export default function Secretarias() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Sigla</label>
+              <label className="block text-xs font-medium text-ink-600 mb-1">Sigla</label>
               <input
                 value={secFiltroSigla}
                 onChange={e => setSecFiltroSigla(e.target.value)}
@@ -869,7 +888,7 @@ export default function Secretarias() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Vigência</label>
+              <label className="block text-xs font-medium text-ink-600 mb-1">Vigência</label>
               <input
                 type="date"
                 value={secFiltroVigor}
@@ -881,22 +900,22 @@ export default function Secretarias() {
 
           {/* Tabela de secretarias */}
           <div className="card overflow-hidden">
-            <div className="px-4 py-2 border-b border-gray-200 dark:border-slate-700/50">
+            <div className="px-4 py-2 border-b border-ink-200">
               <SectionTitle icon={Building2} title="Tabela de secretarias" />
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-100 dark:bg-slate-700/30 border-b border-gray-200 dark:border-slate-700/50">
+                <thead className="bg-ink-100 border-b border-ink-200">
                   <tr>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-8"></th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Descrição</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-24">Sigla</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-28">Status</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-28">Início</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-28">Fim</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-8"></th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600">Descrição</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-24">Sigla</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-28">Status</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-28">Início</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-28">Fim</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
+                <tbody className="divide-y divide-ink-100">
                   {(() => {
                     const filtradas = secretarias.filter(sec => {
                       if (secFiltroDescricao && !sec.nome.toLowerCase().includes(secFiltroDescricao.toLowerCase())) return false;
@@ -934,30 +953,30 @@ export default function Secretarias() {
                           onDoubleClick={() => handleEditSecretaria(sec)}
                           className={`cursor-pointer transition-colors select-none ${
                             isSelected
-                              ? 'bg-blue-600 text-white'
-                              : 'hover:bg-blue-50 dark:hover:bg-blue-900/10'
+                              ? 'bg-brand-600 text-white'
+                              : 'hover:bg-info-50 dark:hover:bg-info-900/10'
                           }`}
                         >
                           <td className="px-4 py-2.5 text-center">
                             {isSelected && <span className="text-white text-xs">▶</span>}
                           </td>
-                          <td className={`px-4 py-2.5 font-medium ${isSelected ? 'text-white' : 'text-gray-900 dark:text-slate-100'}`}>
+                          <td className={`px-4 py-2.5 font-medium ${isSelected ? 'text-white' : 'text-ink-900'}`}>
                             {sec.nome}
                           </td>
                           <td className="px-4 py-2.5">
                             {sec.sigla
-                              ? <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono font-semibold ${isSelected ? 'bg-blue-500/40 text-blue-100' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'}`}>{sec.sigla}</span>
-                              : <span className={isSelected ? 'text-blue-200 text-xs' : 'text-gray-400 text-xs'}>—</span>}
+                              ? <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono font-semibold ${isSelected ? 'bg-info-500/40 text-info-100' : 'bg-info-100 text-brand-700 dark:bg-info-900/30 dark:text-info-300'}`}>{sec.sigla}</span>
+                              : <span className={isSelected ? 'text-info-200 text-xs' : 'text-ink-400 text-xs'}>—</span>}
                           </td>
                           <td className="px-4 py-2.5">
                             {isSelected
-                              ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-500/30 text-blue-100">{sec.ativo !== false ? 'Ativa' : 'Inativa'}</span>
+                              ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-info-500/30 text-info-100">{sec.ativo !== false ? 'Ativa' : 'Inativa'}</span>
                               : <StatusBadge status={sec.ativo !== false ? 'ativa' : 'inativa'} />}
                           </td>
-                          <td className={`px-4 py-2.5 text-xs ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-slate-400'}`}>
+                          <td className={`px-4 py-2.5 text-xs ${isSelected ? 'text-info-100' : 'text-ink-500'}`}>
                             {sec.data_inicio ? new Date(sec.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
                           </td>
-                          <td className={`px-4 py-2.5 text-xs ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-slate-400'}`}>
+                          <td className={`px-4 py-2.5 text-xs ${isSelected ? 'text-info-100' : 'text-ink-500'}`}>
                             {sec.data_fim ? new Date(sec.data_fim + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
                           </td>
                         </tr>
@@ -987,7 +1006,7 @@ export default function Secretarias() {
             />
 
             {/* Toolbar inferior */}
-            <div className="px-4 py-2.5 border-t border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-700/20 flex items-center justify-end flex-wrap gap-2">
+            <div className="px-4 py-2.5 border-t border-ink-200 bg-ink-50 flex items-center justify-end flex-wrap gap-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={() => { setSelectedSecretaria(null); handleCreateSecretaria(); }}
@@ -1042,7 +1061,7 @@ export default function Secretarias() {
           {/* Opções de filtro */}
           <FilterBar>
             <div className="flex-1 min-w-48">
-              <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Nome / CPF</label>
+              <label className="block text-xs font-medium text-ink-600 mb-1">Nome / CPF</label>
               <input
                 value={agenteSearch}
                 onChange={e => setAgenteSearch(e.target.value)}
@@ -1054,22 +1073,22 @@ export default function Secretarias() {
 
           {/* Tabela de agentes */}
           <div className="card overflow-hidden">
-            <div className="px-4 py-2 border-b border-gray-200 dark:border-slate-700/50">
+            <div className="px-4 py-2 border-b border-ink-200">
               <SectionTitle icon={UserCog} title="Tabela de agentes" />
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-100 dark:bg-slate-700/30 border-b border-gray-200 dark:border-slate-700/50">
+                <thead className="bg-ink-100 border-b border-ink-200">
                   <tr>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-8"></th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Nome</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-32">CPF</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Cargo Atual</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Secretaria</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-28">Status</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-8"></th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600">Nome</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-32">CPF</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600">Cargo Atual</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600">Secretaria</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-28">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
+                <tbody className="divide-y divide-ink-100">
                   {(() => {
                     const filteredAg = agentes.filter(a =>
                       !agenteSearch
@@ -1096,17 +1115,17 @@ export default function Secretarias() {
                             onDoubleClick={() => openModalAgente(agente)}
                             className={`cursor-pointer transition-colors select-none ${
                               isSelected
-                                ? 'bg-blue-600 text-white'
-                                : 'hover:bg-blue-50 dark:hover:bg-blue-900/10'
+                                ? 'bg-brand-600 text-white'
+                                : 'hover:bg-info-50 dark:hover:bg-info-900/10'
                             }`}
                           >
                             <td className="px-4 py-2.5 text-center">
                               {isSelected && <span className="text-white text-xs">▶</span>}
                             </td>
-                            <td className={`px-4 py-2.5 font-medium ${isSelected ? 'text-white' : 'text-gray-900 dark:text-slate-100'}`}>
+                            <td className={`px-4 py-2.5 font-medium ${isSelected ? 'text-white' : 'text-ink-900'}`}>
                               {agente.nome}
                             </td>
-                            <td className={`px-4 py-2.5 font-mono text-xs ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-slate-400'}`}>
+                            <td className={`px-4 py-2.5 font-mono text-xs ${isSelected ? 'text-info-100' : 'text-ink-500'}`}>
                               {maskCPF(agente.cpf)}
                             </td>
                             {(() => {
@@ -1119,19 +1138,19 @@ export default function Secretarias() {
                               }) || assigns.sort((a, b) => new Date(b.data_inicio||0) - new Date(a.data_inicio||0))[0];
                               const st = assigns.length === 0 ? null : getStatusVigencia(curr?.data_inicio, curr?.data_fim);
                               return (<>
-                                <td className={`px-4 py-2.5 text-xs ${isSelected ? 'text-blue-100' : 'text-gray-600 dark:text-slate-400'}`}>
-                                  {curr?.cargo || <span className="text-gray-300 dark:text-slate-600">—</span>}
+                                <td className={`px-4 py-2.5 text-xs ${isSelected ? 'text-info-100' : 'text-ink-600'}`}>
+                                  {curr?.cargo || <span className="text-ink-400">—</span>}
                                 </td>
                                 <td className="px-4 py-2.5 text-xs">
                                   {curr?._secSigla
-                                    ? <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono font-semibold ${isSelected ? 'bg-blue-500/40 text-blue-100' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'}`}>{curr._secSigla}</span>
-                                    : <span className="text-gray-300 dark:text-slate-600">—</span>}
+                                    ? <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono font-semibold ${isSelected ? 'bg-info-500/40 text-info-100' : 'bg-info-100 text-brand-700 dark:bg-info-900/30 dark:text-info-300'}`}>{curr._secSigla}</span>
+                                    : <span className="text-ink-400">—</span>}
                                 </td>
                                 <td className="px-4 py-2.5">
                                   {st === null
-                                    ? <span className="text-gray-400 dark:text-slate-500 text-xs">Sem vínculo</span>
+                                    ? <span className="text-ink-400 text-xs">Sem vínculo</span>
                                     : isSelected
-                                      ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-500/30 text-blue-100">{st === 'ativo' ? 'Ativo' : st === 'futuro' ? 'Futuro' : 'Encerrado'}</span>
+                                      ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-info-500/30 text-info-100">{st === 'ativo' ? 'Ativo' : st === 'futuro' ? 'Futuro' : 'Encerrado'}</span>
                                       : <StatusBadge status={st} />}
                                 </td>
                               </>);
@@ -1156,7 +1175,7 @@ export default function Secretarias() {
             />
 
             {/* Toolbar inferior */}
-            <div className="px-4 py-2.5 border-t border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-700/20 flex items-center justify-end">
+            <div className="px-4 py-2.5 border-t border-ink-200 bg-ink-50 flex items-center justify-end">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => { setSelectedAgente(null); openModalAgente(); }}
@@ -1196,7 +1215,7 @@ export default function Secretarias() {
           <FilterBar>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 items-end flex-1">
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Nome</label>
+                <label className="block text-xs font-medium text-ink-600 mb-1">Nome</label>
                 <input
                   value={respFiltroNome}
                   onChange={e => setRespFiltroNome(e.target.value)}
@@ -1205,7 +1224,7 @@ export default function Secretarias() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Secretaria</label>
+                <label className="block text-xs font-medium text-ink-600 mb-1">Secretaria</label>
                 <input
                   value={respFiltroSec}
                   onChange={e => setRespFiltroSec(e.target.value)}
@@ -1214,7 +1233,7 @@ export default function Secretarias() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Cargo / Função</label>
+                <label className="block text-xs font-medium text-ink-600 mb-1">Cargo / Função</label>
                 <input
                   value={respFiltroCargo}
                   onChange={e => setRespFiltroCargo(e.target.value)}
@@ -1223,7 +1242,7 @@ export default function Secretarias() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Status</label>
+                <label className="block text-xs font-medium text-ink-600 mb-1">Status</label>
                 <select
                   value={respFiltroStatus}
                   onChange={e => setRespFiltroStatus(e.target.value)}
@@ -1236,7 +1255,7 @@ export default function Secretarias() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Vigência</label>
+                <label className="block text-xs font-medium text-ink-600 mb-1">Vigência</label>
                 <input
                   type="date"
                   value={respFiltroVigor}
@@ -1249,23 +1268,23 @@ export default function Secretarias() {
 
           {/* Tabela de Responsável */}
           <div className="card overflow-hidden">
-            <div className="px-4 py-2 border-b border-gray-200 dark:border-slate-700/50">
+            <div className="px-4 py-2 border-b border-ink-200">
               <SectionTitle icon={UserCheck} title="Tabela de Responsável" />
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-100 dark:bg-slate-700/30 border-b border-gray-200 dark:border-slate-700/50">
+                <thead className="bg-ink-100 border-b border-ink-200">
                   <tr>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-8"></th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Nome</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Cargo / Função</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Secretaria</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-28">Início</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-28">Fim</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300 w-28">Status</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-8"></th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600">Nome</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600">Cargo / Função</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600">Secretaria</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-28">Início</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-28">Fim</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-28">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
+                <tbody className="divide-y divide-ink-100">
                   {(() => {
                     const filtrados = todosResponsaveis.filter(r => {
                       const vigor = respFiltroVigor ? new Date(respFiltroVigor + 'T12:00:00') : null;
@@ -1306,35 +1325,35 @@ export default function Secretarias() {
                           onDoubleClick={() => openModalResp(resp)}
                           className={`cursor-pointer transition-colors select-none ${
                             isSelected
-                              ? 'bg-blue-600 text-white'
-                              : 'hover:bg-blue-50 dark:hover:bg-blue-900/10'
+                              ? 'bg-brand-600 text-white'
+                              : 'hover:bg-info-50 dark:hover:bg-info-900/10'
                           }`}
                         >
                           <td className="px-4 py-2.5 text-center">
                             {isSelected && <span className="text-white text-xs">▶</span>}
                           </td>
-                          <td className={`px-4 py-2.5 font-medium ${isSelected ? 'text-white' : 'text-gray-900 dark:text-slate-100'}`}>
+                          <td className={`px-4 py-2.5 font-medium ${isSelected ? 'text-white' : 'text-ink-900'}`}>
                             {resp.nome}
                           </td>
-                          <td className={`px-4 py-2.5 ${isSelected ? 'text-blue-100' : 'text-gray-600 dark:text-slate-400'}`}>
+                          <td className={`px-4 py-2.5 ${isSelected ? 'text-info-100' : 'text-ink-600'}`}>
                             {resp.cargo || '—'}
                           </td>
-                          <td className={`px-4 py-2.5 ${isSelected ? 'text-blue-100' : 'text-gray-600 dark:text-slate-400'}`}>
+                          <td className={`px-4 py-2.5 ${isSelected ? 'text-info-100' : 'text-ink-600'}`}>
                             {resp._secNome}
                           </td>
-                          <td className={`px-4 py-2.5 text-xs ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-slate-400'}`}>
+                          <td className={`px-4 py-2.5 text-xs ${isSelected ? 'text-info-100' : 'text-ink-500'}`}>
                             {resp.data_inicio
                               ? new Date(resp.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR')
                               : '—'}
                           </td>
-                          <td className={`px-4 py-2.5 text-xs ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-slate-400'}`}>
+                          <td className={`px-4 py-2.5 text-xs ${isSelected ? 'text-info-100' : 'text-ink-500'}`}>
                             {resp.data_fim
                               ? new Date(resp.data_fim + 'T00:00:00').toLocaleDateString('pt-BR')
                               : '—'}
                           </td>
                           <td className="px-4 py-2.5">
                             {isSelected
-                              ? (() => { const s=getStatusVigencia(resp.data_inicio,resp.data_fim); return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-500/30 text-blue-100">{s==='ativo'?'Ativo':s==='futuro'?'Futuro':'Encerrado'}</span>; })()
+                              ? (() => { const s=getStatusVigencia(resp.data_inicio,resp.data_fim); return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-info-500/30 text-info-100">{s==='ativo'?'Ativo':s==='futuro'?'Futuro':'Encerrado'}</span>; })()
                               : <StatusBadge status={getStatusVigencia(resp.data_inicio, resp.data_fim)} />}
                           </td>
                         </tr>
@@ -1366,7 +1385,7 @@ export default function Secretarias() {
             />
 
             {/* Toolbar inferior */}
-            <div className="px-4 py-2.5 border-t border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-700/20 flex items-center justify-end">
+            <div className="px-4 py-2.5 border-t border-ink-200 bg-ink-50 flex items-center justify-end">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => { setSelectedResp(null); openModalResp(); }}
@@ -1382,7 +1401,7 @@ export default function Secretarias() {
                   <Edit2 className="h-4 w-4" /> Alterar
                 </button>
                 <button
-                  onClick={() => selectedResp && deleteResponsavel(selectedResp)}
+                  onClick={() => selectedResp && setConfirmarExcluirResp(selectedResp)}
                   disabled={!selectedResp}
                   className="btn-danger flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
@@ -1401,68 +1420,68 @@ export default function Secretarias() {
 
             {/* ── Informações da entidade ── */}
             <div className="card overflow-hidden">
-              <div className="px-6 py-3 bg-gray-50 dark:bg-slate-700/20 border-b border-gray-200 dark:border-slate-700/50">
+              <div className="px-6 py-3 bg-ink-50 border-b border-ink-200">
                 <SectionTitle icon={Building2} title="Informações da entidade" />
               </div>
               <div className="p-6 space-y-4">
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">Nome completo</label>
+                  <label className="text-sm font-medium text-ink-700 sm:text-right">Nome completo</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.nome}
                       onChange={e => setFormEntidade(p => ({...p, nome: e.target.value}))}
                       disabled={!entidadeEditing}
-                      className="input-field disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30" placeholder="Nome completo da entidade" />
+                      className="input-field disabled:bg-ink-50 disabled:text-ink-600" placeholder="Nome completo da entidade" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">Nome abreviado</label>
+                  <label className="text-sm font-medium text-ink-700 sm:text-right">Nome abreviado</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.nome_abreviado}
                       onChange={e => setFormEntidade(p => ({...p, nome_abreviado: e.target.value}))}
                       disabled={!entidadeEditing}
-                      className="input-field w-72 disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30" placeholder="Ex: PMMUNICIPIO" />
+                      className="input-field w-72 disabled:bg-ink-50 disabled:text-ink-600" placeholder="Ex: PMMUNICIPIO" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">CNPJ</label>
+                  <label className="text-sm font-medium text-ink-700 sm:text-right">CNPJ</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.cnpj}
                       onChange={e => setFormEntidade(p => ({...p, cnpj: formatCNPJ(e.target.value)}))}
                       disabled={!entidadeEditing}
-                      maxLength={18} className="input-field w-52 font-mono disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30" placeholder="00.000.000/0000-00" />
+                      maxLength={18} className="input-field w-52 font-mono disabled:bg-ink-50 disabled:text-ink-600" placeholder="00.000.000/0000-00" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">Razão social</label>
+                  <label className="text-sm font-medium text-ink-700 sm:text-right">Razão social</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.razao_social}
                       onChange={e => setFormEntidade(p => ({...p, razao_social: e.target.value}))}
                       disabled={!entidadeEditing}
-                      className="input-field disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30" />
+                      className="input-field disabled:bg-ink-50 disabled:text-ink-600" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">Código unidade</label>
+                  <label className="text-sm font-medium text-ink-700 sm:text-right">Código unidade</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.codigo_unidade}
                       onChange={e => setFormEntidade(p => ({...p, codigo_unidade: e.target.value}))}
                       disabled={!entidadeEditing}
-                      className="input-field w-44 disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30" />
+                      className="input-field w-44 disabled:bg-ink-50 disabled:text-ink-600" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">Esfera</label>
+                  <label className="text-sm font-medium text-ink-700 sm:text-right">Esfera</label>
                   <div className="col-span-2">
                     <select value={formEntidade.esfera}
                       onChange={e => setFormEntidade(p => ({...p, esfera: e.target.value}))}
                       disabled={!entidadeEditing}
-                      className="input-field w-56 disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30">
+                      className="input-field w-56 disabled:bg-ink-50 disabled:text-ink-600">
                       <option value="">Selecione...</option>
                       <option value="Municipal">Municipal</option>
                       <option value="Estadual">Estadual</option>
@@ -1472,12 +1491,12 @@ export default function Secretarias() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">Poder</label>
+                  <label className="text-sm font-medium text-ink-700 sm:text-right">Poder</label>
                   <div className="col-span-2">
                     <select value={formEntidade.poder}
                       onChange={e => setFormEntidade(p => ({...p, poder: e.target.value}))}
                       disabled={!entidadeEditing}
-                      className="input-field w-56 disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30">
+                      className="input-field w-56 disabled:bg-ink-50 disabled:text-ink-600">
                       <option value="">Selecione...</option>
                       <option value="Executivo">Executivo</option>
                       <option value="Legislativo">Legislativo</option>
@@ -1488,32 +1507,32 @@ export default function Secretarias() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">E-mail</label>
+                  <label className="text-sm font-medium text-ink-700 sm:text-right">E-mail</label>
                   <div className="col-span-2">
                     <input type="email" value={formEntidade.email}
                       onChange={e => setFormEntidade(p => ({...p, email: e.target.value}))}
                       disabled={!entidadeEditing}
-                      className="input-field disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30" placeholder="email@municipio.gov.br" />
+                      className="input-field disabled:bg-ink-50 disabled:text-ink-600" placeholder="email@municipio.gov.br" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">Telefone</label>
+                  <label className="text-sm font-medium text-ink-700 sm:text-right">Telefone</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.telefone}
                       onChange={e => setFormEntidade(p => ({...p, telefone: formatTelefone(e.target.value)}))}
                       disabled={!entidadeEditing}
-                      maxLength={15} className="input-field w-44 disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30" placeholder="(00) 00000-0000" />
+                      maxLength={15} className="input-field w-44 disabled:bg-ink-50 disabled:text-ink-600" placeholder="(00) 00000-0000" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">Whatsapp notificação</label>
+                  <label className="text-sm font-medium text-ink-700 sm:text-right">Whatsapp notificação</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.whatsapp}
                       onChange={e => setFormEntidade(p => ({...p, whatsapp: formatTelefone(e.target.value)}))}
                       disabled={!entidadeEditing}
-                      maxLength={15} className="input-field w-44 disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30" placeholder="(00) 00000-0000" />
+                      maxLength={15} className="input-field w-44 disabled:bg-ink-50 disabled:text-ink-600" placeholder="(00) 00000-0000" />
                   </div>
                 </div>
 
@@ -1522,13 +1541,13 @@ export default function Secretarias() {
 
             {/* ── Endereço ── */}
             <div className="card overflow-hidden">
-              <div className="px-6 py-3 bg-gray-50 dark:bg-slate-700/20 border-b border-gray-200 dark:border-slate-700/50">
+              <div className="px-6 py-3 bg-ink-50 border-b border-ink-200">
                 <SectionTitle icon={Building2} title="Endereço" />
               </div>
               <div className="p-6 space-y-4">
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">CEP</label>
+                  <label className="text-sm font-medium text-ink-700 sm:text-right">CEP</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.cep}
                       onChange={e => {
@@ -1537,67 +1556,67 @@ export default function Secretarias() {
                         setFormEntidade(p => ({...p, cep: f}));
                       }}
                       disabled={!entidadeEditing}
-                      maxLength={9} className="input-field w-32 font-mono disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30" placeholder="00000-000" />
+                      maxLength={9} className="input-field w-32 font-mono disabled:bg-ink-50 disabled:text-ink-600" placeholder="00000-000" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">Logradouro</label>
+                  <label className="text-sm font-medium text-ink-700 sm:text-right">Logradouro</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.logradouro}
                       onChange={e => setFormEntidade(p => ({...p, logradouro: e.target.value}))}
                       disabled={!entidadeEditing}
-                      className="input-field disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30" placeholder="Rua, Avenida, Praça..." />
+                      className="input-field disabled:bg-ink-50 disabled:text-ink-600" placeholder="Rua, Avenida, Praça..." />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">Número</label>
+                  <label className="text-sm font-medium text-ink-700 sm:text-right">Número</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.numero}
                       onChange={e => setFormEntidade(p => ({...p, numero: e.target.value}))}
                       disabled={!entidadeEditing}
-                      className="input-field w-32 disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30" />
+                      className="input-field w-32 disabled:bg-ink-50 disabled:text-ink-600" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">Complemento</label>
+                  <label className="text-sm font-medium text-ink-700 sm:text-right">Complemento</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.complemento}
                       onChange={e => setFormEntidade(p => ({...p, complemento: e.target.value}))}
                       disabled={!entidadeEditing}
-                      className="input-field disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30" placeholder="Sala, Bloco, Andar..." />
+                      className="input-field disabled:bg-ink-50 disabled:text-ink-600" placeholder="Sala, Bloco, Andar..." />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">Bairro</label>
+                  <label className="text-sm font-medium text-ink-700 sm:text-right">Bairro</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.bairro}
                       onChange={e => setFormEntidade(p => ({...p, bairro: e.target.value}))}
                       disabled={!entidadeEditing}
-                      className="input-field disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30" />
+                      className="input-field disabled:bg-ink-50 disabled:text-ink-600" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">Cidade</label>
+                  <label className="text-sm font-medium text-ink-700 sm:text-right">Cidade</label>
                   <div className="col-span-2">
                     <input type="text" value={formEntidade.cidade}
                       onChange={e => setFormEntidade(p => ({...p, cidade: e.target.value}))}
                       disabled={!entidadeEditing}
-                      className="input-field disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30" />
+                      className="input-field disabled:bg-ink-50 disabled:text-ink-600" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start sm:items-center">
-                  <label className="text-sm font-medium text-gray-700 dark:text-slate-300 sm:text-right">UF</label>
+                  <label className="text-sm font-medium text-ink-700 sm:text-right">UF</label>
                   <div className="col-span-2">
                     <select value={formEntidade.uf}
                       onChange={e => setFormEntidade(p => ({...p, uf: e.target.value}))}
                       disabled={!entidadeEditing}
-                      className="input-field w-24 disabled:bg-gray-50 disabled:text-gray-600 dark:disabled:bg-slate-700/30">
+                      className="input-field w-24 disabled:bg-ink-50 disabled:text-ink-600">
                       <option value="">--</option>
                       {['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'].map(u => (
                         <option key={u} value={u}>{u}</option>
@@ -1612,7 +1631,7 @@ export default function Secretarias() {
             {/* Botões */}
             <div className="flex items-center justify-end gap-3">
               {entidadeSaved && (
-                <span className="text-sm text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
+                <span className="text-sm text-success-600 dark:text-success-400 font-medium flex items-center gap-1">
                   <CheckCircle className="h-4 w-4" /> Salvo com sucesso!
                 </span>
               )}
@@ -1648,6 +1667,13 @@ export default function Secretarias() {
         </div>
       )}
 
+      {/* ── Tab: Usuários ── */}
+      {activeTab === 'usuarios' && podeUsuarios && (
+        <Suspense fallback={<LoadingBar label="Carregando usuários..." />}>
+          <Usuarios />
+        </Suspense>
+      )}
+
       {/* Modal Importar do Portal de Irauçuba */}
 
       {/* ── Modal Criar/Editar Secretaria ── */}
@@ -1655,7 +1681,7 @@ export default function Secretarias() {
         open={showModalSecretaria}
         onClose={() => { setShowModalSecretaria(false); setEditingSecretaria(null); }}
         icon={Building2}
-        iconBg="from-blue-500 to-blue-600"
+        iconBg="from-info-500 to-info-600"
         title={`Secretaria — ${editingSecretaria ? 'Alteração' : 'Inclusão'}`}
         subtitle="Cadastre e gerencie os dados da secretaria municipal."
         width={700}
@@ -1663,8 +1689,8 @@ export default function Secretarias() {
           editingSecretaria ? (
             <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
               editingSecretaria.ativo !== false
-                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                : 'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-400'
+                ? 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400'
+                : 'bg-ink-100 text-ink-600'
             }`}>
               {editingSecretaria.ativo !== false ? 'ATIVA' : 'INATIVA'}
             </span>
@@ -1696,7 +1722,7 @@ export default function Secretarias() {
           <SectionCard icon={Tag} title="Informações principais" subtitle="Descrição, sigla e código da secretaria">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
-                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Descrição *</label>
+                <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Descrição *</label>
                 <input
                   type="text"
                   value={formSecretaria.nome}
@@ -1708,7 +1734,7 @@ export default function Secretarias() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Sigla / Abreviação</label>
+                <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Sigla / Abreviação</label>
                 <input
                   type="text"
                   value={formSecretaria.sigla}
@@ -1719,7 +1745,7 @@ export default function Secretarias() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Código de unidade</label>
+                <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Código de unidade</label>
                 <input
                   type="text"
                   value={formSecretaria.codigo_unidade}
@@ -1735,9 +1761,9 @@ export default function Secretarias() {
                 id="outros_sistemas"
                 checked={formSecretaria.outros_sistemas}
                 onChange={e => setFormSecretaria(p => ({...p, outros_sistemas: e.target.checked}))}
-                className="w-4 h-4 mt-0.5 rounded border-gray-300 text-blue-600 cursor-pointer"
+                className="w-4 h-4 mt-0.5 rounded-sm border-ink-300 text-brand-600 cursor-pointer"
               />
-              <label htmlFor="outros_sistemas" className="text-sm text-gray-600 dark:text-slate-400 cursor-pointer select-none">
+              <label htmlFor="outros_sistemas" className="text-sm text-ink-600 cursor-pointer select-none">
                 Secretaria de outros sistemas — não mostrar na lista de secretarias
               </label>
             </div>
@@ -1747,7 +1773,7 @@ export default function Secretarias() {
           <SectionCard icon={Calendar} title="Vigência" subtitle="Período de atuação da secretaria">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Data início</label>
+                <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Data início</label>
                 <input
                   type="date"
                   value={formSecretaria.data_inicio}
@@ -1756,7 +1782,7 @@ export default function Secretarias() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Data fim <span className="normal-case font-normal text-gray-400">(vazio = vigente)</span></label>
+                <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Data fim <span className="normal-case font-normal text-ink-400">(vazio = vigente)</span></label>
                 <input
                   type="date"
                   value={formSecretaria.data_fim}
@@ -1771,7 +1797,7 @@ export default function Secretarias() {
           <SectionCard icon={Mail} title="Contato" subtitle="E-mail e WhatsApp para notificações">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">E-mail</label>
+                <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">E-mail</label>
                 <input
                   type="email"
                   value={formSecretaria.email}
@@ -1781,7 +1807,7 @@ export default function Secretarias() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">WhatsApp notificação</label>
+                <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">WhatsApp notificação</label>
                 <input
                   type="text"
                   value={formSecretaria.whatsapp}
@@ -1798,7 +1824,7 @@ export default function Secretarias() {
           <SectionCard icon={Shield} title="Integrações PNCP" subtitle="Dados para integração com o Portal Nacional de Compras Públicas">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">CNPJ</label>
+                <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">CNPJ</label>
                 <input
                   type="text"
                   value={formSecretaria.cnpj}
@@ -1809,7 +1835,7 @@ export default function Secretarias() {
                 />
               </div>
               <div className="md:col-span-2 md:max-w-none">
-                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Razão social</label>
+                <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Razão social</label>
                 <input
                   type="text"
                   value={formSecretaria.razao_social}
@@ -1844,11 +1870,11 @@ export default function Secretarias() {
           <SectionCard icon={Network} title="Dados do setor">
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Nome do Setor *</label>
+                <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Nome do Setor *</label>
                 <input type="text" value={formSetor.nome} onChange={(e) => setFormSetor({ ...formSetor, nome: e.target.value })} required autoFocus className="input-field" placeholder="Ex: Protocolo Geral" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Descrição</label>
+                <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Descrição</label>
                 <textarea
                   value={formSetor.descricao}
                   onChange={(e) => setFormSetor({ ...formSetor, descricao: e.target.value })}
@@ -1865,25 +1891,25 @@ export default function Secretarias() {
       {/* Modal de Confirmação de Exclusão */}
       {showDeleteModal && deleteTarget && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-xl max-w-md w-full shadow-xl">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700/50">
+          <div className="bg-surface rounded-xl max-w-md w-full shadow-xl">
+            <div className="px-6 py-4 border-b border-ink-200">
               <div className="flex items-center gap-3">
-                <div className="flex-shrink-0 w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-                  <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
+                <div className="shrink-0 w-10 h-10 bg-danger-100 dark:bg-danger-900/30 rounded-full flex items-center justify-center">
+                  <AlertTriangle className="h-6 w-6 text-danger-600 dark:text-danger-400" />
                 </div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100">
+                <h2 className="text-xl font-semibold text-ink-900">
                   Confirmar Exclusão
                 </h2>
               </div>
             </div>
 
             <div className="p-6">
-              <p className="text-gray-700 dark:text-slate-300 mb-4">
+              <p className="text-ink-700 mb-4">
                 {deleteTarget.type === 'secretaria' ? (
                   <>
                     Tem certeza que deseja excluir a secretaria <strong>{deleteTarget.data.nome}</strong>?
                     {deleteTarget.data.setores?.length > 0 && (
-                      <span className="block mt-2 text-red-600 text-sm">
+                      <span className="block mt-2 text-danger-600 text-sm">
                         ⚠️ Todos os {deleteTarget.data.setores.length} setores vinculados também serão excluídos.
                       </span>
                     )}
@@ -1894,12 +1920,12 @@ export default function Secretarias() {
                   </>
                 )}
               </p>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-ink-600">
                 Esta ação não pode ser desfeita.
               </p>
             </div>
 
-            <div className="px-6 py-4 bg-gray-50 dark:bg-slate-700/30 border-t border-gray-200 dark:border-slate-700/50 flex justify-end space-x-3">
+            <div className="px-6 py-4 bg-ink-50 border-t border-ink-200 flex justify-end space-x-3">
               <button onClick={() => { setShowDeleteModal(false); setDeleteTarget(null); }} className="btn-secondary">Cancelar</button>
               <button onClick={confirmDelete} className="btn-danger flex items-center gap-2">
                 <Trash2 className="h-4 w-4" />
@@ -1913,17 +1939,17 @@ export default function Secretarias() {
       {/* ── Painel de Setores ── */}
       {showSetoresPanel && selectedSecretaria && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-xl max-w-2xl w-full shadow-xl flex flex-col max-h-[80vh]">
+          <div className="bg-surface rounded-xl max-w-2xl w-full shadow-xl flex flex-col max-h-[80vh]">
             {/* Header */}
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700/50 flex items-center justify-between shrink-0">
+            <div className="px-6 py-4 border-b border-ink-200 flex items-center justify-between shrink-0">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
+                <h2 className="text-lg font-semibold text-ink-900">
                   Setores — {selectedSecretaria.nome}
-                  {selectedSecretaria.sigla && <span className="text-gray-400 font-normal text-base ml-1">({selectedSecretaria.sigla})</span>}
+                  {selectedSecretaria.sigla && <span className="text-ink-400 font-normal text-base ml-1">({selectedSecretaria.sigla})</span>}
                 </h2>
               </div>
               <button onClick={() => { setShowSetoresPanel(false); setSelectedSetorInPanel(null); }}
-                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg">
+                className="p-1.5 text-ink-400 hover:text-ink-600 rounded-lg">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -1931,19 +1957,19 @@ export default function Secretarias() {
             {/* Tabela */}
             <div className="overflow-y-auto flex-1">
               <table className="w-full text-sm">
-                <thead className="bg-gray-100 dark:bg-slate-700/30 border-b border-gray-200 dark:border-slate-700/50">
+                <thead className="bg-ink-100 border-b border-ink-200">
                   <tr>
                     <th className="w-8 px-4 py-2.5"></th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-gray-600 dark:text-slate-300">Descrição</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600">Descrição</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
+                <tbody className="divide-y divide-ink-100">
                   {(selectedSecretaria.setores || []).length === 0 ? (
                     <tr>
-                      <td colSpan={2} className="text-center py-10 text-gray-400 dark:text-slate-500">
+                      <td colSpan={2} className="text-center py-10 text-ink-400">
                         <Briefcase className="h-8 w-8 mx-auto mb-2 opacity-40" />
                         <p className="text-sm">Nenhum setor cadastrado para esta secretaria</p>
-                        <p className="text-xs mt-1 text-gray-300">Clique em "Incluir" para adicionar</p>
+                        <p className="text-xs mt-1 text-ink-400">Clique em "Incluir" para adicionar</p>
                       </td>
                     </tr>
                   ) : (
@@ -1955,13 +1981,13 @@ export default function Secretarias() {
                           onClick={() => setSelectedSetorInPanel(isSel ? null : setor)}
                           onDoubleClick={() => { handleEditSetor(setor, selectedSecretaria.id); }}
                           className={`cursor-pointer transition-colors select-none ${
-                            isSel ? 'bg-blue-600 text-white' : 'hover:bg-blue-50 dark:hover:bg-blue-900/10'
+                            isSel ? 'bg-brand-600 text-white' : 'hover:bg-info-50 dark:hover:bg-info-900/10'
                           }`}
                         >
                           <td className="px-4 py-2.5 text-center">
                             {isSel && <span className="text-white text-xs">▶</span>}
                           </td>
-                          <td className={`px-4 py-2.5 font-medium ${isSel ? 'text-white' : 'text-gray-900 dark:text-slate-100'}`}>
+                          <td className={`px-4 py-2.5 font-medium ${isSel ? 'text-white' : 'text-ink-900'}`}>
                             {setor.nome}
                           </td>
                         </tr>
@@ -1973,8 +1999,8 @@ export default function Secretarias() {
             </div>
 
             {/* Toolbar inferior */}
-            <div className="px-4 py-2.5 border-t border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-700/20 flex items-center justify-between shrink-0">
-              <span className="text-xs text-gray-500 dark:text-slate-400">
+            <div className="px-4 py-2.5 border-t border-ink-200 bg-ink-50 flex items-center justify-between shrink-0">
+              <span className="text-xs text-ink-500">
                 {(selectedSecretaria.setores || []).length} setor(es)
               </span>
               <div className="flex items-center gap-2">
@@ -2027,20 +2053,20 @@ export default function Secretarias() {
           <SectionCard icon={User} title="Dados pessoais" subtitle="Nome, CPF e data de nascimento">
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Nome *</label>
+                <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Nome *</label>
                 <input type="text" value={formAgente.nome} onChange={e => setFormAgente(p => ({...p, nome: e.target.value}))} required autoFocus className="input-field" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Nome reduzido</label>
+                <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Nome reduzido</label>
                 <input type="text" value={formAgente.nome_reduzido || ''} onChange={e => setFormAgente(p => ({...p, nome_reduzido: e.target.value}))} className="input-field" placeholder="Como é chamado usualmente" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">CPF</label>
+                  <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">CPF</label>
                   <input type="text" value={formAgente.cpf || ''} onChange={e => setFormAgente(p => ({...p, cpf: formatCPF(e.target.value)}))} maxLength={14} className="input-field font-mono" placeholder="000.000.000-00" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Nascimento</label>
+                  <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Nascimento</label>
                   <input type="date" value={formAgente.nascimento || ''} onChange={e => setFormAgente(p => ({...p, nascimento: e.target.value}))} className="input-field" />
                 </div>
               </div>
@@ -2050,16 +2076,16 @@ export default function Secretarias() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Telefone</label>
+                  <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Telefone</label>
                   <input type="text" value={formAgente.telefone || ''} onChange={e => setFormAgente(p => ({...p, telefone: formatTelefone(e.target.value)}))} maxLength={15} className="input-field" placeholder="(00) 00000-0000" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Matrícula</label>
+                  <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Matrícula</label>
                   <input type="text" value={formAgente.matricula || ''} onChange={e => setFormAgente(p => ({...p, matricula: e.target.value}))} className="input-field font-mono" />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">E-mail</label>
+                <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">E-mail</label>
                 <input type="email" value={formAgente.email || ''} onChange={e => setFormAgente(p => ({...p, email: e.target.value}))} className="input-field" placeholder="email@exemplo.com.br" />
               </div>
             </div>
@@ -2070,19 +2096,19 @@ export default function Secretarias() {
       {/* ── Confirmação exclusão Agente ── */}
       {showDeleteAgenteModal && deleteAgenteTarget && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-xl max-w-md w-full shadow-xl">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700/50 flex items-center gap-3">
-              <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center shrink-0">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
+          <div className="bg-surface rounded-xl max-w-md w-full shadow-xl">
+            <div className="px-6 py-4 border-b border-ink-200 flex items-center gap-3">
+              <div className="w-10 h-10 bg-danger-100 dark:bg-danger-900/30 rounded-full flex items-center justify-center shrink-0">
+                <AlertTriangle className="h-5 w-5 text-danger-600" />
               </div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Confirmar Exclusão</h2>
+              <h2 className="text-lg font-semibold text-ink-900">Confirmar Exclusão</h2>
             </div>
             <div className="p-6">
-              <p className="text-gray-700 dark:text-slate-300">
+              <p className="text-ink-700">
                 Excluir o agente <strong>{deleteAgenteTarget.nome}</strong>? Esta ação não pode ser desfeita.
               </p>
             </div>
-            <div className="px-6 py-4 bg-gray-50 dark:bg-slate-700/30 border-t border-gray-200 dark:border-slate-700/50 flex justify-end gap-3">
+            <div className="px-6 py-4 bg-ink-50 border-t border-ink-200 flex justify-end gap-3">
               <button onClick={() => { setShowDeleteAgenteModal(false); setDeleteAgenteTarget(null); }}
                 className="btn-secondary">Cancelar</button>
               <button onClick={confirmDeleteAgente} className="btn-danger flex items-center gap-2">
@@ -2116,7 +2142,7 @@ export default function Secretarias() {
           <SectionCard icon={Users} title="Vínculo" subtitle="Agente e secretaria vinculados">
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Agente</label>
+                <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Agente</label>
                 <select
                   value={formResp.agente_id}
                   onChange={e => {
@@ -2131,22 +2157,22 @@ export default function Secretarias() {
                 {!formResp.agente_id && (
                   <input type="text" value={formResp.nome} onChange={e => setFormResp(p => ({...p, nome: e.target.value}))} required={!formResp.agente_id} className="input-field mt-2" placeholder="Ou digite o nome manualmente *" />
                 )}
-                {formResp.agente_id && <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">Nome: <strong>{formResp.nome}</strong></p>}
+                {formResp.agente_id && <p className="text-xs text-ink-500 mt-1">Nome: <strong>{formResp.nome}</strong></p>}
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Secretaria / Órgão *</label>
+                <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Secretaria / Órgão *</label>
                 <select value={formResp.secretaria_id} onChange={e => setFormResp(p => ({...p, secretaria_id: e.target.value}))} required className="input-field" disabled={!!editingResp}>
                   <option value="">Selecione...</option>
                   {secretarias.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
                 </select>
-                {editingResp && <p className="text-xs text-gray-400 mt-1">Para trocar a secretaria, remova e re-cadastre.</p>}
+                {editingResp && <p className="text-xs text-ink-400 mt-1">Para trocar a secretaria, remova e re-cadastre.</p>}
               </div>
             </div>
           </SectionCard>
           <SectionCard icon={Shield} title="Função e amparo" subtitle="Cargo e instrumento legal">
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Cargo</label>
+                <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Cargo</label>
                 <select value={formResp.cargo} onChange={e => setFormResp(p => ({...p, cargo: e.target.value}))} className="input-field">
                   <option value="">Selecione...</option>
                   <option value="Gestores">Gestores</option>
@@ -2160,7 +2186,7 @@ export default function Secretarias() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Amparo legal</label>
+                <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Amparo legal</label>
                 <input type="text" value={formResp.amparo} onChange={e => setFormResp(p => ({...p, amparo: e.target.value}))} className="input-field" placeholder="Ex: Portaria: 001/2024" />
               </div>
             </div>
@@ -2168,11 +2194,11 @@ export default function Secretarias() {
           <SectionCard icon={Calendar} title="Vigência" subtitle="Período de atuação do responsável">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Data início *</label>
+                <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Data início *</label>
                 <input type="date" value={formResp.data_inicio} onChange={e => setFormResp(p => ({...p, data_inicio: e.target.value}))} required autoFocus className="input-field" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Data fim <span className="normal-case font-normal text-gray-400">(vazio = atual)</span></label>
+                <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Data fim <span className="normal-case font-normal text-ink-400">(vazio = atual)</span></label>
                 <input type="date" value={formResp.data_fim} onChange={e => setFormResp(p => ({...p, data_fim: e.target.value}))} className="input-field" />
               </div>
             </div>
@@ -2183,22 +2209,22 @@ export default function Secretarias() {
       {/* ── Painel de Orçamento ── */}
       {showOrcamentoPanel && selectedSecretaria && (
         <div className="fixed inset-0 z-[9990] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-gray-50 dark:bg-slate-900 rounded-3xl shadow-2xl w-full flex flex-col overflow-hidden" style={{ maxWidth: '90vw', maxHeight: '90vh', width: 520 }}>
-            <div className="bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700/60 px-6 py-4 shrink-0">
+          <div className="bg-ink-50 rounded-3xl shadow-2xl w-full flex flex-col overflow-hidden" style={{ maxWidth: '90vw', maxHeight: '90vh', width: 520 }}>
+            <div className="bg-surface border-b border-ink-100 px-6 py-4 shrink-0">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-md">
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-success-500 to-emerald-600 flex items-center justify-center shadow-md">
                     <Wallet className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-base font-bold text-gray-900 dark:text-white">
+                    <h2 className="text-base font-bold text-ink-900 dark:text-white">
                       Orçamento — {selectedSecretaria.sigla || selectedSecretaria.nome}
                     </h2>
-                    <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{selectedSecretaria.nome}</p>
+                    <p className="text-xs text-ink-500 mt-0.5">{selectedSecretaria.nome}</p>
                   </div>
                 </div>
                 <button onClick={() => setShowOrcamentoPanel(false)}
-                  className="w-8 h-8 flex items-center justify-center rounded-xl border border-gray-200 dark:border-slate-600 text-gray-400 hover:text-gray-600 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all">
+                  className="w-8 h-8 flex items-center justify-center rounded-xl border border-ink-200 text-ink-400 hover:text-ink-600 hover:bg-ink-100 transition-all">
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -2208,7 +2234,7 @@ export default function Secretarias() {
                 <SectionCard icon={Wallet} title="Dados orçamentários" subtitle="Exercício e valores da LOA">
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Exercício *</label>
+                      <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Exercício *</label>
                       <input
                         type="number"
                         value={formOrcamento.exercicio}
@@ -2221,23 +2247,23 @@ export default function Secretarias() {
                     </div>
                     <div className="grid grid-cols-1 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Valor LOA (R$)</label>
+                        <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Valor LOA (R$)</label>
                         <input type="number" value={formOrcamento.valor_loa} onChange={e => setFormOrcamento(p => ({...p, valor_loa: e.target.value}))} disabled={!orcamentoEditing} step="0.01" min="0" className="input-field" />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Valor suplementado (R$)</label>
+                        <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Valor suplementado (R$)</label>
                         <input type="number" value={formOrcamento.valor_suplementado} onChange={e => setFormOrcamento(p => ({...p, valor_suplementado: e.target.value}))} disabled={!orcamentoEditing} step="0.01" min="0" className="input-field" />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Valor reduzido (R$)</label>
+                        <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Valor reduzido (R$)</label>
                         <input type="number" value={formOrcamento.valor_reduzido} onChange={e => setFormOrcamento(p => ({...p, valor_reduzido: e.target.value}))} disabled={!orcamentoEditing} step="0.01" min="0" className="input-field" />
                       </div>
                     </div>
-                    <div className="rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/40 p-4">
-                      <p className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider mb-1">
+                    <div className="rounded-xl bg-success-50 dark:bg-success-900/20 border border-success-200 dark:border-success-800/40 p-4">
+                      <p className="text-xs font-semibold text-success-700 dark:text-success-400 uppercase tracking-wider mb-1">
                         Valor Vigente (LOA + Suplementado − Reduzido)
                       </p>
-                      <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+                      <p className="text-2xl font-bold text-success-700 dark:text-success-300">
                         {formatBRL(
                           (parseFloat(formOrcamento.valor_loa) || 0) +
                           (parseFloat(formOrcamento.valor_suplementado) || 0) -
@@ -2249,7 +2275,7 @@ export default function Secretarias() {
                 </SectionCard>
               </div>
             </div>
-            <div className="bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700/60 px-6 py-4 shrink-0 flex items-center justify-end gap-3">
+            <div className="bg-surface border-t border-ink-100 px-6 py-4 shrink-0 flex items-center justify-end gap-3">
               {!orcamentoEditing ? (
                 <>
                   <button onClick={() => setShowOrcamentoPanel(false)} className="btn-secondary px-5 py-2 text-sm">Fechar</button>
@@ -2274,54 +2300,54 @@ export default function Secretarias() {
       {/* ── Painel de Dotações ── */}
       {showDotacoesPanel && selectedSecretaria && (
         <div className="fixed inset-0 z-[9990] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-gray-50 dark:bg-slate-900 rounded-3xl shadow-2xl w-full flex flex-col overflow-hidden" style={{ maxWidth: '90vw', maxHeight: '90vh', width: 820 }}>
-            <div className="bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700/60 px-6 py-4 shrink-0">
+          <div className="bg-ink-50 rounded-3xl shadow-2xl w-full flex flex-col overflow-hidden" style={{ maxWidth: '90vw', maxHeight: '90vh', width: 820 }}>
+            <div className="bg-surface border-b border-ink-100 px-6 py-4 shrink-0">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-4">
                   <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-md">
                     <Database className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-base font-bold text-gray-900 dark:text-white">
+                    <h2 className="text-base font-bold text-ink-900 dark:text-white">
                       Dotações Orçamentárias — {selectedSecretaria.sigla || selectedSecretaria.nome}
                     </h2>
-                    <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{selectedSecretaria.nome}</p>
+                    <p className="text-xs text-ink-500 mt-0.5">{selectedSecretaria.nome}</p>
                   </div>
                 </div>
                 <button onClick={() => { setShowDotacoesPanel(false); setShowFormDotacao(false); setSelectedDotacao(null); }}
-                  className="w-8 h-8 flex items-center justify-center rounded-xl border border-gray-200 dark:border-slate-600 text-gray-400 hover:text-gray-600 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all">
+                  className="w-8 h-8 flex items-center justify-center rounded-xl border border-ink-200 text-ink-400 hover:text-ink-600 hover:bg-ink-100 transition-all">
                   <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
             <div className="flex-1 overflow-y-auto">
               <div className="p-6 space-y-4">
-                <div className="rounded-2xl border border-gray-100 dark:border-slate-700/60 bg-white dark:bg-slate-800/50 shadow-sm overflow-hidden">
-                  <div className="px-5 py-3.5 border-b border-gray-100 dark:border-slate-700/60 bg-gradient-to-r from-gray-50 to-white dark:from-slate-800 dark:to-slate-800/80 flex items-center justify-between">
+                <div className="rounded-2xl border border-ink-100 bg-surface shadow-sm overflow-hidden">
+                  <div className="px-5 py-3.5 border-b border-ink-100 bg-gradient-to-r from-ink-50 to-white flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-7 h-7 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center">
                         <Database className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                       </div>
-                      <p className="text-sm font-semibold text-gray-800 dark:text-slate-200">Dotações cadastradas</p>
+                      <p className="text-sm font-semibold text-ink-800">Dotações cadastradas</p>
                     </div>
-                    <span className="text-xs text-gray-500 dark:text-slate-400">{dotacoesList.length} dotação(ões)</span>
+                    <span className="text-xs text-ink-500">{dotacoesList.length} dotação(ões)</span>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
-                      <thead className="bg-gray-50 dark:bg-slate-700/30">
+                      <thead className="bg-ink-50">
                         <tr>
                           <th className="w-8 px-3 py-2.5"></th>
-                          <th className="text-left px-3 py-2.5 font-semibold text-gray-600 dark:text-slate-300 text-xs uppercase">Código</th>
-                          <th className="text-left px-3 py-2.5 font-semibold text-gray-600 dark:text-slate-300 text-xs uppercase">Descrição / Ação</th>
-                          <th className="text-left px-3 py-2.5 font-semibold text-gray-600 dark:text-slate-300 text-xs uppercase">El. Despesa</th>
-                          <th className="text-left px-3 py-2.5 font-semibold text-gray-600 dark:text-slate-300 text-xs uppercase">Fonte</th>
-                          <th className="text-right px-3 py-2.5 font-semibold text-gray-600 dark:text-slate-300 text-xs uppercase">Valor Previsto</th>
+                          <th className="text-left px-3 py-2.5 font-semibold text-ink-600 text-xs uppercase">Código</th>
+                          <th className="text-left px-3 py-2.5 font-semibold text-ink-600 text-xs uppercase">Descrição / Ação</th>
+                          <th className="text-left px-3 py-2.5 font-semibold text-ink-600 text-xs uppercase">El. Despesa</th>
+                          <th className="text-left px-3 py-2.5 font-semibold text-ink-600 text-xs uppercase">Fonte</th>
+                          <th className="text-right px-3 py-2.5 font-semibold text-ink-600 text-xs uppercase">Valor Previsto</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
+                      <tbody className="divide-y divide-ink-100">
                         {dotacoesList.length === 0 ? (
                           <tr>
-                            <td colSpan={6} className="text-center py-10 text-gray-400 dark:text-slate-500">
+                            <td colSpan={6} className="text-center py-10 text-ink-400">
                               <Database className="h-8 w-8 mx-auto mb-2 opacity-40" />
                               <p className="text-sm">Nenhuma dotação cadastrada</p>
                             </td>
@@ -2339,11 +2365,11 @@ export default function Secretarias() {
                                 <td className="px-3 py-2.5 text-center">
                                   {isSel && <ChevronRight className="w-4 h-4 text-white mx-auto" />}
                                 </td>
-                                <td className={`px-3 py-2.5 font-mono text-xs ${isSel ? 'text-white' : 'text-gray-800 dark:text-slate-200'}`}>{dot.codigo}</td>
-                                <td className={`px-3 py-2.5 max-w-xs truncate ${isSel ? 'text-white' : 'text-gray-700 dark:text-slate-300'}`}>{dot.descricao}</td>
-                                <td className={`px-3 py-2.5 text-xs ${isSel ? 'text-indigo-100' : 'text-gray-500 dark:text-slate-400'}`}>{dot.elemento_despesa}</td>
-                                <td className={`px-3 py-2.5 text-xs ${isSel ? 'text-indigo-100' : 'text-gray-500 dark:text-slate-400'}`}>{dot.fonte_recurso}</td>
-                                <td className={`px-3 py-2.5 text-right font-mono text-xs ${isSel ? 'text-white' : 'text-gray-700 dark:text-slate-300'}`}>
+                                <td className={`px-3 py-2.5 font-mono text-xs ${isSel ? 'text-white' : 'text-ink-800'}`}>{dot.codigo}</td>
+                                <td className={`px-3 py-2.5 max-w-xs truncate ${isSel ? 'text-white' : 'text-ink-700'}`}>{dot.descricao}</td>
+                                <td className={`px-3 py-2.5 text-xs ${isSel ? 'text-indigo-100' : 'text-ink-500'}`}>{dot.elemento_despesa}</td>
+                                <td className={`px-3 py-2.5 text-xs ${isSel ? 'text-indigo-100' : 'text-ink-500'}`}>{dot.fonte_recurso}</td>
+                                <td className={`px-3 py-2.5 text-right font-mono text-xs ${isSel ? 'text-white' : 'text-ink-700'}`}>
                                   {dot.valor_previsto ? formatBRL(parseFloat(dot.valor_previsto)) : '—'}
                                 </td>
                               </tr>
@@ -2360,23 +2386,23 @@ export default function Secretarias() {
                     <form onSubmit={handleSubmitDotacao} className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Código da Dotação *</label>
+                          <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Código da Dotação *</label>
                           <input type="text" value={formDotacao.codigo} onChange={e => setFormDotacao(p => ({...p, codigo: e.target.value}))} required autoFocus className="input-field font-mono" placeholder="Ex: 02.001.0412200082.049" />
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Elemento de Despesa</label>
+                          <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Elemento de Despesa</label>
                           <input type="text" value={formDotacao.elemento_despesa} onChange={e => setFormDotacao(p => ({...p, elemento_despesa: e.target.value}))} className="input-field font-mono" placeholder="Ex: 33.90.39" />
                         </div>
                         <div className="col-span-2">
-                          <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Descrição / Ação *</label>
+                          <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Descrição / Ação *</label>
                           <input type="text" value={formDotacao.descricao} onChange={e => setFormDotacao(p => ({...p, descricao: e.target.value}))} required className="input-field" placeholder="Ex: Manutenção das atividades da secretaria" />
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Fonte de Recurso</label>
+                          <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Fonte de Recurso</label>
                           <input type="text" value={formDotacao.fonte_recurso} onChange={e => setFormDotacao(p => ({...p, fonte_recurso: e.target.value}))} className="input-field" placeholder="Ex: 15000000" />
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1.5">Valor Previsto (R$)</label>
+                          <label className="block text-xs font-semibold text-ink-500 uppercase mb-1.5">Valor Previsto (R$)</label>
                           <input type="number" value={formDotacao.valor_previsto} onChange={e => setFormDotacao(p => ({...p, valor_previsto: e.target.value}))} step="0.01" min="0" className="input-field" />
                         </div>
                       </div>
@@ -2392,8 +2418,8 @@ export default function Secretarias() {
                 )}
               </div>
             </div>
-            <div className="bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700/60 px-6 py-4 shrink-0 flex items-center justify-between">
-              <span className="text-xs text-gray-500 dark:text-slate-400">{dotacoesList.length} dotação(ões)</span>
+            <div className="bg-surface border-t border-ink-100 px-6 py-4 shrink-0 flex items-center justify-between">
+              <span className="text-xs text-ink-500">{dotacoesList.length} dotação(ões)</span>
               <div className="flex items-center gap-2">
                 <button onClick={() => { setEditingDotacao(null); setFormDotacao({ codigo:'', descricao:'', elemento_despesa:'', fonte_recurso:'', valor_previsto:'' }); setShowFormDotacao(true); setSelectedDotacao(null); }} className="btn-primary flex items-center gap-1.5 text-sm px-3 py-1.5">
                   <Plus className="h-4 w-4" /> Incluir
@@ -2401,7 +2427,7 @@ export default function Secretarias() {
                 <button onClick={() => { if(!selectedDotacao) return; setEditingDotacao(selectedDotacao); setFormDotacao({ codigo: selectedDotacao.codigo||'', descricao: selectedDotacao.descricao||'', elemento_despesa: selectedDotacao.elemento_despesa||'', fonte_recurso: selectedDotacao.fonte_recurso||'', valor_previsto: selectedDotacao.valor_previsto||'' }); setShowFormDotacao(true); }} disabled={!selectedDotacao} className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
                   <Edit2 className="h-4 w-4" /> Alterar
                 </button>
-                <button onClick={() => selectedDotacao && deleteDotacao(selectedDotacao.id)} disabled={!selectedDotacao} className="btn-danger flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+                <button onClick={() => selectedDotacao && setConfirmarExcluirDotacao(true)} disabled={!selectedDotacao} className="btn-danger flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
                   <Trash2 className="h-4 w-4" /> Excluir
                 </button>
               </div>
@@ -2410,7 +2436,26 @@ export default function Secretarias() {
         </div>
       )}
 
+      {confirmarExcluirDotacao && selectedDotacao && (
+        <ConfirmModal
+          title={`Excluir a dotação "${selectedDotacao.codigo || selectedDotacao.descricao}"?`}
+          message="Esta dotação será removida permanentemente."
+          confirmLabel="Excluir"
+          onConfirm={deleteDotacao}
+          onClose={() => setConfirmarExcluirDotacao(false)}
+        />
+      )}
+
+      {confirmarExcluirResp && (
+        <ConfirmModal
+          title={`Remover "${confirmarExcluirResp.nome}" como responsável?`}
+          message={`Esta pessoa será removida como responsável de ${confirmarExcluirResp._secSigla}.`}
+          confirmLabel="Remover"
+          onConfirm={() => deleteResponsavel(confirmarExcluirResp)}
+          onClose={() => setConfirmarExcluirResp(null)}
+        />
+      )}
+
         </div>
   );
 }
-

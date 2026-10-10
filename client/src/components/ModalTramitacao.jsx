@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react'
-import { X, Send, Lock, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react'
+import { X, Send, Lock, AlertTriangle } from 'lucide-react'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
+import { useAssinatura } from './assinatura/AssinaturaProvider'
 
 export default function ModalTramitacao({ processo, onClose, onSuccess }) {
   const { user } = useAuth()
+  const { assinar } = useAssinatura()
   const [secretarias, setSecretarias] = useState([])
   const [setores, setSetores] = useState([])
   const [usuarios, setUsuarios] = useState([])
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [step, setStep] = useState(1) // 1: dados, 2: confirmação senha
 
   // Operador só pode tramitar dentro da própria secretaria,
   // a menos que tenha sido designado por um gestor neste processo
@@ -21,8 +21,7 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
     despacho: '',
     destinoSecretariaId: isOperadorRestrito ? (user?.secretariaId || '') : '',
     destinoSetorId: '',
-    destinoUsuarioId: '',
-    senhaConfirmacao: ''
+    destinoUsuarioId: ''
   })
 
   // Carregar secretarias
@@ -83,7 +82,7 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
     }))
   }
 
-  const handleSubmitStep1 = (e) => {
+  const handleSubmitStep1 = async (e) => {
     e.preventDefault()
     setError('')
 
@@ -97,105 +96,81 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
       return
     }
 
-    setStep(2)
-  }
-
-  const handleConfirmarTramitacao = async (e) => {
-    e.preventDefault()
-    setError('')
-
-    if (!formData.senhaConfirmacao) {
-      setError('Digite sua senha para assinar eletronicamente')
-      return
-    }
-
-    setLoading(true)
-
+    // Assinatura eletrônica (senha + código do app) e envio
     try {
-      const response = await api.post(`/processos/${processo.id}/tramitar`, {
-        despacho: formData.despacho,
-        destinoSetorId: formData.destinoSetorId,
-        destinoUsuarioId: formData.destinoUsuarioId || null,
-        senhaConfirmacao: formData.senhaConfirmacao
+      const response = await assinar({
+        titulo: `Tramitar o processo ${processo.numero}`,
+        resumo: (
+          <>
+            <p><strong>Despacho:</strong> {formData.despacho.substring(0, 160)}{formData.despacho.length > 160 ? '...' : ''}</p>
+            <p><strong>Destino:</strong> {secretarias.find(s => s.id === formData.destinoSecretariaId)?.nome} › {setores.find(s => s.id === formData.destinoSetorId)?.nome}</p>
+            {formData.destinoUsuarioId && <p><strong>Para:</strong> {usuarios.find(u => u.id === formData.destinoUsuarioId)?.nome}</p>}
+          </>
+        ),
+        executar: (cred) => api.post(`/processos/${processo.id}/tramitar`, {
+          despacho: formData.despacho,
+          destinoSetorId: formData.destinoSetorId,
+          destinoUsuarioId: formData.destinoUsuarioId || null,
+          ...cred,
+        }),
       })
-
+      if (!response) return // cancelou a assinatura
       onSuccess(response.data)
       onClose()
     } catch (err) {
       setError(err.response?.data?.error || 'Erro ao tramitar processo')
-    } finally {
-      setLoading(false)
     }
   }
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-surface rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-slate-700/50 bg-gradient-to-r from-blue-600 to-blue-700">
+        <div className="flex items-center justify-between p-6 border-b border-ink-200 bg-gradient-to-r from-info-600 to-info-700">
           <div className="flex items-center space-x-3">
             <Send className="h-6 w-6 text-white" />
             <div>
               <h2 className="text-xl font-bold text-white">Tramitar Processo</h2>
-              <p className="text-blue-100 text-sm">Processo {processo.numero}</p>
+              <p className="text-info-100 text-sm">Processo {processo.numero}</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-white hover:bg-blue-800 p-2 rounded-lg transition-colors">
+          <button onClick={onClose} className="text-white hover:bg-info-800 p-2 rounded-lg transition-colors">
             <X className="h-6 w-6" />
           </button>
         </div>
 
-        {/* Progress indicator */}
-        <div className="px-6 pt-4">
-          <div className="flex items-center justify-center space-x-4">
-            <div className={`flex items-center ${step >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
-                1
-              </div>
-              <span className="ml-2 text-sm font-medium hidden sm:inline">Dados</span>
-            </div>
-            <div className={`w-16 h-0.5 ${step >= 2 ? 'bg-blue-600' : 'bg-gray-300 dark:bg-slate-700'}`}></div>
-            <div className={`flex items-center ${step >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-slate-700/50 dark:text-slate-300'}`}>
-                2
-              </div>
-              <span className="ml-2 text-sm font-medium hidden sm:inline">Assinatura</span>
-            </div>
-          </div>
-        </div>
-
         {/* Error message */}
         {error && (
-          <div className="mx-6 mt-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg flex items-center space-x-2">
-            <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+          <div className="mx-6 mt-4 bg-danger-50 dark:bg-danger-500/10 border border-danger-200 dark:border-danger-500/20 text-danger-700 dark:text-danger-300 px-4 py-3 rounded-lg flex items-center space-x-2">
+            <AlertTriangle className="h-5 w-5 shrink-0" />
             <span className="text-sm">{error}</span>
           </div>
         )}
 
-        {/* Step 1: Dados da tramitação */}
-        {step === 1 && (
+        {/* Dados da tramitação */}
+        {(
           <form onSubmit={handleSubmitStep1} className="p-6 space-y-4">
             {/* Alerta de Assinatura Obrigatória */}
             <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg p-4 flex items-start space-x-3">
-              <Lock className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+              <Lock className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
               <div className="text-sm text-amber-800 dark:text-amber-300">
-                <strong>Assinatura Eletrônica Obrigatória:</strong> Após preencher os dados, você precisará confirmar com sua senha para tramitar o processo.
+                <strong>Assinatura Eletrônica Obrigatória:</strong> Após preencher os dados, você assinará com sua senha e o código do aplicativo autenticador.
               </div>
             </div>
 
             {/* Aviso para operadores restritos */}
             {isOperadorRestrito && (
-              <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-lg p-3 flex items-start space-x-2">
-                <AlertTriangle className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-blue-700 dark:text-blue-300">
+              <div className="bg-info-50 dark:bg-info-500/10 border border-info-200 dark:border-brand-500/20 rounded-lg p-3 flex items-start space-x-2">
+                <AlertTriangle className="h-4 w-4 text-info-500 mt-0.5 shrink-0" />
+                <p className="text-xs text-brand-700 dark:text-info-300">
                   Como operador, você só pode tramitar para setores da sua secretaria. Para tramitar entre secretarias, solicite a um gestor.
                 </p>
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
-                Despacho * <span className="text-gray-500 dark:text-slate-400 font-normal">(mínimo 10 caracteres)</span>
+              <label className="block text-sm font-medium text-ink-700 mb-2">
+                Despacho * <span className="text-ink-500 font-normal">(mínimo 10 caracteres)</span>
               </label>
               <textarea
                 name="despacho"
@@ -206,13 +181,13 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
                 placeholder="Descreva o parecer, análise ou instrução para o setor de destino..."
                 className="input-field resize-none"
               />
-              <div className="text-right text-xs text-gray-500 mt-1">
+              <div className="text-right text-xs text-ink-500 mt-1">
                 {formData.despacho.length} caracteres
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-ink-700 mb-2">
                 Secretaria de Destino *
               </label>
               {isOperadorRestrito ? (
@@ -220,7 +195,7 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
                   type="text"
                   value={secretarias.find(s => s.id === formData.destinoSecretariaId)?.nome || '...'}
                   disabled
-                  className="input-field bg-gray-100 dark:bg-slate-700/50 cursor-not-allowed text-gray-500"
+                  className="input-field bg-ink-100 cursor-not-allowed text-ink-500"
                 />
               ) : (
               <select
@@ -242,7 +217,7 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
 
             {formData.destinoSecretariaId && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-ink-700 mb-2">
                   Setor de Destino *
                 </label>
                 <select
@@ -264,8 +239,8 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
 
             {formData.destinoSetorId && usuarios.length > 0 && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
-                  Usuário Específico <span className="text-gray-500 dark:text-slate-400 font-normal">(opcional)</span>
+                <label className="block text-sm font-medium text-ink-700 mb-2">
+                  Usuário Específico <span className="text-ink-500 font-normal">(opcional)</span>
                 </label>
                 <select
                   name="destinoUsuarioId"
@@ -283,7 +258,7 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
               </div>
             )}
 
-            <div className="flex justify-end space-x-3 pt-4 border-t dark:border-slate-700/50">
+            <div className="flex justify-end space-x-3 pt-4 border-t">
               <button
                 type="button"
                 onClick={onClose}
@@ -302,80 +277,6 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
           </form>
         )}
 
-        {/* Step 2: Confirmação com senha */}
-        {step === 2 && (
-          <form onSubmit={handleConfirmarTramitacao} className="p-6 space-y-6">
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
-              <div className="flex items-start space-x-3">
-                <Lock className="h-6 w-6 text-blue-600 mt-0.5 flex-shrink-0" />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">Assinatura Eletrônica</h3>
-                  <p className="text-sm text-blue-800 dark:text-blue-400 mb-3">
-                    Para garantir a autenticidade e rastreabilidade da tramitação, é necessário confirmar com sua senha.
-                  </p>
-                  <div className="bg-white dark:bg-slate-800/70 rounded p-3 text-sm text-gray-700 dark:text-slate-300 space-y-1">
-                    <p><strong>Despacho:</strong> {formData.despacho.substring(0, 100)}{formData.despacho.length > 100 ? '...' : ''}</p>
-                    <p><strong>Destino:</strong> {secretarias.find(s => s.id === formData.destinoSecretariaId)?.nome} › {setores.find(s => s.id === formData.destinoSetorId)?.nome}</p>
-                    {formData.destinoUsuarioId && (
-                      <p><strong>Para:</strong> {usuarios.find(u => u.id === formData.destinoUsuarioId)?.nome}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
-                Digite sua senha para confirmar *
-              </label>
-              <input
-                type="password"
-                name="senhaConfirmacao"
-                value={formData.senhaConfirmacao}
-                onChange={handleChange}
-                required
-                placeholder="••••••••"
-                className="input-field"
-                autoFocus
-              />
-              <p className="text-xs text-gray-500 dark:text-slate-400 mt-2">
-                Sua senha será verificada para gerar a assinatura digital desta tramitação.
-              </p>
-            </div>
-
-            <div className="flex justify-between pt-4 border-t dark:border-slate-700/50">
-              <button
-                type="button"
-                onClick={() => {
-                  setStep(1)
-                  setError('')
-                  setFormData(prev => ({ ...prev, senhaConfirmacao: '' }))
-                }}
-                className="btn-secondary"
-                disabled={loading}
-              >
-                Voltar
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    <span>Tramitando...</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-5 w-5" />
-                    <span>Confirmar Tramitação</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-        )}
       </div>
     </div>
   )

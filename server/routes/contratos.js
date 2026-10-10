@@ -1,12 +1,18 @@
 ﻿const express = require('express');
 const router = express.Router();
 const {
+  listLicitacoes, createLicitacao, updateLicitacao, deleteLicitacao,
   listCredores, createCredor, updateCredor, deleteCredor,
-  listItens, createItem, updateItem, deleteItem,
+  listItens, createItem, updateItem, deleteItem, getDnaItem,
+  importarItensUrl, excluirItensInativos, contarItensSemVinculo, excluirItensSemVinculo, verificarItensUrl,
   listContratos, createContrato, updateContrato, deleteContrato,
   syncFromDids,
 } = require('../controllers/contratosController');
-const { authenticate, tenantMiddleware, requireTenant } = require('../middleware/auth');
+const {
+  listOrdens, listOrdemDisponivelDid, getSaldoContrato, getItensContrato, createOrdem, updateOrdem, deleteOrdem,
+  excluirOrdemDefinitivo,
+} = require('../controllers/ordensController');
+const { authenticate, tenantMiddleware, requireTenant, authorize } = require('../middleware/auth');
 
 // Todos os endpoints exigem autenticaÃ§Ã£o + tenant
 router.use(tenantMiddleware, requireTenant, authenticate);
@@ -17,12 +23,33 @@ router.post('/credores',      createCredor);
 router.put('/credores/:id',   updateCredor);
 router.delete('/credores/:id', deleteCredor);
 
-// CatÃ¡logo de Itens
-// (rota SSE /itens/importar-transparencia removida)
-router.get('/itens',       listItens);
-router.post('/itens',      createItem);
-router.put('/itens/:id',   updateItem);
-router.delete('/itens/:id', deleteItem);
+// Licitações
+router.get('/licitacoes',        listLicitacoes);
+router.post('/licitacoes',       createLicitacao);
+router.put('/licitacoes/:id',    updateLicitacao);
+router.delete('/licitacoes/:id', deleteLicitacao);
+
+// Catálogo de Itens
+router.post('/itens/verificar-url',  authorize('admin', 'jeos'), verificarItensUrl);
+router.post('/itens/importar-url',   authorize('admin', 'jeos'), importarItensUrl);
+router.delete('/itens/inativos',     authorize('admin', 'jeos'), excluirItensInativos);
+router.get('/itens/sem-vinculo/count', authorize('admin', 'jeos'), contarItensSemVinculo);
+router.delete('/itens/sem-vinculo',    authorize('admin', 'jeos'), excluirItensSemVinculo);
+router.get('/itens',            listItens);
+router.get('/itens/:id/dna',   getDnaItem);
+router.post('/itens',          createItem);
+router.put('/itens/:id',       updateItem);
+router.delete('/itens/:id',    deleteItem);
+
+// Ordens de Compra/Serviço
+router.get('/ordens',                              listOrdens);
+router.get('/ordens/disponiveis-did',              listOrdemDisponivelDid);
+router.get('/ordens/saldo/:contrato_id',           getSaldoContrato);
+router.get('/ordens/itens-contrato/:contrato_id',  getItensContrato);
+router.post('/ordens',                             createOrdem);
+router.put('/ordens/:id',                          updateOrdem);
+router.delete('/ordens/:id',                       deleteOrdem);
+router.delete('/ordens/:id/definitivo',            authorize('admin', 'jeos'), excluirOrdemDefinitivo);
 
 // Contratos // SSE â€” deve vir antes de /:id
 router.get('/',       listContratos);

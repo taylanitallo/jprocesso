@@ -4,9 +4,11 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
+const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
-const { masterDb, getTenantConnection, ensureMasterRefreshTokensTable, ensureAdminsEmailColumn, criarTabelasBackup } = require('./config/database');
+const { masterDb, getTenantConnection, ensureMasterRefreshTokensTable, ensureAdminsEmailColumn, criarTabelasBackup, criarTabelasAssinaturaLegislacao } = require('./config/database');
 const Tenant = require('./models/Tenant');
 const { migrarTodosOsSchemas } = require('./controllers/tenantController');
 const routes = require('./routes');
@@ -91,35 +93,76 @@ if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 }
 
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 500,
-  message: 'Muitas requisições deste IP, tente novamente mais tarde.',
-  standardHeaders: true,
-  legacyHeaders: false
-});
+// ── Limites de requisição ────────────────────────────────────────────────────
+// Prefeituras costumam ter todos os servidores atrás de UM IP público. Por isso
+// os limites contam por PESSOA (usuário logado / sessão / conta), não pelo IP —
+// assim um prédio inteiro nunca é bloqueado, e as proteções contra abuso e força
+// bruta continuam valendo para cada cliente individualmente.
+const JANELA = 15 * 60 * 1000;
+const hash = (s) => crypto.createHash('sha256').update(String(s)).digest('hex').slice(0, 32);
 
-// B-1: reduzido de 30 → 10 tentativas por 15 min
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: { error: 'Muitas tentativas. Tente novamente em alguns minutos.' },
+// Usuário autenticado pelo access token (Bearer). Token inválido/expirado → null (cai no IP).
+const usuarioDaRequisicao = (req) => {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith('Bearer ')) return null;
+  try {
+    const p = jwt.verify(auth.slice(7), process.env.JWT_SECRET);
+    return p?.id ? `${p.isAdmin ? 'admin' : p.subdomain || 'tenant'}:${p.id}` : null;
+  } catch { return null; }
+};
+
+const limiter = rateLimit({
+  windowMs: JANELA,
+  // Logado: ~5,5 req/s contínuos por pessoa. Anônimo (páginas públicas): por IP.
+  max: (req) => (usuarioDaRequisicao(req) ? 5000 : 10000),
+  keyGenerator: (req) => {
+    const u = usuarioDaRequisicao(req);
+    return u ? `u:${u}` : `ip:${req.ip}`;
+  },
+  message: { error: 'Muitas requisições. Aguarde alguns minutos e tente novamente.' },
   standardHeaders: true,
   legacyHeaders: false,
-  skipSuccessfulRequests: true, // não conta logins bem-sucedidos no limite
 });
 
-// Refresh com limite mais generoso (renova token em segundo plano)
+// Força bruta de senha: 10 erros por CONTA (CPF/e-mail + município) a cada 15 min…
+const authLimiterConta = rateLimit({
+  windowMs: JANELA,
+  max: 10,
+  keyGenerator: (req) => {
+    const b = req.body || {};
+    const conta = String(b.cpf || b.email || '').trim().toLowerCase();
+    return conta ? `conta:${b.subdomain || ''}:${hash(conta)}` : `ip:${req.ip}`;
+  },
+  message: { error: 'Muitas tentativas de senha para esta conta. Tente novamente em alguns minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true, // logins bem-sucedidos não contam
+});
+// …e um teto por IP contra ataque distribuído em várias contas.
+const authLimiterIp = rateLimit({
+  windowMs: JANELA,
+  max: 100,
+  message: { error: 'Muitas tentativas de login a partir desta rede. Tente novamente em alguns minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+});
+
+// Renovação de sessão: por sessão (cookie de refresh); sem cookie, por IP.
 const refreshLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 60,
+  windowMs: JANELA,
+  max: (req) => (req.cookies?.refreshToken || req.cookies?.refreshTokenAdmin ? 300 : 1000),
+  keyGenerator: (req) => {
+    const c = req.headers['x-auth-context'] === 'admin' ? req.cookies?.refreshTokenAdmin : req.cookies?.refreshToken;
+    return c ? `sess:${hash(c)}` : `ip:${req.ip}`;
+  },
   message: { error: 'Muitas tentativas. Tente novamente em alguns minutos.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
 app.use('/api/', limiter);
-app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/login', authLimiterIp, authLimiterConta);
 app.use('/api/auth/refresh', refreshLimiter);
 
 routes(app);
@@ -131,13 +174,41 @@ app.get('/health', (req, res) => {
 // Endpoint leve de keepalive — usado pelo auto-ping abaixo
 app.get('/ping', (req, res) => res.send('pong'));
 
-// ── 404 — rota não encontrada ────────────────────────────────────────────────
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Rota não encontrada — ${req.method} ${req.originalUrl}`,
+// ── Arquivos estáticos do React (produção) ───────────────────────────────────
+const path = require('path');
+const fs = require('fs');
+const distPath = path.join(__dirname, '..', 'client', 'dist');
+
+if (fs.existsSync(distPath)) {
+  // Assets com hash no nome podem ser cacheados por 1 ano
+  // index.html nunca deve ser cacheado para sempre buscar os hashes novos
+  app.use(express.static(distPath, {
+    setHeaders(res, filePath) {
+      if (filePath.endsWith('index.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+        res.setHeader('Pragma', 'no-cache')
+        res.setHeader('Expires', '0')
+      } else {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+      }
+    }
+  }));
+  // Catch-all: devolve index.html para rotas do React Router
+  app.get('*', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+    res.setHeader('Pragma', 'no-cache')
+    res.setHeader('Expires', '0')
+    res.sendFile(path.join(distPath, 'index.html'));
   });
-});
+} else {
+  // ── 404 — rota não encontrada (sem build do frontend) ───────────────────────
+  app.use((req, res) => {
+    res.status(404).json({
+      success: false,
+      message: `Rota não encontrada — ${req.method} ${req.originalUrl}`,
+    });
+  });
+}
 
 // ── Error handler global ─────────────────────────────────────────────────────
 // Deve ser o ÚLTIMO middleware (4 parâmetros obrigatórios no Express)
@@ -181,6 +252,8 @@ const initDatabase = async () => {
     await ensureAdminsEmailColumn();
     // Criar tabelas de backup se não existirem
     await criarTabelasBackup();
+    // Chaves de assinatura eletrônica e legislação por município
+    await criarTabelasAssinaturaLegislacao();
     // Migração automática: garantir colunas ausentes em todos os schemas
     await migrarTodosOsSchemas();
 

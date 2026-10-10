@@ -1,26 +1,32 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery } from 'react-query'
+import { useQuery, useQueryClient } from 'react-query'
 import { useState, useRef, useEffect } from 'react'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import ModalTramitacao from '../components/ModalTramitacao'
+import LoadingBar from '../components/LoadingBar'
 import ModalDevolver from '../components/ModalDevolver'
 import ModalConcluir from '../components/ModalConcluir'
-import { gerarDespachoPDF, gerarPautaPDF, gerarRequisicaoPDF } from '../utils/gerarDocumentoPDF'
+import ModalDespacho from '../components/ModalDespacho'
+import { useAssinatura } from '../components/assinatura/AssinaturaProvider'
+import TarjaAssinatura from '../components/assinatura/TarjaAssinatura'
+import { gerarPautaPDF, gerarProtocoloPDF, gerarRequisicaoPDF } from '../utils/gerarDocumentoPDF'
+import { ORIGEM_PROTOCOLO_LABEL, NATUREZA_PROTOCOLO_LABEL } from '../utils/protocoloConstants'
 import {
   ArrowLeft, Send, ArrowLeftCircle, CheckCircle, Paperclip,
   FileText, Calendar, User, Clock, MapPin, AlertCircle, Download,
   ClipboardList, FileDown, Trash2, QrCode, Shield, Zap, ChevronRight,
-  Plus, X, Upload, ExternalLink, Archive, FilePlus2, GripVertical,
+  Plus, X, Upload, ExternalLink, Archive, FilePlus2, GripVertical, Inbox, Stamp,
 } from 'lucide-react'
-import { PageHeader, SectionTitle, EmptyState } from '../components/ui'
+import { PageHeader, SectionTitle, EmptyState, ConfirmModal } from '../components/ui'
 
 /* ── helpers de cor por tipo de tramitação ──────────────────────────────── */
 const TIPO_CONFIG = {
-  abertura:  { label: 'Abertura',    icon: FileText,        dot: 'bg-blue-500',   badge: 'bg-blue-100   dark:bg-blue-900/40   text-blue-700   dark:text-blue-300'  },
-  tramite:   { label: 'Tramitação',  icon: Send,            dot: 'bg-indigo-500', badge: 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300' },
-  devolucao: { label: 'Devolução',   icon: ArrowLeftCircle, dot: 'bg-red-500',    badge: 'bg-red-100    dark:bg-red-900/40    text-red-700    dark:text-red-300'    },
-  conclusao: { label: 'Conclusão',   icon: CheckCircle,     dot: 'bg-green-500',  badge: 'bg-green-100  dark:bg-green-900/40  text-green-700  dark:text-green-300'  },
+  abertura:    { label: 'Abertura',    icon: FileText,        dot: 'bg-info-500',    badge: 'bg-info-100   dark:bg-info-900/40   text-brand-700   dark:text-info-300'   },
+  tramite:     { label: 'Tramitação',  icon: Send,            dot: 'bg-indigo-500',  badge: 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300'  },
+  devolucao:   { label: 'Devolução',   icon: ArrowLeftCircle, dot: 'bg-danger-500',     badge: 'bg-danger-100    dark:bg-danger-900/40    text-danger-700    dark:text-danger-300'     },
+  conclusao:   { label: 'Conclusão',   icon: CheckCircle,     dot: 'bg-success-500',   badge: 'bg-success-100  dark:bg-success-900/40  text-success-700  dark:text-success-300'   },
+  recebimento: { label: 'Recebimento', icon: Inbox,           dot: 'bg-emerald-500', badge: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' },
 }
 
 const MAX_UPLOAD_BYTES = 20 * 1024 * 1024 // 20 MB
@@ -29,12 +35,12 @@ function InfoField({ icon: Icon, label, value, sub }) {
   if (!value) return null
   return (
     <div className="space-y-0.5">
-      <p className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+      <p className="flex items-center gap-1.5 text-xs font-medium text-ink-500 uppercase tracking-wide">
         {Icon && <Icon className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />}
         {label}
       </p>
-      <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">{value}</p>
-      {sub && <p className="text-xs text-gray-500 dark:text-slate-500">{sub}</p>}
+      <p className="text-sm font-semibold text-ink-900">{value}</p>
+      {sub && <p className="text-xs text-ink-500">{sub}</p>}
     </div>
   )
 }
@@ -43,14 +49,21 @@ export default function DetalhesProcesso() {
   const { id, subdomain } = useParams()
   const navigate           = useNavigate()
   const fileInputRef       = useRef(null)
+  const queryClient        = useQueryClient()
 
   /* ── estado dos modais ── */
   const [showTramitar,      setShowTramitar]      = useState(false)
   const [showDevolver,      setShowDevolver]       = useState(false)
   const [showConcluir,      setShowConcluir]       = useState(false)
+  const [showDespacho,      setShowDespacho]       = useState(false)
   const [showConfirmDelete, setShowConfirmDelete]  = useState(false)
+  const [confirmarExcluirDoc, setConfirmarExcluirDoc] = useState(null)
   const [deletando,         setDeletando]          = useState(false)
   const [successMessage,    setSuccessMessage]     = useState('')
+  const [recebendo,         setRecebendo]          = useState(false)
+
+  /* ── despacho doc local (atualiza imediatamente ao salvar sem esperar refetch) ── */
+  const [localDespachoDoc, setLocalDespachoDoc] = useState(null)
 
   /* ── estado modal Anexar ── */
   const [showAnexar,  setShowAnexar]  = useState(false)
@@ -69,11 +82,19 @@ export default function DetalhesProcesso() {
     return data.processo
   })
 
+  const despachoDocAtual = localDespachoDoc ?? processo?.despacho_doc
+  useEffect(() => {
+    if (processo?.despacho_doc?.tipo_despacho && !localDespachoDoc) {
+      setLocalDespachoDoc(processo.despacho_doc)
+    }
+  }, [processo?.despacho_doc])
+
   useEffect(() => {
     if (processo?.documentos) setLocalDocs(processo.documentos)
   }, [processo?.documentos])
 
   const { user: currentUser } = useAuth()
+  const { assinar } = useAssinatura()
 
   const isResponsavel = !!(currentUser && processo && processo.status !== 'concluido' && (
     processo.usuario_atual_id === currentUser.id ||
@@ -82,7 +103,45 @@ export default function DetalhesProcesso() {
     (currentUser.tipo === 'gestor' && processo.setorAtual?.secretariaId === currentUser.secretariaId)
   ))
 
-  const podeDevolver = isResponsavel && processo?.status !== 'aberto'
+  // Última tramitação (mais recente)
+  const ultimaTramitacao = processo?.tramitacoes
+    ?.slice()
+    .sort((a, b) => new Date(b.data_hora || b.dataHora) - new Date(a.data_hora || a.dataHora))[0]
+
+  // Usuário é o destinatário real (não admin/gestor por permissão global)
+  const isDestinatarioReal = !!(currentUser && processo && (
+    processo.usuario_atual_id === currentUser.id ||
+    (processo.usuario_atual_id === null && processo.setor_atual_id === currentUser.setor?.id)
+  ))
+
+  // Precisa clicar "Receber" antes de poder agir (apenas destinatário real, não admin/gestor)
+  const precisaReceber = isDestinatarioReal &&
+    currentUser?.tipo !== 'admin' &&
+    currentUser?.tipo !== 'gestor' &&
+    processo?.status !== 'concluido' &&
+    ['tramite', 'devolucao'].includes(ultimaTramitacao?.tipo_acao || ultimaTramitacao?.tipo)
+
+  const podeAgir      = isResponsavel && !precisaReceber
+  const podeDevolver  = podeAgir && processo?.status !== 'aberto'
+
+  const handleReceber = async () => {
+    setRecebendo(true)
+    try {
+      const r = await assinar({
+        titulo: `Receber o processo ${processo?.numero || ''}`,
+        resumo: <p>Confirmo o recebimento deste processo no meu setor.</p>,
+        executar: (cred) => api.post(`/processos/${id}/receber`, cred),
+      })
+      if (!r) return // cancelou a assinatura
+      setSuccessMessage('Processo recebido e assinado eletronicamente! Agora você pode tramitar ou concluir.')
+      setTimeout(() => setSuccessMessage(''), 6000)
+      refetch()
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao receber processo.')
+    } finally {
+      setRecebendo(false)
+    }
+  }
 
   const ultimaTramitacaoValida = processo?.tramitacoes
     ?.filter(t => t.tipo_acao === 'tramite' || t.tipo_acao === 'devolucao')
@@ -93,7 +152,10 @@ export default function DetalhesProcesso() {
   } : null
 
   const handleTramitacaoSuccess = (data) => {
-    setSuccessMessage(`Processo tramitado com sucesso! Assinatura: ${data.assinatura_digital.substring(0, 16)}...`)
+    const a = data.assinatura
+    setSuccessMessage(a
+      ? `Processo tramitado e assinado eletronicamente. Código verificador ${a.codigo_verificador} · CRC ${a.codigo_crc}`
+      : 'Processo tramitado com sucesso!')
     setTimeout(() => setSuccessMessage(''), 5000)
     refetch()
   }
@@ -170,9 +232,9 @@ export default function DetalhesProcesso() {
   }
 
   const handleDeleteDocumento = async (docId) => {
-    if (!window.confirm('Deseja excluir este documento permanentemente?')) return
     try {
       await api.delete(`/documentos/${docId}`)
+      setConfirmarExcluirDoc(null)
       refetch()
     } catch (err) {
       alert('Erro ao excluir documento: ' + (err.response?.data?.error || err.message))
@@ -283,14 +345,7 @@ export default function DetalhesProcesso() {
 
   /* ── loading ─────────────────────────────────────────────────────────── */
   if (!processo) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-center space-y-3">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto" />
-          <p className="text-sm text-gray-500 dark:text-slate-400">Carregando processo...</p>
-        </div>
-      </div>
-    )
+    return <LoadingBar label="Carregando processo..." />
   }
 
   /* ── helpers locais ──────────────────────────────────────────────────── */
@@ -326,8 +381,8 @@ export default function DetalhesProcesso() {
 
       {/* ── Mensagem de sucesso ── */}
       {successMessage && (
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700
-                        text-green-700 dark:text-green-400 px-4 py-3 rounded-xl
+        <div className="bg-success-50 dark:bg-success-900/20 border border-success-200 dark:border-success-700
+                        text-success-700 dark:text-success-400 px-4 py-3 rounded-xl
                         flex items-center gap-2 text-sm animate-fade-in">
           <CheckCircle className="h-4 w-4 shrink-0" />
           <span className="font-medium">{successMessage}</span>
@@ -360,11 +415,11 @@ export default function DetalhesProcesso() {
         actions={
           <div className="flex items-center gap-2 flex-wrap">
             {/* badges */}
-            <span className={statusCls[processo.status] || 'badge bg-gray-100 text-gray-600'}>
+            <span className={statusCls[processo.status] || 'badge bg-ink-100 text-ink-600'}>
               {statusLabels[processo.status] || processo.status}
             </span>
             {processo.prioridade === 'urgente' && (
-              <span className="badge bg-red-500 text-white">URGENTE</span>
+              <span className="badge bg-danger-500 text-white">URGENTE</span>
             )}
             {/* Voltar */}
             <button onClick={() => navigate(-1)} className="btn-ghost gap-1.5" title="Voltar">
@@ -386,11 +441,11 @@ export default function DetalhesProcesso() {
             <SectionTitle icon={FileText} title="Informações do Processo" />
 
             {/* Assunto em destaque */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 rounded-xl p-4 mb-5">
-              <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">Assunto</p>
-              <p className="font-semibold text-gray-900 dark:text-slate-100 text-sm leading-relaxed">{processo.assunto}</p>
+            <div className="bg-info-50 dark:bg-info-900/20 border border-info-100 dark:border-info-800/50 rounded-xl p-4 mb-5">
+              <p className="text-xs font-semibold text-brand-600 dark:text-info-400 uppercase tracking-wider mb-1">Assunto</p>
+              <p className="font-semibold text-ink-900 text-sm leading-relaxed">{processo.assunto}</p>
               {processo.descricao && (
-                <p className="text-sm text-gray-600 dark:text-slate-400 mt-1.5 leading-relaxed">{processo.descricao}</p>
+                <p className="text-sm text-ink-600 mt-1.5 leading-relaxed">{processo.descricao}</p>
               )}
             </div>
 
@@ -462,8 +517,8 @@ export default function DetalhesProcesso() {
                         onClick={handleDownloadZip}
                         title="Baixar todos os arquivos em ZIP"
                         className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg
-                                   bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300
-                                   hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                                   bg-ink-100 text-ink-600
+                                   hover:bg-ink-200 transition-colors"
                       >
                         <Archive className="h-3.5 w-3.5" />
                         ZIP
@@ -472,8 +527,8 @@ export default function DetalhesProcesso() {
                         onClick={handleDownloadMerged}
                         title="Baixar todos os PDFs mesclados em um único arquivo"
                         className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg
-                                   bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300
-                                   hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                                   bg-ink-100 text-ink-600
+                                   hover:bg-ink-200 transition-colors"
                       >
                         <FilePlus2 className="h-3.5 w-3.5" />
                         PDF Único
@@ -483,8 +538,8 @@ export default function DetalhesProcesso() {
                   {processo.status !== 'concluido' && (
                     <button
                       onClick={() => setShowAnexar(true)}
-                      className="flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400
-                                 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                      className="flex items-center gap-1.5 text-xs font-medium text-brand-600 dark:text-info-400
+                                 hover:text-brand-700 dark:hover:text-info-300 transition-colors"
                     >
                       <Plus className="h-3.5 w-3.5" />
                       Anexar documento
@@ -503,55 +558,55 @@ export default function DetalhesProcesso() {
                     onDragOver={(e) => handleDragOver(e, idx)}
                     onDrop={handleDrop}
                     className="flex items-center gap-3 px-3 py-2.5
-                               bg-gray-50 dark:bg-slate-700/30
-                               border border-gray-100 dark:border-slate-700/40
-                               rounded-xl hover:bg-gray-100 dark:hover:bg-slate-700/60
+                               bg-ink-50
+                               border border-ink-100
+                               rounded-xl hover:bg-ink-100
                                transition-colors group cursor-default"
                   >
                     <div
                       className="shrink-0 flex items-center justify-center w-6 h-6 cursor-grab active:cursor-grabbing
-                                 text-gray-300 dark:text-slate-600 hover:text-gray-500 dark:hover:text-slate-400 transition-colors"
+                                 text-ink-400 hover:text-ink-500 transition-colors"
                       title="Arraste para reordenar"
                     >
                       <GripVertical className="h-4 w-4" />
                     </div>
-                    <div className="shrink-0 flex items-center justify-center w-9 h-9 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-100 dark:border-red-800/40">
-                      <FileText className="h-4 w-4 text-red-500 dark:text-red-400" />
+                    <div className="shrink-0 flex items-center justify-center w-9 h-9 rounded-lg bg-danger-50 dark:bg-danger-900/30 border border-danger-100 dark:border-danger-800/40">
+                      <FileText className="h-4 w-4 text-danger-500 dark:text-danger-400" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <button
                         onClick={() => handleViewDocumento(doc)}
-                        className="flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400
-                                   hover:text-blue-800 dark:hover:text-blue-300 hover:underline truncate
+                        className="flex items-center gap-1 text-sm font-medium text-brand-600 dark:text-info-400
+                                   hover:text-info-800 dark:hover:text-info-300 hover:underline truncate
                                    max-w-full text-left transition-colors"
                         title={`Abrir ${doc.nome_arquivo} em nova aba`}
                       >
                         <span className="truncate">{doc.nome_arquivo}</span>
-                        <ExternalLink className="h-3 w-3 flex-shrink-0 opacity-60" />
+                        <ExternalLink className="h-3 w-3 shrink-0 opacity-60" />
                       </button>
-                      <p className="text-xs text-gray-500 dark:text-slate-500">
+                      <p className="text-xs text-ink-500">
                         {(doc.tamanho_bytes / 1024).toFixed(1)} KB
                         {' · '}
                         {new Date(doc.data_upload || doc.createdAt).toLocaleDateString('pt-BR')}
                         {doc.uploadPor?.nome && ` · ${doc.uploadPor.nome}`}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                    <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all">
                       <button
                         onClick={() => handleDownloadDocumento(doc)}
-                        className="p-1.5 rounded-lg text-gray-400 dark:text-slate-500
-                                   hover:bg-white dark:hover:bg-slate-600/60
-                                   hover:text-gray-700 dark:hover:text-slate-200 transition-all"
+                        className="p-1.5 rounded-lg text-ink-400
+                                   hover:bg-surface
+                                   hover:text-ink-700 transition-all"
                         title={`Baixar ${doc.nome_arquivo}`}
                       >
                         <Download className="h-4 w-4" />
                       </button>
                       {currentUser?.tipo === 'admin' && (
                         <button
-                          onClick={() => handleDeleteDocumento(doc.id)}
-                          className="p-1.5 rounded-lg text-gray-400 dark:text-slate-500
-                                     hover:bg-red-50 dark:hover:bg-red-900/20
-                                     hover:text-red-600 dark:hover:text-red-400 transition-all"
+                          onClick={() => setConfirmarExcluirDoc(doc.id)}
+                          className="p-1.5 rounded-lg text-ink-400
+                                     hover:bg-danger-50 dark:hover:bg-danger-900/20
+                                     hover:text-danger-600 dark:hover:text-danger-400 transition-all"
                           title="Excluir documento"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -563,11 +618,11 @@ export default function DetalhesProcesso() {
               </div>
             ) : (
               <div className="text-center py-8">
-                <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-slate-700/50 flex items-center justify-center mx-auto mb-3">
-                  <Paperclip className="h-5 w-5 text-gray-400 dark:text-slate-500" />
+                <div className="w-12 h-12 rounded-full bg-ink-100 flex items-center justify-center mx-auto mb-3">
+                  <Paperclip className="h-5 w-5 text-ink-400" />
                 </div>
-                <p className="text-sm font-medium text-gray-600 dark:text-slate-300 mb-1">Nenhum arquivo anexado</p>
-                <p className="text-xs text-gray-400 dark:text-slate-500 mb-4">Ainda não há documentos vinculados a este processo.</p>
+                <p className="text-sm font-medium text-ink-600 mb-1">Nenhum arquivo anexado</p>
+                <p className="text-xs text-ink-400 mb-4">Ainda não há documentos vinculados a este processo.</p>
                 {processo.status !== 'concluido' && (
                   <button
                     onClick={() => setShowAnexar(true)}
@@ -594,7 +649,7 @@ export default function DetalhesProcesso() {
             ) : (
               <div className="relative">
                 {/* Linha vertical */}
-                <div className="absolute left-[18px] top-5 bottom-5 w-px bg-gray-200 dark:bg-slate-700" />
+                <div className="absolute left-[18px] top-5 bottom-5 w-px bg-ink-200" />
 
                 <div className="space-y-4">
                   {[...processo.tramitacoes]
@@ -624,22 +679,22 @@ export default function DetalhesProcesso() {
                           <div className={`
                             rounded-xl border p-4 transition-colors
                             ${isFirst
-                              ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/50'
-                              : 'bg-white dark:bg-slate-800/50 border-gray-100 dark:border-slate-700/40'}
+                              ? 'bg-info-50 dark:bg-info-900/20 border-info-200 dark:border-info-800/50'
+                              : 'bg-surface border-ink-100'}
                           `}>
                             {/* Topo: badge + data */}
                             <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className={`badge text-xs ${cfg.badge}`}>{cfg.label}</span>
                                 {tramitacao.origemSetor && (
-                                  <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-slate-400">
-                                    <span className="font-medium text-gray-700 dark:text-slate-300">
+                                  <span className="flex items-center gap-1 text-xs text-ink-500">
+                                    <span className="font-medium text-ink-700">
                                       {tramitacao.origemSetor.nome}
                                     </span>
                                     {tramitacao.destinoSetor && (
                                       <>
                                         <ChevronRight className="w-3 h-3 shrink-0" />
-                                        <span className="font-medium text-gray-700 dark:text-slate-300">
+                                        <span className="font-medium text-ink-700">
                                           {tramitacao.destinoSetor.nome}
                                         </span>
                                       </>
@@ -649,10 +704,10 @@ export default function DetalhesProcesso() {
                               </div>
                               {dt && (
                                 <div className="text-right shrink-0">
-                                  <p className="text-xs font-semibold text-gray-600 dark:text-slate-300 whitespace-nowrap">
+                                  <p className="text-xs font-semibold text-ink-600 whitespace-nowrap">
                                     {new Date(dt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
                                   </p>
-                                  <p className="text-xs text-gray-400 dark:text-slate-500">
+                                  <p className="text-xs text-ink-400">
                                     {new Date(dt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                   </p>
                                 </div>
@@ -661,22 +716,34 @@ export default function DetalhesProcesso() {
 
                             {/* Despacho */}
                             {tramitacao.despacho && (
-                              <blockquote className="text-sm text-gray-700 dark:text-slate-300
-                                                     bg-gray-50 dark:bg-slate-800/80
-                                                     border-l-2 border-gray-300 dark:border-slate-600
+                              <blockquote className="text-sm text-ink-700
+                                                     bg-ink-50
+                                                     border-l-2 border-ink-300
                                                      rounded-r-lg px-3 py-2 mb-2.5
                                                      leading-relaxed italic">
                                 {tramitacao.despacho}
                               </blockquote>
                             )}
 
+                            {/* Justificativa da devolução */}
+                            {tramitacao.justificativa_devolucao && (
+                              <blockquote className="text-sm text-ink-700 bg-danger-50 dark:bg-danger-900/20
+                                                     border-l-2 border-danger-300 rounded-r-lg px-3 py-2 mb-2.5 leading-relaxed italic">
+                                <span className="not-italic font-semibold text-danger-700 dark:text-danger-300">Justificativa: </span>
+                                {tramitacao.justificativa_devolucao}
+                              </blockquote>
+                            )}
+
                             {/* Autor */}
                             {tramitacao.origemUsuario?.nome && (
-                              <p className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-slate-500">
+                              <p className="flex items-center gap-1.5 text-xs text-ink-500">
                                 <User className="w-3 h-3 shrink-0" />
                                 {tramitacao.origemUsuario.nome}
                               </p>
                             )}
+
+                            {/* Tarja de assinatura eletrônica */}
+                            <TarjaAssinatura assinatura={tramitacao.assinatura_eletronica} subdomain={subdomain} />
                           </div>
                         </div>
                       </div>
@@ -691,12 +758,51 @@ export default function DetalhesProcesso() {
         {/* ── Sidebar (1/3) ── */}
         <div className="space-y-5">
 
+          {/* Dados do Protocolo */}
+          {processo.tipo_processo === 'Protocolo' && processo.protocolo_doc && (
+            <div className="card p-4">
+              <SectionTitle icon={Stamp} title="Dados do Protocolo" />
+              <dl className="space-y-2.5 text-sm">
+                <div>
+                  <dt className="text-xs text-ink-500">Origem</dt>
+                  <dd className="font-medium text-ink-800">
+                    {ORIGEM_PROTOCOLO_LABEL[processo.protocolo_doc.origem] || '—'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-ink-500">Natureza do atendimento</dt>
+                  <dd className="font-medium text-ink-800">
+                    {NATUREZA_PROTOCOLO_LABEL[processo.protocolo_doc.natureza] || '—'}
+                  </dd>
+                </div>
+                {processo.protocolo_doc.documento_apresentado && (
+                  <div>
+                    <dt className="text-xs text-ink-500">Documento apresentado</dt>
+                    <dd className="font-medium text-ink-800">{processo.protocolo_doc.documento_apresentado}</dd>
+                  </div>
+                )}
+                {processo.protocolo_doc.orgao_externo && (
+                  <div>
+                    <dt className="text-xs text-ink-500">Órgão / Empresa</dt>
+                    <dd className="font-medium text-ink-800">{processo.protocolo_doc.orgao_externo}</dd>
+                  </div>
+                )}
+                {processo.protocolo_doc.prazo_dias && (
+                  <div>
+                    <dt className="text-xs text-ink-500">Prazo de atendimento</dt>
+                    <dd className="font-medium text-ink-800">{processo.protocolo_doc.prazo_dias} dia(s)</dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+          )}
+
           {/* QR Code */}
           {processo.qrcode && (
             <div className="card p-4">
               <SectionTitle icon={QrCode} title="QR Code" />
               <div className="flex justify-center">
-                <div className="bg-white dark:bg-slate-900 p-2 rounded-xl border border-gray-100 dark:border-slate-700 inline-block">
+                <div className="bg-surface p-2 rounded-xl border border-ink-100 inline-block">
                   <img
                     src={processo.qrcode}
                     alt="QR Code do processo"
@@ -704,7 +810,7 @@ export default function DetalhesProcesso() {
                   />
                 </div>
               </div>
-              <p className="text-xs text-center text-gray-400 dark:text-slate-500 mt-3 leading-snug">
+              <p className="text-xs text-center text-ink-400 mt-3 leading-snug">
                 Compartilhe para consulta pública
               </p>
             </div>
@@ -715,8 +821,22 @@ export default function DetalhesProcesso() {
             <SectionTitle icon={Zap} title="Ações Rápidas" />
             <div className="space-y-2">
 
-              {/* Ações de tramitação — somente se não concluído */}
-              {processo.status !== 'concluido' && isResponsavel && (
+              {/* Botão Receber — aparece quando o processo foi tramitado e ainda não foi recebido */}
+              {precisaReceber && (
+                <button
+                  onClick={handleReceber}
+                  disabled={recebendo}
+                  className="w-full inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
+                             bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm hover:shadow-md
+                             active:scale-95 justify-start disabled:opacity-60"
+                >
+                  <Inbox className="h-4 w-4" />
+                  {recebendo ? 'Recebendo...' : 'Receber processo'}
+                </button>
+              )}
+
+              {/* Ações de tramitação — somente após receber */}
+              {processo.status !== 'concluido' && podeAgir && (
                 <>
                   <button
                     onClick={() => setShowTramitar(true)}
@@ -728,7 +848,7 @@ export default function DetalhesProcesso() {
                   <button
                     onClick={() => setShowConcluir(true)}
                     className="w-full inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
-                               bg-green-600 text-white hover:bg-green-700 shadow-sm hover:shadow-md
+                               bg-success-600 text-white hover:bg-success-700 shadow-sm hover:shadow-md
                                active:scale-95 justify-start"
                   >
                     <CheckCircle className="h-4 w-4" />
@@ -762,13 +882,13 @@ export default function DetalhesProcesso() {
               {/* PDF por tipo */}
               {processo.tipo_processo === 'Despacho' && (
                 <button
-                  onClick={() => gerarDespachoPDF(processo)}
+                  onClick={() => setShowDespacho(true)}
                   className="w-full inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
                              bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm hover:shadow-md
                              active:scale-95 justify-start"
                 >
                   <FileDown className="h-4 w-4" />
-                  Gerar Despacho (PDF)
+                  {despachoDocAtual?.tipo_despacho ? 'Ver Despacho' : 'Gerar Despacho (PDF)'}
                 </button>
               )}
               {processo.tipo_processo === 'Pauta' && (
@@ -780,6 +900,19 @@ export default function DetalhesProcesso() {
                 >
                   <FileDown className="h-4 w-4" />
                   Gerar Pauta (PDF)
+                </button>
+              )}
+              {processo.tipo_processo === 'Protocolo' && (
+                <button
+                  onClick={() => gerarProtocoloPDF(processo, {
+                    consultaUrl: `${window.location.origin}/${subdomain}/consulta/${encodeURIComponent(processo.numero)}`
+                  })}
+                  className="w-full inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
+                             bg-amber-600 text-white hover:bg-amber-700 shadow-sm hover:shadow-md
+                             active:scale-95 justify-start"
+                >
+                  <FileDown className="h-4 w-4" />
+                  Gerar Comprovante de Protocolo (PDF)
                 </button>
               )}
               {processo.tipo_processo === 'Requisição' && (
@@ -797,7 +930,7 @@ export default function DetalhesProcesso() {
               {/* Excluir — somente admin */}
               {currentUser?.tipo === 'admin' && (
                 <>
-                  <div className="border-t border-gray-100 dark:border-slate-700/50 pt-2 mt-1" />
+                  <div className="border-t border-ink-100 pt-2 mt-1" />
                   <button
                     onClick={() => setShowConfirmDelete(true)}
                     className="w-full btn-danger justify-start"
@@ -808,13 +941,21 @@ export default function DetalhesProcesso() {
                 </>
               )}
 
+              {/* Aviso aguardando recebimento */}
+              {precisaReceber && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 leading-relaxed text-center py-1">
+                  Receba o processo para poder tramitar ou concluir.
+                </p>
+              )}
+
               {/* Sem ações */}
               {processo.status === 'concluido' && currentUser?.tipo !== 'admin'
                 && processo.tipo_processo !== 'Did'
                 && processo.tipo_processo !== 'Despacho'
                 && processo.tipo_processo !== 'Pauta'
+                && processo.tipo_processo !== 'Protocolo'
                 && processo.tipo_processo !== 'Requisição' && (
-                <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed text-center py-2">
+                <p className="text-xs text-ink-500 leading-relaxed text-center py-2">
                   Processo concluído. Nenhuma ação disponível.
                 </p>
               )}
@@ -826,9 +967,9 @@ export default function DetalhesProcesso() {
             <div className="card p-4">
               <SectionTitle icon={MapPin} title="Localização Atual" />
               <div className="space-y-1.5">
-                <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">{processo.setorAtual.nome}</p>
+                <p className="text-sm font-semibold text-ink-900">{processo.setorAtual.nome}</p>
                 {processo.usuarioAtual?.nome && (
-                  <p className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-slate-400">
+                  <p className="flex items-center gap-1.5 text-xs text-ink-500">
                     <User className="w-3.5 h-3.5" />
                     {processo.usuarioAtual.nome}
                   </p>
@@ -842,16 +983,16 @@ export default function DetalhesProcesso() {
       {/* ── Modal: Anexar Documento ── */}
       {showAnexar && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-slate-700/50">
+          <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-md border border-ink-200">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-slate-700/50">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-ink-100">
               <div className="flex items-center gap-2">
-                <Paperclip className="h-5 w-5 text-blue-500" />
-                <h3 className="font-semibold text-gray-900 dark:text-slate-100">Anexar Documento</h3>
+                <Paperclip className="h-5 w-5 text-info-500" />
+                <h3 className="font-semibold text-ink-900">Anexar Documento</h3>
               </div>
               <button
                 onClick={fecharAnexar}
-                className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                className="p-1.5 rounded-lg text-ink-400 hover:bg-ink-100 transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -861,8 +1002,8 @@ export default function DetalhesProcesso() {
             <form onSubmit={handleAnexarSubmit} className="p-6 space-y-4">
               {/* Nome */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 uppercase tracking-wide mb-1.5">
-                  Nome do documento <span className="text-red-500">*</span>
+                <label className="block text-xs font-semibold text-ink-700 uppercase tracking-wide mb-1.5">
+                  Nome do documento <span className="text-danger-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -876,8 +1017,8 @@ export default function DetalhesProcesso() {
 
               {/* Arquivo */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 uppercase tracking-wide mb-1.5">
-                  Arquivo <span className="text-red-500">*</span>
+                <label className="block text-xs font-semibold text-ink-700 uppercase tracking-wide mb-1.5">
+                  Arquivo <span className="text-danger-500">*</span>
                 </label>
                 <input
                   ref={fileInputRef}
@@ -890,23 +1031,23 @@ export default function DetalhesProcesso() {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="w-full flex flex-col items-center gap-2 px-4 py-5
-                             border-2 border-dashed border-gray-200 dark:border-slate-600
-                             rounded-xl hover:border-blue-400 dark:hover:border-blue-500
-                             hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all
-                             text-gray-500 dark:text-slate-400"
+                             border-2 border-dashed border-ink-200
+                             rounded-xl hover:border-info-400 dark:hover:border-brand-500
+                             hover:bg-info-50 dark:hover:bg-info-900/10 transition-all
+                             text-ink-500"
                 >
                   <Upload className="h-6 w-6" />
                   {arquivo
-                    ? <span className="text-sm font-medium text-gray-700 dark:text-slate-200">{arquivo.name}</span>
+                    ? <span className="text-sm font-medium text-ink-700">{arquivo.name}</span>
                     : <span className="text-sm">Clique para selecionar o arquivo</span>
                   }
-                  <span className="text-xs text-gray-400 dark:text-slate-500">PDF, DOC, DOCX, JPG, PNG — máx. 20 MB</span>
+                  <span className="text-xs text-ink-400">PDF, DOC, DOCX, JPG, PNG — máx. 20 MB</span>
                 </button>
               </div>
 
               {/* Erro */}
               {uploadError && (
-                <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg px-3 py-2">
+                <div className="flex items-center gap-2 text-sm text-danger-600 dark:text-danger-400 bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-700 rounded-lg px-3 py-2">
                   <AlertCircle className="h-4 w-4 shrink-0" />
                   {uploadError}
                 </div>
@@ -960,26 +1101,40 @@ export default function DetalhesProcesso() {
         />
       )}
 
+      {showDespacho && processo && (
+        <ModalDespacho
+          processo={{ ...processo, despacho_doc: despachoDocAtual }}
+          onClose={() => setShowDespacho(false)}
+          onSaved={(doc) => {
+            setLocalDespachoDoc(doc)
+            queryClient.setQueryData(['processo', id], old =>
+              old ? { ...old, despacho_doc: doc } : old
+            )
+            refetch()
+          }}
+        />
+      )}
+
       {/* ── Confirm Delete ── */}
       {showConfirmDelete && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-gray-200 dark:border-slate-700/50">
+          <div className="bg-surface rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-ink-200">
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex-shrink-0">
-                <Trash2 className="h-5 w-5 text-red-600 dark:text-red-400" />
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-danger-100 dark:bg-danger-900/30 shrink-0">
+                <Trash2 className="h-5 w-5 text-danger-600 dark:text-danger-400" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900 dark:text-slate-100">Excluir Processo</h3>
-                <p className="text-xs text-gray-500 dark:text-slate-400">Esta ação não pode ser desfeita.</p>
+                <h3 className="font-semibold text-ink-900">Excluir Processo</h3>
+                <p className="text-xs text-ink-500">Esta ação não pode ser desfeita.</p>
               </div>
             </div>
-            <p className="text-sm text-gray-700 dark:text-slate-300 mb-2">
+            <p className="text-sm text-ink-700 mb-2">
               Você está prestes a excluir permanentemente o processo:
             </p>
-            <p className="font-mono font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2 mb-4 text-sm">
+            <p className="font-mono font-bold text-danger-600 dark:text-danger-400 bg-danger-50 dark:bg-danger-900/20 rounded-lg px-3 py-2 mb-4 text-sm">
               {processo.numero}
             </p>
-            <p className="text-xs text-gray-500 dark:text-slate-400 mb-6">
+            <p className="text-xs text-ink-500 mb-6">
               Tramitações, documentos e DID vinculados serão removidos permanentemente.
             </p>
             <div className="flex gap-3 justify-end">
@@ -1001,6 +1156,16 @@ export default function DetalhesProcesso() {
             </div>
           </div>
         </div>
+      )}
+
+      {confirmarExcluirDoc && (
+        <ConfirmModal
+          title="Excluir este documento?"
+          message="O documento será removido permanentemente do processo."
+          confirmLabel="Excluir"
+          onConfirm={() => handleDeleteDocumento(confirmarExcluirDoc)}
+          onClose={() => setConfirmarExcluirDoc(null)}
+        />
       )}
     </div>
   )

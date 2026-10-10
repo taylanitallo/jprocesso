@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { RefreshCw, Plus, Pencil, Layers } from 'lucide-react'
 import api from '../services/api'
+import LoadingBar from '../components/LoadingBar'
 import PageHeader from '../components/ui/PageHeader'
 import SectionTitle from '../components/ui/SectionTitle'
 import EmptyState from '../components/ui/EmptyState'
 import ActionBar from '../components/ui/ActionBar'
 
-const base = 'w-full border rounded-lg px-3 py-2 text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-300'
+const base = 'w-full border rounded-lg px-3 py-2 text-sm dark:text-white focus:outline-hidden focus:ring-2 focus:ring-info-300'
 
 export default function PatGrupos() {
   const [grupos, setGrupos]   = useState([])
@@ -73,23 +74,24 @@ export default function PatGrupos() {
         subtitle="Classificação TCE-Ceará — Art. 94 Lei 4.320/64"
         actions={
           <ActionBar>
-            <button onClick={load} className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
+            <button onClick={load} className="p-2 rounded-lg border border-ink-300 hover:bg-ink-50">
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
             <button onClick={abrirNovo}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+              className="flex items-center gap-2 px-4 py-2 bg-brand-600 text-white rounded-lg text-sm hover:bg-brand-700">
               <Plus className="h-4 w-4" /> Novo Grupo
             </button>
           </ActionBar>
         }
       />
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="bg-surface rounded-xl border border-ink-200 overflow-hidden">
         <div className="px-4 pt-4">
           <SectionTitle icon={Layers} title="Lista de Grupos" subtitle={`${grupos.length} grupo(s) cadastrado(s)`} />
         </div>
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+          <thead className="bg-ink-50 text-ink-600">
             <tr>
               <th className="px-4 py-3 text-left font-medium w-16">Código</th>
               <th className="px-4 py-3 text-left font-medium">Nome</th>
@@ -100,37 +102,37 @@ export default function PatGrupos() {
               <th className="px-4 py-3 text-center font-medium w-16">Ações</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+          <tbody className="divide-y divide-ink-100">
             {loading ? (
               <tr><td colSpan="7" className="text-center py-8">
-                <RefreshCw className="h-6 w-6 animate-spin text-blue-500 mx-auto" />
+                <LoadingBar label="Carregando grupos..." />
               </td></tr>
             ) : grupos.length === 0 ? (
               <tr><td colSpan="7" className="px-4 py-0">
                 <EmptyState icon={Layers} title="Nenhum grupo cadastrado" description="Crie grupos para classificar os bens permanentes." />
               </td></tr>
             ) : grupos.map(g => (
-              <tr key={g.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                <td className="px-4 py-3 font-mono font-semibold text-gray-700 dark:text-gray-300">{g.codigo}</td>
+              <tr key={g.id} className="hover:bg-ink-50">
+                <td className="px-4 py-3 font-mono font-semibold text-ink-700">{g.codigo}</td>
                 <td className="px-4 py-3">
-                  <p className="font-medium text-gray-900 dark:text-white">{g.nome}</p>
-                  {g.descricao && <p className="text-xs text-gray-500 truncate max-w-[240px]">{g.descricao}</p>}
+                  <p className="font-medium text-ink-900 dark:text-white">{g.nome}</p>
+                  {g.descricao && <p className="text-xs text-ink-500 truncate max-w-[240px]">{g.descricao}</p>}
                 </td>
-                <td className="px-4 py-3 hidden md:table-cell text-gray-500 text-xs">{g.conta_contabil || '–'}</td>
-                <td className="px-4 py-3 text-right hidden sm:table-cell text-gray-600 dark:text-gray-300">
+                <td className="px-4 py-3 hidden md:table-cell text-ink-500 text-xs">{g.conta_contabil || '–'}</td>
+                <td className="px-4 py-3 text-right hidden sm:table-cell text-ink-600">
                   {g.vida_util_anos ? `${g.vida_util_anos} anos` : '–'}
                 </td>
-                <td className="px-4 py-3 text-right hidden sm:table-cell text-gray-600 dark:text-gray-300">
+                <td className="px-4 py-3 text-right hidden sm:table-cell text-ink-600">
                   {g.taxa_depreciacao ? `${g.taxa_depreciacao}%` : '–'}
                 </td>
                 <td className="px-4 py-3 text-center">
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${g.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                  <span className={`px-2 py-0.5 rounded-sm text-xs font-medium ${g.ativo ? 'bg-success-100 text-success-700' : 'bg-ink-100 text-ink-500'}`}>
                     {g.ativo ? 'Sim' : 'Não'}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-center">
                   <button onClick={() => abrirEdit(g)}
-                    className="p-1.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600">
+                    className="p-1.5 rounded-sm hover:bg-info-50 dark:hover:bg-info-900/30 text-brand-600">
                     <Pencil className="h-4 w-4" />
                   </button>
                 </td>
@@ -138,60 +140,61 @@ export default function PatGrupos() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Modal formulário */}
       {show && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShow(false)}>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+          <div className="bg-surface rounded-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
             <div className="p-6">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+              <h2 className="text-lg font-bold text-ink-900 dark:text-white mb-4">
                 {edit ? 'Editar Grupo' : 'Novo Grupo'}
               </h2>
               <form onSubmit={submit} className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Código <span className="text-red-500">*</span>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">
+                      Código <span className="text-danger-500">*</span>
                     </label>
                     <input className={base} value={form.codigo} onChange={e => set('codigo', e.target.value)} placeholder="01" required />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Conta Contábil</label>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">Conta Contábil</label>
                     <input className={base} value={form.conta_contabil} onChange={e => set('conta_contabil', e.target.value)} placeholder="1.2.3.1.1.00.00" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Nome <span className="text-red-500">*</span>
+                  <label className="block text-sm font-medium text-ink-700 mb-1">
+                    Nome <span className="text-danger-500">*</span>
                   </label>
                   <input className={base} value={form.nome} onChange={e => set('nome', e.target.value)} placeholder="Ex: Móveis e Utensílios" required />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Descrição</label>
+                  <label className="block text-sm font-medium text-ink-700 mb-1">Descrição</label>
                   <textarea className={`${base} resize-none`} rows={2} value={form.descricao} onChange={e => set('descricao', e.target.value)} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vida Útil (anos)</label>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">Vida Útil (anos)</label>
                     <input type="number" className={base} value={form.vida_util_anos} onChange={e => set('vida_util_anos', e.target.value)} placeholder="10" min="1" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Taxa Dep. (%/ano)</label>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">Taxa Dep. (%/ano)</label>
                     <input type="number" step="0.01" className={base} value={form.taxa_depreciacao} onChange={e => set('taxa_depreciacao', e.target.value)} placeholder="10.00" />
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <input type="checkbox" id="ativoGrupo" checked={form.ativo} onChange={e => set('ativo', e.target.checked)} className="h-4 w-4" />
-                  <label htmlFor="ativoGrupo" className="text-sm text-gray-700 dark:text-gray-300">Grupo ativo</label>
+                  <label htmlFor="ativoGrupo" className="text-sm text-ink-700">Grupo ativo</label>
                 </div>
-                <div className="flex justify-end gap-3 pt-2 border-t dark:border-gray-700">
+                <div className="flex justify-end gap-3 pt-2 border-t">
                   <button type="button" onClick={() => setShow(false)}
-                    className="px-5 py-2 border rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+                    className="px-5 py-2 border rounded-lg text-sm hover:bg-ink-50">
                     Cancelar
                   </button>
                   <button type="submit" disabled={saving}
-                    className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-60">
+                    className="flex items-center gap-2 px-5 py-2 bg-brand-600 text-white rounded-lg text-sm hover:bg-brand-700 disabled:opacity-60">
                     {saving && <RefreshCw className="h-4 w-4 animate-spin" />}
                     Salvar
                   </button>

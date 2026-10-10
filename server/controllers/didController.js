@@ -1,7 +1,21 @@
 const { Op } = require('sequelize');
+const path = require('path');
+const storage = require('../services/storageService');
+
+const migratedSchemas = new Set();
+async function ensureDidColumns(req) {
+  const schema = req.tenant?.schema;
+  if (!schema || migratedSchemas.has(schema)) return;
+  const { Did } = req.models;
+  await Did.sequelize.query(
+    `ALTER TABLE IF EXISTS "${schema}"."dids" ADD COLUMN IF NOT EXISTS "conta_pagamento_id" UUID;`
+  );
+  migratedSchemas.add(schema);
+}
 
 const getByProcesso = async (req, res) => {
   try {
+    await ensureDidColumns(req);
     const { processoId } = req.params;
     const { Did, Processo, Setor, Secretaria } = req.models;
 
@@ -19,6 +33,26 @@ const getByProcesso = async (req, res) => {
     });
 
     if (!did) return res.status(404).json({ error: 'DID não encontrado' });
+
+    // Inclui valor_total da ordem de compra vinculada para preencher valor_bruto na Tesouraria
+    if (did.ordem_compra_id) {
+      try {
+        const { ContratoOrdem } = req.models;
+        const ordem = await ContratoOrdem.findByPk(did.ordem_compra_id, {
+          attributes: ['id', 'numero', 'valor_total'],
+        });
+        if (ordem) did.dataValues.ordem_valor_total = parseFloat(ordem.valor_total) || 0;
+      } catch (_) {}
+    }
+
+    // Retroativamente atribui numero_did para registros antigos com o campo nulo
+    if (!did.numero_did) {
+      const pos = await Did.count({ where: { createdAt: { [Op.lt]: did.createdAt } } });
+      const numero = String(pos + 1);
+      await did.update({ numero_did: numero });
+      did.dataValues.numero_did = numero;
+    }
+
     res.json({ did });
   } catch (err) {
     console.error('Erro getByProcesso DID:', err);
@@ -29,7 +63,8 @@ const getByProcesso = async (req, res) => {
 const NUMERIC_FIELDS = [
   'valor_did', 'nf_valor', 'valor_bruto',
   'desconto_inss', 'desconto_iss', 'desconto_irrf', 'desconto_sindicato',
-  'desconto_bb', 'desconto_caixa', 'desconto_pensao', 'desconto_outros'
+  'desconto_bb', 'desconto_caixa', 'desconto_pensao', 'desconto_outros',
+  'ordem_compra_id', 'conta_pagamento_id'
 ];
 
 const ENUM_FIELDS = ['tipo_did', 'tipo_empenho', 'status'];
@@ -69,6 +104,7 @@ const sanitizeBody = (body) => {
 
 const createOrUpdate = async (req, res) => {
   try {
+    await ensureDidColumns(req);
     const { processoId } = req.params;
     const { Did, Processo, Setor, Secretaria } = req.models;
     const body = sanitizeBody(req.body);
@@ -76,11 +112,17 @@ const createOrUpdate = async (req, res) => {
     let did = await Did.findOne({ where: { processo_id: processoId } });
 
     if (!did) {
-      const count = await Did.count();
+      // Usa o numero_did fornecido (gerado no início do processo) ou calcula
+      // a partir da sequência própria da secretaria do processo.
+      let numeroDid = body.numero_did ? String(body.numero_did).trim() : '';
+      if (!numeroDid) {
+        const { formatado } = await resolverProximoNumeroDid(req, { processoId });
+        numeroDid = formatado;
+      }
       did = await Did.create({
         ...body,
         processo_id: processoId,
-        numero_did: count + 1,
+        numero_did: numeroDid,
         criado_por_id: req.user.id
       });
     } else {
@@ -113,7 +155,7 @@ const createOrUpdate = async (req, res) => {
   }
 };
 
-module.exports = { getByProcesso, createOrUpdate, getProximoNumero, getEstoque, getAlmEstoque };
+module.exports = { getByProcesso, createOrUpdate, getProximoNumero, getEstoque, getAlmEstoque, uploadCertidao, downloadCertidaoUrl, deleteCertidao };
 
 // ─── Sincronização automática DID → Almoxarifado ────────────────────────────
 // Ao salvar um DID com itens, registra SAÍDA no almoxarifado para cada item
@@ -245,11 +287,117 @@ async function getEstoque(req, res) {
   }
 }
 
+// ─── Numeração de DID por secretaria ──────────────────────────────────────
+// Cada secretaria tem sua própria sequência (ex: SEJUV-001, SEAD-001, ...),
+// contando apenas os DIDs já registrados com aquela secretaria.
+async function resolverProximoNumeroDid(req, { secretariaId, secretariaNomeOuSigla, processoId } = {}) {
+  const { Did, Secretaria, Processo, Setor } = req.models;
+  let sigla = '';
+  let nomeFiltro = null;
+
+  if (secretariaId && Secretaria) {
+    const sec = await Secretaria.findByPk(secretariaId);
+    if (sec) { sigla = sec.sigla || ''; nomeFiltro = sec.nome; }
+  }
+  if (!nomeFiltro && secretariaNomeOuSigla && Secretaria) {
+    const sec = await Secretaria.findOne({
+      where: { [Op.or]: [{ nome: secretariaNomeOuSigla }, { sigla: secretariaNomeOuSigla }] }
+    });
+    if (sec) { sigla = sec.sigla || ''; nomeFiltro = sec.nome; }
+    else nomeFiltro = secretariaNomeOuSigla;
+  }
+  if (!nomeFiltro && processoId && processoId !== 'novo' && Processo && Setor && Secretaria) {
+    const processo = await Processo.findByPk(processoId, {
+      include: [{ model: Setor, as: 'setorAtual', include: [{ model: Secretaria, as: 'secretaria' }] }]
+    });
+    const sec = processo?.setorAtual?.secretaria;
+    if (sec) { sigla = sec.sigla || ''; nomeFiltro = sec.nome; }
+  }
+
+  const where = nomeFiltro ? { secretaria_sec1: nomeFiltro } : {};
+  const count = await Did.count({ where });
+  const proximo = count + 1;
+  const formatado = sigla ? `${sigla}-${String(proximo).padStart(3, '0')}` : String(proximo);
+  return { proximo, sigla, formatado };
+}
+
 async function getProximoNumero(req, res) {
   try {
+    const { secretariaId, secretaria } = req.query;
+    const resultado = await resolverProximoNumeroDid(req, { secretariaId, secretariaNomeOuSigla: secretaria });
+    res.json(resultado);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+const CERT_KEYS = ['municipal', 'trabalhista', 'fgts', 'estadual', 'federal', 'simples_nac'];
+
+async function uploadCertidao(req, res) {
+  try {
+    const { processoId, certKey } = req.params;
+    if (!CERT_KEYS.includes(certKey)) return res.status(400).json({ error: 'Chave de certidão inválida.' });
+    if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado.' });
+
     const { Did } = req.models;
-    const count = await Did.count();
-    res.json({ proximo: count + 1 });
+    const did = await Did.findOne({ where: { processo_id: processoId } });
+    if (!did) return res.status(404).json({ error: 'DID não encontrado.' });
+
+    const ext = path.extname(req.file.originalname);
+    const storagePath = `${req.tenant.schema}/dids/${did.id}/cert_${certKey}${ext}`;
+
+    // upsert: true para permitir re-upload da mesma certidão
+    await storage.uploadArquivo({
+      buffer: req.file.buffer,
+      path: storagePath,
+      contentType: req.file.mimetype,
+    });
+
+    const arquivos = { ...(did.cert_sec1_arquivos || {}), [certKey]: { nome: req.file.originalname, path: storagePath } };
+    // Forçar detecção da mudança no campo JSONB pelo Sequelize
+    did.cert_sec1_arquivos = arquivos;
+    did.changed('cert_sec1_arquivos', true);
+    await did.save();
+
+    res.json({ cert_sec1_arquivos: arquivos });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function downloadCertidaoUrl(req, res) {
+  try {
+    const { processoId, certKey } = req.params;
+    const { Did } = req.models;
+    const did = await Did.findOne({ where: { processo_id: processoId } });
+    if (!did) return res.status(404).json({ error: 'DID não encontrado.' });
+
+    const arq = (did.cert_sec1_arquivos || {})[certKey];
+    if (!arq?.path) return res.status(404).json({ error: 'Arquivo não encontrado.' });
+
+    const url = await storage.createSignedUrl(arq.path, 120);
+    res.json({ url, nome: arq.nome });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function deleteCertidao(req, res) {
+  try {
+    const { processoId, certKey } = req.params;
+    const { Did } = req.models;
+    const did = await Did.findOne({ where: { processo_id: processoId } });
+    if (!did) return res.status(404).json({ error: 'DID não encontrado.' });
+
+    const arquivos = { ...(did.cert_sec1_arquivos || {}) };
+    const arq = arquivos[certKey];
+    if (arq?.path) {
+      try { await storage.deleteDocumento(arq.path); } catch (_) {}
+    }
+    delete arquivos[certKey];
+    await did.update({ cert_sec1_arquivos: arquivos });
+
+    res.json({ cert_sec1_arquivos: arquivos });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

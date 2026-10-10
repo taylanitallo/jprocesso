@@ -76,7 +76,7 @@ const _revokeRefreshToken = (db, isAdmin, jti) =>
 // M-2: TTL curto — 15 min. Sessões longas são mantidas pelo refresh token (30d).
 const generateAccessToken = (payload) =>
   jwt.sign(payload, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE || '15m',
+    expiresIn: process.env.JWT_EXPIRE || '30m',
   });
 const REFRESH_COOKIE_OPTS = {
   httpOnly: true,
@@ -86,11 +86,84 @@ const REFRESH_COOKIE_OPTS = {
   path: '/api/auth', // restringe o cookie apenas às rotas de auth
 };
 
-const setRefreshTokenCookie = (res, token) =>
-  res.cookie('refreshToken', token, REFRESH_COOKIE_OPTS);
+// Sessões separadas: superadmin e município usam cookies distintos, para que
+// entrar num município no mesmo navegador não derrube a sessão do superadmin.
+// O front informa o contexto da página no header x-auth-context ('admin' | 'tenant').
+const REFRESH_COOKIE_TENANT = 'refreshToken';
+const REFRESH_COOKIE_ADMIN  = 'refreshTokenAdmin';
+const _cookieName = (isAdmin) => isAdmin ? REFRESH_COOKIE_ADMIN : REFRESH_COOKIE_TENANT;
+const _isAdminContext = (req) => req.headers['x-auth-context'] === 'admin';
 
-const clearRefreshTokenCookie = (res) =>
-  res.clearCookie('refreshToken', { ...REFRESH_COOKIE_OPTS, maxAge: 0 });
+const setRefreshTokenCookie = (res, token, isAdmin = false) =>
+  res.cookie(_cookieName(isAdmin), token, REFRESH_COOKIE_OPTS);
+
+const clearRefreshTokenCookie = (res, isAdmin = false) =>
+  res.clearCookie(_cookieName(isAdmin), { ...REFRESH_COOKIE_OPTS, maxAge: 0 });
+
+// ── Busca de municípios por e-mail ──────────────────────────────────────────
+// Usuários vivem em {schema}.usuarios (um schema por município) — o e-mail só
+// é único dentro de cada schema. Para descobrir em quais municípios um e-mail
+// tem conta ativa, iteramos os tenants ativos e consultamos cada schema.
+const qi = () => masterDb.getQueryInterface();
+
+const buscarMunicipiosPorEmail = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email || typeof email !== 'string' || !email.includes('@')) {
+      return res.status(400).json({ error: 'E-mail válido é obrigatório' });
+    }
+    const emailNormalizado = email.trim().toLowerCase();
+
+    const tenants = await Tenant.findAll({
+      where: { ativo: true },
+      attributes: ['nome_municipio', 'subdominio', 'cidade', 'estado', 'schema', 'configuracoes'],
+    });
+
+    const resultados = await Promise.all(
+      tenants.map(async (tenant) => {
+        try {
+          const schemaQ = qi().quoteIdentifier(tenant.schema);
+          const rows = await masterDb.query(
+            `SELECT 1 FROM ${schemaQ}.usuarios WHERE LOWER(email) = :email AND ativo = true LIMIT 1`,
+            { replacements: { email: emailNormalizado }, type: QueryTypes.SELECT }
+          );
+          return rows.length > 0 ? tenant : null;
+        } catch {
+          // Schema sem tabela usuarios/coluna esperada — ignora silenciosamente
+          return null;
+        }
+      })
+    );
+
+    const municipios = resultados
+      .filter(Boolean)
+      .map(t => {
+        // Enviar apenas os campos de logo usados na tela de seleção.
+        // Nunca incluir o timbrado (imagem base64 pesada) nem margens — isso
+        // inflava a resposta para vários MB e travava/atrasava o login.
+        const c = t.configuracoes || {};
+        return {
+          nome_municipio: t.nome_municipio,
+          subdominio: t.subdominio,
+          cidade: t.cidade,
+          estado: t.estado,
+          configuracoes: {
+            logo_login_url:   c.logo_login_url   ?? null,
+            logo_interna_url: c.logo_interna_url ?? null,
+            logo_url:         c.logo_url         ?? null,
+            brasao_url:       c.brasao_url       ?? null,
+            imagem_url:       c.imagem_url       ?? null,
+          },
+        };
+      })
+      .sort((a, b) => a.nome_municipio.localeCompare(b.nome_municipio));
+
+    res.json({ municipios });
+  } catch (error) {
+    console.error('Erro ao buscar municípios por e-mail:', error);
+    res.status(500).json({ error: 'Erro ao buscar municípios' });
+  }
+};
 
 const register = async (req, res) => {
   try {
@@ -128,29 +201,27 @@ const register = async (req, res) => {
       secretariaId,
       setorId,
       permissoes: permissoes || {
-        criar_processo: true,
-        editar_processo: true,
-        excluir_processo: false,
-        tramitar_processo: true,
-        acessar_almoxarifado: false,
-        acessar_financeiro: false,
-        acessar_contratos: false,
-        visualizar_relatorios: false,
-        gerenciar_usuarios: false,
-        gerenciar_secretarias: false,
-        gerenciar_configuracoes: false
+        processos:     { ver: true, criar: true, editar: true, excluir: false, tramitar: true, devolver: true, concluir: true, arquivar: false, anexar_documento: true, excluir_documento: false },
+        arquivo:       { acessar: false },
+        almoxarifado:  { acessar: false, painel: { ver: true }, estoque: { ver: true, editar: true }, entradas: { ver: true, registrar: true }, saidas: { ver: true, registrar: true }, requisicoes: { ver: true, criar: true, aprovar: false, cancelar: false }, cotas: { ver: true, gerenciar: false }, inventario: { ver: true, realizar: false }, auditoria: { ver: false } },
+        patrimonio:    { acessar: false, painel: { ver: true }, bens: { ver: true, criar: false, editar: false, excluir: false }, tombamento: { ver: true, realizar: false }, transferencia: { ver: true, realizar: false }, baixa: { ver: true, realizar: false }, inventario: { ver: true, realizar: false }, grupos: { ver: false, gerenciar: false } },
+        financeiro:    { acessar: false, painel: { ver: true }, processos_did: { ver: true }, relatorio: { ver: false } },
+        contratos:     { acessar: false, itens: { ver: true, criar: false, editar: false, excluir: false }, credores: { ver: true, criar: false, editar: false, excluir: false }, contratos: { ver: true, criar: false, editar: false, excluir: false }, ordens: { ver: true, criar: false, editar: false, excluir: false }, relatorios: { ver: true } },
+        tesouraria:    { acessar: false, contas: { ver: true, criar: false, editar: false, excluir: false }, receitas: { ver: true, criar: false, editar: false, excluir: false }, despesas: { ver: true, criar: false, editar: false, excluir: false }, relatorios: { ver: true } },
+        administracao: { gerenciar_usuarios: false, gerenciar_secretarias: false, gerenciar_configuracoes: false, visualizar_relatorios: false, visualizar_registros: false },
       }
     });
 
     const token = jwt.sign(
-      { 
-        id: user.id, 
-        email: user.email, 
+      {
+        id: user.id,
+        email: user.email,
         tipo: user.tipo,
-        tenantId: req.tenant.id
+        tenantId: req.tenant.id,
+        subdomain: req.tenant.subdominio
       },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRE || '7d' }
+      { expiresIn: process.env.JWT_EXPIRE || '30m' }
     );
 
     res.status(201).json({
@@ -210,7 +281,7 @@ const login = async (req, res) => {
           isAdmin: true
         },
         process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRE || '7d' }
+        { expiresIn: process.env.JWT_EXPIRE || '30m' }
       );
 
       // Setar refresh token em cookie httpOnly (aditivo — não altera resposta existente)
@@ -218,7 +289,7 @@ const login = async (req, res) => {
       await _saveRefreshToken(masterDb, true, {
         jti: jtiAdmin, userId: admin.id, tokenHash: hashAdmin, expiresAt: Date.now() + REFRESH_EXPIRE_MS,
       });
-      setRefreshTokenCookie(res, rtAdmin);
+      setRefreshTokenCookie(res, rtAdmin, true);
 
       return res.json({
         message: 'Login admin realizado com sucesso',
@@ -232,6 +303,10 @@ const login = async (req, res) => {
       });
     }
     
+    if (!cpf && !email) {
+      return res.status(400).json({ error: 'CPF ou e-mail é obrigatório' });
+    }
+
     const tenant = await Tenant.findOne({ where: { subdominio: subdomain, ativo: true } });
     if (!tenant) {
       return res.status(404).json({ error: 'Cliente não encontrado' });
@@ -241,8 +316,11 @@ const login = async (req, res) => {
     const models = initTenantModels(tenantDb);
     const { User } = models;
 
-    const user = await User.findOne({ 
-      where: { cpf, ativo: true },
+    const { Op, fn, col, where: sqlWhere } = require('sequelize');
+    const user = await User.findOne({
+      where: email
+        ? { [Op.and]: [sqlWhere(fn('LOWER', col('User.email')), email.trim().toLowerCase()), { ativo: true }] }
+        : { cpf, ativo: true },
       include: [
         { model: models.Secretaria, as: 'secretaria' },
         { model: models.Setor, as: 'setor' }
@@ -260,9 +338,10 @@ const login = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { 
-        id: user.id, 
-        email: user.email, 
+      {
+        id: user.id,
+        nome: user.nome,
+        email: user.email,
         tipo: user.tipo,
         tenantId: tenant.id,
         subdomain: tenant.subdominio,
@@ -271,14 +350,19 @@ const login = async (req, res) => {
         setorId: user.setorId || null
       },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRE || '7d' }
+      { expiresIn: process.env.JWT_EXPIRE || '30m' }
     );
 
     // Setar refresh token em cookie httpOnly (aditivo — não altera resposta existente)
     const { token: rtTenant, jti: jtiTenant, tokenHash: hashTenant } = _buildRefreshToken({
       id: user.id,
+      nome: user.nome,
+      email: user.email,
+      tipo: user.tipo,
       tenantId: tenant.id,
       subdomain: tenant.subdominio,
+      secretariaId: user.secretariaId || null,
+      setorId: user.setorId || null,
     });
     await _saveRefreshToken(tenantDb, false, {
       jti: jtiTenant, userId: user.id, tokenHash: hashTenant, expiresAt: Date.now() + REFRESH_EXPIRE_MS,
@@ -319,7 +403,13 @@ const login = async (req, res) => {
     });
   } catch (error) {
     console.error('Erro ao fazer login:', error);
-    res.status(500).json({ error: 'Erro ao fazer login' });
+    // Erro de banco (ex: coluna ausente em schema desatualizado) — expõe a causa real
+    if (error.name === 'SequelizeDatabaseError') {
+      return res.status(500).json({
+        error: `Erro no banco de dados ao fazer login: ${error.original?.message || error.message}`
+      });
+    }
+    res.status(500).json({ error: error.message || 'Erro ao fazer login' });
   }
 };
 
@@ -353,6 +443,36 @@ const getProfile = async (req, res) => {
   } catch (error) {
     console.error('Erro ao buscar perfil:', error);
     res.status(500).json({ error: 'Erro ao buscar perfil' });
+  }
+};
+
+const getUsersBySecretaria = async (req, res) => {
+  try {
+    const { User, Secretaria } = req.models;
+    const { nome } = req.query;
+    const { Op } = require('sequelize');
+
+    const where = { ativo: true };
+
+    if (nome) {
+      const secretarias = await Secretaria.findAll({
+        attributes: ['id'],
+        where: { nome: { [Op.iLike]: `%${nome}%` } },
+      });
+      const ids = secretarias.map(s => s.id);
+      // Filtra pela secretaria se encontrou, senão retorna todos (fallback)
+      if (ids.length) where.secretariaId = { [Op.in]: ids };
+    }
+
+    const users = await User.findAll({
+      attributes: ['id', 'nome'],
+      where,
+      order: [['nome', 'ASC']],
+    });
+    res.json({ users });
+  } catch (error) {
+    console.error('getUsersBySecretaria:', error);
+    res.status(500).json({ error: 'Erro ao buscar usuários' });
   }
 };
 
@@ -464,7 +584,8 @@ const deleteUser = async (req, res) => {
 // ── Refresh Token ─────────────────────────────────────────────────────────────
 const refreshToken = async (req, res) => {
   try {
-    const cookieToken = req.cookies?.refreshToken;
+    const adminCtx = _isAdminContext(req);
+    const cookieToken = req.cookies?.[_cookieName(adminCtx)];
     if (!cookieToken) {
       return res.status(401).json({ error: 'Refresh token não encontrado' });
     }
@@ -475,6 +596,11 @@ const refreshToken = async (req, res) => {
       decoded = jwt.verify(cookieToken, _getRefreshSecret(), { algorithms: ['HS256'] });
     } catch {
       return res.status(401).json({ error: 'Refresh token inválido ou expirado' });
+    }
+
+    // O token precisa ser do mesmo tipo do contexto (superadmin × município)
+    if (!!decoded.isAdmin !== adminCtx) {
+      return res.status(401).json({ error: 'Sessão não corresponde a este acesso' });
     }
 
     const { jti } = decoded;
@@ -502,9 +628,29 @@ const refreshToken = async (req, res) => {
       return res.status(401).json({ error: 'Refresh token expirado' });
     }
 
-    // Montar novo access token sem campos internos do JWT
+    // Montar novo access token — busca tipo atualizado do banco para não perder permissões
     const { iat, exp, jti: _jti, ...cleanPayload } = decoded;
-    const newAccessToken = generateAccessToken(cleanPayload);
+    let freshPayload = { ...cleanPayload };
+    if (decoded.subdomain && decoded.id && !decoded.isAdmin) {
+      try {
+        const tenantForRefresh = await Tenant.findOne({ where: { subdominio: decoded.subdomain, ativo: true } });
+        if (tenantForRefresh) {
+          const tenantDbForRefresh = await getTenantConnection(tenantForRefresh.schema);
+          const modelsForRefresh   = initTenantModels(tenantDbForRefresh);
+          const freshUser = await modelsForRefresh.User?.findByPk(decoded.id, {
+            attributes: ['nome', 'tipo', 'email', 'secretariaId', 'setorId']
+          });
+          if (freshUser) {
+            freshPayload.nome        = freshUser.nome || cleanPayload.nome;
+            freshPayload.tipo        = freshUser.tipo;
+            freshPayload.email       = freshUser.email || cleanPayload.email;
+            freshPayload.secretariaId = freshUser.secretariaId || null;
+            freshPayload.setorId     = freshUser.setorId || null;
+          }
+        }
+      } catch { /* mantém cleanPayload se falhar */ }
+    }
+    const newAccessToken = generateAccessToken(freshPayload);
 
     res.json({ success: true, token: newAccessToken });
   } catch (error) {
@@ -515,8 +661,9 @@ const refreshToken = async (req, res) => {
 
 // ── Logout ────────────────────────────────────────────────────────────────────
 const logoutUser = async (req, res) => {
+  const adminCtx = _isAdminContext(req);
   try {
-    const cookieToken = req.cookies?.refreshToken;
+    const cookieToken = req.cookies?.[_cookieName(adminCtx)];
     let decoded = null;
     if (cookieToken) {
       try {
@@ -552,19 +699,21 @@ const logoutUser = async (req, res) => {
       } catch { /* não bloqueia o logout se o log falhar */ }
     }
 
-    clearRefreshTokenCookie(res);
+    clearRefreshTokenCookie(res, adminCtx);
     res.json({ success: true, message: 'Logout realizado com sucesso' });
   } catch (error) {
     console.error('[logoutUser] Erro:', error.message);
-    clearRefreshTokenCookie(res);
+    clearRefreshTokenCookie(res, adminCtx);
     res.status(500).json({ error: 'Erro ao fazer logout' });
   }
 };
 
 module.exports = {
+  buscarMunicipiosPorEmail,
   register,
   login,
   getProfile,
+  getUsersBySecretaria,
   listUsers,
   updateUser,
   deleteUser,

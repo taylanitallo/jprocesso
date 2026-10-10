@@ -15,25 +15,25 @@ export default function PageHeader({ icon: Icon, eyebrow, title, subtitle, actio
       <div className="flex items-center gap-4 min-w-0">
         {Icon && (
           <div className="shrink-0 flex items-center justify-center w-11 h-11 rounded-2xl
-                          bg-blue-50 dark:bg-blue-900/30
-                          border border-blue-100 dark:border-blue-800/50
+                          bg-info-50 dark:bg-info-900/30
+                          border border-info-100 dark:border-info-800/50
                           shadow-sm">
-            <Icon className="w-5 h-5 text-blue-600 dark:text-blue-400" strokeWidth={1.75} />
+            <Icon className="w-5 h-5 text-brand-600 dark:text-info-400" strokeWidth={1.75} />
           </div>
         )}
         <div className="min-w-0">
           {eyebrow && (
             <p className="text-xs font-semibold uppercase tracking-wider
-                          text-blue-600 dark:text-blue-400 mb-0.5">
+                          text-brand-600 dark:text-info-400 mb-0.5">
               {eyebrow}
             </p>
           )}
           <h1 className="text-xl font-bold tracking-tight
-                         text-gray-900 dark:text-slate-100 truncate">
+                         text-ink-900 truncate">
             {title}
           </h1>
           {subtitle && (
-            <p className="text-sm text-gray-500 dark:text-slate-400 mt-0.5 truncate">
+            <p className="text-sm text-ink-500 mt-0.5 truncate">
               {subtitle}
             </p>
           )}

@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -9,11 +9,11 @@ import SectionTitle from '../components/ui/SectionTitle';
 const ToggleSwitch = ({ checked, onChange }) => (
   <label className="relative inline-flex items-center cursor-pointer">
     <input type="checkbox" checked={checked} onChange={onChange} className="sr-only peer" />
-    <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer
+    <div className="w-11 h-6 bg-ink-200 peer-focus:outline-hidden peer-focus:ring-4 peer-focus:ring-info-300 dark:peer-focus:ring-info-800 rounded-full peer
       peer-checked:after:translate-x-full peer-checked:after:border-white
       after:content-[''] after:absolute after:top-[2px] after:left-[2px]
-      after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all
-      peer-checked:bg-blue-600" />
+      after:bg-surface after:border-ink-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all
+      peer-checked:bg-brand-600" />
   </label>
 );
 
@@ -36,28 +36,28 @@ const ImageUpload = ({ label, value, onChange, hint, disabled }) => {
 
   return (
     <div className={`space-y-2 ${disabled ? 'opacity-60' : ''}`}>
-      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">{label}</label>
-      {hint && <p className="text-xs text-gray-400 dark:text-slate-500">{hint}</p>}
+      <label className="block text-sm font-medium text-ink-700">{label}</label>
+      {hint && <p className="text-xs text-ink-400">{hint}</p>}
       <div className="flex items-start gap-4">
         {/* Preview */}
         <div
-          className={`w-28 h-20 rounded-lg border-2 border-dashed border-gray-300 dark:border-slate-600 flex items-center justify-center bg-gray-50 dark:bg-slate-700/20 overflow-hidden flex-shrink-0 transition-colors ${disabled ? 'cursor-not-allowed' : 'cursor-pointer hover:border-blue-400'}`}
+          className={`w-28 h-20 rounded-lg border-2 border-dashed border-ink-300 flex items-center justify-center bg-ink-50 overflow-hidden shrink-0 transition-colors ${disabled ? 'cursor-not-allowed' : 'cursor-pointer hover:border-info-400'}`}
           onClick={() => !disabled && inputRef.current?.click()}
         >
           {value
             ? <img src={value} alt="preview" className="max-w-full max-h-full object-contain p-1" />
-            : <div className="text-center text-gray-400"><ImageIcon className="h-6 w-6 mx-auto mb-1" /><span className="text-[10px]">Sem imagem</span></div>
+            : <div className="text-center text-ink-400"><ImageIcon className="h-6 w-6 mx-auto mb-1" /><span className="text-[10px]">Sem imagem</span></div>
           }
         </div>
         {/* Botões */}
         <div className="flex flex-col gap-2">
           <button type="button" disabled={disabled} onClick={() => inputRef.current?.click()}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-medium rounded-lg border border-blue-200 dark:border-blue-700 hover:bg-blue-100 transition-colors disabled:cursor-not-allowed">
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-info-50 dark:bg-info-900/30 text-brand-700 dark:text-info-300 text-xs font-medium rounded-lg border border-info-200 dark:border-info-700 hover:bg-info-100 transition-colors disabled:cursor-not-allowed">
             <Upload className="h-3.5 w-3.5" /> Escolher imagem
           </button>
           {value && (
             <button type="button" disabled={disabled} onClick={() => onChange(null)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs font-medium rounded-lg border border-red-200 dark:border-red-700 hover:bg-red-100 transition-colors disabled:cursor-not-allowed">
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-danger-50 dark:bg-danger-900/20 text-danger-600 dark:text-danger-400 text-xs font-medium rounded-lg border border-danger-200 dark:border-danger-700 hover:bg-danger-100 transition-colors disabled:cursor-not-allowed">
               <X className="h-3.5 w-3.5" /> Remover
             </button>
           )}
@@ -79,7 +79,7 @@ export default function Configuracoes() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
-  const [editandoGerais, setEditandoGerais] = useState(false);
+  const [editandoGerais, setEditandoGerais] = useState(true);
   const [geraisOriginal, setGeraisOriginal] = useState(null);
 
   // Estado da aba Gerais — configurações GLOBAIS do tenant (sem logo_secretaria)
@@ -88,9 +88,17 @@ export default function Configuracoes() {
     logo_prefeitura:   conf.logo_prefeitura   || null,
     logo_sidebar:      conf.logo_sidebar      || null,
     imagem_fundo_login: conf.imagem_fundo_login || null,
+    timbrado:          conf.timbrado          || null,
+    timbrado_opacity:  conf.timbrado_opacity  ?? 75,
     cor_relatorio_primaria:   conf.cor_relatorio_primaria   || '#1e40af',
     cor_relatorio_secundaria: conf.cor_relatorio_secundaria || '#1e3a5f',
     cor_relatorio_texto:      conf.cor_relatorio_texto      || '#111827',
+    margens: {
+      top:    conf.margens?.top    ?? 20,
+      bottom: conf.margens?.bottom ?? 20,
+      left:   conf.margens?.left   ?? 14,
+      right:  conf.margens?.right  ?? 14,
+    },
   });
 
   // Logo da secretaria do usuário — armazenada na tabela secretarias (por secretaria)
@@ -101,8 +109,8 @@ export default function Configuracoes() {
   // Busca configurações globais diretamente do banco ao montar
   useEffect(() => {
     if (!tenant?.subdominio) return;
-    fetch(`/api/tenants/info?subdomain=${tenant.subdominio}`)
-      .then(r => r.json())
+    api.get(`/tenants/info?subdomain=${tenant.subdominio}`)
+      .then(r => r.data)
       .then(data => {
         const c = data?.tenant?.configuracoes;
         if (!c) return;
@@ -110,9 +118,17 @@ export default function Configuracoes() {
           logo_prefeitura:          c.logo_prefeitura          ?? null,
           logo_sidebar:             c.logo_sidebar             ?? null,
           imagem_fundo_login:       c.imagem_fundo_login       ?? null,
+          timbrado:                 c.timbrado                 ?? null,
+          timbrado_opacity:         c.timbrado_opacity         ?? 75,
           cor_relatorio_primaria:   c.cor_relatorio_primaria   || '#1e40af',
           cor_relatorio_secundaria: c.cor_relatorio_secundaria || '#1e3a5f',
           cor_relatorio_texto:      c.cor_relatorio_texto      || '#111827',
+          margens: {
+            top:    c.margens?.top    ?? 20,
+            bottom: c.margens?.bottom ?? 20,
+            left:   c.margens?.left   ?? 14,
+            right:  c.margens?.right  ?? 14,
+          },
         });
       })
       .catch(() => {});
@@ -207,6 +223,27 @@ export default function Configuracoes() {
   const [exportLoading, setExportLoading] = useState('');
   const importInputRef = useRef(null);
 
+  // ── URL de integração para importação de itens
+  const [urlImportacaoItens, setUrlImportacaoItens] = useState(tenant?.configuracoes?.url_importacao_itens || '');
+  const [savingUrlImportacao, setSavingUrlImportacao] = useState(false);
+
+  useEffect(() => {
+    if (tenant?.configuracoes?.url_importacao_itens !== undefined)
+      setUrlImportacaoItens(tenant.configuracoes.url_importacao_itens || '');
+  }, [tenant?.configuracoes?.url_importacao_itens]);
+
+  const salvarUrlImportacao = async () => {
+    setSavingUrlImportacao(true);
+    try {
+      await updateTenantConfig({ url_importacao_itens: urlImportacaoItens.trim() });
+      feedback('✅ URL de importação salva!');
+    } catch (err) {
+      feedback(err.response?.data?.error || 'Erro ao salvar URL', true);
+    } finally {
+      setSavingUrlImportacao(false);
+    }
+  };
+
   const handleExport = async (tipo, formato = 'json') => {
     setExportLoading(tipo + formato);
     try {
@@ -277,10 +314,9 @@ export default function Configuracoes() {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-5 animate-fade-in">
+    <div className="space-y-5 animate-fade-in">
       <PageHeader
         icon={Settings}
-        eyebrow="Sistema"
         title="Configurações"
         subtitle="Gerencie suas preferências e informações pessoais"
       />
@@ -294,15 +330,15 @@ export default function Configuracoes() {
           { label: 'Última atualização', value: tenant?.updated_at ? new Date(tenant.updated_at).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR'), icon: RefreshCw, color: 'slate' },
         ].map(({ label, value, icon: Icon, color }) => {
           const colorMap = {
-            blue:   'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800',
-            green:  'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800',
+            blue:   'bg-info-50 dark:bg-info-900/20 text-brand-600 dark:text-info-400 border-info-200 dark:border-info-800',
+            green:  'bg-success-50 dark:bg-success-900/20 text-success-700 dark:text-success-400 border-success-200 dark:border-success-800',
             amber:  'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800',
             purple: 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800',
-            slate:  'bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700',
+            slate:  'bg-ink-50 text-ink-600 border-ink-200',
           };
           return (
             <div key={label} className={`flex items-center gap-3 p-3 rounded-xl border ${colorMap[color]}`}>
-              <Icon className="h-5 w-5 flex-shrink-0" />
+              <Icon className="h-5 w-5 shrink-0" />
               <div className="min-w-0">
                 <p className="text-[10px] font-semibold uppercase tracking-wide opacity-70">{label}</p>
                 <p className="text-sm font-semibold truncate">{value}</p>
@@ -313,12 +349,12 @@ export default function Configuracoes() {
       </div>
 
       {success && (
-        <div className="p-4 bg-green-50 dark:bg-green-900/30 border border-green-300 dark:border-green-700 rounded-lg text-green-800 dark:text-green-300 text-sm flex items-center gap-2">
+        <div className="p-4 bg-success-50 dark:bg-success-900/30 border border-success-300 dark:border-success-700 rounded-lg text-success-800 dark:text-success-300 text-sm flex items-center gap-2">
           {success}
         </div>
       )}
       {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg text-red-800 dark:text-red-300 text-sm flex items-center gap-2">
+        <div className="p-4 bg-danger-50 dark:bg-danger-900/30 border border-danger-300 dark:border-danger-700 rounded-lg text-danger-800 dark:text-danger-300 text-sm flex items-center gap-2">
           {error}
         </div>
       )}
@@ -326,7 +362,7 @@ export default function Configuracoes() {
       <div className="card">
         {/* Tabs — overflow-x-auto no wrapper para funcionar no WebKit (border-radius + overflow-hidden bloqueia filhos) */}
         <div
-          className="border-b border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-800/50 overflow-x-auto overflow-y-hidden scrollbar-none touch-pan-x"
+          className="border-b border-ink-200 bg-ink-50 overflow-x-auto overflow-y-hidden scrollbar-none touch-pan-x"
           style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
         >
           <nav className="flex min-w-max">
@@ -338,8 +374,8 @@ export default function Configuracoes() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex-shrink-0 flex items-center gap-2 py-3.5 px-5 border-b-2 font-medium text-sm transition-all whitespace-nowrap
                   ${activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-900'
-                    : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:border-gray-300'
+                    ? 'border-brand-500 text-brand-600 dark:text-info-400 bg-surface'
+                    : 'border-transparent text-ink-500 hover:text-ink-700 hover:border-ink-300'
                   }`}
               >
                 <Icon className="h-4 w-4" /> {tab.label}
@@ -359,7 +395,7 @@ export default function Configuracoes() {
               {secretariaId && (
                 <div>
                   <SectionTitle title="Logo da Secretaria" />
-                  <p className="text-xs text-gray-400 dark:text-slate-500 mb-5">Cada secretaria configura sua própria logo. Aparece no cabeçalho dos relatórios desta secretaria.</p>
+                  <p className="text-xs text-ink-400 mb-5">Cada secretaria configura sua própria logo. Aparece no cabeçalho dos relatórios desta secretaria.</p>
                   <div className="flex items-start gap-8">
                     <ImageUpload
                       label="Logo da Sua Secretaria"
@@ -369,7 +405,7 @@ export default function Configuracoes() {
                       disabled={savingSecretariaLogo}
                     />
                     {savingSecretariaLogo && (
-                      <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 mt-8">
+                      <div className="flex items-center gap-2 text-sm text-brand-600 dark:text-info-400 mt-8">
                         <RefreshCw className="h-4 w-4 animate-spin" /> Salvando...
                       </div>
                     )}
@@ -380,7 +416,7 @@ export default function Configuracoes() {
               {/* Logos Globais — visíveis para admin */}
               <div>
                 <SectionTitle title="Identidade Visual do Sistema" />
-                <p className="text-xs text-gray-400 dark:text-slate-500 mb-5">Configurações globais aplicadas a todo o sistema. Requer permissão de administrador.</p>
+                <p className="text-xs text-ink-400 mb-5">Configurações globais aplicadas a todo o sistema. Requer permissão de administrador.</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <ImageUpload
                     label="Logo da Prefeitura / Brasão"
@@ -389,20 +425,77 @@ export default function Configuracoes() {
                     hint="Aparece no cabeçalho principal dos relatórios e documentos oficiais."
                     disabled={!editandoGerais}
                   />
-                  <ImageUpload
-                    label="Logo do Sistema (Sidebar)"
-                    value={geraisData.logo_sidebar}
-                    onChange={(v) => handleLogoChange('logo_sidebar', v)}
-                    hint="Substitui o ícone padrão no canto inferior esquerdo do menu lateral."
-                    disabled={!editandoGerais}
-                  />
+                </div>
+              </div>
+
+              {/* Timbrado */}
+              <div>
+                <SectionTitle title="Timbrado" />
+                <p className="text-xs text-ink-400 mb-5">Imagem PNG usada como marca d'água de fundo nos relatórios gerados pelo sistema.</p>
+                <div className="flex flex-col gap-6 md:flex-row md:items-start">
+                  <div className="flex flex-col gap-3">
+                    <ImageUpload
+                      label="Arquivo do Timbrado (PNG)"
+                      value={geraisData.timbrado}
+                      onChange={(v) => handleLogoChange('timbrado', v)}
+                      hint="Use PNG com fundo transparente para melhor resultado."
+                      disabled={!editandoGerais}
+                    />
+                    {geraisData.timbrado && (
+                      <div className="max-w-[260px]">
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs font-medium text-ink-600">Opacidade do timbrado</label>
+                          <span className="text-xs font-mono text-ink-700">{geraisData.timbrado_opacity}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0}
+                          max={100}
+                          step={1}
+                          value={geraisData.timbrado_opacity}
+                          onChange={e => setGeraisData(p => ({ ...p, timbrado_opacity: Number(e.target.value) }))}
+                          disabled={!editandoGerais}
+                          className="w-full accent-info-600 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                        />
+                        <p className="text-[11px] text-ink-400 mt-1">Controla a transparência da marca d'água nos relatórios (0% = invisível, 100% = opaco).</p>
+                      </div>
+                    )}
+                  </div>
+                  {geraisData.timbrado && (
+                    <div className="flex-1">
+                      <p className="text-xs font-medium text-ink-600 mb-2">Pré-visualização (proporção A4 · 210 × 297 mm)</p>
+                      {/* Proporção exata A4 portrait: 210/297 ≈ 0.7071 */}
+                      <div
+                        className="relative rounded-sm border border-ink-300 overflow-hidden bg-surface shadow-md"
+                        style={{ width: '100%', maxWidth: 360, aspectRatio: '210 / 297' }}
+                      >
+                        {/* Simulação de conteúdo */}
+                        <div className="absolute inset-0 p-[8%] space-y-[3%]">
+                          <div className="h-[3%] rounded-sm bg-ink-200" style={{ width: '60%' }} />
+                          <div className="h-[2%] rounded-sm bg-ink-100" style={{ width: '80%' }} />
+                          <div className="h-[2%] rounded-sm bg-ink-100" style={{ width: '70%' }} />
+                          <div className="h-[2%] rounded-sm bg-ink-100" style={{ width: '90%' }} />
+                          <div className="h-[2%] rounded-sm bg-ink-100" style={{ width: '65%' }} />
+                          <div className="h-[2%] rounded-sm bg-ink-100" style={{ width: '75%' }} />
+                        </div>
+                        {/* Timbrado preenchendo toda a folha */}
+                        <div className="absolute inset-0 pointer-events-none">
+                          <img
+                            src={geraisData.timbrado}
+                            alt="timbrado"
+                            style={{ width: '100%', height: '100%', objectFit: 'fill', opacity: (geraisData.timbrado_opacity ?? 75) / 100 }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Cores dos relatórios */}
               <div>
                 <SectionTitle title="Cores dos Relatórios / Documentos" />
-                <p className="text-xs text-gray-400 dark:text-slate-500 mb-5">Definam as cores institucionais usadas nos PDFs gerados pelo sistema.</p>
+                <p className="text-xs text-ink-400 mb-5">Definam as cores institucionais usadas nos PDFs gerados pelo sistema.</p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-xl">
                   {[
                     { key: 'cor_relatorio_primaria',   label: 'Cor Primária',   hint: 'Cabeçalho, títulos' },
@@ -410,33 +503,136 @@ export default function Configuracoes() {
                     { key: 'cor_relatorio_texto',      label: 'Cor do Texto',   hint: 'Texto principal' },
                   ].map(({ key, label, hint }) => (
                     <div key={key}>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">{label}</label>
-                      <p className="text-xs text-gray-400 dark:text-slate-500 mb-2">{hint}</p>
+                      <label className="block text-sm font-medium text-ink-700 mb-1">{label}</label>
+                      <p className="text-xs text-ink-400 mb-2">{hint}</p>
                       <div className="flex items-center gap-3">
                         <input
                           type="color"
                           value={geraisData[key]}
                           onChange={e => setGeraisData(p => ({ ...p, [key]: e.target.value }))}
                           disabled={!editandoGerais}
-                          className="h-9 w-14 rounded-lg border border-gray-300 dark:border-slate-600 cursor-pointer p-0.5 bg-white dark:bg-slate-700/30 disabled:opacity-60 disabled:cursor-not-allowed"
+                          className="h-9 w-14 rounded-lg border border-ink-300 cursor-pointer p-0.5 bg-surface disabled:opacity-60 disabled:cursor-not-allowed"
                         />
-                        <span className="text-xs font-mono text-gray-600 dark:text-slate-400 uppercase">{geraisData[key]}</span>
+                        <span className="text-xs font-mono text-ink-600 uppercase">{geraisData[key]}</span>
                       </div>
                     </div>
                   ))}
                 </div>
 
                 {/* Preview das cores */}
-                <div className="mt-5 rounded-lg overflow-hidden border border-gray-200 dark:border-slate-600 max-w-sm">
+                <div className="mt-5 rounded-lg overflow-hidden border border-ink-200 max-w-sm">
                   <div className="px-4 py-2.5 text-white text-xs font-bold" style={{ backgroundColor: geraisData.cor_relatorio_primaria }}>
                     Prefeitura Municipal — Preview
                   </div>
                   <div className="h-1" style={{ backgroundColor: geraisData.cor_relatorio_secundaria }} />
-                  <div className="px-4 py-3 bg-white dark:bg-slate-900">
+                  <div className="px-4 py-3 bg-surface">
                     <p className="text-xs font-semibold" style={{ color: geraisData.cor_relatorio_texto }}>Conteúdo do relatório aqui</p>
                     <p className="text-[11px] mt-1" style={{ color: geraisData.cor_relatorio_texto, opacity: 0.7 }}>Processo nº 001/2026 · Secretaria de Administração</p>
                   </div>
                   <div className="h-1" style={{ backgroundColor: geraisData.cor_relatorio_secundaria }} />
+                </div>
+              </div>
+
+              {/* Margens dos Documentos */}
+              <div>
+                <SectionTitle title="Margens dos Documentos" />
+                <p className="text-xs text-ink-400 mb-5">
+                  Define o espaço (em mm) entre o conteúdo e as bordas da folha em todos os documentos gerados — PDFs, relatórios, DIDs, ofícios e ordens.
+                </p>
+
+                {/* Presets */}
+                <div className="flex flex-wrap gap-2 mb-5">
+                  {[
+                    { label: 'Normal',   mg: { top: 20, bottom: 20, left: 14, right: 14 } },
+                    { label: 'Estreito', mg: { top: 12, bottom: 12, left: 12, right: 12 } },
+                    { label: 'ABNT',     mg: { top: 30, bottom: 20, left: 30, right: 20 } },
+                    { label: 'Largo',    mg: { top: 25, bottom: 25, left: 25, right: 25 } },
+                  ].map(({ label, mg }) => (
+                    <button
+                      key={label}
+                      type="button"
+                      disabled={!editandoGerais}
+                      onClick={() => setGeraisData(p => ({ ...p, margens: mg }))}
+                      className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-ink-300
+                                 bg-ink-50 text-ink-700
+                                 hover:bg-info-50 dark:hover:bg-info-900/30 hover:border-info-400
+                                 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-8 items-start">
+                  {/* Inputs */}
+                  <div className="grid grid-cols-2 gap-4 w-full max-w-xs">
+                    {[
+                      { key: 'top',    label: 'Superior' },
+                      { key: 'bottom', label: 'Inferior' },
+                      { key: 'left',   label: 'Esquerda' },
+                      { key: 'right',  label: 'Direita'  },
+                    ].map(({ key, label }) => (
+                      <div key={key}>
+                        <label className="block text-xs font-medium text-ink-600 mb-1">{label}</label>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            min="5"
+                            max="50"
+                            step="1"
+                            value={geraisData.margens[key]}
+                            disabled={!editandoGerais}
+                            onChange={e => {
+                              const v = Math.min(50, Math.max(5, Number(e.target.value) || 5))
+                              setGeraisData(p => ({ ...p, margens: { ...p.margens, [key]: v } }))
+                            }}
+                            className="w-20 px-2 py-1.5 text-sm rounded-lg border border-ink-300
+                                       bg-surface text-ink-900
+                                       focus:ring-2 focus:ring-brand-500 outline-hidden
+                                       disabled:opacity-60 disabled:cursor-not-allowed"
+                          />
+                          <span className="text-xs text-ink-500">mm</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Prévia A4 */}
+                  <div className="shrink-0">
+                    <p className="text-xs text-ink-400 mb-2">Pré-visualização</p>
+                    <div className="relative bg-surface shadow-sm border border-ink-300"
+                         style={{ width: 90, height: 127 }}>
+                      {/* área de conteúdo */}
+                      <div className="absolute border-2 border-dashed border-info-400"
+                           style={{
+                             top:    `${(geraisData.margens.top    / 297) * 127}px`,
+                             bottom: `${(geraisData.margens.bottom / 297) * 127}px`,
+                             left:   `${(geraisData.margens.left   / 210) * 90}px`,
+                             right:  `${(geraisData.margens.right  / 210) * 90}px`,
+                           }}>
+                        <div className="w-full h-1.5 bg-ink-300 rounded-sm mt-1.5 mx-auto" style={{ width: '80%' }} />
+                        <div className="w-full h-1 bg-ink-200 rounded-sm mt-1 mx-auto" style={{ width: '90%' }} />
+                        <div className="w-full h-1 bg-ink-200 rounded-sm mt-1 mx-auto" style={{ width: '70%' }} />
+                      </div>
+                      {/* rótulos de medida */}
+                      <span className="absolute text-[7px] text-info-500 font-bold"
+                            style={{ top: 2, left: '50%', transform: 'translateX(-50%)' }}>
+                        {geraisData.margens.top}
+                      </span>
+                      <span className="absolute text-[7px] text-info-500 font-bold"
+                            style={{ bottom: 2, left: '50%', transform: 'translateX(-50%)' }}>
+                        {geraisData.margens.bottom}
+                      </span>
+                      <span className="absolute text-[7px] text-info-500 font-bold"
+                            style={{ left: 2, top: '50%', transform: 'translateY(-50%)' }}>
+                        {geraisData.margens.left}
+                      </span>
+                      <span className="absolute text-[7px] text-info-500 font-bold"
+                            style={{ right: 2, top: '50%', transform: 'translateY(-50%)' }}>
+                        {geraisData.margens.right}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -448,7 +644,7 @@ export default function Configuracoes() {
                       if (geraisOriginal) setGeraisData({ ...geraisOriginal });
                       setEditandoGerais(false);
                     }}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 rounded-lg text-sm font-semibold transition-colors shadow-sm border border-gray-300 dark:border-slate-600"
+                    className="flex items-center gap-2 px-4 py-2 bg-ink-100 hover:bg-ink-200 text-ink-700 rounded-lg text-sm font-semibold transition-colors shadow-sm border border-ink-300"
                   >
                     <X className="h-4 w-4" /> Cancelar
                   </button>
@@ -456,7 +652,7 @@ export default function Configuracoes() {
                   <button
                     type="button"
                     onClick={() => { setGeraisOriginal({ ...geraisData }); setEditandoGerais(true); }}
-                    className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm"
+                    className="flex items-center gap-2 px-4 py-2 bg-warning-600 hover:bg-warning-700 dark:bg-warning-700 dark:hover:bg-warning-800 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm"
                   >
                     Alterar
                   </button>
@@ -479,10 +675,10 @@ export default function Configuracoes() {
                 { key: 'emailMencao',     title: 'E-mail — Menções',                   desc: 'Receba um e-mail quando for mencionado em um comentário' },
                 { key: 'pushProcesso',    title: 'Push — Notificações do Navegador',   desc: 'Receba notificações push no navegador em tempo real' },
               ].map(({ key, title, desc }, i, arr) => (
-                <div key={key} className={`flex items-center justify-between py-4 ${i < arr.length - 1 ? 'border-b border-gray-100 dark:border-slate-700/50' : ''}`}>
+                <div key={key} className={`flex items-center justify-between py-4 ${i < arr.length - 1 ? 'border-b border-ink-100' : ''}`}>
                   <div className="flex-1 pr-4">
-                    <p className="font-medium text-gray-800 dark:text-slate-200 text-sm">{title}</p>
-                    <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{desc}</p>
+                    <p className="font-medium text-ink-800 text-sm">{title}</p>
+                    <p className="text-xs text-ink-500 mt-0.5">{desc}</p>
                   </div>
                   <ToggleSwitch checked={notificacoesData[key]} onChange={(e) => setNotificacoesData({ ...notificacoesData, [key]: e.target.checked })} />
                 </div>
@@ -504,24 +700,24 @@ export default function Configuracoes() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
                 <button
                   onClick={() => isDark && toggleTheme()}
-                  className={`p-5 rounded-xl border-2 text-left transition-all ${!isDark ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30' : 'border-gray-200 dark:border-slate-700/50 hover:border-gray-300 dark:hover:border-slate-500'}`}
+                  className={`p-5 rounded-xl border-2 text-left transition-all ${!isDark ? 'border-brand-500 bg-info-50 dark:bg-info-900/30' : 'border-ink-200 hover:border-ink-300'}`}
                 >
                   <div className="mb-2"><Sun className="h-7 w-7 text-amber-500" /></div>
-                  <p className="font-semibold text-gray-800 dark:text-slate-200">Modo Claro</p>
-                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Interface clara e brilhante</p>
-                  {!isDark && <span className="mt-2 inline-flex items-center gap-1 badge bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300"><CheckCircle className="h-3 w-3" /> Ativo</span>}
+                  <p className="font-semibold text-ink-800">Modo Claro</p>
+                  <p className="text-xs text-ink-500 mt-0.5">Interface clara e brilhante</p>
+                  {!isDark && <span className="mt-2 inline-flex items-center gap-1 badge bg-info-100 dark:bg-info-900/40 text-brand-700 dark:text-info-300"><CheckCircle className="h-3 w-3" /> Ativo</span>}
                 </button>
                 <button
                   onClick={() => !isDark && toggleTheme()}
-                  className={`p-5 rounded-xl border-2 text-left transition-all ${isDark ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30' : 'border-gray-200 dark:border-slate-700/50 hover:border-gray-300 dark:hover:border-slate-500'}`}
+                  className={`p-5 rounded-xl border-2 text-left transition-all ${isDark ? 'border-brand-500 bg-info-50 dark:bg-info-900/30' : 'border-ink-200 hover:border-ink-300'}`}
                 >
                   <div className="mb-2"><Moon className="h-7 w-7 text-indigo-500" /></div>
-                  <p className="font-semibold text-gray-800 dark:text-slate-200">Modo Escuro</p>
-                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Interface escura e confortável</p>
-                  {isDark && <span className="mt-2 inline-flex items-center gap-1 badge bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300"><CheckCircle className="h-3 w-3" /> Ativo</span>}
+                  <p className="font-semibold text-ink-800">Modo Escuro</p>
+                  <p className="text-xs text-ink-500 mt-0.5">Interface escura e confortável</p>
+                  {isDark && <span className="mt-2 inline-flex items-center gap-1 badge bg-info-100 dark:bg-info-900/40 text-brand-700 dark:text-info-300"><CheckCircle className="h-3 w-3" /> Ativo</span>}
                 </button>
               </div>
-              <p className="text-xs text-gray-400 dark:text-slate-500">A preferência de tema é salva automaticamente no seu navegador.</p>
+              <p className="text-xs text-ink-400">A preferência de tema é salva automaticamente no seu navegador.</p>
             </div>
           )}
 
@@ -532,21 +728,21 @@ export default function Configuracoes() {
               {/* EXPORTAÇÃO */}
               <div>
                 <SectionTitle icon={FileDown} title="Exportação de Dados" />
-                <p className="text-xs text-gray-400 dark:text-slate-500 mb-5">
+                <p className="text-xs text-ink-400 mb-5">
                   Faça o download dos dados do sistema nos formatos JSON ou CSV para backup ou integração com outros sistemas.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {exportItems.map(({ id, emoji, label, desc }) => (
-                    <div key={id} className="flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-800/50">
+                    <div key={id} className="flex items-center justify-between p-4 rounded-xl border border-ink-200 bg-ink-50">
                       <div>
-                        <p className="text-sm font-medium text-gray-800 dark:text-slate-200">{emoji} {label}</p>
-                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{desc}</p>
+                        <p className="text-sm font-medium text-ink-800">{emoji} {label}</p>
+                        <p className="text-xs text-ink-400 mt-0.5">{desc}</p>
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                      <div className="flex items-center gap-2 shrink-0 ml-4">
                         <button
                           onClick={() => handleExport(id, 'json')}
                           disabled={exportLoading === id + 'json'}
-                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 hover:bg-blue-100 transition-colors disabled:opacity-60"
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-info-50 dark:bg-info-900/30 text-brand-700 dark:text-info-300 border border-info-200 dark:border-info-700 hover:bg-info-100 transition-colors disabled:opacity-60"
                         >
                           {exportLoading === id + 'json' ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
                           JSON
@@ -554,7 +750,7 @@ export default function Configuracoes() {
                         <button
                           onClick={() => handleExport(id, 'csv')}
                           disabled={exportLoading === id + 'csv'}
-                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-700 hover:bg-green-100 transition-colors disabled:opacity-60"
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-success-50 dark:bg-success-900/30 text-success-700 dark:text-success-300 border border-success-200 dark:border-success-700 hover:bg-success-100 transition-colors disabled:opacity-60"
                         >
                           {exportLoading === id + 'csv' ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
                           CSV
@@ -565,19 +761,19 @@ export default function Configuracoes() {
                 </div>
               </div>
 
-              <hr className="border-gray-200 dark:border-slate-700/50" />
+              <hr className="border-ink-200" />
 
               {/* IMPORTAÇÃO */}
               <div>
                 <SectionTitle icon={FileUp} title="Importação de Dados" />
-                <p className="text-xs text-gray-400 dark:text-slate-500 mb-5">
+                <p className="text-xs text-ink-400 mb-5">
                   Importe dados a partir de arquivos JSON ou CSV previamente exportados do sistema. Os registros existentes não serão sobrescritos.
                 </p>
 
                 <div className="space-y-4 max-w-lg">
                   {/* Tipo de dado */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Tipo de dado a importar</label>
+                    <label className="block text-sm font-medium text-ink-700 mb-2">Tipo de dado a importar</label>
                     <select
                       value={importType}
                       onChange={e => setImportType(e.target.value)}
@@ -599,18 +795,18 @@ export default function Configuracoes() {
 
                   {/* Upload */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Arquivo (JSON ou CSV)</label>
+                    <label className="block text-sm font-medium text-ink-700 mb-2">Arquivo (JSON ou CSV)</label>
                     <div
-                      className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-800/40 cursor-pointer hover:border-blue-400 transition-colors"
+                      className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-ink-300 bg-ink-50 cursor-pointer hover:border-info-400 transition-colors"
                       onClick={() => importInputRef.current?.click()}
                     >
-                      <Database className="h-8 w-8 text-gray-300 dark:text-slate-600 mb-2" />
+                      <Database className="h-8 w-8 text-ink-400 mb-2" />
                       {importFile ? (
-                        <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">{importFile.name}</p>
+                        <p className="text-sm text-brand-600 dark:text-info-400 font-medium">{importFile.name}</p>
                       ) : (
                         <>
-                          <p className="text-sm text-gray-500 dark:text-slate-400">Clique para selecionar o arquivo</p>
-                          <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">Formatos aceitos: .json, .csv</p>
+                          <p className="text-sm text-ink-500">Clique para selecionar o arquivo</p>
+                          <p className="text-xs text-ink-400 mt-1">Formatos aceitos: .json, .csv</p>
                         </>
                       )}
                     </div>
@@ -627,10 +823,10 @@ export default function Configuracoes() {
                   {importStatus && (
                     <div className={`flex items-center gap-2 p-3 rounded-lg text-sm border ${
                       importStatus.ok
-                        ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700 text-green-800 dark:text-green-300'
-                        : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700 text-red-800 dark:text-red-300'
+                        ? 'bg-success-50 dark:bg-success-900/30 border-success-200 dark:border-success-700 text-success-800 dark:text-success-300'
+                        : 'bg-danger-50 dark:bg-danger-900/30 border-danger-200 dark:border-danger-700 text-danger-800 dark:text-danger-300'
                     }`}>
-                      {importStatus.ok ? <CheckCircle className="h-4 w-4 flex-shrink-0" /> : <AlertCircle className="h-4 w-4 flex-shrink-0" />}
+                      {importStatus.ok ? <CheckCircle className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
                       {importStatus.msg}
                     </div>
                   )}
@@ -647,13 +843,44 @@ export default function Configuracoes() {
                 </div>
               </div>
 
-              <hr className="border-gray-200 dark:border-slate-700/50" />
+              <hr className="border-ink-200" />
+
+              {/* URL DE IMPORTAÇÃO DE ITENS */}
+              <div>
+                <SectionTitle icon={ArrowLeftRight} title="Integração — Catálogo de Itens" />
+                <p className="text-xs text-ink-400 mb-5">
+                  Configure o endereço de onde o sistema irá buscar itens ao clicar em <strong>"Importar Itens"</strong> na aba Itens do módulo Contratos. A URL deve retornar um array JSON com os campos <code className="bg-ink-100 px-1 rounded-sm text-xs">descricao</code>, <code className="bg-ink-100 px-1 rounded-sm text-xs">categoria</code> e <code className="bg-ink-100 px-1 rounded-sm text-xs">unidade_medida</code>.
+                </p>
+                <div className="flex gap-3 items-end max-w-xl">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-ink-700 mb-2">URL da API de Itens</label>
+                    <input
+                      type="url"
+                      value={urlImportacaoItens}
+                      onChange={e => setUrlImportacaoItens(e.target.value)}
+                      placeholder="https://api.exemplo.gov.br/itens"
+                      className="input-field text-sm font-mono"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={salvarUrlImportacao}
+                    disabled={savingUrlImportacao}
+                    className="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {savingUrlImportacao ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    Salvar
+                  </button>
+                </div>
+              </div>
+
+              <hr className="border-ink-200" />
 
               {/* APIs / INTEGRAÇÕES */}
               <div>
                 <SectionTitle icon={Key} title="APIs e Integrações" />
-                <p className="text-xs text-gray-400 dark:text-slate-500 mb-5">
-                  Endpoints disponíveis para integração com sistemas externos. Utilize o token JWT de autenticação no header <code className="bg-gray-100 dark:bg-slate-700/30 px-1 rounded text-xs">Authorization: Bearer &lt;token&gt;</code>.
+                <p className="text-xs text-ink-400 mb-5">
+                  Endpoints disponíveis para integração com sistemas externos. Utilize o token JWT de autenticação no header <code className="bg-ink-100 px-1 rounded-sm text-xs">Authorization: Bearer &lt;token&gt;</code>.
                 </p>
 
                 <div className="space-y-3">
@@ -667,22 +894,22 @@ export default function Configuracoes() {
                     { method: 'GET',    path: '/export/processos?formato=json', desc: 'Exportar todos os processos' },
                     { method: 'POST',   path: '/import',                   desc: 'Importar dados via multipart/form-data' },
                   ].map(({ method, path, desc }) => (
-                    <div key={method + path} className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-700/50">
-                      <span className={`flex-shrink-0 mt-0.5 px-2 py-0.5 rounded text-[10px] font-bold ${
-                        method === 'GET'  ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' :
-                        method === 'POST' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' :
-                        'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300'
+                    <div key={method + path} className="flex items-start gap-3 p-3 rounded-lg bg-ink-50 border border-ink-100">
+                      <span className={`flex-shrink-0 mt-0.5 px-2 py-0.5 rounded-sm text-[10px] font-bold ${
+                        method === 'GET'  ? 'bg-success-100 dark:bg-success-900/40 text-success-700 dark:text-success-300' :
+                        method === 'POST' ? 'bg-info-100 dark:bg-info-900/40 text-brand-700 dark:text-info-300' :
+                        'bg-warning-100 dark:bg-warning-900/40 text-warning-700 dark:text-warning-300'
                       }`}>{method}</span>
                       <div className="min-w-0">
-                        <code className="text-xs font-mono text-gray-800 dark:text-slate-200 break-all">{path}</code>
-                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{desc}</p>
+                        <code className="text-xs font-mono text-ink-800 break-all">{path}</code>
+                        <p className="text-xs text-ink-400 mt-0.5">{desc}</p>
                       </div>
                     </div>
                   ))}
                 </div>
 
-                <p className="text-xs text-gray-400 dark:text-slate-500 mt-4">
-                  ℹ️ Todas as requisições devem incluir o header <code className="bg-gray-100 dark:bg-slate-700/30 px-1 rounded text-xs">x-tenant-subdomain: {tenant?.subdominio}</code> para identificar o tenant.
+                <p className="text-xs text-ink-400 mt-4">
+                  ℹ️ Todas as requisições devem incluir o header <code className="bg-ink-100 px-1 rounded-sm text-xs">x-tenant-subdomain: {tenant?.subdominio}</code> para identificar o tenant.
                 </p>
               </div>
 

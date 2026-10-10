@@ -6,6 +6,7 @@ module.exports = (sequelize) => {
     contrato_id:    { type: DataTypes.INTEGER, allowNull: false },
     item_id:        { type: DataTypes.INTEGER },
     lote:           { type: DataTypes.STRING(50) },
+    codigo_item:    { type: DataTypes.STRING(100) },
     descricao:      { type: DataTypes.STRING(500), allowNull: false },
     unidade:        { type: DataTypes.STRING(50) },
     quantidade:     { type: DataTypes.DECIMAL(15, 4) },

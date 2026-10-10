@@ -13,8 +13,8 @@ const defineDidModel = (sequelize) => {
       comment: 'FK: Processo vinculado'
     },
     numero_did: {
-      type: DataTypes.INTEGER,
-      comment: 'Número sequencial do DID'
+      type: DataTypes.STRING(30),
+      comment: 'Número do DID (string para preservar zeros à esquerda)'
     },
     tipo_did: {
       type: DataTypes.STRING(20),
@@ -41,6 +41,7 @@ const defineDidModel = (sequelize) => {
     cert_sec1_estadual: { type: DataTypes.BOOLEAN, defaultValue: false },
     cert_sec1_federal: { type: DataTypes.BOOLEAN, defaultValue: false },
     cert_sec1_simples_nac: { type: DataTypes.BOOLEAN, defaultValue: false },
+    cert_sec1_arquivos: { type: DataTypes.JSONB, defaultValue: {} },
     valor_did: { type: DataTypes.DECIMAL(15, 2) },
     itens_did: { type: DataTypes.JSON },
 
@@ -76,9 +77,11 @@ const defineDidModel = (sequelize) => {
     cert_municipal: { type: DataTypes.BOOLEAN, defaultValue: false },
     cert_estadual: { type: DataTypes.BOOLEAN, defaultValue: false },
     contabil_auditor: { type: DataTypes.STRING },
+    contabil_empenhado: { type: DataTypes.STRING(10) },
     empenho_numero: { type: DataTypes.STRING },
     tipo_empenho: { type: DataTypes.STRING(20), allowNull: true },
     data_empenho: { type: DataTypes.DATEONLY },
+    contabil_liquidado: { type: DataTypes.STRING(10) },
     liquidacao_numero: { type: DataTypes.STRING },
     data_liquidacao: { type: DataTypes.DATEONLY },
 
@@ -150,11 +153,13 @@ const defineDidModel = (sequelize) => {
     contabil_pc_empenho_numero: { type: DataTypes.STRING },
     contabil_pc_tipo_empenho: { type: DataTypes.STRING(20) },
     contabil_pc_data_empenho: { type: DataTypes.DATEONLY },
+    contabil_pc_liquidado: { type: DataTypes.STRING(10) },
     contabil_pc_liquidacao_numero: { type: DataTypes.STRING },
     contabil_pc_data_liquidacao: { type: DataTypes.DATEONLY },
     contabil_pc_doc_caixa: { type: DataTypes.STRING },
 
     // ── Seção de Recebimento (DID Contas Variáveis) ───────────────────────
+    receb_ordem_recebida: { type: DataTypes.STRING(10) },
     receb_data: { type: DataTypes.DATEONLY },
     receb_nf_data: { type: DataTypes.DATEONLY },
     receb_nf_enviado_compras: { type: DataTypes.DATEONLY },
@@ -174,7 +179,14 @@ const defineDidModel = (sequelize) => {
       type: DataTypes.STRING(20),
       defaultValue: 'rascunho'
     },
-    criado_por_id: { type: DataTypes.UUID }
+    criado_por_id: { type: DataTypes.UUID },
+
+    // ── Vínculo com Ordem de Compra ───────────────────────────────────────
+    ordem_compra_id: { type: DataTypes.INTEGER, allowNull: true },
+    ordem_ref:       { type: DataTypes.STRING(100), allowNull: true },
+
+    // ── Tesouraria ────────────────────────────────────────────────────────
+    conta_pagamento_id: { type: DataTypes.UUID, allowNull: true, comment: 'FK: ContaBancaria de onde saiu o pagamento' },
   }, {
     tableName: 'dids',
     timestamps: true,

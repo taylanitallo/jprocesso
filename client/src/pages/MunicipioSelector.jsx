@@ -1,42 +1,46 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Building2 } from 'lucide-react'
-import api from '../services/api'
+import { Search, Building2, ArrowLeft } from 'lucide-react'
+import api, { apiUrl } from '../services/api'
+import BotaoTema from '../components/BotaoTema'
+import { useTheme } from '../context/ThemeContext'
 
+// Tela inicial do sistema — descobre o município pelo e-mail (em vez de exigir
+// que o usuário já saiba o subdomínio) e então encaminha para o login normal
+// (/{subdominio}/login, CPF + senha) daquele município.
 export default function MunicipioSelector() {
-  const [municipios, setMunicipios] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [step, setStep] = useState('email') // 'email' | 'lista'
+  const [email, setEmail] = useState('')
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [municipios, setMunicipios] = useState([])
   const [busca, setBusca] = useState('')
+
   const navigate = useNavigate()
+  const { isDark } = useTheme()
 
-  useEffect(() => {
-    fetchMunicipios()
-  }, [])
-
-  const fetchMunicipios = async () => {
+  const handleBuscarEmail = async (e) => {
+    e.preventDefault()
+    setError('')
+    if (!email.trim()) return
+    setLoading(true)
     try {
-      const res = await api.get('/tenants/public')
-      if (res.data.tenants && Array.isArray(res.data.tenants)) {
-        const ordenados = res.data.tenants.sort((a, b) =>
-          a.nome_municipio.localeCompare(b.nome_municipio)
-        )
-        setMunicipios(ordenados)
+      const { data } = await api.post('/auth/buscar-municipios', { email: email.trim() })
+      const encontrados = data.municipios || []
+
+      if (encontrados.length === 0) {
+        setError('Não encontramos uma conta com este e-mail.')
+      } else if (encontrados.length === 1) {
+        navigate(`/${encontrados[0].subdominio}/login`)
+      } else {
+        setMunicipios(encontrados)
+        setStep('lista')
       }
     } catch (err) {
-      setError('Erro ao carregar órgãos. Tente novamente.')
+      setError(err.response?.data?.error || 'Erro ao buscar. Tente novamente.')
     } finally {
       setLoading(false)
     }
-  }
-
-  const handleAcessar = (subdominio) => {
-    // Limpa sessão ativa antes de abrir o login do tenant selecionado
-    localStorage.removeItem('token')
-    localStorage.removeItem('subdomain')
-    delete api.defaults.headers.common['Authorization']
-    delete api.defaults.headers.common['x-tenant-subdomain']
-    window.location.href = `/${subdominio}/login`
   }
 
   const municipiosFiltrados = municipios.filter(m =>
@@ -44,167 +48,154 @@ export default function MunicipioSelector() {
     (m.cidade && m.cidade.toLowerCase().includes(busca.toLowerCase()))
   )
 
+  const logoUrl = (m) => {
+    if (!m) return null
+    return (
+      ((m.configuracoes?.logo_login_url || m.configuracoes?.logo_interna_url) && m.subdominio
+        ? apiUrl(`/tenants/${m.subdominio}/logo/${m.configuracoes?.logo_login_url ? 'login' : 'interna'}`)
+        : null) ||
+      m.configuracoes?.logo_url ||
+      m.configuracoes?.brasao_url ||
+      m.configuracoes?.imagem_url ||
+      null
+    )
+  }
+
+  // Classes com par claro/escuro (antes eram estilos inline só para fundo escuro)
+  const campo = 'w-full py-2.5 rounded-xl text-sm outline-hidden transition-all bg-white dark:bg-white/5 border border-ink-200 dark:border-white/10 text-ink-900 dark:text-white placeholder:text-ink-400 dark:placeholder:text-white/30 focus:border-violet-500/60'
+
   return (
     <div
-      className="min-h-screen flex flex-col relative"
+      className="min-h-screen flex flex-col relative bg-gradient-to-br from-brand-50 via-canvas to-violet-50"
       style={{
-        backgroundImage: "url('/background_geral.png')",
+        // A imagem de fundo é escura e já traz o logo em branco: só no tema escuro.
+        // No claro, fundo suave + logo em versão escura.
+        backgroundImage: isDark ? "url('/background_geral.png')" : undefined,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
+        minHeight: '100svh',
       }}
     >
-      {/* overlay escuro */}
-      <div className="absolute inset-0 bg-[#050b18]/70" />
+      <div className="absolute inset-0 dark:bg-[#050b18]/70" />
+      <BotaoTema className="absolute top-4 right-4 z-30" />
+      {!isDark && (
+        <img src="/logo_dark.png" alt="jProcesso"
+          className="hidden lg:block absolute left-[5%] top-1/2 -translate-y-1/2 w-[36%] max-w-[520px] z-[5] pointer-events-none" />
+      )}
 
-      {/* conteúdo principal */}
-      <div className="relative flex-1 flex items-center justify-end min-h-screen px-8 py-10 max-w-6xl mx-auto w-full">
+      <div
+        className="relative flex-1 flex flex-col items-center justify-center lg:items-end lg:justify-center px-4 sm:px-8 lg:px-8 py-8 lg:py-10 w-full"
+        style={{ maxWidth: '1152px', margin: '0 auto' }}
+      >
+        <div className="w-full max-w-md shrink-0 rounded-2xl p-6 sm:p-8 flex flex-col gap-5 backdrop-blur-[24px]
+                        bg-white/90 dark:bg-[rgba(10,8,28,0.80)]
+                        border border-violet-300/60 dark:border-violet-500/30
+                        shadow-[0_20px_50px_rgba(124,58,237,0.15)] dark:shadow-[0_0_60px_rgba(139,92,246,0.12),0_0_120px_rgba(139,92,246,0.06),0_30px_60px_rgba(0,0,0,0.6)]">
+          {/* ── Passo 1: e-mail ── */}
+          {step === 'email' && (
+            <>
+              <p className="text-ink-700 dark:text-white/80 text-sm text-center">
+                Informe seu e-mail para acessar o sistema
+              </p>
 
-        {/* ── Card de seleção ── */}
-        <div
-          className="w-full max-w-md lg:flex-shrink-0 rounded-2xl p-6 sm:p-8 flex flex-col gap-5"
-          style={{
-            background: 'rgba(10, 8, 28, 0.80)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-            border: '1px solid rgba(139, 92, 246, 0.30)',
-            boxShadow: '0 0 60px rgba(139, 92, 246, 0.12), 0 0 120px rgba(139, 92, 246, 0.06), 0 30px 60px rgba(0,0,0,0.6)',
-          }}
-        >
-          {/* cabeçalho card */}
-          <p className="text-white/80 text-sm text-center">
-            Selecione seu órgão para acessar o sistema
-          </p>
+              {error && (
+                <div className="bg-danger-50 dark:bg-danger-900/30 border border-danger-200 dark:border-danger-500/30 text-danger-700 dark:text-danger-300 px-4 py-2.5 rounded-xl text-sm">
+                  {error}
+                </div>
+              )}
 
-          {/* campo de busca */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Pesquisar órgão..."
-              value={busca}
-              onChange={e => setBusca(e.target.value)}
-              className="w-full pl-9 pr-3 py-2.5 rounded-xl text-sm text-white placeholder-white/30 outline-none transition-all"
-              style={{
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.10)',
-              }}
-              onFocus={e => { e.currentTarget.style.borderColor = 'rgba(139,92,246,0.60)' }}
-              onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)' }}
-            />
-          </div>
-
-          {/* lista de órgãos */}
-          <div className="flex flex-col gap-2 max-h-96 overflow-y-auto pr-0.5">
-            {error && (
-              <p className="text-red-400 text-xs text-center py-3">{error}</p>
-            )}
-
-            {loading && (
-              <div className="flex flex-col gap-2">
-                {[1, 2, 3].map(i => (
-                  <div
-                    key={i}
-                    className="h-14 rounded-xl animate-pulse"
-                    style={{ background: 'rgba(255,255,255,0.05)' }}
+              <form onSubmit={handleBuscarEmail} className="flex flex-col gap-3">
+                <div className="relative">
+                  <input
+                    type="email"
+                    autoFocus
+                    placeholder="seu@email.com"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    className={`${campo} px-3.5`}
+                    required
+                    autoComplete="email"
                   />
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full h-11 flex items-center justify-center gap-2 rounded-xl font-semibold text-white text-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                  style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', boxShadow: '0 0 20px rgba(139,92,246,0.35)' }}
+                >
+                  {loading ? 'Buscando...' : 'Continuar'}
+                </button>
+              </form>
+            </>
+          )}
+
+          {/* ── Passo 2: lista de municípios (múltiplos resultados) ── */}
+          {step === 'lista' && (
+            <>
+              <p className="text-ink-700 dark:text-white/80 text-sm text-center">
+                Encontramos mais de um órgão para este e-mail. Selecione um:
+              </p>
+
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400 dark:text-white/30 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Pesquisar órgão..."
+                  value={busca}
+                  onChange={e => setBusca(e.target.value)}
+                  autoFocus
+                  className={`${campo} pl-9 pr-3`}
+                />
+              </div>
+
+              <div className="flex flex-col gap-2 overflow-y-auto pr-0.5" style={{ maxHeight: 'min(380px, 40svh)' }}>
+                {municipiosFiltrados.length === 0 && (
+                  <p className="text-ink-500 dark:text-white/40 text-xs text-center py-4">Nenhum órgão encontrado.</p>
+                )}
+
+                {municipiosFiltrados.map(m => (
+                  <div
+                    key={m.subdominio}
+                    className="flex items-center gap-4 px-3 py-3 rounded-xl transition-all duration-150 cursor-pointer
+                               bg-ink-50 dark:bg-white/[0.04] border border-ink-200 dark:border-white/[0.07]
+                               hover:bg-violet-50 dark:hover:bg-violet-500/[0.12] hover:border-violet-400/40"
+                    onClick={() => navigate(`/${m.subdominio}/login`)}
+                  >
+                    <div className="shrink-0 w-11 h-11 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center overflow-hidden bg-violet-500/10 border border-violet-500/30">
+                      {logoUrl(m) ? (
+                        <img src={logoUrl(m)} alt={m.nome_municipio} className="w-full h-full object-contain p-1.5" />
+                      ) : (
+                        <Building2 className="h-6 w-6 text-violet-500 dark:text-violet-400" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-ink-900 dark:text-white text-sm font-semibold leading-tight" style={{ wordBreak: 'break-word' }}>
+                        {m.nome_municipio}
+                      </p>
+                      <p className="text-ink-500 dark:text-white/35 text-xs mt-0.5">
+                        {m.cidade ? `${m.cidade}/${m.estado}` : m.estado}
+                      </p>
+                    </div>
+                  </div>
                 ))}
               </div>
-            )}
 
-            {!loading && !error && municipiosFiltrados.length === 0 && (
-              <p className="text-white/40 text-xs text-center py-4">
-                {busca ? 'Nenhum órgão encontrado.' : 'Nenhum órgão disponível.'}
-              </p>
-            )}
-
-            {!loading && municipiosFiltrados.map(m => {
-              const logoUrl =
-                m.configuracoes?.logo_url ||
-                m.configuracoes?.brasao_url ||
-                m.configuracoes?.imagem_url ||
-                m.logo_url ||
-                m.brasao_url ||
-                m.imagem_url ||
-                null
-
-              return (
-              <div
-                key={m.id}
-                className="flex items-center gap-4 px-3 py-3 rounded-xl transition-all duration-150 cursor-pointer"
-                style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.07)',
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.background = 'rgba(139,92,246,0.12)'
-                  e.currentTarget.style.borderColor = 'rgba(139,92,246,0.40)'
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'
-                }}
-                onClick={() => handleAcessar(m.subdominio)}
+              <button
+                type="button"
+                onClick={() => { setStep('email'); setError(''); setMunicipios([]); setBusca('') }}
+                className="inline-flex items-center gap-1.5 text-xs text-ink-500 dark:text-white/50 hover:text-violet-600 dark:hover:text-violet-300 transition-all self-center"
               >
-                {/* brasão / logo */}
-                <div
-                  className="flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center overflow-hidden"
-                  style={{
-                    background: 'rgba(139,92,246,0.12)',
-                    border: '1px solid rgba(139,92,246,0.30)',
-                  }}
-                >
-                  {logoUrl ? (
-                    <img
-                      src={logoUrl}
-                      alt={m.nome_municipio}
-                      className="w-full h-full object-contain p-1.5"
-                    />
-                  ) : (
-                    <Building2 className="h-6 w-6 text-violet-400" />
-                  )}
-                </div>
-
-                {/* nome + subdomínio */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-white text-sm font-semibold leading-tight" style={{ wordBreak: 'break-word' }}>
-                    {m.nome_municipio}
-                  </p>
-                  <p className="text-white/35 text-xs mt-0.5">
-                    /{m.subdominio}
-                  </p>
-                </div>
-
-                {/* botão ACESSAR */}
-                <button
-                  onClick={e => { e.stopPropagation(); handleAcessar(m.subdominio) }}
-                  className="flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg transition-all duration-150 text-white"
-                  style={{
-                    background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
-                    boxShadow: '0 0 12px rgba(139,92,246,0.35)',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = 'linear-gradient(135deg, #8b5cf6, #7c3aed)'
-                    e.currentTarget.style.boxShadow = '0 0 20px rgba(139,92,246,0.55)'
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = 'linear-gradient(135deg, #7c3aed, #6d28d9)'
-                    e.currentTarget.style.boxShadow = '0 0 12px rgba(139,92,246,0.35)'
-                  }}
-                >
-                  ACESSAR
-                </button>
-              </div>
-              )
-            })}
-          </div>
-
+                <ArrowLeft className="h-3 w-3" />
+                Usar outro e-mail
+              </button>
+            </>
+          )}
         </div>
-      </div>
 
-      {/* copyright */}
-      <div className="relative text-center pb-4 text-xs text-white/20">
-        © 2026&nbsp;&nbsp;JEOS SISTEMAS E ASSESSORIAS LTDA&nbsp;&nbsp;•&nbsp;&nbsp;V1.0.0
+        <p className="text-ink-500 dark:text-white/20 text-xs mt-4 text-center w-full max-w-md">
+          © 2026&nbsp;&nbsp;JEOS SISTEMAS E ASSESSORIAS LTDA&nbsp;&nbsp;•&nbsp;&nbsp;V{__APP_VERSION__}
+        </p>
       </div>
     </div>
   )

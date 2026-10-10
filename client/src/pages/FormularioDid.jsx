@@ -3,7 +3,8 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, Save, Loader2, CheckCircle, AlertCircle, FileCheck, FileDown, Eye } from 'lucide-react'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
-import { EMPTY, DidReadOnlyContext } from './did/didShared'
+import { useAssinatura } from '../components/assinatura/AssinaturaProvider'
+import { EMPTY, DidReadOnlyContext, ConfirmModal } from './did/didShared'
 import { gerarDidPDF } from './did/gerarDidPDF'
 import DidFixasSecaoI from './did/fixas/DidFixasSecaoI'
 import DidFixasSecaoII from './did/fixas/DidFixasSecaoII'
@@ -30,7 +31,7 @@ import DidVariaveisSecaoXII from './did/variaveis/DidVariaveisSecaoXII'
 function Field({ label, children, half }) {
   return (
     <div className={half ? 'col-span-1' : 'col-span-2'}>
-      <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">{label}</label>
+      <label className="block text-xs font-medium text-ink-500 mb-1">{label}</label>
       {children}
     </div>
   )
@@ -43,9 +44,9 @@ function Input({ value, onChange, type = 'text', placeholder }) {
       value={value ?? ''}
       onChange={onChange}
       placeholder={placeholder}
-      className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-slate-600
-        bg-white dark:bg-slate-700/30 text-gray-900 dark:text-slate-100
-        focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+      className="w-full px-3 py-2 text-sm rounded-lg border border-ink-200
+        bg-surface text-ink-900
+        focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-hidden"
     />
   )
 }
@@ -57,18 +58,18 @@ function Textarea({ value, onChange, placeholder }) {
       value={value ?? ''}
       onChange={onChange}
       placeholder={placeholder}
-      className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-slate-600
-        bg-white dark:bg-slate-700/30 text-gray-900 dark:text-slate-100
-        focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+      className="w-full px-3 py-2 text-sm rounded-lg border border-ink-200
+        bg-surface text-ink-900
+        focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-hidden resize-none"
     />
   )
 }
 
 function Checkbox({ label, checked, onChange }) {
   return (
-    <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-slate-300">
+    <label className="flex items-center gap-2 cursor-pointer text-sm text-ink-700">
       <input type="checkbox" checked={!!checked} onChange={onChange}
-        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+        className="w-4 h-4 rounded-sm border-ink-300 text-brand-600 focus:ring-brand-500" />
       {label}
     </label>
   )
@@ -131,54 +132,54 @@ function ModalItensContrato({ contrato, itensDid, onConfirm, onClose }) {
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-3xl flex flex-col" style={{ maxHeight: '85vh' }}>
-        <div className="flex items-center justify-between bg-gray-800 dark:bg-slate-950 px-4 py-3 rounded-t-xl shrink-0">
+      <div className="bg-surface rounded-xl shadow-2xl w-full max-w-3xl flex flex-col" style={{ maxHeight: '85vh' }}>
+        <div className="flex items-center justify-between bg-ink-800 px-4 py-3 rounded-t-xl shrink-0">
           <div>
             <span className="text-sm font-semibold text-white">Selecionar Itens para o DID</span>
-            {contrato && <span className="ml-3 text-xs text-gray-400 font-mono">{contrato.numero_contrato} — {contrato.tipo_contrato}</span>}
+            {contrato && <span className="ml-3 text-xs text-ink-400 font-mono">{contrato.numero_contrato} — {contrato.tipo_contrato}</span>}
           </div>
-          <button onClick={onClose} className="p-0.5 rounded hover:bg-gray-700 text-white/80 hover:text-white">
+          <button onClick={onClose} className="p-0.5 rounded-sm hover:bg-ink-700 text-white/80 hover:text-white">
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {itensContrato.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-10 text-gray-400">
+          <div className="flex-1 flex flex-col items-center justify-center p-10 text-ink-400">
             <p className="text-sm font-medium">Nenhum item encontrado no contrato.</p>
             <p className="text-xs mt-1">Adicione itens ao contrato em Contratos antes de criar o DID.</p>
           </div>
         ) : (
           <>
-            <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-300 shrink-0">
+            <div className="px-4 py-2 bg-info-50 dark:bg-info-900/20 border-b border-info-100 dark:border-info-800 text-xs text-brand-700 dark:text-info-300 shrink-0">
               Marque os itens e informe a quantidade desejada para este DID (função de ordem de compra).
             </div>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto overflow-x-auto">
               <table className="w-full text-xs">
-                <thead className="bg-gray-50 dark:bg-slate-700/30 sticky top-0">
+                <thead className="bg-ink-50 sticky top-0">
                   <tr>
                     <th className="px-3 py-2 w-10"></th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-500 dark:text-slate-400">Descrição</th>
-                    <th className="px-3 py-2 text-center font-semibold text-gray-500 dark:text-slate-400 w-20">Unid.</th>
-                    <th className="px-3 py-2 text-right font-semibold text-gray-500 dark:text-slate-400 w-32">Vlr. Unit. (R$)</th>
-                    <th className="px-3 py-2 text-right font-semibold text-gray-500 dark:text-slate-400 w-28">Qtd. DID</th>
-                    <th className="px-3 py-2 text-right font-semibold text-gray-500 dark:text-slate-400 w-32">Subtotal</th>
+                    <th className="px-3 py-2 text-left font-semibold text-ink-500">Descrição</th>
+                    <th className="px-3 py-2 text-center font-semibold text-ink-500 w-20">Unid.</th>
+                    <th className="px-3 py-2 text-right font-semibold text-ink-500 w-32">Vlr. Unit. (R$)</th>
+                    <th className="px-3 py-2 text-right font-semibold text-ink-500 w-28">Qtd. DID</th>
+                    <th className="px-3 py-2 text-right font-semibold text-ink-500 w-32">Subtotal</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50">
+                <tbody className="divide-y divide-ink-100">
                   {selecao.map((it, idx) => {
                     const q = parseFloat(it.qtd_did) || 0
                     const u = parseFloat(it.valor_unit_did) || 0
                     const sub = q * u
                     return (
                       <tr key={idx} onClick={() => toggle(idx)}
-                        className={`cursor-pointer transition-colors ${it.selecionado ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-slate-700/30'}`}>
+                        className={`cursor-pointer transition-colors ${it.selecionado ? 'bg-info-50 dark:bg-info-900/20' : 'hover:bg-ink-50'}`}>
                         <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
                           <input type="checkbox" checked={it.selecionado} onChange={() => toggle(idx)}
-                            className="w-4 h-4 accent-blue-600 cursor-pointer" />
+                            className="w-4 h-4 accent-info-600 cursor-pointer" />
                         </td>
-                        <td className="px-3 py-2 text-gray-800 dark:text-slate-200 font-medium">{it.descricao || '—'}</td>
-                        <td className="px-3 py-2 text-center text-gray-500">{it.unidade || '—'}</td>
-                        <td className="px-3 py-2 text-right font-mono text-gray-600 dark:text-slate-300">
+                        <td className="px-3 py-2 text-ink-800 font-medium">{it.descricao || '—'}</td>
+                        <td className="px-3 py-2 text-center text-ink-500">{it.unidade || '—'}</td>
+                        <td className="px-3 py-2 text-right font-mono text-ink-600">
                           {it.valor_unit_did
                             ? parseFloat(it.valor_unit_did).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
                             : '—'}
@@ -186,14 +187,14 @@ function ModalItensContrato({ contrato, itensDid, onConfirm, onClose }) {
                         <td className="px-2 py-1.5" onClick={e => e.stopPropagation()}>
                           <input type="number" min="0" step="any" value={it.qtd_did}
                             onChange={e => { if (!it.selecionado) toggle(idx); setQtd(idx, e.target.value) }}
-                            className={`w-full px-2 py-1 text-xs rounded border text-right font-mono outline-none
-                              ${it.selecionado ? 'border-blue-300 dark:border-blue-600 bg-white dark:bg-slate-700/30 focus:ring-1 focus:ring-blue-500' : 'border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-900 opacity-50'}`}
+                            className={`w-full px-2 py-1 text-xs rounded-sm border text-right font-mono outline-hidden
+                              ${it.selecionado ? 'border-info-300 dark:border-brand-600 bg-surface focus:ring-1 focus:ring-brand-500' : 'border-ink-200 bg-ink-50 opacity-50'}`}
                             placeholder="0" />
                         </td>
                         <td className="px-3 py-2 text-right font-semibold font-mono">
                           {sub > 0
-                            ? <span className="text-blue-700 dark:text-blue-400">{sub.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-                            : <span className="text-gray-400">—</span>}
+                            ? <span className="text-brand-700 dark:text-info-400">{sub.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                            : <span className="text-ink-400">—</span>}
                         </td>
                       </tr>
                     )
@@ -204,18 +205,18 @@ function ModalItensContrato({ contrato, itensDid, onConfirm, onClose }) {
           </>
         )}
 
-        <div className="border-t border-gray-200 dark:border-slate-700/50 px-4 py-3 flex items-center gap-3 shrink-0">
+        <div className="border-t border-ink-200 px-4 py-3 flex items-center gap-3 shrink-0">
           <button onClick={confirmar} disabled={!selecao.some(it => it.selecionado)}
-            className="flex items-center gap-1.5 px-5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+            className="flex items-center gap-1.5 px-5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-sm text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
             <Check className="w-4 h-4" /> Confirmar Seleção
           </button>
           <button onClick={onClose}
-            className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-slate-700/30 dark:hover:bg-slate-700/50 text-gray-700 dark:text-slate-200 rounded text-sm font-semibold transition-colors">
+            className="px-4 py-1.5 bg-ink-200 hover:bg-ink-300 text-ink-700 rounded-sm text-sm font-semibold transition-colors">
             Cancelar
           </button>
           {totalSelecionado > 0 && (
-            <span className="ml-auto text-xs text-gray-500">
-              {selecao.filter(it => it.selecionado).length} item(ns) · Total: <strong className="text-blue-700 dark:text-blue-400">{totalSelecionado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
+            <span className="ml-auto text-xs text-ink-500">
+              {selecao.filter(it => it.selecionado).length} item(ns) · Total: <strong className="text-brand-700 dark:text-info-400">{totalSelecionado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
             </span>
           )}
         </div>
@@ -228,7 +229,8 @@ export default function FormularioDid() {
   const { id: processoId, subdomain } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const { tenant } = useAuth()
+  const { tenant, user } = useAuth()
+  const { assinar } = useAssinatura()
   // Modo somente leitura: ativado quando o processo está em outro setor/secretaria
   const readOnly = location.state?.readOnly === true
 
@@ -240,7 +242,7 @@ export default function FormularioDid() {
   const handleGerarPDF = async () => {
     setGerandoPDF(true)
     try {
-      await gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid })
+      await gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, processoId })
     } finally {
       setGerandoPDF(false)
     }
@@ -253,6 +255,14 @@ export default function FormularioDid() {
   const [processo, setProcesso] = useState(null)
   const [tipoDid, setTipoDid]   = useState('fixas')
   const [itensDid, setItensDid] = useState([{ _id: 1, descricao: '', quantidade: '', valor_unitario: '', valor_total: '' }])
+
+  const TOTAL_SECOES = { fixas: 7, variaveis: 12 }
+  // maxSecaoVisivel: quantas seções são exibidas (desbloqueio progressivo)
+  // Novo DID → começa em 1 (Seção I visível, tipo sempre tem default)
+  // DID existente → definido em loadDid (todas as seções)
+  const [maxSecaoVisivel, setMaxSecaoVisivel] = useState(1)
+  const [alterandoTipo, setAlterandoTipo] = useState(false)
+  const [confirmarTrocarTipo, setConfirmarTrocarTipo] = useState(false)
 
   const addItemDid = () => setItensDid(p => [...p, { _id: Date.now(), descricao: '', quantidade: '', valor_unitario: '', valor_total: '' }])
   const removeItemDid = idx => setItensDid(p => p.filter((_, i) => i !== idx))
@@ -361,31 +371,80 @@ export default function FormularioDid() {
 
   useEffect(() => {
     if (processoId === 'novo') {
-      api.get('/did/proximo-numero')
-        .then(r => setProximoNumero(r.data.proximo))
+      const params = user?.secretariaId ? `?secretariaId=${user.secretariaId}` : ''
+      api.get(`/did/proximo-numero${params}`)
+        .then(r => setProximoNumero(r.data.formatado || r.data.proximo))
         .catch(() => {})
     }
-  }, [])
+  }, [user])
+
+  // Calcula quantas seções devem estar visíveis baseado nos dados já salvos no banco.
+  // Uma seção N+1 aparece somente quando a seção N tem pelo menos um campo preenchido.
+  const calcMaxSecaoVisivel = (f, tipo, itens) => {
+    const temItens = itens.some(it => it.valor_total)
+    // Seção I: campos obrigatórios principais
+    if (!(f.credor_sec1 && f.data_did && f.objeto && temItens)) return 1
+    if (tipo === 'fixas') {
+      if (!(f.ci_recebido_em || f.ci_responsavel || f.despacho_ci))                           return 2
+      if (!(f.financas_recebido_em || f.financas_responsavel))                                 return 3
+      if (!(f.contabil_recebido_em || f.contabil_responsavel || f.empenho_numero))             return 4
+      if (!(f.financas2_recebido_em || f.financas2_responsavel || f.financas2_enviado_pagamento)) return 5
+      if (!(f.tesouraria_recebido_em || f.tesouraria_responsavel || f.pago))                   return 6
+      return 7
+    } else { // variaveis
+      if (!(f.ci_recebido_em || f.ci_responsavel || f.despacho_ci))                                    return 2
+      if (!(f.financas_recebido_em || f.financas_responsavel))                                          return 3
+      if (!(f.compras2_recebido_em || f.compras2_responsavel || f.compras2_nro_empenho_solicitacao))    return 4
+      if (!(f.contabil_recebido_em || f.contabil_responsavel || f.empenho_numero))                      return 5
+      if (!(f.compras_recebido_em || f.compras_responsavel))                                            return 6
+      if (!(f.receb_responsavel || f.receb_data))                                                       return 7
+      if (!(f.compras3_recebido_em || f.compras3_responsavel))                                          return 8
+      if (!(f.contabil_pc_recebido_em || f.contabil_pc_responsavel || f.contabil_pc_liquidacao_numero)) return 9
+      if (!(f.financas2_recebido_em || f.financas2_responsavel || f.financas2_enviado_pagamento))       return 10
+      if (!(f.tesouraria_recebido_em || f.tesouraria_responsavel || f.pago))                            return 11
+      return 12
+    }
+  }
 
   const loadDid = async () => {
+    // Sempre reseta ao mudar de processo (evita maxSecaoVisivel stale entre navegações)
+    setDid(null)
+    setMaxSecaoVisivel(1)
     if (processoId === 'novo') { setLoading(false); return }
     setLoading(true)
     try {
       const { data } = await api.get(`/did/processo/${processoId}`)
       setDid(data.did)
       setProcesso(data.did.processo)
-      if (data.did.tipo_did) setTipoDid(data.did.tipo_did)
-      if (data.did.itens_did?.length) setItensDid(data.did.itens_did.map((it, i) => ({ _id: i, ...it })))
+      const tipo = data.did.tipo_did || 'fixas'
+      if (data.did.tipo_did) setTipoDid(tipo)
+      const itens = data.did.itens_did?.length
+        ? data.did.itens_did.map((it, i) => ({ _id: i, ...it }))
+        : itensDid
+      if (data.did.itens_did?.length) setItensDid(itens)
       setEditando(false)
-      setForm(prev => {
-        const merged = { ...EMPTY }
-        Object.keys(EMPTY).forEach(k => {
-          merged[k] = data.did[k] !== undefined && data.did[k] !== null ? data.did[k] : EMPTY[k]
-        })
-        return merged
+      // Constrói mergedForm primeiro (síncrono) para usá-lo em calcMaxSecaoVisivel
+      const mergedForm = { ...EMPTY }
+      Object.keys(EMPTY).forEach(k => {
+        mergedForm[k] = data.did[k] !== undefined && data.did[k] !== null ? data.did[k] : EMPTY[k]
       })
+      // Se há ordem vinculada e valor_bruto ainda zerado, usa o valor total da ordem
+      if (data.did.ordem_valor_total && (!mergedForm.valor_bruto || parseFloat(mergedForm.valor_bruto) === 0)) {
+        mergedForm.valor_bruto = parseFloat(data.did.ordem_valor_total).toFixed(2)
+      }
+      setForm(mergedForm)
+      // Determina seções visíveis a partir dos dados reais do banco
+      setMaxSecaoVisivel(calcMaxSecaoVisivel(mergedForm, tipo, itens))
     } catch (err) {
-      if (err.response?.status !== 404) setMsg({ ok: false, text: 'Erro ao carregar DID' })
+      if (err.response?.status === 404) {
+        // Processo existe mas DID ainda não foi criado.
+        // Pré-preenche numero_did com o valor digitado no NovoProcesso (via location.state).
+        if (location.state?.did_numero) {
+          setForm(f => ({ ...f, numero_did: String(location.state.did_numero) }))
+        }
+      } else {
+        setMsg({ ok: false, text: 'Erro ao carregar DID' })
+      }
     } finally {
       setLoading(false)
     }
@@ -401,18 +460,26 @@ export default function FormularioDid() {
     'contrato_ref', 'credor_sec1', 'cnpj_cpf_credor_sec1', 'nro_licitacao_sec1', 'tipo_licitacao_sec1', 'valor_did',
     'mes_referencia', 'nf_sec1',
     'cert_sec1_municipal', 'cert_sec1_trabalhista', 'cert_sec1_fgts', 'cert_sec1_estadual', 'cert_sec1_federal', 'cert_sec1_simples_nac',
+    'ordem_compra_id', 'ordem_ref',
   ]
 
   const criarProcessoSeNovo = async () => {
     if (processoId !== 'novo') return processoId
-    const resP = await api.post('/processos', {
-      assunto: form.objeto,
-      descricao: form.objeto,
-      interessado_nome: form.credor_sec1 || 'DID - Instrução de Despesa',
-      interessado_cpf_cnpj: (form.cnpj_cpf_credor_sec1 || '').replace(/\D/g, '') || '00000000000000',
-      tipo_processo: 'Did',
-      prioridade: 'normal'
+    // Abertura do processo é ato assinado eletronicamente (senha + código do app)
+    const resP = await assinar({
+      titulo: 'Abrir processo de DID',
+      resumo: <p><strong>Objeto:</strong> {form.objeto}</p>,
+      executar: (cred) => api.post('/processos', {
+        assunto: form.objeto,
+        descricao: form.objeto,
+        interessado_nome: form.credor_sec1 || 'DID - Instrução de Despesa',
+        interessado_cpf_cnpj: (form.cnpj_cpf_credor_sec1 || '').replace(/\D/g, '') || '00000000000000',
+        tipo_processo: 'Did',
+        prioridade: 'normal',
+        ...cred,
+      }),
     })
+    if (!resP) throw new Error('Assinatura cancelada — o processo não foi aberto.')
     return resP.data?.processo?.id || resP.data?.id
   }
 
@@ -428,9 +495,12 @@ export default function FormularioDid() {
       setDid(data.did)
       setMsg({ ok: true, text: `Seção I — DID Nº ${data.did.numero_did} salva com sucesso!` })
       if (processoId === 'novo') {
+        // primeiroSalvo: sinaliza ao loadDid que deve começar na Seção II
         navigate(`/${subdomain}/processos/${targetId}/did`, { replace: true })
         return true
       }
+      // DID já existente: desbloqueia Seção II
+      setMaxSecaoVisivel(prev => Math.max(prev, 2))
       setTimeout(() => setMsg(null), 4000)
       return true
     } catch (err) {
@@ -460,6 +530,24 @@ export default function FormularioDid() {
       return false
     } finally {
       setSaving(false)
+    }
+  }
+
+  // Fábrica de handlers para seções II em diante:
+  // salva o DID e desbloqueia a próxima seção em caso de sucesso.
+  const makeOnSave = (secaoNum) => async () => {
+    const ok = await handleSave()
+    if (ok !== false) setMaxSecaoVisivel(prev => Math.max(prev, secaoNum + 1))
+    return ok
+  }
+
+  // Fábrica de "Limpar Seção" — zera os campos da seção e persiste no banco.
+  const makeLimparSecao = (campos) => async () => {
+    const patch = {}
+    campos.forEach(c => { patch[c] = EMPTY[c] !== undefined ? EMPTY[c] : '' })
+    setForm(prev => ({ ...prev, ...patch }))
+    if (did?.id) {
+      try { await api.post(`/did/processo/${processoId}`, patch) } catch { /* silently ignore */ }
     }
   }
 
@@ -497,9 +585,14 @@ export default function FormularioDid() {
   const refDateDid = new Date(dataRefDid + 'T00:00:00')
   const siglaDidSec = secDidObj?.sigla || secretariaSigla || ''
   const numBase = form.numero_did || did?.numero_did || proximoNumero
-  const numeroDIDFmt = numBase
-    ? `DID ${String(numBase).padStart(3, '0')}${siglaDidSec ? ` - ${siglaDidSec}` : ''}`
-    : 'Carregando...'
+  // Números novos já vêm formatados por secretaria (ex: "SEJUV-001") — exibe direto.
+  // Números antigos são só o sequencial global — mantém o formato legado com a sigla ao lado.
+  const numeroJaFormatado = /^[A-Za-z]+-\d+$/.test(String(numBase || ''))
+  const numeroDIDFmt = !numBase
+    ? 'Carregando...'
+    : numeroJaFormatado
+      ? `DID ${numBase}`
+      : `DID ${String(numBase).padStart(3, '0')}${siglaDidSec ? ` - ${siglaDidSec}` : ''}`
   const responsaveisDid = (secDidObj?.responsaveis || []).map(r => {
     const ini = r.data_inicio ? new Date(r.data_inicio + 'T00:00:00') : null
     const fim = r.data_fim    ? new Date(r.data_fim    + 'T00:00:00') : null
@@ -509,27 +602,53 @@ export default function FormularioDid() {
   const totalItensDid = itensDid.reduce((acc, it) => acc + (parseFloat(it.valor_total) || 0), 0)
   const temItensPreenchidos = itensDid.some(it => it.valor_total)
 
-  // Lock de tipo: bloqueado quando DID já salvo no banco
-  const tipoBloqueado = did !== null
+  // Lock de tipo: bloqueado quando DID já salvo (exceto em modo alteração)
+  const tipoBloqueado = did !== null && !alterandoTipo
   // Detecta preenchimento parcial (antes de salvar)
   const hasAnyData = !!(form.objeto?.trim() || form.contrato_ref || form.credor_sec1?.trim() || temItensPreenchidos)
+  const secaoILimpa = !hasAnyData
+
+  const handleAlterarTipo = () => {
+    if (!secaoILimpa) {
+      setMsg({ ok: false, text: 'Limpe a Seção I antes de alterar o tipo de DID.' })
+      return
+    }
+    setAlterandoTipo(true)
+  }
+
+  const handleTrocarTipo = async (novoTipo) => {
+    if (novoTipo === tipoDid) { setAlterandoTipo(false); return }
+    setTipoDid(novoTipo)
+    setMaxSecaoVisivel(1)
+    setAlterandoTipo(false)
+    if (did?.id) {
+      try {
+        await api.post(`/did/processo/${processoId}`, { tipo_did: novoTipo })
+        setMsg({ ok: true, text: `Tipo alterado para ${novoTipo === 'fixas' ? 'Contas Fixas' : 'Contas Variáveis'}.` })
+        setTimeout(() => setMsg(null), 3000)
+      } catch {
+        setMsg({ ok: false, text: 'Erro ao salvar tipo de DID.' })
+      }
+    }
+  }
 
   const handleLimparParaTrocar = () => {
     const novoTipo = tipoDid === 'fixas' ? 'variaveis' : 'fixas'
-    if (!window.confirm(
-      `Trocar para "DID Contas ${novoTipo === 'fixas' ? 'Fixas' : 'Variáveis'}"?\n\nTodos os dados preenchidos serão apagados.`
-    )) return
     setForm(EMPTY)
     setItensDid([{ _id: 1, descricao: '', quantidade: '', valor_unitario: '', valor_total: '' }])
     setTipoDid(novoTipo)
+    setMaxSecaoVisivel(1)
+    setConfirmarTrocarTipo(false)
   }
 
-  // Sincroniza valor_bruto com o total dos itens da Seção I
+  // Sincroniza valor_bruto: prefere total da ordem vinculada, senão usa itens DID
   useEffect(() => {
-    if (totalItensDid > 0) {
+    if (did?.ordem_valor_total && parseFloat(did.ordem_valor_total) > 0) {
+      set('valor_bruto', parseFloat(did.ordem_valor_total).toFixed(2))
+    } else if (totalItensDid > 0) {
       set('valor_bruto', totalItensDid.toFixed(2))
     }
-  }, [totalItensDid])
+  }, [totalItensDid, did?.ordem_valor_total])
 
   const vliq = (parseFloat(form.valor_bruto) || 0)
     - ['desconto_inss','desconto_iss','desconto_irrf','desconto_sindicato',
@@ -538,7 +657,7 @@ export default function FormularioDid() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
     </div>
   )
 
@@ -549,7 +668,7 @@ export default function FormularioDid() {
       {/* Banner somente leitura */}
       {readOnly && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-300 px-4 py-3 rounded-lg flex items-center gap-2">
-          <Eye className="h-5 w-5 flex-shrink-0" />
+          <Eye className="h-5 w-5 shrink-0" />
           <span className="text-sm font-medium">Modo somente leitura — o processo está em outro setor. Você pode visualizar e gerar PDF, mas não pode editar.</span>
         </div>
       )}
@@ -557,14 +676,14 @@ export default function FormularioDid() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <button onClick={() => navigate(-1)}
-          className="p-2 rounded-lg text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors">
+          className="p-2 rounded-lg text-ink-500 hover:bg-ink-100 transition-colors">
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div>
           <h1 className="page-title">📋 {numeroDIDFmt}</h1>
           <div className="flex items-center gap-1.5 mt-0.5">
-            <FileCheck className="h-4 w-4 text-blue-500" />
-            <span className="text-sm font-semibold text-blue-500">
+            <FileCheck className="h-4 w-4 text-info-500" />
+            <span className="text-sm font-semibold text-info-500">
               {processoId === 'novo' ? 'Novo DID' : (processo?.numero || `Processo ${processoId}`)}
               {secretariaNome ? ` · ${secretariaNome}` : ''}
             </span>
@@ -574,7 +693,7 @@ export default function FormularioDid() {
         <div className="ml-auto flex items-center gap-2">
           <button type="button" onClick={handleGerarPDF} disabled={gerandoPDF || !did}
             title={!did ? 'Salve o DID antes de gerar o PDF' : 'Gerar PDF do DID'}
-            className="flex items-center gap-2 px-3 py-1.5 bg-gray-700 hover:bg-gray-800 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+            className="flex items-center gap-2 px-3 py-1.5 bg-ink-700 hover:bg-ink-800 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
             {gerandoPDF ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
             {gerandoPDF ? 'Gerando...' : 'Gerar PDF'}
           </button>
@@ -584,7 +703,7 @@ export default function FormularioDid() {
             type="button"
             onClick={() => setEditando(true)}
             disabled={editando}
-            className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+            className="flex items-center gap-2 px-3 py-1.5 bg-warning-600 hover:bg-warning-700 dark:bg-warning-700 dark:hover:bg-warning-800 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
             ✏️ Alterar
           </button>
           <button onClick={handleSaveDid} disabled={savingDid || !editando} className="btn-primary flex items-center gap-2 py-1.5 text-sm">
@@ -599,8 +718,8 @@ export default function FormularioDid() {
       {/* Mensagem feedback */}
       {msg && (
         <div className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium
-          ${msg.ok ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-                   : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'}`}>
+          ${msg.ok ? 'bg-success-50 text-success-700 dark:bg-success-900/20 dark:text-success-400'
+                   : 'bg-danger-50 text-danger-700 dark:bg-danger-900/20 dark:text-danger-400'}`}>
           {msg.ok ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
           {msg.text}
         </div>
@@ -609,23 +728,43 @@ export default function FormularioDid() {
       {/* Tipo DID */}
       <div className="card p-4">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-semibold text-gray-700 dark:text-slate-300">Tipo de DID</p>
-          {tipoBloqueado && (
-            <span className="text-xs text-gray-500 dark:text-slate-400 bg-gray-100 dark:bg-slate-700/30 px-2.5 py-1 rounded-full">
-              🔒 Bloqueado — DID salvo
-            </span>
-          )}
-          {!tipoBloqueado && hasAnyData && (
-            <button
-              type="button"
-              onClick={handleLimparParaTrocar}
-              className="text-xs text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300
-                flex items-center gap-1 px-2.5 py-1 rounded-lg border border-amber-200 dark:border-amber-700
-                hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
-            >
-              ↺ Limpar e trocar tipo
-            </button>
-          )}
+          <p className="text-sm font-semibold text-ink-700">Tipo de DID</p>
+          <div className="flex items-center gap-2">
+            {did !== null && !alterandoTipo && (
+              <>
+                <span className="text-xs text-ink-500 bg-ink-100 px-2.5 py-1 rounded-full">
+                  🔒 Bloqueado — DID salvo
+                </span>
+                {!readOnly && (
+                  <button type="button" onClick={handleAlterarTipo}
+                    className="text-xs text-brand-600 dark:text-info-400 hover:text-brand-700 dark:hover:text-info-300
+                      flex items-center gap-1 px-2.5 py-1 rounded-lg border border-info-200 dark:border-info-700
+                      hover:bg-info-50 dark:hover:bg-info-900/20 transition-colors">
+                    ↺ Alterar Tipo
+                  </button>
+                )}
+              </>
+            )}
+            {did !== null && alterandoTipo && (
+              <button type="button" onClick={() => setAlterandoTipo(false)}
+                className="text-xs text-ink-600 hover:text-ink-700
+                  flex items-center gap-1 px-2.5 py-1 rounded-lg border border-ink-200
+                  hover:bg-ink-50 transition-colors">
+                ✕ Cancelar
+              </button>
+            )}
+            {!tipoBloqueado && hasAnyData && (
+              <button
+                type="button"
+                onClick={() => setConfirmarTrocarTipo(true)}
+                className="text-xs text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300
+                  flex items-center gap-1 px-2.5 py-1 rounded-lg border border-amber-200 dark:border-amber-700
+                  hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+              >
+                ↺ Limpar e trocar tipo
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="flex gap-8">
@@ -638,13 +777,13 @@ export default function FormularioDid() {
             <input
               type="radio" name="tipo_did" value="fixas"
               checked={tipoDid === 'fixas'}
-              onChange={() => setTipoDid('fixas')}
+              onChange={() => alterandoTipo ? handleTrocarTipo('fixas') : setTipoDid('fixas')}
               disabled={tipoBloqueado || (hasAnyData && tipoDid !== 'fixas')}
-              className="w-4 h-4 accent-blue-600"
+              className="w-4 h-4 accent-info-600"
             />
             <div>
-              <span className="text-sm font-medium text-gray-800 dark:text-slate-200">DID Contas Fixas</span>
-              <p className="text-xs text-gray-400 dark:text-slate-500">Valor fixo mensal · vinculado a contrato</p>
+              <span className="text-sm font-medium text-ink-800">DID Contas Fixas</span>
+              <p className="text-xs text-ink-400">Valor fixo mensal · vinculado a contrato</p>
             </div>
           </label>
 
@@ -657,17 +796,22 @@ export default function FormularioDid() {
             <input
               type="radio" name="tipo_did" value="variaveis"
               checked={tipoDid === 'variaveis'}
-              onChange={() => setTipoDid('variaveis')}
+              onChange={() => alterandoTipo ? handleTrocarTipo('variaveis') : setTipoDid('variaveis')}
               disabled={tipoBloqueado || (hasAnyData && tipoDid !== 'variaveis')}
-              className="w-4 h-4 accent-blue-600"
+              className="w-4 h-4 accent-info-600"
             />
             <div>
-              <span className="text-sm font-medium text-gray-800 dark:text-slate-200">DID Contas Variáveis</span>
-              <p className="text-xs text-gray-400 dark:text-slate-500">Quantidade × Vlr. Unit. · inclui atestado de recebimento</p>
+              <span className="text-sm font-medium text-ink-800">DID Contas Variáveis</span>
+              <p className="text-xs text-ink-400">Quantidade × Vlr. Unit. · inclui atestado de recebimento</p>
             </div>
           </label>
         </div>
 
+        {alterandoTipo && (
+          <p className="text-xs text-brand-600 dark:text-info-400 mt-2">
+            Selecione o novo tipo de DID acima. A alteração será salva imediatamente.
+          </p>
+        )}
         {!tipoBloqueado && hasAnyData && (
           <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
             ⚠ Preenchimento em curso. Para trocar o tipo use &ldquo;Limpar e trocar tipo&rdquo; acima.
@@ -687,15 +831,16 @@ export default function FormularioDid() {
             dataRefDid={dataRefDid}
             secretariaNome={secretariaNome}
             didId={did?.id}
+            processoId={processoId}
             onSaveSecaoI={handleSaveSecaoI}
             saving={saving}
           />
-          <DidFixasSecaoII form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} />
-          <DidFixasSecaoIII form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} />
-          <DidFixasSecaoIV form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} />
-          <DidFixasSecaoV form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} />
-          <DidFixasSecaoVI form={form} inp={inp} chk={chk} vliq={vliq} saving={saving} didId={did?.id} onSave={handleSave} />
-          <DidFixasSecaoVII form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} />
+          {maxSecaoVisivel >= 2 && <DidFixasSecaoII form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(2)} onLimpar={makeLimparSecao(['ci_recebido_em','ci_responsavel','despacho_ci','dotacao_numero','fonte_recurso_numero'])} />}
+          {maxSecaoVisivel >= 3 && <DidFixasSecaoIII form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(3)} onLimpar={makeLimparSecao(['financas_recebido_em','financas_responsavel'])} />}
+          {maxSecaoVisivel >= 4 && <DidFixasSecaoIV form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(4)} onLimpar={makeLimparSecao(['contabil_recebido_em','contabil_responsavel','contabil_auditor','empenho_numero','tipo_empenho','data_empenho','liquidacao_numero','data_liquidacao','doc_caixa'])} />}
+          {maxSecaoVisivel >= 5 && <DidFixasSecaoV form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(5)} onLimpar={makeLimparSecao(['financas2_recebido_em','financas2_responsavel','financas2_enviado_pagamento'])} />}
+          {maxSecaoVisivel >= 6 && <DidFixasSecaoVI form={form} inp={inp} chk={chk} vliq={vliq} saving={saving} didId={did?.id} onSave={makeOnSave(6)} onLimpar={makeLimparSecao(['tesouraria_recebido_em','tesouraria_responsavel','conta_pagamento_id','banco_pagador','ag_pagador','cc_pagador','cert_teso_municipal','cert_teso_trabalhista','cert_teso_fgts','cert_teso_estadual','cert_teso_federal','cert_teso_simples_nac','desconto_inss','desconto_iss','desconto_irrf','desconto_outros','pago','doc_caixa'])} />}
+          {maxSecaoVisivel >= 7 && <DidFixasSecaoVII form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(7)} onLimpar={makeLimparSecao(['contab_fech_finalizado','contab_fech_tce'])} />}
         </>
       ) : (
         <>
@@ -710,26 +855,37 @@ export default function FormularioDid() {
             dataRefDid={dataRefDid}
             secretariaNome={secretariaNome}
             didId={did?.id}
+            processoId={processoId}
             onSaveSecaoI={handleSaveSecaoI}
             saving={saving}
           />
-          <DidVariaveisSecaoII form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} />
-          <DidVariaveisSecaoIII form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} />
-          <DidVariaveisSecaoIV form={form} inp={inp} set={set} saving={saving} didId={did?.id} onSave={handleSave} />
-          <DidVariaveisSecaoV form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} />
-          <DidVariaveisSecaoVI form={form} inp={inp} set={set} saving={saving} didId={did?.id} onSave={handleSave} />
-          <DidVariaveisSecaoVII
-            form={form} inp={inp} chk={chk}
-            saving={saving}
-            didId={did?.id}
-            onSave={handleSave}
-          />
-          <DidVariaveisSecaoVIII form={form} inp={inp} set={set} saving={saving} didId={did?.id} onSave={handleSave} />
-          <DidVariaveisSecaoIX form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} />
-          <DidVariaveisSecaoX form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} />
-          <DidVariaveisSecaoXI form={form} inp={inp} chk={chk} vliq={vliq} saving={saving} didId={did?.id} onSave={handleSave} />
-          <DidVariaveisSecaoXII form={form} inp={inp} saving={saving} didId={did?.id} onSave={handleSave} />
+          {maxSecaoVisivel >= 2  && <DidVariaveisSecaoII form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(2)} onLimpar={makeLimparSecao(['ci_recebido_em','ci_responsavel','despacho_ci','dotacao_numero','fonte_recurso_numero'])} />}
+          {maxSecaoVisivel >= 3  && <DidVariaveisSecaoIII form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(3)} onLimpar={makeLimparSecao(['financas_recebido_em','financas_responsavel'])} />}
+          {maxSecaoVisivel >= 4  && <DidVariaveisSecaoIV form={form} inp={inp} set={set} saving={saving} didId={did?.id} onSave={makeOnSave(4)} onLimpar={makeLimparSecao(['compras2_recebido_em','compras2_responsavel','compras2_nro_empenho_solicitacao'])} />}
+          {maxSecaoVisivel >= 5  && <DidVariaveisSecaoV form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(5)} onLimpar={makeLimparSecao(['contabil_recebido_em','contabil_responsavel','contabil_auditor','empenho_numero','tipo_empenho','data_empenho'])} />}
+          {maxSecaoVisivel >= 6  && <DidVariaveisSecaoVI form={form} inp={inp} set={set} saving={saving} didId={did?.id} onSave={makeOnSave(6)} onLimpar={makeLimparSecao(['compras_recebido_em','compras_responsavel','nro_empenho_solicitacao','local_entrega'])} />}
+          {maxSecaoVisivel >= 7  && <DidVariaveisSecaoVII form={form} inp={inp} chk={chk} saving={saving} didId={did?.id} onSave={makeOnSave(7)} onLimpar={makeLimparSecao(['receb_data','receb_nf_data','receb_responsavel','receb_cargo','receb_nf_conferida','receb_qtd_conferida','receb_esp_conforme','receb_nf_enviado_compras','receb_obs'])} />}
+          {maxSecaoVisivel >= 8  && <DidVariaveisSecaoVIII form={form} inp={inp} set={set} saving={saving} didId={did?.id} onSave={makeOnSave(8)} onLimpar={makeLimparSecao(['compras3_recebido_em','compras3_responsavel','compras3_local_entrega'])} />}
+          {maxSecaoVisivel >= 9  && <DidVariaveisSecaoIX form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(9)} onLimpar={makeLimparSecao(['contabil_pc_recebido_em','contabil_pc_responsavel','contabil_pc_auditor','contabil_pc_liquidacao_numero','contabil_pc_data_liquidacao'])} />}
+          {maxSecaoVisivel >= 10 && <DidVariaveisSecaoX form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(10)} onLimpar={makeLimparSecao(['financas2_recebido_em','financas2_responsavel','financas2_enviado_pagamento'])} />}
+          {maxSecaoVisivel >= 11 && <DidVariaveisSecaoXI form={form} inp={inp} chk={chk} vliq={vliq} saving={saving} didId={did?.id} onSave={makeOnSave(11)} onLimpar={makeLimparSecao(['tesouraria_recebido_em','tesouraria_responsavel','conta_pagamento_id','banco_pagador','ag_pagador','cc_pagador','cert_teso_cnd','cert_teso_fgts','cert_teso_estadual','cert_teso_trabalhista','cert_teso_municipal','desconto_inss','desconto_iss','desconto_irrf','desconto_outros','pago','doc_caixa'])} />}
+          {maxSecaoVisivel >= 12 && <DidVariaveisSecaoXII form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(12)} onLimpar={makeLimparSecao(['contab_fech_finalizado','contab_fech_tce'])} />}
         </>
+      )}
+
+      {/* Indicador de próxima etapa — aparece enquanto houver seções bloqueadas */}
+      {maxSecaoVisivel < (TOTAL_SECOES[tipoDid] ?? 7) && (
+        <div className="flex items-center gap-3 px-5 py-4 rounded-xl border-2 border-dashed border-ink-200 text-center justify-center">
+          <span className="text-2xl">🔒</span>
+          <div className="text-left">
+            <p className="text-sm font-semibold text-ink-600">
+              Seção {['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'][maxSecaoVisivel]} — próxima etapa
+            </p>
+            <p className="text-xs text-ink-400">
+              Salve a Seção {['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'][maxSecaoVisivel - 1]} para liberar
+            </p>
+          </div>
+        </div>
       )}
 
       {/* Salvar bottom */}
@@ -739,7 +895,7 @@ export default function FormularioDid() {
         </button>
         <button type="button" onClick={handleGerarPDF} disabled={gerandoPDF || !did}
           title={!did ? 'Salve o DID antes de gerar o PDF' : 'Gerar PDF do DID'}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+          className="flex items-center gap-2 px-4 py-2 bg-ink-700 hover:bg-ink-800 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
           {gerandoPDF ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
           {gerandoPDF ? 'Gerando...' : 'Gerar PDF'}
         </button>
@@ -749,7 +905,7 @@ export default function FormularioDid() {
           type="button"
           onClick={() => setEditando(true)}
           disabled={editando}
-          className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+          className="flex items-center gap-2 px-4 py-2 bg-warning-600 hover:bg-warning-700 dark:bg-warning-700 dark:hover:bg-warning-800 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
           ✏️ Alterar
         </button>
         <button onClick={handleSaveDid} disabled={savingDid || !editando} className="btn-primary flex items-center gap-2">
@@ -760,6 +916,15 @@ export default function FormularioDid() {
         )}
       </div>
     </div>
+    {confirmarTrocarTipo && (
+      <ConfirmModal
+        title={`Trocar para "DID Contas ${tipoDid === 'fixas' ? 'Variáveis' : 'Fixas'}"?`}
+        message="Todos os dados preenchidos serão apagados."
+        confirmLabel="Trocar"
+        onConfirm={handleLimparParaTrocar}
+        onClose={() => setConfirmarTrocarTipo(false)}
+      />
+    )}
     </DidReadOnlyContext.Provider>
   )
 }

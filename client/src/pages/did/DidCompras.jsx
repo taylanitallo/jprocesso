@@ -1,5 +1,5 @@
 import { ShoppingCart } from 'lucide-react'
-import { Field, Input, SectionCard } from './didShared'
+import { Field, Input, UserSelect, SectionCard } from './didShared'
 
 export default function DidSecaoIII({ form, inp, set }) {
   return (
@@ -9,38 +9,38 @@ export default function DidSecaoIII({ form, inp, set }) {
         <Input type="date" value={form.compras_recebido_em} onChange={inp('compras_recebido_em')} />
       </Field>
       <Field label="Responsável" half>
-        <Input value={form.compras_responsavel} onChange={inp('compras_responsavel')} />
+        <UserSelect value={form.compras_responsavel} onChange={inp('compras_responsavel')} secretaria="compras" />
       </Field>
       <div className="col-span-2">
-        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Situação</label>
+        <label className="block text-xs font-medium text-ink-500 mb-2">Situação</label>
         <div className="flex gap-6">
-          <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+          <label className="flex items-center gap-2 cursor-pointer text-sm text-ink-700">
             <input type="radio" name="licitado" checked={form.ja_licitado === true}
               onChange={() => set('ja_licitado', true)}
-              className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+              className="w-4 h-4 text-brand-600 focus:ring-brand-500" />
             Já Licitado
           </label>
-          <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+          <label className="flex items-center gap-2 cursor-pointer text-sm text-ink-700">
             <input type="radio" name="licitado" checked={form.ja_licitado === false}
               onChange={() => set('ja_licitado', false)}
-              className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+              className="w-4 h-4 text-brand-600 focus:ring-brand-500" />
             Não Licitado
           </label>
         </div>
       </div>
       <div className="col-span-2">
-        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Realizar Cotação</label>
+        <label className="block text-xs font-medium text-ink-500 mb-2">Realizar Cotação</label>
         <div className="flex gap-6">
-          <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+          <label className="flex items-center gap-2 cursor-pointer text-sm text-ink-700">
             <input type="radio" name="cotacao" checked={form.realizar_cotacao === true}
               onChange={() => set('realizar_cotacao', true)}
-              className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+              className="w-4 h-4 text-brand-600 focus:ring-brand-500" />
             Sim
           </label>
-          <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+          <label className="flex items-center gap-2 cursor-pointer text-sm text-ink-700">
             <input type="radio" name="cotacao" checked={form.realizar_cotacao === false}
               onChange={() => set('realizar_cotacao', false)}
-              className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+              className="w-4 h-4 text-brand-600 focus:ring-brand-500" />
             Não
           </label>
         </div>
@@ -55,7 +55,7 @@ export default function DidSecaoIII({ form, inp, set }) {
         <Input type="date" value={form.data_compras} onChange={inp('data_compras')} />
       </Field>
       <Field label="Responsável Compras" half>
-        <Input value={form.responsavel_compras} onChange={inp('responsavel_compras')} />
+        <UserSelect value={form.responsavel_compras} onChange={inp('responsavel_compras')} secretaria="compras" />
       </Field>
       <Field label="Nº Solicitação de Empenho" half>
         <Input value={form.nro_empenho_solicitacao} onChange={inp('nro_empenho_solicitacao')} />

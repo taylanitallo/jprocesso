@@ -12,20 +12,20 @@ export default function EmptyState({ icon: Icon, title, description, action }) {
     <div className="flex flex-col items-center justify-center gap-4 py-16 px-6 text-center">
       {Icon && (
         <div className="flex items-center justify-center w-14 h-14 rounded-2xl
-                        bg-slate-100 dark:bg-slate-800
-                        border border-slate-200 dark:border-slate-700">
+                        bg-ink-100
+                        border border-ink-200">
           <Icon
-            className="w-6 h-6 text-slate-400 dark:text-slate-500"
+            className="w-6 h-6 text-ink-400"
             strokeWidth={1.5}
           />
         </div>
       )}
       <div className="max-w-xs">
-        <p className="text-sm font-semibold text-gray-700 dark:text-slate-200">
+        <p className="text-sm font-semibold text-ink-700">
           {title}
         </p>
         {description && (
-          <p className="text-sm text-gray-400 dark:text-slate-500 mt-1 leading-relaxed">
+          <p className="text-sm text-ink-400 mt-1 leading-relaxed">
             {description}
           </p>
         )}

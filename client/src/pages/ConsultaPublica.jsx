@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useParams, useLocation } from 'react-router-dom'
 import { Search, AlertCircle, ArrowLeft, Share2, Printer, ChevronLeft, SlidersHorizontal, X, LogIn, Building, FileSearch, Clock, Sun, Moon } from 'lucide-react'
 import api from '../services/api'
+import { useTheme } from '../context/ThemeContext'
 
 export default function ConsultaPublica() {
   const { subdomain } = useParams()
@@ -12,7 +13,7 @@ export default function ConsultaPublica() {
   const [showSugestoes, setShowSugestoes] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [searched, setSearched] = useState(false)
-  const [modoClaro, setModoClaro] = useState(false)
+  const { isDark, toggleTheme } = useTheme()
 
   // Filtros avançados
   const [showFiltros, setShowFiltros] = useState(false)
@@ -201,69 +202,69 @@ export default function ConsultaPublica() {
   }
 
   // ── TEMA ──────────────────────────────────────────────────────────────────
-  const mc = modoClaro
+  const mc = !isDark // segue o tema global (claro/escuro) escolhido pelo usuário
   const bgCard     = mc ? 'rgba(255,255,255,0.97)'      : 'rgba(8,12,30,0.88)'
-  const bdCard     = mc ? 'border-slate-200'            : 'border-slate-700/60'
-  const bdHdr      = mc ? 'border-slate-200/80'         : 'border-slate-700/50'
+  const bdCard     = mc ? 'border-ink-200'            : 'border-ink-200/60'
+  const bdHdr      = mc ? 'border-ink-200/80'         : 'border-ink-200/50'
   const bgCardHdr  = mc ? 'rgba(139,92,246,0.05)'       : 'rgba(139,92,246,0.07)'
-  const txt1       = mc ? 'text-slate-900'              : 'text-white'
-  const txt2       = mc ? 'text-slate-700'              : 'text-slate-300'
-  const txt3       = mc ? 'text-slate-500'              : 'text-slate-500'
+  const txt1       = mc ? 'text-ink-900'              : 'text-white'
+  const txt2       = mc ? 'text-ink-700'              : 'text-ink-400'
+  const txt3       = mc ? 'text-ink-500'              : 'text-ink-500'
   const txtV       = mc ? 'text-violet-700'             : 'text-violet-300'
-  const bgDesp     = mc ? 'bg-slate-100 border-slate-200'          : 'bg-slate-800/40 border-slate-700/50'
+  const bgDesp     = mc ? 'bg-ink-100 border-ink-200'          : 'bg-ink-100/40 border-ink-200/50'
   const bgDev      = mc ? 'bg-orange-50 border-orange-200'         : 'border-orange-500/25'
   const txtDevT    = mc ? 'text-orange-600'             : 'text-orange-400'
   const txtDevB    = mc ? 'text-orange-800'             : 'text-orange-200'
   const hdrBg      = mc ? 'rgba(255,255,255,0.96)'      : 'rgba(5,8,22,0.9)'
   const tbrBg      = mc ? 'rgba(248,250,252,0.96)'      : 'rgba(6,10,26,0.9)'
   const ftrBg      = mc ? 'rgba(248,250,252,0.95)'      : 'rgba(6,10,26,0.9)'
-  const bdPg       = mc ? 'border-slate-200/80'         : 'border-white/[0.08]'
-  const overlayClass = mc ? 'bg-white/80'               : 'bg-slate-950/75'
-  const searchInputBg = mc ? 'bg-white border-slate-300 text-slate-900' : 'bg-white/95 border-white/20 text-slate-900'
-  const txtNav     = mc ? 'text-slate-600 hover:text-slate-900' : 'text-white/55 hover:text-white/90'
+  const bdPg       = mc ? 'border-ink-200/80'         : 'border-white/[0.08]'
+  const overlayClass = mc ? 'bg-surface/80'               : 'bg-[#050816]/75'
+  const searchInputBg = mc ? 'bg-surface border-ink-300 text-ink-900' : 'bg-surface/95 border-white/20 text-ink-900'
+  const txtNav     = mc ? 'text-ink-600 hover:text-ink-900' : 'text-white/55 hover:text-white/90'
   const bgSugest   = mc ? 'rgba(255,255,255,0.97)'      : 'rgba(8,12,30,0.88)'
-  const bdSugest   = mc ? 'border-slate-200'            : 'border-slate-700/60'
-  const txtMeta    = mc ? 'text-slate-400'              : 'text-slate-400'
+  const bdSugest   = mc ? 'border-ink-200'            : 'border-ink-200/60'
+  const txtMeta    = mc ? 'text-ink-400'              : 'text-ink-400'
 
   // helpers de badge
   const badgeSituacao = (tipo) => {
     const dark = {
-      abertura:      { label: 'Abertura',    cls: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
-      tramite:       { label: 'Tramitação',  cls: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30' },
-      tramitacao:    { label: 'Tramitação',  cls: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30' },
+      abertura:      { label: 'Abertura',    cls: 'bg-info-500/20 text-info-300 border-brand-500/30' },
+      tramite:       { label: 'Tramitação',  cls: 'bg-violet-500/20 text-violet-300 border-violet-500/30' },
+      tramitacao:    { label: 'Tramitação',  cls: 'bg-violet-500/20 text-violet-300 border-violet-500/30' },
       analise:       { label: 'Em análise',  cls: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
       deferimento:   { label: 'Deferido',    cls: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
-      indeferimento: { label: 'Indeferido',  cls: 'bg-red-500/20 text-red-300 border-red-500/30' },
+      indeferimento: { label: 'Indeferido',  cls: 'bg-danger-500/20 text-danger-300 border-danger-500/30' },
       conclusao:     { label: 'Concluído',   cls: 'bg-violet-500/20 text-violet-300 border-violet-500/30' },
       devolucao:     { label: 'Devolvido',   cls: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
-      arquivamento:  { label: 'Arquivado',   cls: 'bg-slate-500/20 text-slate-300 border-slate-500/30' },
+      arquivamento:  { label: 'Arquivado',   cls: 'bg-ink-500/20 text-ink-400 border-ink-500/30' },
     }
     const light = {
-      abertura:      { label: 'Abertura',    cls: 'bg-blue-100 text-blue-700 border-blue-300' },
-      tramite:       { label: 'Tramitação',  cls: 'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-300' },
-      tramitacao:    { label: 'Tramitação',  cls: 'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-300' },
+      abertura:      { label: 'Abertura',    cls: 'bg-info-100 text-brand-700 border-info-300' },
+      tramite:       { label: 'Tramitação',  cls: 'bg-violet-100 text-violet-700 border-violet-300' },
+      tramitacao:    { label: 'Tramitação',  cls: 'bg-violet-100 text-violet-700 border-violet-300' },
       analise:       { label: 'Em análise',  cls: 'bg-amber-100 text-amber-700 border-amber-300' },
       deferimento:   { label: 'Deferido',    cls: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
-      indeferimento: { label: 'Indeferido',  cls: 'bg-red-100 text-red-700 border-red-300' },
+      indeferimento: { label: 'Indeferido',  cls: 'bg-danger-100 text-danger-700 border-danger-300' },
       conclusao:     { label: 'Concluído',   cls: 'bg-violet-100 text-violet-700 border-violet-300' },
       devolucao:     { label: 'Devolvido',   cls: 'bg-orange-100 text-orange-700 border-orange-300' },
-      arquivamento:  { label: 'Arquivado',   cls: 'bg-slate-100 text-slate-600 border-slate-300' },
+      arquivamento:  { label: 'Arquivado',   cls: 'bg-ink-100 text-ink-600 border-ink-300' },
     }
     const map = mc ? light : dark
-    const b = map[tipo] || (mc ? { label: tipo, cls: 'bg-slate-100 text-slate-600 border-slate-300' } : { label: tipo, cls: 'bg-white/10 text-white/60 border-white/15' })
+    const b = map[tipo] || (mc ? { label: tipo, cls: 'bg-ink-100 text-ink-600 border-ink-300' } : { label: tipo, cls: 'bg-surface/10 text-white/60 border-white/15' })
     return <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border ${b.cls}`}>{b.label}</span>
   }
 
   const dotColor = (tipo) => ({
-    abertura:      'bg-blue-400 shadow-blue-400/50',
-    tramite:       'bg-fuchsia-400 shadow-fuchsia-400/50',
-    tramitacao:    'bg-fuchsia-400 shadow-fuchsia-400/50',
+    abertura:      'bg-info-400 shadow-info-400/50',
+    tramite:       'bg-violet-400 shadow-fuchsia-400/50',
+    tramitacao:    'bg-violet-400 shadow-fuchsia-400/50',
     devolucao:     'bg-orange-400 shadow-orange-400/50',
     conclusao:     'bg-violet-400 shadow-violet-400/50',
     deferimento:   'bg-emerald-400 shadow-emerald-400/50',
-    indeferimento: 'bg-red-400 shadow-red-400/50',
-    arquivamento:  'bg-slate-400 shadow-slate-400/50',
-  }[tipo] || (mc ? 'bg-slate-400' : 'bg-white/30'))
+    indeferimento: 'bg-danger-400 shadow-danger-400/50',
+    arquivamento:  'bg-ink-400 shadow-slate-400/50',
+  }[tipo] || (mc ? 'bg-ink-400' : 'bg-surface/30'))
 
   if (tenantNotFound) {
     return (
@@ -271,27 +272,27 @@ export default function ConsultaPublica() {
         className="relative h-screen overflow-hidden flex items-center justify-center"
         style={{ backgroundImage: "url('/background.png')", backgroundSize: 'cover', backgroundPosition: 'center' }}
       >
-        <div className="absolute inset-0 bg-slate-950/60 pointer-events-none" />
+        <div className="absolute inset-0 bg-white/75 dark:bg-[#050816]/60 pointer-events-none" />
         <div className="relative z-10 text-center px-8 max-w-md">
           <div className="mb-6 flex justify-center">
-            <img src="/logo_jprocesso.png" alt="jProcesso" className="w-48 object-contain drop-shadow-[0_0_20px_rgba(168,85,247,0.40)]" />
+            <img src={isDark ? '/logo_jprocesso.png' : '/logo_dark.png'} alt="jProcesso" className="w-48 object-contain drop-shadow-[0_0_20px_rgba(168,85,247,0.40)]" />
           </div>
-          <div className="bg-[#050816]/90 backdrop-blur-xl border border-red-500/30 shadow-[0_0_40px_rgba(239,68,68,0.20)] rounded-[28px] px-8 py-8">
-            <div className="mb-4 w-16 h-16 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto">
+          <div className="bg-white/90 dark:bg-[#050816]/90 backdrop-blur-xl border border-danger-200 dark:border-danger-500/30 shadow-[0_0_40px_rgba(239,68,68,0.20)] rounded-[28px] px-8 py-8">
+            <div className="mb-4 w-16 h-16 rounded-full bg-danger-500/10 border border-danger-500/30 flex items-center justify-center mx-auto">
               <span className="text-3xl">🔒</span>
             </div>
-            <h1 className="text-xl font-bold text-white mb-2">Página não encontrada</h1>
-            <p className="text-slate-400 text-sm mb-6">
-              O município <span className="text-white font-semibold">/{subdomain}</span> não existe ou foi desativado no sistema.
+            <h1 className="text-xl font-bold text-ink-900 mb-2">Página não encontrada</h1>
+            <p className="text-ink-400 text-sm mb-6">
+              O município <span className="text-ink-900 font-semibold">/{subdomain}</span> não existe ou foi desativado no sistema.
             </p>
             <a
               href="/"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white text-sm font-semibold hover:from-fuchsia-500 hover:to-violet-500 transition-all"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-violet-600 text-white text-sm font-semibold hover:from-violet-500 hover:to-violet-500 transition-all"
             >
               Voltar ao início
             </a>
           </div>
-          <p className="mt-6 text-xs text-white/30 uppercase tracking-widest">
+          <p className="mt-6 text-xs text-ink-400 dark:text-white/30 uppercase tracking-widest">
             © 2026 JEOS SISTEMAS E ASSESSORIAS LTDA
           </p>
         </div>
@@ -314,7 +315,7 @@ export default function ConsultaPublica() {
 
       {/* ── HEADER ── */}
       <header
-        className={`no-print relative z-20 flex-shrink-0 backdrop-blur-xl border-b ${bdPg} transition-colors duration-300`}
+        className={`no-print relative z-20 shrink-0 backdrop-blur-xl border-b ${bdPg} transition-colors duration-300`}
         style={{ background: hdrBg }}
       >
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
@@ -329,10 +330,11 @@ export default function ConsultaPublica() {
           <nav className={`hidden md:flex items-center gap-7 text-[11px] font-semibold tracking-widest uppercase`}>
             <Link to={`/${subdomain}/login`} className={`${txtNav} transition-colors`}>Início</Link>
             <a href="#" className={`${txtNav} transition-colors`}>Perguntas Frequentes</a>
-            <a href="#" className={`${txtNav} transition-colors`}>Legislações</a>
+            <Link to={`/${subdomain}/verificar`} className={`${txtNav} transition-colors`}>Verificar documento</Link>
+            <Link to={`/${subdomain}/legislacao`} className={`${txtNav} transition-colors`}>Legislações</Link>
             <Link
               to={`/${subdomain}/login`}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600/20 border border-violet-500/30 text-violet-400 hover:bg-violet-600/30 transition-all text-[11px]"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600/20 border border-violet-500/30 text-violet-700 dark:text-violet-300 hover:bg-violet-600/30 transition-all text-[11px]"
             >
               <LogIn className="h-3.5 w-3.5" />
               Acesso Restrito
@@ -340,12 +342,12 @@ export default function ConsultaPublica() {
 
             {/* Toggle modo claro/escuro */}
             <button
-              onClick={() => setModoClaro(v => !v)}
+              onClick={toggleTheme}
               title={mc ? 'Mudar para modo escuro' : 'Mudar para modo claro'}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-semibold transition-all ${
                 mc
-                  ? 'bg-slate-100 border-slate-300 text-slate-600 hover:bg-slate-200'
-                  : 'bg-white/8 border-white/20 text-white/60 hover:bg-white/15 hover:text-white/90'
+                  ? 'bg-ink-100 border-ink-300 text-ink-600 hover:bg-ink-200'
+                  : 'bg-surface/8 border-white/20 text-white/60 hover:bg-surface/15 hover:text-white/90'
               }`}
             >
               {mc ? <Moon className="h-3.5 w-3.5" /> : <Sun className="h-3.5 w-3.5" />}
@@ -356,16 +358,16 @@ export default function ConsultaPublica() {
           {/* Mobile: botões */}
           <div className="md:hidden flex items-center gap-2">
             <button
-              onClick={() => setModoClaro(v => !v)}
+              onClick={toggleTheme}
               className={`p-2 rounded-lg border transition-all ${
-                mc ? 'bg-slate-100 border-slate-300 text-slate-600' : 'bg-white/8 border-white/20 text-white/60'
+                mc ? 'bg-ink-100 border-ink-300 text-ink-600' : 'bg-surface/8 border-white/20 text-white/60'
               }`}
             >
               {mc ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
             </button>
             <Link
               to={`/${subdomain}/login`}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600/20 border border-violet-500/30 text-violet-400 text-xs font-semibold"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600/20 border border-violet-500/30 text-violet-700 dark:text-violet-300 text-xs font-semibold"
             >
               <LogIn className="h-3.5 w-3.5" />
               Login
@@ -382,7 +384,7 @@ export default function ConsultaPublica() {
 
           {/* Toolbar de busca */}
           <div
-            className={`no-print flex-shrink-0 backdrop-blur-xl border-b ${bdPg} transition-colors duration-300`}
+            className={`no-print shrink-0 backdrop-blur-xl border-b ${bdPg} transition-colors duration-300`}
             style={{ background: tbrBg }}
           >
             <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3">
@@ -397,28 +399,28 @@ export default function ConsultaPublica() {
 
                 <form onSubmit={handleConsulta} className="flex-1 flex items-center gap-2">
                   <div className="flex-1 relative">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400" />
                     <input
                       type="text"
                       value={numeroProcesso}
                       onChange={(e) => setNumeroProcesso(e.target.value)}
-                      className={`w-full h-10 rounded-xl border pl-9 pr-3 text-sm placeholder:text-slate-400 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 ${searchInputBg}`}
+                      className={`w-full h-10 rounded-xl border pl-9 pr-3 text-sm placeholder:text-ink-400 outline-hidden focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 ${searchInputBg}`}
                       placeholder="Número do processo..."
                     />
                   </div>
                   <button
                     type="submit"
-                    className="flex-shrink-0 h-10 px-4 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold transition-colors whitespace-nowrap"
+                    className="shrink-0 h-10 px-4 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold transition-colors whitespace-nowrap"
                   >
                     Buscar
                   </button>
                 </form>
 
-                <div className="flex-shrink-0 flex items-center gap-2">
-                  <button onClick={handleCompartilhar} title="Compartilhar" className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all">
+                <div className="shrink-0 flex items-center gap-2">
+                  <button onClick={handleCompartilhar} title="Compartilhar" className="p-2 rounded-lg text-ink-500 hover:text-ink-900 hover:bg-ink-100 dark:text-white/40 dark:hover:text-white dark:hover:bg-surface/10 transition-all">
                     <Share2 className="h-4 w-4" />
                   </button>
-                  <button onClick={handleImprimir} title="Imprimir" className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all">
+                  <button onClick={handleImprimir} title="Imprimir" className="p-2 rounded-lg text-ink-500 hover:text-ink-900 hover:bg-ink-100 dark:text-white/40 dark:hover:text-white dark:hover:bg-surface/10 transition-all">
                     <Printer className="h-4 w-4" />
                   </button>
                 </div>
@@ -497,8 +499,8 @@ export default function ConsultaPublica() {
                       <p className={`print-label text-[11px] font-semibold ${txt3} uppercase tracking-wider`}>Prioridade</p>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold border ${
                         processo.prioridade === 'urgente'
-                          ? 'bg-red-500/15 text-red-600 border-red-500/25'
-                          : mc ? 'bg-slate-100 text-slate-600 border-slate-300' : 'bg-slate-700/40 text-slate-300 border-slate-600/40'
+                          ? 'bg-danger-500/15 text-danger-600 border-danger-500/25'
+                          : mc ? 'bg-ink-100 text-ink-600 border-ink-300' : 'bg-ink-200/40 text-ink-500 border-ink-300/40'
                       }`}>
                         {processo.prioridade === 'urgente' ? 'Urgente' : 'Normal'}
                       </span>
@@ -509,11 +511,11 @@ export default function ConsultaPublica() {
                   {processo.tramitacoes && processo.tramitacoes.length > 0 && (
                     <div className={`pt-3 border-t ${bdHdr} flex flex-wrap gap-4 text-xs ${txt3}`}>
                       <span>
-                        <span className={`font-semibold ${mc ? 'text-slate-600' : 'text-slate-400'}`}>Tramitações:</span>{' '}
+                        <span className={`font-semibold ${mc ? 'text-ink-600' : 'text-ink-400'}`}>Tramitações:</span>{' '}
                         {processo.tramitacoes.length}
                       </span>
                       <span>
-                        <span className={`font-semibold ${mc ? 'text-slate-600' : 'text-slate-400'}`}>Tempo total:</span>{' '}
+                        <span className={`font-semibold ${mc ? 'text-ink-600' : 'text-ink-400'}`}>Tempo total:</span>{' '}
                         {calcularPermanencia(processo.data_abertura || processo.created_at, processo.data_conclusao)}
                       </span>
                     </div>
@@ -536,7 +538,7 @@ export default function ConsultaPublica() {
                     </span>
                   </div>
                   {processo.tramitacoes && (
-                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-violet-500/20 border border-violet-500/30 text-violet-400 text-[10px] font-bold">
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-violet-500/20 border border-violet-500/30 text-violet-700 dark:text-violet-300 text-[10px] font-bold">
                       {processo.tramitacoes.length}
                     </span>
                   )}
@@ -550,10 +552,10 @@ export default function ConsultaPublica() {
                         .map((tramitacao, index, arr) => (
                           <div key={tramitacao.id || index} className="relative flex gap-4">
                             {/* Timeline vertical */}
-                            <div className="flex flex-col items-center flex-shrink-0 w-6">
-                              <div className={`w-3 h-3 rounded-full mt-1 flex-shrink-0 shadow-[0_0_8px] ${dotColor(tramitacao.tipo_acao)}`} />
+                            <div className="flex flex-col items-center shrink-0 w-6">
+                              <div className={`w-3 h-3 rounded-full mt-1 shrink-0 shadow-[0_0_8px] ${dotColor(tramitacao.tipo_acao)}`} />
                               {index < arr.length - 1 && (
-                                <div className={`w-px flex-1 mt-1 mb-0 ${mc ? 'bg-slate-200' : 'bg-slate-700/60'}`} style={{ minHeight: '2rem' }} />
+                                <div className={`w-px flex-1 mt-1 mb-0 ${mc ? 'bg-ink-200' : 'bg-ink-200/60'}`} style={{ minHeight: '2rem' }} />
                               )}
                             </div>
 
@@ -654,12 +656,12 @@ export default function ConsultaPublica() {
               {/* Form */}
               <form onSubmit={handleConsulta} className="flex items-center gap-2 mb-3">
                 <div className="flex-1 relative">
-                  <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400" />
                   <input
                     type="text"
                     value={numeroProcesso}
                     onChange={(e) => setNumeroProcesso(e.target.value)}
-                    className={`w-full h-12 rounded-xl border pl-11 pr-4 text-sm placeholder:text-slate-400 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 ${searchInputBg}`}
+                    className={`w-full h-12 rounded-xl border pl-11 pr-4 text-sm placeholder:text-ink-400 outline-hidden focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 ${searchInputBg}`}
                     placeholder="Digite o número do processo (Ex: Proc.2026.0000001 - SEMAD)"
                   />
                 </div>
@@ -667,10 +669,10 @@ export default function ConsultaPublica() {
                   type="button"
                   onClick={() => setShowFiltros(v => !v)}
                   title="Filtros avançados"
-                  className={`inline-flex items-center gap-1.5 h-12 px-4 rounded-xl border text-sm font-medium transition-all flex-shrink-0 ${
+                  className={`inline-flex items-center gap-1.5 h-12 px-4 rounded-xl border text-sm font-medium transition-all shrink-0 ${
                     showFiltros || filtrosAtivos.length > 0
-                      ? 'bg-violet-500/20 border-violet-500/40 text-violet-300'
-                      : 'border-white/20 text-white/60 hover:border-white/40 hover:text-white/80'
+                      ? 'bg-violet-100 border-violet-300 text-violet-700 dark:bg-violet-500/20 dark:border-violet-500/40 dark:text-violet-300'
+                      : 'border-ink-300 text-ink-600 hover:border-ink-400 hover:text-ink-900 dark:border-white/20 dark:text-white/60 dark:hover:border-white/40 dark:hover:text-white/80'
                   }`}
                 >
                   <SlidersHorizontal className="h-4 w-4" />
@@ -683,7 +685,7 @@ export default function ConsultaPublica() {
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex items-center justify-center gap-2 h-12 px-5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold transition-colors whitespace-nowrap shadow-lg shadow-violet-600/25 flex-shrink-0"
+                  className="inline-flex items-center justify-center gap-2 h-12 px-5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold transition-colors whitespace-nowrap shadow-lg shadow-violet-600/25 shrink-0"
                 >
                   <Search className="h-4 w-4" />
                   Buscar
@@ -700,7 +702,7 @@ export default function ConsultaPublica() {
                       <select
                         value={filtroSecretaria}
                         onChange={e => setFiltroSecretaria(e.target.value)}
-                        className="w-full h-10 rounded-xl border border-white/20 bg-white/95 px-3 text-sm text-slate-900 outline-none focus:border-violet-500"
+                        className="w-full h-10 rounded-xl border border-ink-300 dark:border-white/20 bg-surface/95 px-3 text-sm text-ink-900 outline-hidden focus:border-violet-500"
                       >
                         <option value="">Todas as secretarias</option>
                         {secretariasList.map(s => (
@@ -715,7 +717,7 @@ export default function ConsultaPublica() {
                         value={filtroCredor}
                         onChange={e => setFiltroCredor(e.target.value)}
                         placeholder="Nome, CPF ou CNPJ..."
-                        className="w-full h-10 rounded-xl border border-white/20 bg-white/95 px-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-violet-500"
+                        className="w-full h-10 rounded-xl border border-ink-300 dark:border-white/20 bg-surface/95 px-3 text-sm text-ink-900 placeholder:text-ink-400 outline-hidden focus:border-violet-500"
                       />
                     </div>
                     <div>
@@ -725,7 +727,7 @@ export default function ConsultaPublica() {
                         value={filtroNumeroDid}
                         onChange={e => setFiltroNumeroDid(e.target.value)}
                         placeholder="Ex: DID-2026/0001..."
-                        className="w-full h-10 rounded-xl border border-white/20 bg-white/95 px-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-violet-500"
+                        className="w-full h-10 rounded-xl border border-ink-300 dark:border-white/20 bg-surface/95 px-3 text-sm text-ink-900 placeholder:text-ink-400 outline-hidden focus:border-violet-500"
                       />
                     </div>
                     <div>
@@ -735,7 +737,7 @@ export default function ConsultaPublica() {
                         value={filtroDescricao}
                         onChange={e => setFiltroDescricao(e.target.value)}
                         placeholder="Palavra-chave no assunto..."
-                        className="w-full h-10 rounded-xl border border-white/20 bg-white/95 px-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-violet-500"
+                        className="w-full h-10 rounded-xl border border-ink-300 dark:border-white/20 bg-surface/95 px-3 text-sm text-ink-900 placeholder:text-ink-400 outline-hidden focus:border-violet-500"
                       />
                     </div>
                   </div>
@@ -743,7 +745,7 @@ export default function ConsultaPublica() {
                     <button
                       type="button"
                       onClick={() => { setFiltroSecretaria(''); setFiltroCredor(''); setFiltroNumeroDid(''); setFiltroDescricao('') }}
-                      className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                      className="text-xs text-danger-400 hover:text-danger-300 transition-colors"
                     >
                       Limpar filtros
                     </button>
@@ -764,10 +766,10 @@ export default function ConsultaPublica() {
                   {filtrosAtivos.map(f => (
                     <span
                       key={f.key}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-violet-500/15 text-violet-300 text-xs font-medium rounded-full border border-violet-500/25"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-violet-500/15 text-violet-700 dark:text-violet-300 text-xs font-medium rounded-full border border-violet-500/25"
                     >
                       {f.label}
-                      <button onClick={f.clear} className="hover:text-red-400 transition-colors ml-0.5">
+                      <button onClick={f.clear} className="hover:text-danger-400 transition-colors ml-0.5">
                         <X className="h-3 w-3" />
                       </button>
                     </span>
@@ -779,12 +781,12 @@ export default function ConsultaPublica() {
             {/* Estado inicial */}
             {!searched && !isLoading && (
               <div className="text-center py-8">
-                <FileSearch className={`h-10 w-10 ${mc ? 'text-slate-300' : 'text-slate-600'} mx-auto mb-3`} />
-                <p className={`${mc ? 'text-slate-500' : 'text-slate-400'} text-sm mb-1`}>Pesquise pelo número do protocolo ou use os filtros avançados.</p>
-                <p className={`${mc ? 'text-slate-400' : 'text-slate-600'} text-xs mb-6`}>Você pode combinar secretaria, credor, número e descrição ao mesmo tempo.</p>
+                <FileSearch className={`h-10 w-10 ${mc ? 'text-ink-400' : 'text-ink-500'} mx-auto mb-3`} />
+                <p className={`${mc ? 'text-ink-500' : 'text-ink-400'} text-sm mb-1`}>Pesquise pelo número do protocolo ou use os filtros avançados.</p>
+                <p className={`${mc ? 'text-ink-400' : 'text-ink-500'} text-xs mb-6`}>Você pode combinar secretaria, credor, número e descrição ao mesmo tempo.</p>
                 <Link
                   to={`/${subdomain}/login`}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-medium transition-all ${mc ? 'bg-slate-100 border-slate-300 text-slate-600 hover:text-slate-900 hover:border-slate-400' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/25'}`}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-medium transition-all ${mc ? 'bg-ink-100 border-ink-300 text-ink-600 hover:text-ink-900 hover:border-ink-400' : 'bg-surface/5 border-white/10 text-ink-400 hover:text-white hover:border-white/25'}`}
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Acesso Restrito (Login)
@@ -795,7 +797,7 @@ export default function ConsultaPublica() {
             {/* Loading */}
             {isLoading && (
               <div className="text-center py-14">
-                <div className={`inline-block animate-spin rounded-full h-9 w-9 border-2 ${mc ? 'border-slate-200 border-t-violet-600' : 'border-slate-700 border-t-violet-500'}`} />
+                <div className={`inline-block animate-spin rounded-full h-9 w-9 border-2 ${mc ? 'border-ink-200 border-t-violet-600' : 'border-ink-200 border-t-violet-500'}`} />
                 <p className={`mt-4 ${txt3} text-sm`}>Buscando processo...</p>
               </div>
             )}
@@ -803,7 +805,7 @@ export default function ConsultaPublica() {
             {/* Múltiplos resultados */}
             {searched && !processo && !isLoading && showSugestoes && processosSugestoes.length > 0 && (
               <div className="space-y-2">
-                <p className={`text-sm ${mc ? 'text-slate-600' : 'text-slate-400'} font-medium mb-3`}>
+                <p className={`text-sm ${mc ? 'text-ink-600' : 'text-ink-400'} font-medium mb-3`}>
                   {processosSugestoes.length} resultado(s) encontrado(s). Selecione para ver os detalhes:
                 </p>
                 {processosSugestoes.map(proc => (
@@ -817,7 +819,7 @@ export default function ConsultaPublica() {
                       <div className="flex-1 min-w-0">
                         <p className={`font-semibold ${txt1} text-sm truncate`}>{proc.numero}</p>
                         <p className={`text-xs ${txt3} truncate mt-0.5`}>{proc.assunto}</p>
-                        {proc.interessado_nome && <p className={`text-xs ${mc ? 'text-slate-400' : 'text-slate-600'} truncate`}>{proc.interessado_nome}</p>}
+                        {proc.interessado_nome && <p className={`text-xs ${mc ? 'text-ink-400' : 'text-ink-500'} truncate`}>{proc.interessado_nome}</p>}
                       </div>
                       <div className={`flex-shrink-0 text-xs ${txt3} text-right`}>
                         <p className="font-medium">{proc.setorAtual?.secretaria?.sigla || proc.setorAtual?.sigla || ''}</p>
@@ -835,7 +837,7 @@ export default function ConsultaPublica() {
                 className={`rounded-2xl border ${bdCard} p-12 text-center transition-colors duration-300`}
                 style={{ background: bgCard }}
               >
-                <AlertCircle className={`h-12 w-12 ${mc ? 'text-slate-300' : 'text-slate-600'} mx-auto mb-4`} />
+                <AlertCircle className={`h-12 w-12 ${mc ? 'text-ink-400' : 'text-ink-500'} mx-auto mb-4`} />
                 <h3 className={`text-lg font-semibold ${txt1} mb-2`}>Nenhum resultado encontrado</h3>
                 <p className={`${txt3} text-sm mb-5`}>Verifique o número digitado ou tente os filtros avançados.</p>
                 <button
@@ -852,17 +854,17 @@ export default function ConsultaPublica() {
 
       {/* ── FOOTER ── */}
       <footer
-        className={`no-print relative z-20 flex-shrink-0 backdrop-blur-xl border-t ${bdPg} transition-colors duration-300`}
+        className={`no-print relative z-20 shrink-0 backdrop-blur-xl border-t ${bdPg} transition-colors duration-300`}
         style={{ background: ftrBg }}
       >
         <div className="max-w-7xl mx-auto px-6 py-2.5 flex items-center justify-center">
-          <p className={`text-[11px] font-medium tracking-[0.16em] ${mc ? 'text-slate-400' : 'text-slate-600'} uppercase`}>
+          <p className={`text-[11px] font-medium tracking-[0.16em] ${mc ? 'text-ink-400' : 'text-ink-500'} uppercase`}>
             © 2026{' '}
             <a href="https://jeossistemas.com" target="_blank" rel="noopener noreferrer" className="hover:text-violet-500 transition-colors">
               JEOS SISTEMAS E ASSESSORIA LTDA
             </a>
             <span className="mx-2 text-violet-500/50">•</span>
-            V1.0.0
+            V{__APP_VERSION__}
           </p>
         </div>
       </footer>

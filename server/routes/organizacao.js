@@ -20,6 +20,7 @@ const {
   updateAgente,
   deleteAgente,
 } = require('../controllers/organizacaoController');
+const { listBancos, listContas, createConta, updateConta, deleteConta } = require('../controllers/contasBancariasController');
 const { authenticate, tenantMiddleware, requireTenant, authorize } = require('../middleware/auth');
 
 router.get('/secretarias/publico', tenantMiddleware, requireTenant, listSecretariasPublico);
@@ -44,6 +45,11 @@ router.post('/agentes', tenantMiddleware, requireTenant, authenticate, createAge
 router.put('/agentes/:id', tenantMiddleware, requireTenant, authenticate, updateAgente);
 router.delete('/agentes/:id', tenantMiddleware, requireTenant, authenticate, deleteAgente);
 
+router.get('/bancos',                  authenticate, listBancos);
+router.get('/contas-bancarias',        tenantMiddleware, requireTenant, authenticate, listContas);
+router.post('/contas-bancarias',       tenantMiddleware, requireTenant, authenticate, createConta);
+router.put('/contas-bancarias/:id',    tenantMiddleware, requireTenant, authenticate, updateConta);
+router.delete('/contas-bancarias/:id', tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), deleteConta);
 
 module.exports = router;
 

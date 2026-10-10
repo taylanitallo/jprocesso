@@ -19,6 +19,9 @@ const defineCredorModel = require('./Credor');
 const defineContratoItemModel = require('./ContratoItem');
 const defineContratoItemVinculoModel = require('./ContratoItemVinculo');
 const defineContratoModel = require('./Contrato');
+const defineContratoOrdemModel = require('./ContratoOrdem');
+const defineContratoOrdemItemModel = require('./ContratoOrdemItem');
+const defineLicitacaoModel = require('./Licitacao');
 const definePatGrupoModel = require('./PatGrupo');
 const definePatBemModel = require('./PatBem');
 const definePatResponsabilidadeModel = require('./PatResponsabilidade');
@@ -26,6 +29,10 @@ const definePatMovimentacaoModel = require('./PatMovimentacao');
 const definePatBaixaModel = require('./PatBaixa');
 const definePatInventarioModel = require('./PatInventario');
 const definePatInventarioItemModel = require('./PatInventarioItem');
+const defineContaBancariaModel = require('./ContaBancaria');
+const defineTesReceitaModel = require('./TesReceita');
+const defineTesDespesaModel = require('./TesDespesa');
+const defineTesGrupoContaModel = require('./TesGrupoConta');
 const defineLogModel = require('./Log');
 
 const initTenantModels = (sequelize) => {
@@ -50,6 +57,9 @@ const initTenantModels = (sequelize) => {
   const ContratoItem = defineContratoItemModel(sequelize);
   const ContratoItemVinculo = defineContratoItemVinculoModel(sequelize);
   const Contrato = defineContratoModel(sequelize);
+  const ContratoOrdem = defineContratoOrdemModel(sequelize);
+  const ContratoOrdemItem = defineContratoOrdemItemModel(sequelize);
+  const Licitacao = defineLicitacaoModel(sequelize);
   const PatGrupo = definePatGrupoModel(sequelize);
   const PatBem = definePatBemModel(sequelize);
   const PatResponsabilidade = definePatResponsabilidadeModel(sequelize);
@@ -57,6 +67,10 @@ const initTenantModels = (sequelize) => {
   const PatBaixa = definePatBaixaModel(sequelize);
   const PatInventario = definePatInventarioModel(sequelize);
   const PatInventarioItem = definePatInventarioItemModel(sequelize);
+  const ContaBancaria = defineContaBancariaModel(sequelize);
+  const TesReceita = defineTesReceitaModel(sequelize);
+  const TesDespesa = defineTesDespesaModel(sequelize);
+  const TesGrupoConta = defineTesGrupoContaModel(sequelize);
   const Log = defineLogModel(sequelize);
 
   // Contrato → Credor
@@ -66,6 +80,14 @@ const initTenantModels = (sequelize) => {
   // Contrato → Itens vinculados (itens do contrato específico, com qtd/valor)
   Contrato.hasMany(ContratoItemVinculo, { foreignKey: 'contrato_id', as: 'itens' });
   ContratoItemVinculo.belongsTo(Contrato, { foreignKey: 'contrato_id', as: 'contrato' });
+  ContratoItemVinculo.belongsTo(ContratoItem, { foreignKey: 'item_id', as: 'catalogo', constraints: false });
+
+  // Contrato → Ordens de Compra/Serviço
+  Contrato.hasMany(ContratoOrdem,     { foreignKey: 'contrato_id', as: 'ordens',    constraints: false });
+  ContratoOrdem.belongsTo(Contrato,   { foreignKey: 'contrato_id', as: 'contrato',  constraints: false });
+  ContratoOrdem.hasMany(ContratoOrdemItem, { foreignKey: 'ordem_id', as: 'itens',   constraints: false });
+  ContratoOrdemItem.belongsTo(ContratoOrdem, { foreignKey: 'ordem_id', as: 'ordemPai', constraints: false });
+  ContratoOrdemItem.belongsTo(ContratoItem, { foreignKey: 'item_id', as: 'catalogo', constraints: false });
 
   Secretaria.hasMany(Setor, { foreignKey: 'secretariaId', as: 'setores' });
   Setor.belongsTo(Secretaria, { foreignKey: 'secretariaId', as: 'secretaria' });
@@ -108,6 +130,8 @@ const initTenantModels = (sequelize) => {
   AlmoxLote.belongsTo(AlmoxarifadoItem, { foreignKey: 'item_id', as: 'item' });
   AlmoxarifadoItem.hasMany(AlmoxLote, { foreignKey: 'item_id', as: 'lotes' });
   AlmoxLote.belongsTo(User, { foreignKey: 'usuario_id', as: 'usuario' });
+  AlmoxLote.belongsTo(ContratoOrdem, { foreignKey: 'ordem_id', as: 'ordemCompra', constraints: false });
+  AlmoxLote.belongsTo(ContratoOrdemItem, { foreignKey: 'ordem_item_id', as: 'ordemItem', constraints: false });
 
   // Movimentações → Lote
   AlmoxarifadoMovimentacao.belongsTo(AlmoxLote, { foreignKey: 'lote_id', as: 'lote' });
@@ -136,6 +160,8 @@ const initTenantModels = (sequelize) => {
   Did.belongsTo(Processo, { foreignKey: 'processo_id', as: 'processo' });
   Processo.hasOne(Did, { foreignKey: 'processo_id', as: 'did' });
   Did.belongsTo(User, { foreignKey: 'criado_por_id', as: 'criadoPor' });
+  Did.belongsTo(ContratoOrdem, { foreignKey: 'ordem_compra_id', as: 'ordemCompra', constraints: false });
+  ContratoOrdem.hasOne(Did, { foreignKey: 'ordem_compra_id', as: 'did', constraints: false });
 
   // Patrimônio associations
   PatBem.belongsTo(PatGrupo,    { foreignKey: 'grupo_id',      as: 'grupo' });
@@ -161,6 +187,20 @@ const initTenantModels = (sequelize) => {
   PatBem.hasMany(PatInventarioItem, { foreignKey: 'bem_id', as: 'inventarioItens' });
   PatInventario.belongsTo(User,       { foreignKey: 'responsavel_id', as: 'responsavel' });
   PatInventario.belongsTo(Secretaria, { foreignKey: 'secretaria_id',  as: 'secretaria' });
+
+  // ContaBancaria associations
+  ContaBancaria.belongsTo(Secretaria, { foreignKey: 'secretaria_id', as: 'secretaria' });
+  Secretaria.hasMany(ContaBancaria, { foreignKey: 'secretaria_id', as: 'contasBancarias' });
+
+  // TesReceita associations
+  TesReceita.belongsTo(ContaBancaria, { foreignKey: 'conta_id', as: 'conta' });
+  ContaBancaria.hasMany(TesReceita, { foreignKey: 'conta_id', as: 'receitas' });
+
+  // TesDespesa associations
+  TesDespesa.belongsTo(ContaBancaria, { foreignKey: 'conta_id', as: 'conta', constraints: false });
+  ContaBancaria.hasMany(TesDespesa, { foreignKey: 'conta_id', as: 'despesas', constraints: false });
+  TesDespesa.belongsTo(ContratoOrdem, { foreignKey: 'ordem_id', as: 'ordem', constraints: false });
+  ContratoOrdem.hasOne(TesDespesa, { foreignKey: 'ordem_id', as: 'pagamento', constraints: false });
 
   // Log associations
   Log.belongsTo(User,       { foreignKey: 'usuario_id',   as: 'usuario',    constraints: false });
@@ -189,6 +229,9 @@ const initTenantModels = (sequelize) => {
     ContratoItem,
     ContratoItemVinculo,
     Contrato,
+    ContratoOrdem,
+    ContratoOrdemItem,
+    Licitacao,
     PatGrupo,
     PatBem,
     PatResponsabilidade,
@@ -196,6 +239,10 @@ const initTenantModels = (sequelize) => {
     PatBaixa,
     PatInventario,
     PatInventarioItem,
+    ContaBancaria,
+    TesReceita,
+    TesDespesa,
+    TesGrupoConta,
     Log,
   };
 };

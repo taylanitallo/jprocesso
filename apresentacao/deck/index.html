@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>jProcesso — Apresentação</title>
+<style>
+  :root{
+    --tinta:#0f172a; --tinta2:#334155; --apagado:#64748b; --linha:#e2e8f0;
+    --fundo:#ffffff; --papel:#f8fafc;
+    --acento:#1d4ed8; --alerta:#b91c1c; --ambar:#b45309; --verde:#15803d;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%}
+  body{
+    font-family:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+    background:#1e293b; color:var(--tinta);
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ── Palco ─────────────────────────────────────────────────────────────── */
+  .palco{position:relative; width:100vw; height:100vh; overflow:hidden}
+  .slide{
+    position:absolute; inset:0; display:none;
+    background:var(--fundo);
+    padding:4.2vh 4.5vw 7vh;
+    flex-direction:column;
+  }
+  .slide.ativo{display:flex}
+
+  /* ── Tipografia ────────────────────────────────────────────────────────── */
+  .etiqueta{
+    font-size:1.55vh; font-weight:700; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--apagado); margin-bottom:1.6vh;
+  }
+  .etiqueta.perigo{color:var(--alerta)}
+  h1{font-size:6.6vh; line-height:1.05; font-weight:800; letter-spacing:-.02em}
+  h2{font-size:4.6vh; line-height:1.12; font-weight:800; letter-spacing:-.015em; max-width:22ch}
+  h3{font-size:2.9vh; line-height:1.2; font-weight:700}
+  p.sub{font-size:2.4vh; line-height:1.45; color:var(--tinta2); max-width:44ch; margin-top:1.8vh}
+  .fonte{font-size:1.5vh; color:var(--apagado); margin-top:auto; padding-top:2vh}
+
+  /* ── Números grandes ───────────────────────────────────────────────────── */
+  .numerao{font-size:11vh; line-height:.92; font-weight:800; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
+  .numerao.perigo{color:var(--alerta)}
+  .numerao.ambar{color:var(--ambar)}
+  .numerao.verde{color:var(--verde)}
+  .numerao.acento{color:var(--acento)}
+  .legenda{font-size:2vh; color:var(--tinta2); margin-top:1vh; max-width:26ch; line-height:1.35}
+
+  /* ── Grades ────────────────────────────────────────────────────────────── */
+  .tres{display:grid; grid-template-columns:repeat(3,1fr); gap:5vw; align-items:start; flex:1; align-content:center}
+  .duas{display:grid; grid-template-columns:1fr 1fr; gap:4vw; flex:1; align-items:center}
+
+  /* Dor: texto à esquerda, print grande à direita */
+  .dor{display:grid; grid-template-columns:31% 1fr; gap:3vw; flex:1; align-items:center; min-height:0}
+  .dor .texto{display:flex; flex-direction:column; justify-content:center}
+  .dor figure{height:100%; display:flex; align-items:center; justify-content:center; min-height:0}
+  .dor img{
+    max-width:100%; max-height:100%; object-fit:contain;
+    border:1px solid var(--linha); border-radius:6px;
+    box-shadow:0 10px 34px rgba(15,23,42,.16);
+  }
+  .aspas{font-size:3.1vh; line-height:1.25; font-weight:700; letter-spacing:-.01em}
+  .aspas::before{content:"“"} .aspas::after{content:"”"}
+
+  /* Recortes largos (faixa de alerta, certidões, saldos) pedem a largura inteira —
+     espremidos numa coluna, o texto some no projetor. */
+  .dor.empilhado{grid-template-columns:1fr; grid-template-rows:auto 1fr; gap:2.2vh}
+  .dor.empilhado .topo{display:flex; align-items:center; gap:3.2vw; flex-wrap:nowrap}
+  .dor.empilhado .aspas{font-size:3.4vh; flex:1 1 auto; max-width:34ch}
+  .dor.empilhado .bloco-num{display:flex; align-items:baseline; gap:1.1vw; flex:0 0 auto}
+  .dor.empilhado .numerao{font-size:8.6vh}
+  .dor.empilhado .legenda{margin-top:0; max-width:30ch; font-size:1.95vh}
+  .dor.empilhado figure{width:100%; height:100%; align-items:center}
+  .dor.empilhado .remate{font-size:2.1vh; color:var(--tinta2); flex:0 0 auto; max-width:24ch; line-height:1.35}
+
+  /* ── Antes × Depois ────────────────────────────────────────────────────── */
+  table.comparativo{width:100%; border-collapse:collapse; font-size:2.05vh}
+  table.comparativo th{
+    text-align:left; padding:1.5vh 1.4vw; font-size:1.5vh; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--apagado); border-bottom:2px solid var(--linha);
+  }
+  table.comparativo td{padding:1.55vh 1.4vw; border-bottom:1px solid var(--linha); vertical-align:top; line-height:1.35}
+  table.comparativo td:first-child{color:var(--tinta2); width:47%}
+  table.comparativo td:last-child{font-weight:600}
+
+  /* ── Listas de risco ───────────────────────────────────────────────────── */
+  ul.riscos{list-style:none; display:flex; flex-direction:column; gap:2.1vh; margin-top:1vh}
+  ul.riscos li{display:flex; gap:1.3vw; align-items:flex-start; font-size:2.25vh; line-height:1.35}
+  ul.riscos .marca{
+    flex:0 0 auto; width:2.9vh; height:2.9vh; border-radius:50%;
+    background:#fee2e2; color:var(--alerta); font-weight:800; font-size:1.7vh;
+    display:flex; align-items:center; justify-content:center; margin-top:.2vh;
+  }
+  ul.riscos.ok .marca{background:#dcfce7; color:var(--verde)}
+
+  /* ── Etapas de implantação ─────────────────────────────────────────────── */
+  .etapas{display:grid; grid-template-columns:repeat(4,1fr); gap:2vw; margin-top:2vh}
+  .etapa{border-top:4px solid var(--acento); padding-top:1.6vh}
+  .etapa .n{font-size:1.5vh; font-weight:800; letter-spacing:.16em; color:var(--acento); text-transform:uppercase}
+  .etapa .t{font-size:2.35vh; font-weight:700; margin-top:.8vh; line-height:1.2}
+  .etapa .d{font-size:1.85vh; color:var(--tinta2); margin-top:.7vh; line-height:1.35}
+
+  /* ── Caixas ────────────────────────────────────────────────────────────── */
+  .caixa{background:var(--papel); border:1px solid var(--linha); border-radius:8px; padding:2.6vh 2vw}
+  .caixa.destaque{background:#eff6ff; border-color:#bfdbfe}
+  .preencher{
+    background:#fef9c3; border:1px dashed #ca8a04; color:#713f12;
+    padding:.15em .5em; border-radius:4px; font-weight:700; white-space:nowrap;
+  }
+
+  /* ── Capa ──────────────────────────────────────────────────────────────── */
+  .capa{justify-content:center; background:var(--fundo)}
+  .capa .marca{font-size:1.7vh; font-weight:800; letter-spacing:.22em; text-transform:uppercase; color:var(--acento)}
+  .capa h1{margin-top:2.4vh; font-size:8.5vh}
+  .capa .para{font-size:3vh; color:var(--tinta2); margin-top:3vh; line-height:1.4}
+  .capa .rodape{margin-top:6vh; font-size:2vh; color:var(--apagado)}
+  .regua{width:9vw; height:5px; background:var(--acento); margin:3.5vh 0 0}
+
+  /* ── Fechamento ────────────────────────────────────────────────────────── */
+  /* O preço é texto longo ("R$ 2.400/mês"), não um número curto: no corpo do
+     .numerao ele encavalava no rótulo do slide. */
+  .valor-invest{
+    font-size:7vh; line-height:1.05; font-weight:800; letter-spacing:-.02em;
+    color:var(--acento); font-variant-numeric:tabular-nums;
+  }
+
+  .pedido{
+    border-left:6px solid var(--acento); padding-left:2.2vw; margin-top:2vh;
+  }
+  .pedido .grande{font-size:5.2vh; font-weight:800; line-height:1.12; letter-spacing:-.02em; max-width:20ch}
+
+  /* ── Navegação ─────────────────────────────────────────────────────────── */
+  .barra{
+    position:fixed; left:0; right:0; bottom:0; height:4.4vh;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 2.2vw; background:var(--fundo); border-top:1px solid var(--linha);
+    font-size:1.5vh; color:var(--apagado); z-index:10;
+  }
+  .barra .secao{font-weight:600; color:var(--tinta2)}
+  .barra nav{display:flex; gap:.7vw; align-items:center}
+  .barra button{
+    border:1px solid var(--linha); background:var(--fundo); color:var(--tinta2);
+    border-radius:5px; width:3.4vh; height:3.4vh; font-size:1.7vh; cursor:pointer; line-height:1;
+  }
+  .barra button:hover{background:var(--papel)}
+  .progresso{position:fixed; left:0; bottom:4.4vh; height:3px; background:var(--acento); z-index:11; transition:width .18s}
+
+  .anexo-tag{
+    display:inline-block; background:var(--papel); border:1px solid var(--linha);
+    color:var(--apagado); font-size:1.4vh; font-weight:700; letter-spacing:.14em;
+    text-transform:uppercase; padding:.35em .8em; border-radius:4px; margin-bottom:1.6vh;
+  }
+
+  /* ── Impressão em PDF ──────────────────────────────────────────────────── */
+  @page{size:A4 landscape; margin:0}
+  @media print{
+    body{background:#fff}
+    .palco{height:auto; overflow:visible}
+    .barra,.progresso{display:none}
+    .slide{
+      display:flex !important; position:relative; inset:auto;
+      width:100%; height:100vh; page-break-after:always; break-after:page;
+      padding:6vh 6vw;
+    }
+    .dor img{box-shadow:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="palco" id="palco">
+
+  <!-- 1 ─ CAPA ─────────────────────────────────────────────────────── 10s -->
+  <section class="slide capa" data-secao="Capa">
+    <div class="marca">JEOS Sistemas e Assessorias</div>
+    <h1>jProcesso</h1>
+    <div class="regua"></div>
+    <p class="para">
+      Gestão de processos, contratos e execução da despesa<br>
+      para a <strong>Prefeitura Municipal de Itapajé</strong>
+    </p>
+    <div class="rodape"><span class="preencher">[[DATA DA REUNIÃO]]</span></div>
+  </section>
+
+  <!-- 2 ─ DIAGNÓSTICO ─────────────────────────────────────────────── 45s -->
+  <section class="slide" data-secao="Diagnóstico">
+    <div class="etiqueta perigo">Hoje, na sua prefeitura</div>
+    <h2>Três números que ninguém consegue responder na hora</h2>
+    <div class="tres">
+      <div>
+        <div class="numerao perigo"><span class="preencher">[[N]]</span></div>
+        <div class="legenda">contratos vencem nos próximos 90 dias — e ninguém sabe quais</div>
+      </div>
+      <div>
+        <div class="numerao perigo"><span class="preencher">[[N]]</span></div>
+        <div class="legenda">dias entre o pedido da secretaria e o pagamento ao fornecedor</div>
+      </div>
+      <div>
+        <div class="numerao perigo"><span class="preencher">[[N]]</span></div>
+        <div class="legenda">processos estão parados agora, sem ninguém responsável</div>
+      </div>
+    </div>
+    <div class="fonte">
+      Preencher com os números do próprio município, levantados antes da reunião.
+      Se forem estimativas, escrever aqui a premissa e a fonte.
+    </div>
+  </section>
+
+  <!-- 3 ─ O SISTEMA EM UMA FRASE ──────────────────────────────────── 20s -->
+  <section class="slide" data-secao="O que é">
+    <div class="etiqueta">O jProcesso</div>
+    <div class="dor">
+      <div class="texto">
+        <h2>Tudo o que a prefeitura pede, aprova e paga — em um lugar só, com nome e hora.</h2>
+        <p class="sub">Do protocolo do processo até o dinheiro sair da conta.</p>
+      </div>
+      <figure><img src="../telas/01-dashboard.png" alt="Painel principal do jProcesso"></figure>
+    </div>
+  </section>
+
+  <!-- 4 ─ DOR 1: CONTRATOS ────────────────────────────────────────── 45s -->
+  <section class="slide" data-secao="Dor 1 — Contratos">
+    <div class="etiqueta perigo">Dor 1</div>
+    <div class="dor empilhado">
+      <div class="topo">
+        <div class="aspas">Contrato venceu e ninguém me avisou</div>
+        <div class="bloco-num">
+          <span class="numerao ambar">5</span>
+          <span class="legenda">contratos exigem decisão sua neste mês: 2 já venceram, 3 vencem em até 30 dias</span>
+        </div>
+        <div class="remate">O oxigênio do hospital vence em <strong>8 dias</strong>.</div>
+      </div>
+      <figure><img src="../telas/03-contratos-vencimento.png" alt="Painel de contratos com alerta de vencimento"></figure>
+    </div>
+    <div class="fonte">Tela do sistema, com dados de demonstração do município fictício de Modelo (CE).</div>
+  </section>
+
+  <!-- 5 ─ DOR 2: CERTIDÕES ────────────────────────────────────────── 45s -->
+  <section class="slide" data-secao="Dor 2 — Certidões">
+    <div class="etiqueta perigo">Dor 2</div>
+    <div class="dor empilhado">
+      <div class="topo">
+        <div class="aspas">Paguei com certidão vencida e o Tribunal glosou</div>
+        <div class="bloco-num">
+          <span class="numerao acento">18</span>
+          <span class="legenda">conferências de certidão antes de qualquer pagamento — 6 certidões, em 3 momentos</span>
+        </div>
+        <div class="remate">Aqui o FGTS estava vencido. <strong>O processo não passou.</strong></div>
+      </div>
+      <figure><img src="../telas/05-did-certidoes.png" alt="Conferência de certidões e devolução pelo Controle Interno"></figure>
+    </div>
+    <div class="fonte">Tela do sistema, com dados de demonstração do município fictício de Modelo (CE).</div>
+  </section>
+
+  <!-- 6 ─ DOR 3: PROCESSO PARADO ──────────────────────────────────── 45s -->
+  <section class="slide" data-secao="Dor 3 — Prazo">
+    <div class="etiqueta perigo">Dor 3</div>
+    <div class="dor">
+      <div class="texto">
+        <div class="aspas">O processo sumiu e o prazo estourou</div>
+        <div class="numerao perigo" style="margin-top:3vh">35</div>
+        <div class="legenda">processos sem movimentação há mais de 48 horas — todos na tela, com nome e setor</div>
+        <p class="sub" style="font-size:2.1vh">O senhor vê isso ao abrir o sistema. Não precisa pedir.</p>
+      </div>
+      <figure><img src="../telas/02-alertas-pendencias.png" alt="Alertas executivos do painel principal"></figure>
+    </div>
+    <div class="fonte">Tela do sistema, com dados de demonstração do município fictício de Modelo (CE).</div>
+  </section>
+
+  <!-- 7 ─ DOR 4: DEPENDÊNCIA ──────────────────────────────────────── 45s -->
+  <section class="slide" data-secao="Dor 4 — Dependência">
+    <div class="etiqueta perigo">Dor 4</div>
+    <div class="dor">
+      <div class="texto">
+        <div class="aspas">Só a Dona Fulana sabe onde está o processo</div>
+        <div class="numerao acento" style="margin-top:3vh">6,6</div>
+        <div class="legenda">passos por processo, em média — cada um com quem recebeu, quando e o que despachou</div>
+        <p class="sub" style="font-size:2.1vh">Se ela faltar, a prefeitura não para.</p>
+      </div>
+      <figure><img src="../telas/07-processo-historico.png" alt="Linha do tempo da tramitação do processo"></figure>
+    </div>
+    <div class="fonte">Tela do sistema, com dados de demonstração do município fictício de Modelo (CE).</div>
+  </section>
+
+  <!-- 8 ─ DOR 5: CAIXA ────────────────────────────────────────────── 45s -->
+  <section class="slide" data-secao="Dor 5 — Caixa">
+    <div class="etiqueta perigo">Dor 5</div>
+    <div class="dor empilhado">
+      <div class="topo">
+        <div class="aspas">Não sei quanto tenho em caixa hoje</div>
+        <div class="bloco-num">
+          <span class="numerao verde">30</span>
+          <span class="legenda">contas do município com saldo, entrada e saída na mesma tela — inclusive as de convênio</span>
+        </div>
+        <div class="remate">Antes de autorizar a despesa, o senhor sabe se tem o dinheiro.</div>
+      </div>
+      <figure><img src="../telas/08-tesouraria-saldo.png" alt="Saldo por conta bancária na tesouraria"></figure>
+    </div>
+    <div class="fonte">Tela do sistema, com dados de demonstração do município fictício de Modelo (CE).</div>
+  </section>
+
+  <!-- 9 ─ ANTES × DEPOIS ──────────────────────────────────────────── 45s -->
+  <section class="slide" data-secao="Antes × Depois">
+    <div class="etiqueta">A rotina de quem trabalha</div>
+    <h2 style="margin-bottom:2.4vh">O que muda na mesa da servidora</h2>
+    <table class="comparativo">
+      <thead><tr><th>Hoje</th><th>Com o jProcesso</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Ela leva a pasta na mão até a Contabilidade e volta com o carimbo.</td>
+          <td>Ela despacha na tela; o processo chega lá no mesmo minuto.</td>
+        </tr>
+        <tr>
+          <td>Para saber onde está o processo, ela liga para três setores.</td>
+          <td>Ela abre a tela e vê o setor, a pessoa e a hora.</td>
+        </tr>
+        <tr>
+          <td>A certidão do fornecedor está numa pasta, e às vezes some.</td>
+          <td>A certidão fica anexada ao processo, junto com a nota.</td>
+        </tr>
+        <tr>
+          <td>O relatório para a Câmara leva dias sendo montado no Excel.</td>
+          <td>Sai em PDF e planilha, em um clique.</td>
+        </tr>
+        <tr>
+          <td>Quando ela sai de férias, ninguém sabe onde as coisas estão.</td>
+          <td>Quem tem permissão abre e continua de onde parou.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 10 ─ RISCOS ─────────────────────────────────────────────────── 45s -->
+  <section class="slide" data-secao="Riscos">
+    <div class="etiqueta perigo">O que deixa de existir</div>
+    <div class="duas">
+      <div>
+        <h3 style="margin-bottom:1.6vh; color:var(--alerta)">Riscos que somem</h3>
+        <ul class="riscos">
+          <li><span class="marca">✕</span><span>Pagar fornecedor com certidão vencida — e devolver o dinheiro depois</span></li>
+          <li><span class="marca">✕</span><span>Serviço essencial parar porque o contrato venceu sem aditivo</span></li>
+          <li><span class="marca">✕</span><span>Ato administrativo sem autor identificado</span></li>
+          <li><span class="marca">✕</span><span>A mesma pessoa pedir, autorizar e pagar</span></li>
+          <li><span class="marca">✕</span><span>Dado pessoal de cidadão exposto no portal</span></li>
+          <li><span class="marca">✕</span><span>Histórico da gestão sair da prefeitura num pen drive</span></li>
+        </ul>
+      </div>
+      <figure style="height:100%; display:flex; align-items:center">
+        <img src="../telas/12-registros-auditoria.png" alt="Registro de auditoria de ações no sistema"
+             style="max-width:100%; max-height:78vh; object-fit:contain; border:1px solid var(--linha); border-radius:6px; box-shadow:0 10px 34px rgba(15,23,42,.16)">
+      </figure>
+    </div>
+    <div class="fonte">Cada ação registrada com usuário, módulo, data, hora e computador de origem.</div>
+  </section>
+
+  <!-- 11 ─ IMPLANTAÇÃO ────────────────────────────────────────────── 45s -->
+  <section class="slide" data-secao="Implantação">
+    <div class="etiqueta">Do contrato ao sistema rodando</div>
+    <h2>O trabalho é nosso. O da sua equipe é decidir e usar.</h2>
+    <div class="etapas">
+      <div class="etapa">
+        <div class="n">Semana 1</div>
+        <div class="t">Estrutura</div>
+        <div class="d">Cadastramos secretarias, setores e usuários do município. Sua equipe só confere.</div>
+      </div>
+      <div class="etapa">
+        <div class="n">Semana 2</div>
+        <div class="t">Migração</div>
+        <div class="d">Trazemos os dados que já existem, se houver base anterior.</div>
+      </div>
+      <div class="etapa">
+        <div class="n">Semana 3</div>
+        <div class="t">Treinamento</div>
+        <div class="d">Capacitação dos servidores indicados, presencial ou a distância.</div>
+      </div>
+      <div class="etapa">
+        <div class="n">Semana 4</div>
+        <div class="t">Operação assistida</div>
+        <div class="d">Acompanhamos o dia a dia no primeiro mês de uso real.</div>
+      </div>
+    </div>
+    <div class="caixa destaque" style="margin-top:3.4vh">
+      <strong>Prazo total até rodar: 30 dias</strong> ·
+      Suporte <span class="preencher">[[HORÁRIO E CANAIS]]</span> ·
+      Treinamento de <span class="preencher">[[CARGA HORÁRIA]]</span> ·
+      Atualizações e correções inclusas, sem custo adicional
+    </div>
+    <div class="fonte">Prazos e condições a confirmar em contrato.</div>
+  </section>
+
+  <!-- 12 ─ INVESTIMENTO ───────────────────────────────────────────── 45s -->
+  <section class="slide" data-secao="Investimento">
+    <div class="etiqueta">Investimento</div>
+    <div class="duas" style="align-items:start; padding-top:3.5vh">
+      <div>
+        <div class="valor-invest">R$ 10.000<span style="font-size:3.4vh; font-weight:700">/mês</span></div>
+        <div class="legenda">locação mensal, com suporte, atualizações e hospedagem inclusos</div>
+        <div class="caixa" style="margin-top:2.6vh; padding:1.8vh 1.4vw">
+          <div style="font-size:1.95vh; color:var(--tinta2); line-height:1.4">
+            O preço acompanha o porte do município:<br>
+            <strong>coeficiente do FPM × R$ 5.000</strong>.<br>
+            Itapajé tem coeficiente <strong>2,0</strong> — 46.426 habitantes, Censo 2022.
+          </div>
+        </div>
+        <div style="margin-top:2.6vh; font-size:3.2vh; font-weight:800; color:var(--acento)"><span class="preencher">[[R$]]</span></div>
+        <div class="legenda">implantação, migração e treinamento — parcela única</div>
+      </div>
+      <div class="caixa">
+        <h3 style="margin-bottom:1.6vh">Como contratar sem dor de cabeça</h3>
+        <ul class="riscos ok" style="gap:1.6vh">
+          <li><span class="marca">✓</span><span><strong>Pregão eletrônico</strong>, menor preço, Lei 14.133/2021</span></li>
+          <li><span class="marca">✓</span><span>Locação de software (SaaS), 12 meses, prorrogável</span></li>
+          <li><span class="marca">✓</span><span>Entregamos o <strong>pacote completo de documentos</strong>: DFD, ETP, matriz de riscos, termo de referência, edital e minuta de contrato</span></li>
+          <li><span class="marca">✓</span><span>Roteiro de prova de conceito pronto, para o município testar antes de aceitar a proposta</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="fonte">Coeficiente conforme a Decisão Normativa do TCU vigente. A Procuradoria do Município dá a palavra final sobre o enquadramento da contratação.</div>
+  </section>
+
+  <!-- 13 ─ PRÓXIMO PASSO ──────────────────────────────────────────── 30s -->
+  <section class="slide" data-secao="Próximo passo">
+    <div class="etiqueta">Próximo passo</div>
+    <div style="flex:1; display:flex; flex-direction:column; justify-content:center">
+      <div class="pedido">
+        <div class="grande">Uma hora com sua equipe de Administração e Finanças.</div>
+        <p class="sub" style="max-width:38ch">
+          Levamos o sistema já com a estrutura de secretarias de Itapajé e percorremos
+          o caminho de um processo real, do protocolo ao pagamento.
+        </p>
+      </div>
+    </div>
+    <div class="caixa" style="margin-top:2vh">
+      <strong>JEOS Sistemas e Assessorias</strong> ·
+      <span class="preencher">[[CONTATO]]</span> ·
+      <span class="preencher">[[TELEFONE]]</span> ·
+      <span class="preencher">[[E-MAIL]]</span>
+    </div>
+  </section>
+
+  <!-- ══════════════ ANEXOS — só se perguntarem ═══════════════════════════ -->
+
+  <!-- 14 ─ MÓDULOS -->
+  <section class="slide" data-secao="Anexo — Módulos">
+    <div class="anexo-tag">Anexo</div>
+    <h3 style="margin-bottom:2.4vh">O que mais vem junto</h3>
+    <div class="tres" style="align-content:start; gap:3vw">
+      <div>
+        <h3 style="font-size:2.3vh; color:var(--acento)">Almoxarifado</h3>
+        <p class="sub" style="font-size:1.95vh; max-width:none">Entradas por empenho, saídas, requisição por setor com autorização, <strong>cota mensal por secretaria</strong>, inventário e alerta de estoque mínimo.</p>
+        <h3 style="font-size:2.3vh; color:var(--acento); margin-top:3vh">Patrimônio</h3>
+        <p class="sub" style="font-size:1.95vh; max-width:none">Tombamento, grupos e depreciação na classificação do TCE-CE, transferência entre setores, responsável por bem e inventário.</p>
+      </div>
+      <div>
+        <h3 style="font-size:2.3vh; color:var(--acento)">Documentos oficiais</h3>
+        <p class="sub" style="font-size:1.95vh; max-width:none">Ofício, portaria, decreto, comunicado e determinação — em PDF, com o brasão e o timbre do município.</p>
+        <h3 style="font-size:2.3vh; color:var(--acento); margin-top:3vh">Consulta pública</h3>
+        <p class="sub" style="font-size:1.95vh; max-width:none">O cidadão acompanha o processo pelo número, sem cadastro, com QR Code. CPF, e-mail e telefone nunca aparecem.</p>
+      </div>
+      <div>
+        <h3 style="font-size:2.3vh; color:var(--acento)">Permissões</h3>
+        <p class="sub" style="font-size:1.95vh; max-width:none">Por módulo <em>e</em> por ação: ver, criar, editar, excluir, aprovar. Dá para liberar consulta e negar aprovação para a mesma pessoa.</p>
+        <h3 style="font-size:2.3vh; color:var(--acento); margin-top:3vh">Identidade do município</h3>
+        <p class="sub" style="font-size:1.95vh; max-width:none">Logo, brasão e cores da prefeitura na tela e em tudo que é impresso.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15 ─ SEGURANÇA E LGPD -->
+  <section class="slide" data-secao="Anexo — Segurança">
+    <div class="anexo-tag">Anexo</div>
+    <div class="duas">
+      <div>
+        <h3 style="margin-bottom:1.6vh">Segurança e LGPD</h3>
+        <ul class="riscos ok">
+          <li><span class="marca">✓</span><span>Cada município tem sua <strong>própria base de dados</strong>. Não é filtro de tela: é separação real.</span></li>
+          <li><span class="marca">✓</span><span>A sessão do usuário é amarrada ao município — um acesso não alcança o outro.</span></li>
+          <li><span class="marca">✓</span><span>Senhas guardadas cifradas. Ninguém, nem nós, lê a senha de um servidor.</span></li>
+          <li><span class="marca">✓</span><span>Limite de tentativas de acesso, contra ataque de senha.</span></li>
+          <li><span class="marca">✓</span><span>Dado pessoal do cidadão removido antes de ir para a consulta pública.</span></li>
+          <li><span class="marca">✓</span><span>Cópia de segurança automática, com histórico e restauração.</span></li>
+        </ul>
+      </div>
+      <div>
+        <h3 style="margin-bottom:1.6vh">Os dados são do município</h3>
+        <p class="sub" style="max-width:none">
+          A qualquer momento, e ao fim do contrato, o município leva seus dados em formato aberto,
+          sem custo. Isso fica escrito no contrato — não é promessa de vendedor.
+        </p>
+        <div class="caixa" style="margin-top:2.6vh">
+          <strong>Trilha de auditoria</strong>
+          <p class="sub" style="font-size:1.95vh; max-width:none; margin-top:.8vh">
+            Cada ação relevante fica registrada com usuário, módulo, data, hora e computador de origem.
+            O servidor comum não apaga esse registro.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16 ─ HONESTIDADE -->
+  <section class="slide" data-secao="Anexo — Limites">
+    <div class="anexo-tag">Anexo</div>
+    <h3 style="margin-bottom:1vh">O que o jProcesso <em>não</em> faz</h3>
+    <p class="sub" style="max-width:60ch">Dizemos antes de o senhor perguntar. É o que separa fornecedor de vendedor.</p>
+    <ul class="riscos" style="margin-top:2.6vh">
+      <li><span class="marca">!</span><span><strong>Não substitui o sistema contábil.</strong> Ele registra o número e a data do empenho e da liquidação; quem emite o empenho no orçamento continua sendo a contabilidade.</span></li>
+      <li><span class="marca">!</span><span><strong>Não gera o arquivo de remessa do TCE/SIM.</strong> Ele organiza e comprova tudo o que o Tribunal cobra, e marca o que já foi enviado — mas o envio segue pelo sistema contábil.</span></li>
+      <li><span class="marca">!</span><span><strong>Precisa de internet.</strong> É um sistema web. Funciona bem em conexão fraca, mas não funciona sem conexão.</span></li>
+    </ul>
+    <div class="fonte">Tudo o que foi mostrado nos slides anteriores está implementado e pode ser aberto ao vivo, agora.</div>
+  </section>
+
+</div>
+
+<div class="progresso" id="progresso"></div>
+<div class="barra">
+  <span class="secao" id="secao">Capa</span>
+  <nav>
+    <button id="ant" title="Anterior (←)">‹</button>
+    <span id="contador" style="min-width:5.5vw; text-align:center">1 / 16</span>
+    <button id="prox" title="Próximo (→)">›</button>
+  </nav>
+</div>
+
+<script>
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var atual = 0;
+
+  function mostrar(i){
+    atual = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach(function(s, k){ s.classList.toggle('ativo', k === atual); });
+    document.getElementById('contador').textContent = (atual + 1) + ' / ' + slides.length;
+    document.getElementById('secao').textContent = slides[atual].dataset.secao || '';
+    document.getElementById('progresso').style.width = ((atual + 1) / slides.length * 100) + '%';
+    try { location.hash = atual + 1; } catch (e) {}
+  }
+
+  document.getElementById('prox').onclick = function(){ mostrar(atual + 1); };
+  document.getElementById('ant').onclick  = function(){ mostrar(atual - 1); };
+
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); mostrar(atual + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); mostrar(atual - 1); }
+    else if (e.key === 'Home') { mostrar(0); }
+    else if (e.key === 'End')  { mostrar(slides.length - 1); }
+  });
+
+  // Avanço por toque, para quem apresenta do tablet
+  var x0 = null;
+  document.addEventListener('touchstart', function(e){ x0 = e.changedTouches[0].clientX; }, {passive:true});
+  document.addEventListener('touchend', function(e){
+    if (x0 === null) return;
+    var d = e.changedTouches[0].clientX - x0;
+    if (Math.abs(d) > 60) mostrar(atual + (d < 0 ? 1 : -1));
+    x0 = null;
+  }, {passive:true});
+
+  // Permite pular direto para um slide pelo endereço (…/index.html#7) e voltar
+  // pelo botão do navegador — útil quando alguém pede "mostra de novo aquele slide".
+  window.addEventListener('hashchange', function(){
+    var n = parseInt((location.hash || '').replace('#',''), 10);
+    if (!isNaN(n) && n - 1 !== atual) mostrar(n - 1);
+  });
+
+  var inicial = parseInt((location.hash || '').replace('#',''), 10);
+  mostrar(isNaN(inicial) ? 0 : inicial - 1);
+</script>
+
+</body>
+</html>

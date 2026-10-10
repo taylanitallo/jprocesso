@@ -42,7 +42,12 @@ const tenantCache = new Map();
 // OTIMIZADO: de ~30 queries sequenciais → 2 rodadas paralelas (~10x mais rápido no primeiro acesso)
 const runTenantMigrations = async (tenantDb, tenantSchema) => {
   // Helper: executa query ignorando erros (IF NOT EXISTS torna tudo idempotente)
-  const run = (sql) => tenantDb.query(sql).catch(() => {});
+  const run = (sql) => tenantDb.query(sql).catch((err) => {
+    // Log apenas erros que não sejam "já existe" — útil para diagnóstico em produção
+    if (!err.message?.includes('already exists')) {
+      console.warn(`[migration] ${tenantSchema}: ${err.message?.slice(0, 120)}`);
+    }
+  });
 
   // SET search_path uma única vez para esta conexão
   await tenantDb.query(`SET search_path = "${tenantSchema}"`);
@@ -53,10 +58,44 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
     // 0. Usuários — coluna nome_reduzido
     run(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS nome_reduzido VARCHAR(60)`),
 
+    // 0e. Usuários — CHECK de tipo precisa aceitar 'jeos' (Administrador Jeos)
+    run(`
+      ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS usuarios_tipo_check;
+      ALTER TABLE usuarios ADD CONSTRAINT usuarios_tipo_check
+        CHECK (tipo IN ('admin', 'gestor', 'operacional', 'jeos'));
+    `),
+
+    // 0f. Usuários — CPF/e-mail únicos só entre usuários não-'jeos'. Administrador
+    // Jeos (equipe JEOS) reutiliza o mesmo CPF/e-mail em todos os municípios.
+    run(`
+      ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS usuarios_cpf_key;
+      ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS usuarios_email_key;
+      CREATE UNIQUE INDEX IF NOT EXISTS usuarios_cpf_unico_idx
+        ON usuarios (cpf) WHERE tipo <> 'jeos';
+      CREATE UNIQUE INDEX IF NOT EXISTS usuarios_email_unico_idx
+        ON usuarios (email) WHERE tipo <> 'jeos';
+    `),
+
+    // 0g. Tramitações — CHECK de tipo_acao precisa aceitar 'recebimento'
+    // (schemas antigos foram criados sem esse valor e quebram o "Receber processo")
+    run(`
+      ALTER TABLE tramitacoes DROP CONSTRAINT IF EXISTS tramitacoes_tipo_acao_check;
+      ALTER TABLE tramitacoes ADD CONSTRAINT tramitacoes_tipo_acao_check
+        CHECK (tipo_acao IN ('abertura', 'tramite', 'devolucao', 'conclusao', 'arquivamento', 'recebimento'));
+    `),
+
     // 0a. Processos — colunas opcionais adicionadas após criação inicial
     run(`
       ALTER TABLE processos
-        ADD COLUMN IF NOT EXISTS tipo_processo VARCHAR(50)
+        ADD COLUMN IF NOT EXISTS tipo_processo  VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS protocolo_doc  JSONB
+    `),
+
+    // 0a-bis. Anexos — colunas adicionadas após criação inicial (tenants antigos)
+    run(`
+      ALTER TABLE anexos
+        ADD COLUMN IF NOT EXISTS tipo_origem VARCHAR(30) DEFAULT 'anexo',
+        ADD COLUMN IF NOT EXISTS ordem       INTEGER     DEFAULT 0
     `),
 
     // 0d. Refresh tokens persistidos por tenant (substitui Map em memória)
@@ -104,6 +143,85 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
       ALTER TABLE contratos
         ADD COLUMN IF NOT EXISTS fontes_recurso TEXT[] NOT NULL DEFAULT '{}',
         ADD COLUMN IF NOT EXISTS dotacoes TEXT[] NOT NULL DEFAULT '{}'
+    `),
+
+    // 0i. Assinatura eletrônica avançada (Lei 14.063/2020) — atos de tramitação
+    run(`
+      CREATE TABLE IF NOT EXISTS assinaturas_eletronicas (
+        id                 UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+        codigo_verificador VARCHAR(12)   NOT NULL UNIQUE,
+        codigo_crc         VARCHAR(8)    NOT NULL,
+        processo_id        UUID          NOT NULL,
+        tramitacao_id      UUID,
+        tipo_ato           VARCHAR(30)   NOT NULL,
+        signatario_id      UUID          NOT NULL,
+        signatario_nome    VARCHAR(255)  NOT NULL,
+        signatario_cpf     VARCHAR(11),
+        signatario_cargo   VARCHAR(120),
+        nivel              VARCHAR(20)   NOT NULL DEFAULT 'avancada',
+        metodo             VARCHAR(40)   NOT NULL,
+        conteudo           JSONB         NOT NULL,
+        hash_conteudo      CHAR(64)      NOT NULL,
+        hash_anterior      CHAR(64),
+        assinatura         TEXT          NOT NULL,
+        chave_id           VARCHAR(32)   NOT NULL,
+        ip                 VARCHAR(64),
+        user_agent         VARCHAR(300),
+        assinado_em        TIMESTAMPTZ   NOT NULL,
+        created_at         TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS assinaturas_processo_idx   ON assinaturas_eletronicas (processo_id, assinado_em);
+      CREATE INDEX IF NOT EXISTS assinaturas_tramitacao_idx ON assinaturas_eletronicas (tramitacao_id);
+
+      -- Registro de assinatura é imutável: bloqueia UPDATE
+      CREATE OR REPLACE FUNCTION assinaturas_bloquear_update() RETURNS trigger AS $$
+      BEGIN
+        RAISE EXCEPTION 'Assinaturas eletrônicas são imutáveis';
+      END;
+      $$ LANGUAGE plpgsql;
+      DROP TRIGGER IF EXISTS assinaturas_imutaveis ON assinaturas_eletronicas;
+      CREATE TRIGGER assinaturas_imutaveis BEFORE UPDATE ON assinaturas_eletronicas
+        FOR EACH ROW EXECUTE FUNCTION assinaturas_bloquear_update();
+
+      -- 2º fator (app autenticador). Separado de usuarios para o segredo nunca
+      -- sair em listagens de usuários.
+      CREATE TABLE IF NOT EXISTS usuario_totp (
+        usuario_id      UUID         PRIMARY KEY,
+        segredo_cifrado TEXT         NOT NULL,
+        ativo           BOOLEAN      NOT NULL DEFAULT false,
+        ultimo_passo    BIGINT,
+        ativado_em      TIMESTAMPTZ,
+        created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+      );
+    `),
+
+    // 0h. Contratos — Licitações (processos licitatórios / contratações diretas)
+    run(`
+      CREATE TABLE IF NOT EXISTS licitacoes (
+        id                  SERIAL        PRIMARY KEY,
+        numero_licitacao    VARCHAR(100)  NOT NULL,
+        numero_processo     VARCHAR(100),
+        modalidade          VARCHAR(100),
+        tipo_objeto         VARCHAR(100),
+        criterio_julgamento VARCHAR(100),
+        registro_preco      BOOLEAN       NOT NULL DEFAULT false,
+        objeto              TEXT          NOT NULL,
+        secretaria          VARCHAR(200),
+        agente_contratacao  VARCHAR(300),
+        valor_estimado      NUMERIC(15,2),
+        valor_homologado    NUMERIC(15,2),
+        data_publicacao     DATE,
+        data_abertura       DATE,
+        data_homologacao    DATE,
+        link_pncp           VARCHAR(500),
+        observacoes         TEXT,
+        status              VARCHAR(20)   NOT NULL DEFAULT 'EM ANDAMENTO',
+        created_at          TIMESTAMP     NOT NULL DEFAULT NOW(),
+        updated_at          TIMESTAMP     NOT NULL DEFAULT NOW()
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS licitacoes_numero_uq
+        ON licitacoes (numero_licitacao) WHERE status <> 'EXCLUÍDO';
     `),
 
     // 1. Secretarias — colunas extras
@@ -177,6 +295,7 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
       CREATE TABLE IF NOT EXISTS contratos_itens (
         id               SERIAL       PRIMARY KEY,
         codigo           VARCHAR(10)  UNIQUE,
+        codigo_item      VARCHAR(100),
         descricao        VARCHAR(500) NOT NULL,
         categoria        VARCHAR(20),
         unidade_medida   VARCHAR(50),
@@ -201,6 +320,7 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
         numero_contrato  VARCHAR(50)   NOT NULL,
         objeto           TEXT          NOT NULL,
         modalidade       VARCHAR(100),
+        tipo_objeto      VARCHAR(100),
         numero_licitacao VARCHAR(100),
         credor_id        INTEGER       NOT NULL REFERENCES credores(id),
         valor            NUMERIC(15,2),
@@ -657,8 +777,161 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
       ADD COLUMN IF NOT EXISTS contabil_pc_data_empenho      DATE,
       ADD COLUMN IF NOT EXISTS contabil_pc_liquidacao_numero VARCHAR(200),
       ADD COLUMN IF NOT EXISTS contabil_pc_data_liquidacao   DATE,
-      ADD COLUMN IF NOT EXISTS contabil_pc_doc_caixa         VARCHAR(200)
+      ADD COLUMN IF NOT EXISTS contabil_pc_doc_caixa         VARCHAR(200),
+      ADD COLUMN IF NOT EXISTS ordem_compra_id               INTEGER,
+      ADD COLUMN IF NOT EXISTS ordem_ref                     VARCHAR(100)
   `);
+
+  // DID — conta de pagamento e vínculo com ordem
+  await run(`
+    ALTER TABLE dids
+      ADD COLUMN IF NOT EXISTS conta_pagamento_id UUID
+  `);
+
+  // DID — numero_did como VARCHAR(30) (schemas antigos usavam INTEGER;
+  // o modelo grava strings tipo "SEMAD-001"). Idempotente: varchar→varchar é no-op.
+  await run(`
+    ALTER TABLE dids
+      ALTER COLUMN numero_did TYPE VARCHAR(30) USING numero_did::text
+  `);
+
+  // Contratos — coluna tipo_objeto
+  await run(`ALTER TABLE contratos ADD COLUMN IF NOT EXISTS tipo_objeto VARCHAR(100)`);
+
+  // Contratos — dados bancários do credor para este contrato
+  await run(`
+    ALTER TABLE contratos
+      ADD COLUMN IF NOT EXISTS banco   VARCHAR(200),
+      ADD COLUMN IF NOT EXISTS agencia VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS conta   VARCHAR(50)
+  `);
+
+  // DID — indicadores "está empenhado?" / "está liquidado?" das seções de Contabilidade
+  await run(`
+    ALTER TABLE dids
+      ADD COLUMN IF NOT EXISTS contabil_empenhado    VARCHAR(10),
+      ADD COLUMN IF NOT EXISTS contabil_liquidado     VARCHAR(10),
+      ADD COLUMN IF NOT EXISTS contabil_pc_liquidado  VARCHAR(10)
+  `);
+
+  // DID — indicador "ordem recebida?" da Seção de Recebimento (Almoxarifado, Contas Variáveis)
+  await run(`ALTER TABLE dids ADD COLUMN IF NOT EXISTS receb_ordem_recebida VARCHAR(10)`);
+
+  // Itens — colunas extras
+  await run(`ALTER TABLE contratos_itens ADD COLUMN IF NOT EXISTS codigo_item VARCHAR(100)`);
+  await run(`ALTER TABLE contratos_itens ADD COLUMN IF NOT EXISTS lote VARCHAR(50)`);
+  await run(`ALTER TABLE contratos_itens_vinculo ADD COLUMN IF NOT EXISTS codigo_item VARCHAR(100)`);
+
+  // ── Ordens de Compra/Serviço ──────────────────────────────────────────────
+  await run(`
+    CREATE TABLE IF NOT EXISTS contratos_ordens (
+      id                    SERIAL PRIMARY KEY,
+      tipo                  VARCHAR(20)   NOT NULL,
+      numero                VARCHAR(50)   NOT NULL,
+      contrato_id           INTEGER       NOT NULL,
+      data_emissao          DATE          NOT NULL,
+      data_entrega_prevista DATE,
+      objeto                TEXT          NOT NULL,
+      secretaria            VARCHAR(200),
+      fiscal_responsavel    VARCHAR(200),
+      local_entrega         VARCHAR(500),
+      valor_total           NUMERIC(15,2) NOT NULL DEFAULT 0,
+      observacoes           TEXT,
+      status                VARCHAR(20)   NOT NULL DEFAULT 'EMITIDA',
+      created_at            TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      updated_at            TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run(`CREATE INDEX IF NOT EXISTS idx_contratos_ordens_contrato ON contratos_ordens(contrato_id)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_contratos_ordens_status   ON contratos_ordens(status)`);
+  await run(`ALTER TABLE contratos_ordens ADD COLUMN IF NOT EXISTS justificativa TEXT`);
+  await run(`ALTER TABLE contratos_ordens ADD COLUMN IF NOT EXISTS destino_did VARCHAR(10)`);
+
+  await run(`
+    CREATE TABLE IF NOT EXISTS contratos_ordens_itens (
+      id             SERIAL PRIMARY KEY,
+      ordem_id       INTEGER       NOT NULL,
+      item_id        INTEGER,
+      descricao      VARCHAR(500)  NOT NULL,
+      unidade        VARCHAR(50),
+      quantidade     NUMERIC(15,4) NOT NULL DEFAULT 1,
+      valor_unitario NUMERIC(15,2) NOT NULL DEFAULT 0,
+      valor_total    NUMERIC(15,2) NOT NULL DEFAULT 0,
+      ordem          INTEGER       NOT NULL DEFAULT 0,
+      created_at     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      updated_at     TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run(`CREATE INDEX IF NOT EXISTS idx_contratos_ordens_itens_ordem ON contratos_ordens_itens(ordem_id)`);
+  await run(`ALTER TABLE contratos_ordens_itens ADD COLUMN IF NOT EXISTS lote VARCHAR(50)`);
+  await run(`ALTER TABLE contratos_ordens_itens ADD COLUMN IF NOT EXISTS codigo_item VARCHAR(100)`);
+
+  // ── Módulo Tesouraria ────────────────────────────────────────────────────────
+  await run(`
+    CREATE TABLE IF NOT EXISTS contas_bancarias (
+      id            UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+      nome          VARCHAR(200)  NOT NULL,
+      banco_codigo  VARCHAR(10),
+      banco_nome    VARCHAR(200),
+      agencia       VARCHAR(20),
+      agencia_digito VARCHAR(5),
+      conta         VARCHAR(30),
+      conta_digito  VARCHAR(5),
+      tipo          VARCHAR(30)   NOT NULL DEFAULT 'Conta Corrente',
+      secretaria_id UUID,
+      ativo         BOOLEAN       NOT NULL DEFAULT TRUE,
+      observacao    TEXT,
+      created_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      updated_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await run(`
+    CREATE TABLE IF NOT EXISTS tes_receitas (
+      id          UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+      conta_id    UUID          NOT NULL,
+      data        DATE          NOT NULL,
+      descricao   VARCHAR(300)  NOT NULL,
+      valor       NUMERIC(15,2) NOT NULL,
+      observacao  TEXT,
+      created_at  TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      updated_at  TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run(`CREATE INDEX IF NOT EXISTS idx_tes_receitas_conta ON tes_receitas(conta_id)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_tes_receitas_data  ON tes_receitas(data)`);
+
+  await run(`
+    CREATE TABLE IF NOT EXISTS tes_despesas (
+      id              UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+      ordem_id        INTEGER       NOT NULL,
+      conta_id        UUID          NOT NULL,
+      data_pagamento  DATE          NOT NULL,
+      valor_bruto     NUMERIC(15,2) NOT NULL,
+      valor_liquido   NUMERIC(15,2) NOT NULL,
+      observacao      TEXT,
+      created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run(`CREATE INDEX IF NOT EXISTS idx_tes_despesas_ordem ON tes_despesas(ordem_id)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_tes_despesas_conta ON tes_despesas(conta_id)`);
+
+  // Grupos de contas do relatório "Saldo por Conta" — privados por usuário
+  await run(`
+    CREATE TABLE IF NOT EXISTS tes_grupos_contas (
+      id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+      usuario_id  UUID         NOT NULL,
+      nome        VARCHAR(80)  NOT NULL,
+      descricao   TEXT,
+      contas_ids  JSONB        NOT NULL DEFAULT '[]'::jsonb,
+      ordem       INTEGER      NOT NULL DEFAULT 0,
+      ativo       BOOLEAN      NOT NULL DEFAULT TRUE,
+      created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+      updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run(`CREATE INDEX IF NOT EXISTS idx_tes_grupos_contas_usuario ON tes_grupos_contas(usuario_id)`);
 };
 
 const getTenantConnection = async (tenantSchema) => {
@@ -761,6 +1034,33 @@ const criarTabelasBackup = async () => {
   `).catch(() => {});
 };
 
+// Tabelas públicas: chaves de assinatura eletrônica e legislação por município
+const criarTabelasAssinaturaLegislacao = async () => {
+  await masterDb.query(`
+    CREATE TABLE IF NOT EXISTS public.assinatura_chaves (
+      kid               VARCHAR(32)  PRIMARY KEY,
+      chave_publica_pem TEXT         NOT NULL,
+      criado_em         TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS public.legislacoes (
+      id                     UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id              UUID          NOT NULL REFERENCES public.clientes(id) ON DELETE CASCADE,
+      titulo                 VARCHAR(300)  NOT NULL,
+      descricao              TEXT,
+      data_publicacao        DATE,
+      arquivo_path           TEXT,
+      arquivo_nome           VARCHAR(255),
+      regulamenta_assinatura BOOLEAN       NOT NULL DEFAULT false,
+      ordem                  INTEGER       NOT NULL DEFAULT 0,
+      ativo                  BOOLEAN       NOT NULL DEFAULT true,
+      criado_em              TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      atualizado_em          TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS legislacoes_tenant_idx ON public.legislacoes (tenant_id, ordem);
+  `).catch((err) => console.warn('[migration] assinatura/legislação:', err.message));
+};
+
 // Garante que a tabela public.refresh_tokens existe no masterDb (para admin users)
 const ensureMasterRefreshTokensTable = async () => {
   await masterDb.query(`
@@ -797,4 +1097,5 @@ module.exports = {
   ensureMasterRefreshTokensTable,
   ensureAdminsEmailColumn,
   criarTabelasBackup,
+  criarTabelasAssinaturaLegislacao,
 };

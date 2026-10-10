@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const xml2js = require('xml2js');
 const nfseService = require('../services/nfseService');
 const { registrarLog } = require('../middleware/activityLogger');
+const { applyScopeToWhere, getScope, ensurePermissoes } = require('../utils/scopeFilter');
 
 // â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -24,10 +25,32 @@ async function ensureTables(req) {
   await AlmoxarifadoRequisicaoItem.sync({ force: false });
   await AlmoxarifadoMovimentacao.sync({ force: false });
   await AlmoxLote.sync({ force: false });
+  if (req.models.ContratoOrdem)     await req.models.ContratoOrdem.sync({ force: false });
+  if (req.models.ContratoOrdemItem) await req.models.ContratoOrdemItem.sync({ force: false });
   await AlmoxAuditLog.sync({ force: false });
   if (AlmoxCota) await AlmoxCota.sync({ force: false });
   if (AlmoxInventario) await AlmoxInventario.sync({ force: false });
   if (AlmoxInventarioItem) await AlmoxInventarioItem.sync({ force: false });
+
+  // Adiciona colunas novas com segurança (IF NOT EXISTS — nunca derruba dados)
+  const seq = AlmoxarifadoItem.sequelize;
+  const addCol = async (sql) => { try { await seq.query(sql); } catch (_) {} };
+  const s = `"${schema}"`;
+  await addCol(`ALTER TABLE ${s}."almoxarifado_itens"  ADD COLUMN IF NOT EXISTS secretaria  VARCHAR(100)`);
+  await addCol(`ALTER TABLE ${s}."almoxarifado_lotes"  ADD COLUMN IF NOT EXISTS ordem_id     INTEGER`);
+  await addCol(`ALTER TABLE ${s}."almoxarifado_lotes"  ADD COLUMN IF NOT EXISTS ordem_item_id INTEGER`);
+  await addCol(`ALTER TABLE ${s}."almoxarifado_lotes"  ALTER COLUMN numero_empenho DROP NOT NULL`);
+  // unidade_medida é coluna legada (antes renomeada para unidade) — garante que não bloqueia INSERT
+  await addCol(`ALTER TABLE ${s}."almoxarifado_itens"        ALTER COLUMN unidade_medida        DROP NOT NULL`);
+  await addCol(`ALTER TABLE ${s}."almoxarifado_itens"        ALTER COLUMN unidade_medida        SET DEFAULT 'UN'`);
+  // usuario_id é coluna legada em requisicoes — modelo usa usuario_solicitante_id
+  await addCol(`ALTER TABLE ${s}."almoxarifado_requisicoes"  ALTER COLUMN usuario_id            DROP NOT NULL`);
+  await addCol(`ALTER TABLE ${s}."almoxarifado_requisicoes"  ADD COLUMN IF NOT EXISTS secretaria_id      UUID`);
+  await addCol(`ALTER TABLE ${s}."almoxarifado_requisicoes"  ADD COLUMN IF NOT EXISTS hash_solicitante   VARCHAR(128)`);
+  await addCol(`ALTER TABLE ${s}."almoxarifado_requisicoes"  ADD COLUMN IF NOT EXISTS hash_entrega       VARCHAR(128)`);
+  // Estende o ENUM com o novo status AGUARDANDO_RETIRADA — tenta schema do tenant e public
+  await addCol(`ALTER TYPE ${s}."enum_almoxarifado_requisicoes_status" ADD VALUE IF NOT EXISTS 'AGUARDANDO_RETIRADA'`);
+  await addCol(`ALTER TYPE "public"."enum_almoxarifado_requisicoes_status" ADD VALUE IF NOT EXISTS 'AGUARDANDO_RETIRADA'`);
 
   initializedSchemas.add(schema);
 }
@@ -135,7 +158,7 @@ const getDashboard = async (req, res) => {
     await ensureTables(req);
     const { AlmoxarifadoItem, AlmoxarifadoMovimentacao, AlmoxarifadoRequisicao, AlmoxLote } = req.models;
 
-    const totalItens = await AlmoxarifadoItem.count({ where: { ativo: true } });
+    const totalItens = await AlmoxarifadoItem.count({ where: { ativo: true, estoque_atual: { [Op.gt]: 0 } } });
 
     // Itens no estoque crítico (abaixo do mínimo)
     const itensCriticos = await AlmoxarifadoItem.findAll({
@@ -166,8 +189,11 @@ const getDashboard = async (req, res) => {
       limit: 10
     });
 
+    // 'PENDENTE' é status legado e NÃO existe no enum do banco. Incluí-lo aqui fazia o
+    // Postgres rejeitar a comparação inteira (22P02), derrubando o painel com erro 500 —
+    // e zerando os cartões de estoque crítico e requisições no Dashboard.
     const requisicoesPendentes = await AlmoxarifadoRequisicao.count({
-      where: { status: { [Op.in]: ['PENDENTE', 'PENDENTE_AUTORIZACAO'] } }
+      where: { status: 'PENDENTE_AUTORIZACAO' }
     });
 
     const itensParaValor = await AlmoxarifadoItem.findAll({
@@ -279,7 +305,7 @@ const createItem = async (req, res) => {
     await registrarLog(req, {
       acao: 'criar_item_almoxarifado',
       modulo: 'almoxarifado',
-      descricao: `Item de almoxarifado criado: ${nome}`,
+      descricao: `Adicionou o item "${nome}" ao catálogo do almoxarifado`,
       referencia_id: item.id
     });
   } catch (error) {
@@ -295,12 +321,22 @@ const updateItem = async (req, res) => {
     const item = await AlmoxarifadoItem.findByPk(req.params.id);
     if (!item) return res.status(404).json({ error: 'Item nÃ£o encontrado' });
 
-    const { codigo, nome, descricao, unidade, categoria, estoque_minimo, estoque_maximo, valor_unitario, localizacao, ativo } = req.body;
+    const {
+      codigo, nome, descricao, unidade, categoria,
+      estoque_minimo, estoque_maximo, valor_unitario,
+      localizacao, corredor, prateleira, gaveta, secretaria,
+      tipo_item, ponto_ressuprimento, ativo
+    } = req.body;
     if (codigo && codigo !== item.codigo) {
       const existe = await AlmoxarifadoItem.findOne({ where: { codigo } });
       if (existe) return res.status(400).json({ error: 'CÃ³digo jÃ¡ utilizado por outro item' });
     }
-    await item.update({ codigo, nome, descricao, unidade, categoria, estoque_minimo, estoque_maximo, valor_unitario, localizacao, ativo });
+    await item.update({
+      codigo, nome, descricao, unidade, categoria,
+      estoque_minimo, estoque_maximo, valor_unitario,
+      localizacao, corredor, prateleira, gaveta, secretaria,
+      tipo_item, ponto_ressuprimento, ativo
+    });
     res.json(item);
   } catch (error) {
     console.error('Erro updateItem:', error);
@@ -465,21 +501,244 @@ const listLotes = async (req, res) => {
   }
 };
 
+/** Helper: calcula itens com saldo de uma ordem */
+async function calcularItensComSaldo(ordem, AlmoxarifadoItem, AlmoxLote) {
+  const itensComSaldo = [];
+  for (const item of (ordem.itens || [])) {
+    const totalRecebido = await AlmoxLote.sum('quantidade_inicial', {
+      where: { ordem_item_id: item.id }
+    }) || 0;
+    const saldo = parseFloat(item.quantidade) - parseFloat(totalRecebido);
+    if (saldo <= 0.001) continue;
+    let almoxItem = null;
+    if (item.codigo_item) {
+      almoxItem = await AlmoxarifadoItem.findOne({ where: { codigo: item.codigo_item, ativo: true } });
+    }
+    itensComSaldo.push({
+      ...item.toJSON(),
+      quantidade_recebida: parseFloat(totalRecebido),
+      saldo: parseFloat(saldo.toFixed(4)),
+      almox_item_id: almoxItem?.id || null
+    });
+  }
+  return itensComSaldo;
+}
+
+/** Lista ordens de compra disponíveis para entrada no almoxarifado */
+/** Helper: IDs de ordens cujo DID vinculado já foi marcado como "recebido" na Seção de Recebimento (Almoxarifado) */
+async function idsOrdensRecebidasNoDid(Did, ordemIds) {
+  if (!Did || ordemIds.length === 0) return new Set();
+  const dids = await Did.findAll({
+    where: { ordem_compra_id: { [Op.in]: ordemIds }, receb_ordem_recebida: 'sim' },
+    attributes: ['ordem_compra_id'],
+    raw: true,
+  });
+  return new Set(dids.map(d => d.ordem_compra_id));
+}
+
+const listOrdensCompraDisponiveis = async (req, res) => {
+  try {
+    await ensureTables(req);
+    const { ContratoOrdem, ContratoOrdemItem, Contrato, Credor, AlmoxarifadoItem, AlmoxLote, Did } = req.models;
+    if (!ContratoOrdem) return res.status(503).json({ error: 'Módulo de contratos não disponível' });
+
+    const { q } = req.query;
+    const where = { tipo: 'COMPRA', status: 'EMITIDA' };
+    if (q) {
+      where[Op.or] = [
+        { numero: { [Op.iLike]: `%${q}%` } },
+        { objeto:  { [Op.iLike]: `%${q}%` } },
+      ];
+    }
+
+    const ordens = await ContratoOrdem.findAll({
+      where,
+      include: [
+        {
+          model: Contrato,
+          as: 'contrato',
+          attributes: ['id', 'numero_contrato', 'objeto'],
+          include: [{ model: Credor, as: 'credor', attributes: ['id', 'razao_social', 'cnpj_cpf'] }]
+        },
+        { model: ContratoOrdemItem, as: 'itens' }
+      ],
+      order: [['data_emissao', 'DESC']],
+      limit: 100
+    });
+
+    // Só entram ordens cujo DID vinculado teve o recebimento confirmado (Seção de Recebimento)
+    const recebidas = await idsOrdensRecebidasNoDid(Did, ordens.map(o => o.id));
+
+    const result = [];
+    for (const ordem of ordens) {
+      if (!recebidas.has(ordem.id)) continue;
+      const itensComSaldo = await calcularItensComSaldo(ordem, AlmoxarifadoItem, AlmoxLote);
+      if (itensComSaldo.length > 0) {
+        result.push({ ...ordem.toJSON(), itens: itensComSaldo });
+      }
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error('Erro listOrdensCompraDisponiveis:', error);
+    res.status(500).json({ error: 'Erro ao listar ordens de compra' });
+  }
+};
+
+/** Busca uma Ordem de Compra pelo número e retorna com saldo disponível por item */
+const getOrdemByNumero = async (req, res) => {
+  try {
+    await ensureTables(req);
+    const { ContratoOrdem, ContratoOrdemItem, Contrato, Credor, AlmoxarifadoItem, AlmoxLote, Did } = req.models;
+    if (!ContratoOrdem) return res.status(503).json({ error: 'Módulo de contratos não disponível' });
+
+    const numero = decodeURIComponent(req.params.numero).trim();
+
+    const ordem = await ContratoOrdem.findOne({
+      where: { numero: { [Op.iLike]: numero }, tipo: 'COMPRA', status: 'EMITIDA' },
+      include: [
+        {
+          model: Contrato,
+          as: 'contrato',
+          attributes: ['id', 'numero_contrato', 'objeto'],
+          include: [{ model: Credor, as: 'credor', attributes: ['id', 'razao_social', 'cnpj_cpf'] }]
+        },
+        { model: ContratoOrdemItem, as: 'itens' }
+      ]
+    });
+
+    if (!ordem) {
+      return res.status(404).json({ error: `Ordem de compra "${numero}" não encontrada, cancelada ou já atendida` });
+    }
+
+    const recebidas = await idsOrdensRecebidasNoDid(Did, [ordem.id]);
+    if (!recebidas.has(ordem.id)) {
+      return res.status(404).json({ error: 'Esta ordem ainda não foi confirmada como recebida no DID (Seção de Recebimento)' });
+    }
+
+    const itensComSaldo = await calcularItensComSaldo(ordem, AlmoxarifadoItem, AlmoxLote);
+    if (itensComSaldo.length === 0) {
+      return res.status(404).json({ error: 'Todos os itens desta ordem já foram totalmente recebidos' });
+    }
+
+    res.json({ ...ordem.toJSON(), itens: itensComSaldo });
+  } catch (error) {
+    console.error('Erro getOrdemByNumero:', error);
+    res.status(500).json({ error: 'Erro ao buscar ordem de compra' });
+  }
+};
+
+/** Retorna itens com estoque atual > 0 (visão de estoque real) */
+const getEstoque = async (req, res) => {
+  try {
+    await ensureTables(req);
+    const { AlmoxarifadoItem, Secretaria } = req.models;
+    const where = { estoque_atual: { [Op.gt]: 0 }, ativo: true };
+
+    // Escopo por secretaria — a coluna `secretaria` é texto (nome).
+    // Usuários do almoxarifado/admin (scope 'todas') veem todas; usuários de
+    // secretaria veem apenas itens da própria secretaria.
+    const user = req.user;
+    if (user && user.tipo !== 'admin' && user.tipo !== 'jeos') {
+      await ensurePermissoes(req);
+      const { scope, secretarias } = getScope(user, 'almoxarifado', 'estoque', 'ver');
+
+      const resolverNomes = async (ids) => {
+        if (!ids.length || !Secretaria) return [];
+        const secs = await Secretaria.findAll({
+          where: { id: { [Op.in]: ids } }, attributes: ['nome'], raw: true,
+        });
+        return secs.map(s => s.nome).filter(Boolean);
+      };
+
+      if (scope === 'none') {
+        where.secretaria = { [Op.in]: [] };
+      } else if (scope === 'propria') {
+        const nomes = await resolverNomes(user.secretariaId ? [user.secretariaId] : []);
+        where.secretaria = nomes.length ? { [Op.in]: nomes } : { [Op.in]: [] };
+      } else if (scope === 'algumas') {
+        const nomes = await resolverNomes(secretarias);
+        where.secretaria = nomes.length ? { [Op.in]: nomes } : { [Op.in]: [] };
+      }
+      // scope 'todas': sem filtro
+    }
+
+    // Filtros opcionais vindos da query
+    if (req.query.secretaria) where.secretaria = req.query.secretaria;
+    if (req.query.tipo_item)  where.tipo_item = req.query.tipo_item;
+
+    const itens = await AlmoxarifadoItem.findAll({ where, order: [['nome', 'ASC']] });
+    res.json(itens);
+  } catch (error) {
+    console.error('Erro getEstoque:', error);
+    res.status(500).json({ error: 'Erro ao buscar estoque' });
+  }
+};
+
 /** Registra entrada com lote (empenho, NF, validade) â€” mÃ©todo preferencial */
 const registrarEntradaLote = async (req, res) => {
   try {
     await ensureTables(req);
     const { AlmoxarifadoItem, AlmoxarifadoMovimentacao, AlmoxLote } = req.models;
     const {
-      item_id, quantidade, valor_unitario, data_entrada,
-      numero_empenho, numero_nf, fornecedor_nome, data_validade, observacao
+      item_id: item_id_body, quantidade, valor_unitario, data_entrada,
+      numero_empenho, numero_nf, fornecedor_nome, data_validade, observacao,
+      corredor, prateleira, gaveta, secretaria,
+      chave_nfe, numero_contrato, fornecedor_cnpj, conferencia_cega_qtd,
+      ordem_id, ordem_item_id,
+      // campos para auto-criar AlmoxarifadoItem quando não existir
+      _codigo_item, _descricao_item, _unidade_item
     } = req.body;
 
-    if (!item_id || !quantidade || !data_entrada) {
-      return res.status(400).json({ error: 'Item, quantidade e data de entrada sÃ£o obrigatÃ³rios' });
+    const { ContratoOrdem, ContratoOrdemItem } = req.models;
+
+    if (!quantidade || !data_entrada) {
+      return res.status(400).json({ error: 'Quantidade e data de entrada são obrigatórios' });
+    }
+
+    // Se a entrada está vinculada a uma ordem, valida saldo disponível
+    let ordemItem = null;
+    if (ordem_item_id) {
+      if (!ContratoOrdemItem) return res.status(503).json({ error: 'Módulo de contratos indisponível' });
+      ordemItem = await ContratoOrdemItem.findByPk(ordem_item_id);
+      if (!ordemItem) return res.status(404).json({ error: 'Item da ordem de compra não encontrado' });
+
+      const totalRecebido = await AlmoxLote.sum('quantidade_inicial', {
+        where: { ordem_item_id }
+      }) || 0;
+      const saldo = parseFloat(ordemItem.quantidade) - parseFloat(totalRecebido);
+      if (parseFloat(quantidade) > saldo + 0.001) {
+        return res.status(400).json({
+          error: `Quantidade excede o saldo da ordem. Saldo disponível: ${saldo} ${ordemItem.unidade || ''}`.trim()
+        });
+      }
+    }
+
+    // Resolve o AlmoxarifadoItem: usa item_id fornecido ou busca/cria pelo código da ordem
+    let item_id = item_id_body;
+    if (!item_id && ordemItem) {
+      const codigo = ordemItem.codigo_item || _codigo_item;
+      if (codigo) {
+        let almoxItem = await AlmoxarifadoItem.findOne({ where: { codigo } });
+        if (!almoxItem) {
+          almoxItem = await AlmoxarifadoItem.create({
+            codigo,
+            nome: ordemItem.descricao || _descricao_item || codigo,
+            unidade: ordemItem.unidade || _unidade_item || 'UN',
+            estoque_atual: 0,
+            estoque_minimo: 0,
+            valor_unitario: parseFloat(ordemItem.valor_unitario) || 0,
+          });
+        }
+        item_id = almoxItem.id;
+      }
+    }
+
+    if (!item_id) {
+      return res.status(400).json({ error: 'Item obrigatório. Selecione um item ou vincule uma ordem de compra.' });
     }
     const item = await AlmoxarifadoItem.findByPk(item_id);
-    if (!item) return res.status(404).json({ error: 'Item nÃ£o encontrado' });
+    if (!item) return res.status(404).json({ error: 'Item não encontrado' });
 
     const qtd = parseFloat(quantidade);
     const vlrUnit = parseFloat(valor_unitario) || parseFloat(item.valor_unitario) || 0;
@@ -489,15 +748,38 @@ const registrarEntradaLote = async (req, res) => {
       item_id,
       numero_empenho: numero_empenho || null,
       numero_nf: numero_nf || null,
+      chave_nfe: chave_nfe || null,
+      numero_contrato: numero_contrato || null,
       fornecedor_nome: fornecedor_nome || null,
+      fornecedor_cnpj: fornecedor_cnpj || null,
       data_entrada,
       data_validade: data_validade || null,
       quantidade_inicial: qtd,
       quantidade_atual: qtd,
       valor_unitario: vlrUnit,
       observacao: observacao || null,
+      conferencia_cega_qtd: conferencia_cega_qtd ? parseFloat(conferencia_cega_qtd) : null,
+      conferencia_cega_ok: conferencia_cega_qtd ? parseFloat(conferencia_cega_qtd) === qtd : null,
+      ordem_id: ordem_id || null,
+      ordem_item_id: ordem_item_id || null,
       usuario_id: req.user.id
     });
+
+    // Se vinculado a ordem, verifica se todos os itens foram totalmente recebidos
+    if (ordem_id && ContratoOrdem) {
+      const todosItens = await ContratoOrdemItem.findAll({ where: { ordem_id } });
+      let totalmenteRecebida = true;
+      for (const oi of todosItens) {
+        const recebido = await AlmoxLote.sum('quantidade_inicial', { where: { ordem_item_id: oi.id } }) || 0;
+        if (parseFloat(recebido) < parseFloat(oi.quantidade) - 0.001) {
+          totalmenteRecebida = false;
+          break;
+        }
+      }
+      if (totalmenteRecebida) {
+        await ContratoOrdem.update({ status: 'ATENDIDA' }, { where: { id: ordem_id } });
+      }
+    }
 
     // Registra movimentaÃ§Ã£o de ENTRADA vinculada ao lote
     const mov = await AlmoxarifadoMovimentacao.create({
@@ -523,7 +805,12 @@ const registrarEntradaLote = async (req, res) => {
     if (novoEstoque > 0 && vlrUnit > 0) {
       novoVal = ((estoqueAntes * novoVal) + (qtd * vlrUnit)) / novoEstoque;
     }
-    await item.update({ estoque_atual: novoEstoque, valor_unitario: novoVal.toFixed(2) });
+    const locationUpdate = {};
+    if (corredor  !== undefined) locationUpdate.corredor  = corredor  || null;
+    if (prateleira !== undefined) locationUpdate.prateleira = prateleira || null;
+    if (gaveta    !== undefined) locationUpdate.gaveta    = gaveta    || null;
+    if (secretaria !== undefined) locationUpdate.secretaria = secretaria || null;
+    await item.update({ estoque_atual: novoEstoque, valor_unitario: novoVal.toFixed(2), ...locationUpdate });
 
     await audit(req.models, {
       tabela: 'almoxarifado_lotes',
@@ -536,10 +823,18 @@ const registrarEntradaLote = async (req, res) => {
       ip: req.ip
     });
 
+    await registrarLog(req, {
+      acao: 'registrar_entrada_estoque',
+      modulo: 'almoxarifado',
+      descricao: `Registrou entrada de ${qtd} ${item.unidade} de "${item.nome}" no estoque`,
+      referencia_id: lote.id,
+      referencia_numero: item.codigo || null
+    });
+
     res.status(201).json({ lote, movimentacao: mov, estoque_atual: novoEstoque });
   } catch (error) {
     console.error('Erro registrarEntradaLote:', error);
-    res.status(500).json({ error: 'Erro ao registrar entrada' });
+    res.status(500).json({ error: 'Erro ao registrar entrada', detail: error.message, sql: error.sql });
   }
 };
 
@@ -551,11 +846,11 @@ const listRequisicoes = async (req, res) => {
     const { status, page = 1, limit = 20 } = req.query;
 
     const where = {};
-    if (status) where.status = status;
-    // Restringe ao usuário não-admin a apenas sua secretaria
-    if (req.user.tipo !== 'admin' && req.user.secretariaId) {
-      where.secretaria_id = req.user.secretariaId;
+    if (status) {
+      const statusList = String(status).split(',').map(s => s.trim()).filter(Boolean);
+      where.status = statusList.length === 1 ? statusList[0] : { [Op.in]: statusList };
     }
+    await applyScopeToWhere(where, req, 'secretaria_id', 'almoxarifado', 'requisicoes', 'ver');
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const { count, rows } = await AlmoxarifadoRequisicao.findAndCountAll({
@@ -564,6 +859,7 @@ const listRequisicoes = async (req, res) => {
         { model: Setor, as: 'setor', attributes: ['nome'] },
         { model: User, as: 'solicitante', attributes: ['nome'] },
         { model: User, as: 'autorizador', attributes: ['nome'], required: false },
+        { model: User, as: 'atendente', attributes: ['nome'], required: false },
         { model: Secretaria, as: 'secretaria', attributes: ['nome'], required: false },
         {
           model: AlmoxarifadoRequisicaoItem, as: 'itens',
@@ -583,19 +879,56 @@ const listRequisicoes = async (req, res) => {
   }
 };
 
+const getRequisicao = async (req, res) => {
+  try {
+    await ensureTables(req);
+    const { AlmoxarifadoRequisicao, AlmoxarifadoRequisicaoItem, AlmoxarifadoItem, User, Setor, Secretaria } = req.models;
+    const requisicao = await AlmoxarifadoRequisicao.findByPk(req.params.id, {
+      include: [
+        { model: Setor, as: 'setor', attributes: ['nome'] },
+        { model: User, as: 'solicitante', attributes: ['id', 'nome'] },
+        { model: User, as: 'autorizador', attributes: ['id', 'nome'], required: false },
+        { model: User, as: 'atendente', attributes: ['id', 'nome'], required: false },
+        { model: Secretaria, as: 'secretaria', attributes: ['nome'], required: false },
+        {
+          model: AlmoxarifadoRequisicaoItem, as: 'itens',
+          include: [{ model: AlmoxarifadoItem, as: 'item', attributes: ['nome', 'unidade', 'codigo'] }]
+        }
+      ]
+    });
+    if (!requisicao) return res.status(404).json({ error: 'Requisição não encontrada' });
+    res.json(requisicao);
+  } catch (error) {
+    console.error('Erro getRequisicao:', error);
+    res.status(500).json({ error: 'Erro ao buscar requisição' });
+  }
+};
+
 const createRequisicao = async (req, res) => {
   try {
     await ensureTables(req);
-    const { AlmoxarifadoRequisicao, AlmoxarifadoRequisicaoItem, AlmoxarifadoItem } = req.models;
-    const { setor_id, secretaria_id, observacao, prioridade, itens } = req.body;
+    const bcrypt = require('bcryptjs');
+    const { AlmoxarifadoRequisicao, AlmoxarifadoRequisicaoItem, AlmoxarifadoItem, User } = req.models;
+    const { setor_id, secretaria_id, observacao, prioridade, data_solicitacao, itens, senhaConfirmacao } = req.body;
 
     if (!setor_id || !itens || itens.length === 0) {
-      return res.status(400).json({ error: 'Setor e pelo menos um item sÃ£o obrigatÃ³rios' });
+      return res.status(400).json({ error: 'Setor e pelo menos um item são obrigatórios' });
+    }
+    if (!senhaConfirmacao) {
+      return res.status(400).json({ error: 'Senha obrigatória para assinatura eletrônica' });
+    }
+    const userDb = await User.findByPk(req.user.id, { attributes: ['senha'] });
+    if (!userDb || !(await bcrypt.compare(senhaConfirmacao, userDb.senha))) {
+      return res.status(401).json({ error: 'Senha incorreta. Assinatura eletrônica não autorizada.' });
     }
 
     const ano = new Date().getFullYear();
     const count = await AlmoxarifadoRequisicao.count();
     const numero = `REQ-${ano}-${String(count + 1).padStart(4, '0')}`;
+
+    const hash_solicitante = crypto.createHash('sha256')
+      .update(`${numero}|SOLICITACAO|${req.user.id}|${Date.now()}`)
+      .digest('hex');
 
     const requisicao = await AlmoxarifadoRequisicao.create({
       numero,
@@ -604,8 +937,9 @@ const createRequisicao = async (req, res) => {
       usuario_solicitante_id: req.user.id,
       status: 'PENDENTE_AUTORIZACAO',
       prioridade: prioridade || 'NORMAL',
-      data_solicitacao: new Date().toISOString().split('T')[0],
-      observacao
+      data_solicitacao: data_solicitacao || new Date().toISOString().split('T')[0],
+      observacao,
+      hash_solicitante
     });
 
     for (const it of itens) {
@@ -622,8 +956,16 @@ const createRequisicao = async (req, res) => {
 
     await audit(req.models, {
       tabela: 'almoxarifado_requisicoes', registro_id: requisicao.id,
-      acao: 'CRIOU', descricao: `Criou requisiÃ§Ã£o ${numero}`,
+      acao: 'CRIOU', descricao: `Criou requisicao ${numero}`,
       depois: requisicao.toJSON(), user: req.user, ip: req.ip
+    });
+
+    await registrarLog(req, {
+      acao: 'criar_requisicao',
+      modulo: 'almoxarifado',
+      descricao: `Fez uma requisição de material (${numero}) — ${itens.length} item(ns)`,
+      referencia_id: requisicao.id,
+      referencia_numero: numero
     });
 
     res.status(201).json(requisicao);
@@ -642,14 +984,24 @@ const createRequisicao = async (req, res) => {
 const autorizarRequisicao = async (req, res) => {
   try {
     await ensureTables(req);
-    const { AlmoxarifadoRequisicao, AlmoxarifadoRequisicaoItem, AlmoxarifadoItem } = req.models;
+    const bcrypt = require('bcryptjs');
+    const { AlmoxarifadoRequisicao, AlmoxarifadoRequisicaoItem, AlmoxarifadoItem, User } = req.models;
+    const { senhaConfirmacao } = req.body;
+
+    if (!senhaConfirmacao) {
+      return res.status(400).json({ error: 'Senha obrigatória para assinatura eletrônica' });
+    }
+    const userDb = await User.findByPk(req.user.id, { attributes: ['senha'] });
+    if (!userDb || !(await bcrypt.compare(senhaConfirmacao, userDb.senha))) {
+      return res.status(401).json({ error: 'Senha incorreta. Assinatura eletrônica não autorizada.' });
+    }
 
     const requisicao = await AlmoxarifadoRequisicao.findByPk(req.params.id, {
       include: [{ model: AlmoxarifadoRequisicaoItem, as: 'itens' }]
     });
-    if (!requisicao) return res.status(404).json({ error: 'RequisiÃ§Ã£o nÃ£o encontrada' });
+    if (!requisicao) return res.status(404).json({ error: 'Requisição não encontrada' });
     if (!['PENDENTE', 'PENDENTE_AUTORIZACAO'].includes(requisicao.status)) {
-      return res.status(400).json({ error: `RequisiÃ§Ã£o nÃ£o pode ser autorizada no status ${requisicao.status}` });
+      return res.status(400).json({ error: `Requisição não pode ser autorizada no status ${requisicao.status}` });
     }
 
     // Valida estoque para todos os itens
@@ -676,18 +1028,12 @@ const autorizarRequisicao = async (req, res) => {
       .update(`${requisicao.numero}|${req.user.id}|${ts}`)
       .digest('hex');
 
-    // Gera token OTP de 6 dÃ­gitos
-    const token_entrega = String(Math.floor(100000 + Math.random() * 900000));
-    const token_expiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 h
-
     const antes = { status: requisicao.status };
     await requisicao.update({
       status: 'AUTORIZADA',
       data_autorizacao: new Date(),
       usuario_autorizador_id: req.user.id,
-      hash_assinatura,
-      token_entrega,
-      token_expiry
+      hash_assinatura
     });
 
     await audit(req.models, {
@@ -698,12 +1044,15 @@ const autorizarRequisicao = async (req, res) => {
       user: req.user, ip: req.ip
     });
 
-    res.json({
-      message: 'RequisiÃ§Ã£o autorizada',
-      token_entrega,
-      token_expiry,
-      hash_assinatura
+    await registrarLog(req, {
+      acao: 'autorizar_requisicao',
+      modulo: 'almoxarifado',
+      descricao: `Autorizou a requisição de material ${requisicao.numero}`,
+      referencia_id: requisicao.id,
+      referencia_numero: requisicao.numero
     });
+
+    res.json({ message: 'Requisição autorizada', hash_assinatura });
   } catch (error) {
     console.error('Erro autorizarRequisicao:', error);
     res.status(500).json({ error: 'Erro ao autorizar requisiÃ§Ã£o' });
@@ -730,7 +1079,7 @@ const iniciarSeparacao = async (req, res) => {
 
     await audit(req.models, {
       tabela: 'almoxarifado_requisicoes', registro_id: requisicao.id,
-      acao: 'SEPAROU', descricao: `Iniciou separaÃ§Ã£o de ${requisicao.numero}`,
+      acao: 'SEPAROU', descricao: `Iniciou separacao de ${requisicao.numero}`,
       antes, depois: { status: 'EM_SEPARACAO' },
       user: req.user, ip: req.ip
     });
@@ -743,31 +1092,59 @@ const iniciarSeparacao = async (req, res) => {
 };
 
 /**
- * Confirmar entrega â†’ ENTREGUE
- * Valida token OTP, despacha estoque via FIFO, marca como ENTREGUE.
+ * Marcar como AGUARDANDO_RETIRADA → itens separados, aguardando retirada pelo solicitante.
+ */
+const aguardandoRetirada = async (req, res) => {
+  try {
+    await ensureTables(req);
+    const { AlmoxarifadoRequisicao } = req.models;
+
+    const requisicao = await AlmoxarifadoRequisicao.findByPk(req.params.id);
+    if (!requisicao) return res.status(404).json({ error: 'Requisição não encontrada' });
+    if (requisicao.status !== 'EM_SEPARACAO') {
+      return res.status(400).json({ error: 'A requisição precisa estar Em Separação para marcar como aguardando retirada' });
+    }
+
+    const antes = { status: requisicao.status };
+    await requisicao.update({ status: 'AGUARDANDO_RETIRADA' });
+
+    await audit(req.models, {
+      tabela: 'almoxarifado_requisicoes', registro_id: requisicao.id,
+      acao: 'AGUARDANDO_RETIRADA', descricao: `Requisição ${requisicao.numero} pronta para retirada`,
+      antes, depois: { status: 'AGUARDANDO_RETIRADA' },
+      user: req.user, ip: req.ip
+    });
+
+    res.json({ message: 'Aguardando retirada', status: 'AGUARDANDO_RETIRADA' });
+  } catch (error) {
+    console.error('Erro aguardandoRetirada:', error?.message, error?.original?.message, error);
+    res.status(500).json({ error: error?.original?.message || error?.message || 'Erro ao atualizar status' });
+  }
+};
+
+/**
+ * Confirmar entrega → ENTREGUE
+ * Autentica com senha, despacha estoque via FIFO, marca como ENTREGUE.
  */
 const entregarComToken = async (req, res) => {
   try {
     await ensureTables(req);
-    const { AlmoxarifadoRequisicao, AlmoxarifadoRequisicaoItem } = req.models;
-    const { token } = req.body;
+    const bcrypt = require('bcryptjs');
+    const { AlmoxarifadoRequisicao, AlmoxarifadoRequisicaoItem, User } = req.models;
+    const { senhaConfirmacao } = req.body;
 
-    if (!token) return res.status(400).json({ error: 'Token de entrega obrigatÃ³rio' });
+    if (!senhaConfirmacao) return res.status(400).json({ error: 'Senha obrigatória para assinatura eletrônica' });
+    const userDb = await User.findByPk(req.user.id, { attributes: ['senha'] });
+    if (!userDb || !(await bcrypt.compare(senhaConfirmacao, userDb.senha))) {
+      return res.status(401).json({ error: 'Senha incorreta. Assinatura eletrônica não autorizada.' });
+    }
 
     const requisicao = await AlmoxarifadoRequisicao.findByPk(req.params.id, {
       include: [{ model: AlmoxarifadoRequisicaoItem, as: 'itens' }]
     });
-    if (!requisicao) return res.status(404).json({ error: 'RequisiÃ§Ã£o nÃ£o encontrada' });
-    if (!['AUTORIZADA', 'EM_SEPARACAO'].includes(requisicao.status)) {
-      return res.status(400).json({ error: `RequisiÃ§Ã£o no status ${requisicao.status} nÃ£o pode ser entregue` });
-    }
-
-    // Valida token
-    if (requisicao.token_entrega !== String(token)) {
-      return res.status(400).json({ error: 'Token de entrega invÃ¡lido' });
-    }
-    if (!requisicao.token_expiry || new Date() > new Date(requisicao.token_expiry)) {
-      return res.status(400).json({ error: 'Token de entrega expirado. Solicite nova autorizaÃ§Ã£o.' });
+    if (!requisicao) return res.status(404).json({ error: 'Requisição não encontrada' });
+    if (requisicao.status !== 'AGUARDANDO_RETIRADA') {
+      return res.status(400).json({ error: 'A requisição precisa estar com status Aguardando Retirada para ser entregue' });
     }
 
     const hoje = new Date().toISOString().split('T')[0];
@@ -781,7 +1158,7 @@ const entregarComToken = async (req, res) => {
         item_id: ri.item_id,
         quantidade: pendente,
         data: hoje,
-        requisicao_id: requisicao.numero,
+        requisicao_id: requisicao.id,
         user_id: req.user.id
       });
 
@@ -796,14 +1173,17 @@ const entregarComToken = async (req, res) => {
       return res.status(400).json({ error: 'NÃ£o foi possÃ­vel entregar nenhum item', detalhes: erros });
     }
 
+    const hash_entrega = crypto.createHash('sha256')
+      .update(`${requisicao.numero}|ENTREGUE|${req.user.id}|${Date.now()}`)
+      .digest('hex');
+
     const antes = { status: requisicao.status };
     await requisicao.update({
       status: 'ENTREGUE',
       data_entrega: new Date(),
       data_atendimento: hoje,
       usuario_atendente_id: req.user.id,
-      token_entrega: null,    // invalida o token apÃ³s uso
-      token_expiry: null
+      hash_entrega
     });
 
     await audit(req.models, {
@@ -894,6 +1274,16 @@ const atenderRequisicao = async (req, res) => {
       observacao: observacao || requisicao.observacao
     });
 
+    await registrarLog(req, {
+      acao: 'atender_requisicao',
+      modulo: 'almoxarifado',
+      descricao: novoStatus === 'ENTREGUE'
+        ? `Entregou a requisição de material ${requisicao.numero}`
+        : `Atendeu parcialmente a requisição de material ${requisicao.numero}`,
+      referencia_id: requisicao.id,
+      referencia_numero: requisicao.numero
+    });
+
     res.json({ message: 'RequisiÃ§Ã£o processada', status: novoStatus });
   } catch (error) {
     console.error('Erro atenderRequisicao:', error);
@@ -918,7 +1308,7 @@ const cancelarRequisicao = async (req, res) => {
 
     await audit(req.models, {
       tabela: 'almoxarifado_requisicoes', registro_id: requisicao.id,
-      acao: 'CANCELOU', descricao: `Cancelou ${requisicao.numero}: ${justificativa || 'â€”'}`,
+      acao: 'CANCELOU', descricao: `Cancelou ${requisicao.numero}: ${justificativa || '-'}`,
       antes, depois: { status: 'CANCELADA' },
       user: req.user, ip: req.ip
     });
@@ -970,14 +1360,20 @@ const relatorioConsumo = async (req, res) => {
 const listAuditLog = async (req, res) => {
   try {
     await ensureTables(req);
-    const { AlmoxAuditLog } = req.models;
-    const { tabela, acao, user_id, user_nome, page = 1, limit = 50 } = req.query;
+    const { AlmoxAuditLog, User } = req.models;
+    const { tabela, acao, user_id, user_nome, data_de, data_ate, page = 1, limit = 50 } = req.query;
 
     const where = {};
-    if (tabela)     where.tabela    = tabela;
-    if (acao)       where.acao      = acao;
-    if (user_id)    where.user_id   = user_id;
-    if (user_nome)  where.user_nome = { [Op.iLike]: `%${user_nome}%` };
+    if (tabela)    where.tabela    = tabela;
+    if (acao)      where.acao      = acao;
+    if (user_id)   where.user_id   = user_id;
+    if (user_nome) where.user_nome = { [Op.iLike]: `%${user_nome}%` };
+
+    if (data_de || data_ate) {
+      where.created_at = {};
+      if (data_de)  where.created_at[Op.gte] = new Date(data_de + 'T00:00:00');
+      if (data_ate) where.created_at[Op.lte]  = new Date(data_ate + 'T23:59:59');
+    }
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const { count, rows } = await AlmoxAuditLog.findAndCountAll({
@@ -986,6 +1382,19 @@ const listAuditLog = async (req, res) => {
       limit: parseInt(limit),
       offset
     });
+
+    // Enriquece registros antigos: busca nome pelo user_id quando user_nome está vazio
+    const semNome = rows.filter(r => !r.user_nome && r.user_id);
+    if (semNome.length > 0 && User) {
+      const ids = [...new Set(semNome.map(r => r.user_id))];
+      const users = await User.findAll({ where: { id: ids }, attributes: ['id', 'nome'] });
+      const mapa  = Object.fromEntries(users.map(u => [u.id, u.nome]));
+      rows.forEach(r => {
+        if (!r.user_nome && r.user_id && mapa[r.user_id]) {
+          r.dataValues.user_nome = mapa[r.user_id];
+        }
+      });
+    }
 
     res.json({ total: count, pagina: parseInt(page), logs: rows });
   } catch (error) {
@@ -1460,12 +1869,13 @@ const consultarNFSe = async (req, res) => {
 
 module.exports = {
   getDashboard,
-  listItens, createItem, updateItem, deleteItem, getCategorias,
+  listItens, createItem, updateItem, deleteItem, getCategorias, getEstoque,
+  listOrdensCompraDisponiveis, getOrdemByNumero,
   listMovimentacoes, registrarEntrada, registrarSaida,
   listLotes, registrarEntradaLote,
   importarNFe, consultarNFSe,
-  listRequisicoes, createRequisicao,
-  autorizarRequisicao, iniciarSeparacao, entregarComToken, regenerarToken,
+  listRequisicoes, getRequisicao, createRequisicao,
+  autorizarRequisicao, iniciarSeparacao, aguardandoRetirada, entregarComToken, regenerarToken,
   atenderRequisicao, cancelarRequisicao,
   relatorioConsumo,
   listAuditLog,

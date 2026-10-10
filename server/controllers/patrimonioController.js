@@ -1,5 +1,6 @@
 const { Op } = require('sequelize');
 const { registrarLog } = require('../middleware/activityLogger');
+const { applyScopeToWhere } = require('../utils/scopeFilter');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Gerar próximo número de tombamento  (ex: 2026000001)
@@ -76,10 +77,7 @@ const listarBens = async (req, res) => {
     if (grupo_id)      where.grupo_id      = grupo_id;
     if (secretaria_id) where.secretaria_id = secretaria_id;
     if (setor_id)      where.setor_id      = setor_id;
-    // Restringe ao usuário não-admin a apenas sua secretaria
-    if (req.user.tipo !== 'admin' && req.user.secretariaId) {
-      where.secretaria_id = req.user.secretariaId;
-    }
+    if (!secretaria_id) await applyScopeToWhere(where, req, 'secretaria_id', 'patrimonio', 'bens', 'ver');
     if (q) {
       where[Op.or] = [
         { numero_tombamento: { [Op.iLike]: `%${q}%` } },

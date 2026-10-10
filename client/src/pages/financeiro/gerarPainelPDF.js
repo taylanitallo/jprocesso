@@ -1,9 +1,30 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { applyTimbradoToPage } from '../../utils/timbradoStore'
+import { getMargens } from '../../utils/margensStore'
+import { setPDFLoading } from '../../utils/pdfLoadingStore'
 
-// ─── Constantes de layout ─────────────────────────────────────────────────────
-const M  = 12          // margem esquerda/direita
-const UW = 186         // largura util: 210 - 2*12
+// Números novos já vêm formatados por secretaria (ex: "SEJUV-001"); números
+// antigos são só o sequencial global e recebem o zero-padding legado.
+const fmtNumeroDid = (numeroDid) => {
+  if (!numeroDid) return '—'
+  const str = String(numeroDid)
+  return /^[A-Za-z]+-\d+$/.test(str) ? str : `DID-${str.padStart(3, '0')}`
+}
+
+// ─── Margens dinâmicas (atualizadas antes de cada geração) ────────────────────
+let M       = 12
+let UW      = 186
+let mTop    = 20
+let mBottom = 20
+
+function refreshM() {
+  const mg = getMargens()
+  M       = mg.left
+  UW      = 210 - mg.left - mg.right
+  mTop    = mg.top
+  mBottom = mg.bottom
+}
 
 // ─── Helpers de formatação ────────────────────────────────────────────────────
 const safe = v => {
@@ -67,56 +88,43 @@ const norm = (doc, size, color) => {
 
 // ─── Verificacao de quebra de pagina ─────────────────────────────────────────
 const checkPage = (doc, y, pageH, needed = 25) => {
-  if (y + needed > pageH - 14) {
+  if (y + needed > pageH - mBottom) {
     doc.addPage()
-    return 16
+    applyTimbradoToPage(doc)
+    return mTop + 4
   }
   return y
 }
 
 // ─── Cabecalho principal ──────────────────────────────────────────────────────
 function drawHeader(doc, ano, orgNome, descFiltros, pageW, pageH) {
-  const H = 36
-
-  // Bloco principal escuro
-  doc.setFillColor(...C.headerBg)
-  doc.rect(0, 0, pageW, H, 'F')
-
-  // Faixa esquerda colorida
-  doc.setFillColor(...C.blue)
-  doc.rect(0, 0, 4, H, 'F')
-
-  // Linha decorativa inferior
-  doc.setFillColor(...C.teal)
-  doc.rect(4, H - 1.5, pageW - 4, 1.5, 'F')
-
   // Titulo principal
-  bold(doc, 15, C.white)
-  doc.text('PAINEL FINANCEIRO', M + 3, 11)
+  bold(doc, 15, C.ink)
+  doc.text('PAINEL FINANCEIRO', M + 3, mTop)
 
   // Subtitulo
-  norm(doc, 8.5, [170, 185, 220])
-  doc.text('Resumo de Documentos de Instrucao de Despesas (DID)', M + 3, 18)
+  norm(doc, 8.5, C.sub)
+  doc.text('Resumo de Documentos de Instrucao de Despesas (DID)', M + 3, mTop + 7)
 
   // Linha de metadados
-  norm(doc, 7, [130, 148, 185])
+  norm(doc, 7, C.muted)
   const metaLeft = `Ano de referencia: ${ano}` + (orgNome ? '  |  ' + safe(orgNome) : '')
-  doc.text(metaLeft, M + 3, 25)
+  doc.text(metaLeft, M + 3, mTop + 14)
 
   // Data/hora geracao (direita)
   const agora = new Date().toLocaleString('pt-BR')
-  norm(doc, 6.5, [110, 128, 168])
-  doc.text(`Gerado em: ${agora}`, pageW - M, 25, { align: 'right' })
+  norm(doc, 6.5, C.muted)
+  doc.text(`Gerado em: ${agora}`, pageW - M, mTop + 14, { align: 'right' })
 
   // Filtros ativos
   const filtrosTxt = descFiltros.length > 0
     ? safe('Filtros: ' + descFiltros.join('  |  '))
     : 'Filtros: Todos os registros do periodo'
   const filtroLines = doc.splitTextToSize(filtrosTxt, pageW - M * 2 - 6)
-  norm(doc, 6, [100, 118, 162])
-  doc.text(filtroLines[0], M + 3, 32)
+  norm(doc, 6, C.muted)
+  doc.text(filtroLines[0], M + 3, mTop + 21)
 
-  return H + 8
+  return mTop + 28
 }
 
 // ─── Rodape em todas as paginas ───────────────────────────────────────────────
@@ -124,11 +132,7 @@ function drawFooters(doc, ano, orgNome, pageH, pageW) {
   const total = doc.internal.getNumberOfPages()
   for (let p = 1; p <= total; p++) {
     doc.setPage(p)
-    doc.setFillColor(...C.headerBg)
-    doc.rect(0, pageH - 10, pageW, 10, 'F')
-    doc.setFillColor(...C.blue)
-    doc.rect(0, pageH - 10, 3, 10, 'F')
-    norm(doc, 6.5, [140, 158, 200])
+    norm(doc, 6.5, C.muted)
     doc.text(
       safe((orgNome || 'Modulo Financeiro') + '  -  Painel DIDs ' + ano),
       M + 2,
@@ -372,6 +376,7 @@ function drawTable(doc, { head, body, colStyles, headColor, altColor, y, pageH }
     },
     columnStyles: colStyles || {},
     tableLineWidth: 0,
+    didDrawPage: () => applyTimbradoToPage(doc),
   })
   return doc.lastAutoTable.finalY + 8
 }
@@ -379,10 +384,14 @@ function drawTable(doc, { head, body, colStyles, headColor, altColor, y, pageH }
 // ─── Funcao principal exportada ───────────────────────────────────────────────
 export function gerarPainelPDF({ painel, filtros, ano, orgNome }) {
   if (!painel) return
+  setPDFLoading(true)
+  try {
+  refreshM()
 
   const doc   = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const pageW = doc.internal.pageSize.getWidth()
   const pageH = doc.internal.pageSize.getHeight()
+  applyTimbradoToPage(doc)
 
   // ── Descricao dos filtros ativos ─────────────────────────────────────────
   const descFiltros = []
@@ -522,7 +531,7 @@ export function gerarPainelPDF({ painel, filtros, ano, orgNome }) {
     y = drawTable(doc, {
       head: ['No. DID', 'Tipo', 'Credor', 'Secretaria', 'Referencia', 'Data', 'Valor Bruto'],
       body: painel.dids.pendentes.map(d => [
-        `DID-${String(d.numero_did).padStart(3, '0')}`,
+        fmtNumeroDid(d.numero_did),
         fmtTipo(d.tipo_did),
         fmt(d.credor_sec1),
         fmt(d.secretaria_sec1),
@@ -557,7 +566,7 @@ export function gerarPainelPDF({ painel, filtros, ano, orgNome }) {
       margin: { left: M, right: M, top: 14, bottom: 14 },
       head: [['No. DID', 'Tipo', 'Credor', 'Secretaria', 'Data', 'Valor Bruto', 'Status']],
       body: painel.dids.ultimos.map(d => [
-        `DID-${String(d.numero_did).padStart(3, '0')}`,
+        fmtNumeroDid(d.numero_did),
         fmtTipo(d.tipo_did),
         fmt(d.credor_sec1),
         fmt(d.secretaria_sec1),
@@ -598,6 +607,7 @@ export function gerarPainelPDF({ painel, filtros, ano, orgNome }) {
         }
       },
       tableLineWidth: 0,
+      didDrawPage: () => applyTimbradoToPage(doc),
     })
     y = doc.lastAutoTable.finalY + 8
   }
@@ -606,5 +616,10 @@ export function gerarPainelPDF({ painel, filtros, ano, orgNome }) {
   drawFooters(doc, ano, orgNome, pageH, pageW)
 
   // ── Download ─────────────────────────────────────────────────────────────
-  doc.save(`painel-financeiro-${ano}.pdf`)
+  const blobPainel = doc.output('blob')
+  const urlPainel = URL.createObjectURL(blobPainel)
+  const aPainel = document.createElement('a')
+  aPainel.href = urlPainel; aPainel.download = `painel-financeiro-${ano}.pdf`; aPainel.click()
+  setTimeout(() => URL.revokeObjectURL(urlPainel), 10000)
+  } finally { setPDFLoading(false) }
 }

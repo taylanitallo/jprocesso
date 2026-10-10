@@ -9,6 +9,7 @@ import {
   X, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import { PageHeader, EmptyState } from '../components/ui'
+import LoadingBar from '../components/LoadingBar'
 
 // ── Constantes de badge / cor ─────────────────────────────────────────────────
 const TIPO_CLS = {
@@ -16,6 +17,7 @@ const TIPO_CLS = {
   Despacho:   'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 ring-indigo-200 dark:ring-indigo-800/40',
   Pauta:      'bg-teal-50   dark:bg-teal-900/30   text-teal-600   dark:text-teal-300   ring-teal-200   dark:ring-teal-800/40',
   Requisição: 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-300 ring-orange-200 dark:ring-orange-800/40',
+  Protocolo:  'bg-amber-50  dark:bg-amber-900/30  text-amber-600  dark:text-amber-300  ring-amber-200  dark:ring-amber-800/40',
 }
 
 const STATUS_INFO = {
@@ -197,7 +199,7 @@ export default function Processos() {
       />
 
       {/* ── Abas ── */}
-      <div className="flex border-b border-gray-200 dark:border-slate-700/50">
+      <div className="flex border-b border-ink-200">
         {[
           { id: 'entrada',  label: 'Caixa de Entrada', icon: Inbox },
           { id: 'enviados', label: 'Enviados',          icon: Send  },
@@ -207,8 +209,8 @@ export default function Processos() {
             onClick={() => setAba(id)}
             className={`flex items-center gap-2 px-5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
               aba === id
-                ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200'
+                ? 'border-brand-600 text-brand-600 dark:text-info-400 dark:border-info-400'
+                : 'border-transparent text-ink-500 hover:text-ink-700'
             }`}
           >
             <TabIcon className="h-4 w-4" />
@@ -221,12 +223,12 @@ export default function Processos() {
       {aba === 'entrada' && (
         <>
           {/* ── Painel de Filtros ── */}
-          <div className="bg-white dark:bg-slate-900/70 border border-gray-200 dark:border-slate-700/70 rounded-2xl overflow-hidden">
+          <div className="bg-surface border border-ink-200 rounded-2xl overflow-hidden">
 
             {/* Linha principal: busca + status + botão filtros */}
             <div className="p-4 flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400 pointer-events-none" />
                 <input
                   type="text"
                   placeholder="Buscar por número, assunto ou interessado..."
@@ -253,14 +255,14 @@ export default function Processos() {
                 onClick={() => setMostrarFiltros(v => !v)}
                 className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border transition-all ${
                   mostrarFiltros || filtrosAtivos > 0
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'
+                    ? 'bg-brand-600 text-white border-brand-600'
+                    : 'border-ink-200 text-ink-600 hover:bg-ink-50'
                 }`}
               >
                 <SlidersHorizontal className="h-4 w-4" />
                 Filtros
                 {filtrosAtivos > 0 && (
-                  <span className="ml-1 bg-white text-blue-600 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
+                  <span className="ml-1 bg-surface text-brand-600 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
                     {filtrosAtivos}
                   </span>
                 )}
@@ -270,22 +272,23 @@ export default function Processos() {
 
             {/* Filtros avançados (expansível) */}
             {mostrarFiltros && (
-              <div className="border-t border-gray-100 dark:border-slate-700/50 p-4 space-y-3">
+              <div className="border-t border-ink-100 p-4 space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Tipo</label>
+                    <label className="block text-xs font-semibold text-ink-500 mb-1.5 uppercase tracking-wide">Tipo</label>
                     <select value={tipo} onChange={(e) => { setTipo(e.target.value); reset() }} className="input-field text-sm w-full">
                       <option value="">Todos os Tipos</option>
                       <option value="Did">Did</option>
                       <option value="Despacho">Despacho</option>
                       <option value="Pauta">Pauta</option>
+                      <option value="Protocolo">Protocolo</option>
                       <option value="Requisição">Requisição</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Prioridade</label>
+                    <label className="block text-xs font-semibold text-ink-500 mb-1.5 uppercase tracking-wide">Prioridade</label>
                     <select value={prioridade} onChange={(e) => { setPrioridade(e.target.value); reset() }} className="input-field text-sm w-full">
                       <option value="">Todas</option>
                       <option value="urgente">Urgente</option>
@@ -296,7 +299,7 @@ export default function Processos() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Secretaria</label>
+                    <label className="block text-xs font-semibold text-ink-500 mb-1.5 uppercase tracking-wide">Secretaria</label>
                     <select
                       value={secretariaId}
                       onChange={(e) => { setSecretariaId(e.target.value); setSetorId(''); reset() }}
@@ -310,7 +313,7 @@ export default function Processos() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Setor</label>
+                    <label className="block text-xs font-semibold text-ink-500 mb-1.5 uppercase tracking-wide">Setor</label>
                     <select value={setorId} onChange={(e) => { setSetorId(e.target.value); reset() }} className="input-field text-sm w-full">
                       <option value="">Todos</option>
                       {setorOpts.map(s => (
@@ -320,7 +323,7 @@ export default function Processos() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Responsável</label>
+                    <label className="block text-xs font-semibold text-ink-500 mb-1.5 uppercase tracking-wide">Responsável</label>
                     <select value={usuarioId} onChange={(e) => { setUsuarioId(e.target.value); reset() }} className="input-field text-sm w-full">
                       <option value="">Todos</option>
                       {usuarioOpts.map(u => (
@@ -335,7 +338,7 @@ export default function Processos() {
                   <div className="flex justify-end pt-1">
                     <button
                       onClick={limparFiltros}
-                      className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                      className="flex items-center gap-1.5 text-xs text-ink-500 hover:text-danger-500 dark:hover:text-danger-400 transition-colors"
                     >
                       <X className="h-3.5 w-3.5" />
                       Limpar filtros
@@ -348,10 +351,7 @@ export default function Processos() {
 
           {/* ── Lista ── */}
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-16">
-              <div className="h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-3" />
-              <p className="text-gray-400 dark:text-slate-500 text-sm">Carregando processos...</p>
-            </div>
+            <LoadingBar label="Carregando processos..." />
           ) : data?.processos && data.processos.length > 0 ? (
             <>
               <div className="space-y-2">
@@ -400,10 +400,10 @@ export default function Processos() {
       {aba === 'enviados' && (
         <>
           {/* ── Painel de Filtros Enviados ── */}
-          <div className="bg-white dark:bg-slate-900/70 border border-gray-200 dark:border-slate-700/70 rounded-2xl overflow-hidden">
+          <div className="bg-surface border border-ink-200 rounded-2xl overflow-hidden">
             <div className="p-4 flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400 pointer-events-none" />
                 <input
                   type="text"
                   placeholder="Buscar por número, assunto ou interessado..."
@@ -430,14 +430,14 @@ export default function Processos() {
                 onClick={() => setMostrarFiltrosEnv(v => !v)}
                 className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl border transition-all ${
                   mostrarFiltrosEnv || filtrosAtivosEnv > 0
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'
+                    ? 'bg-brand-600 text-white border-brand-600'
+                    : 'border-ink-200 text-ink-600 hover:bg-ink-50'
                 }`}
               >
                 <SlidersHorizontal className="h-4 w-4" />
                 Filtros
                 {filtrosAtivosEnv > 0 && (
-                  <span className="ml-1 bg-white text-blue-600 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
+                  <span className="ml-1 bg-surface text-brand-600 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
                     {filtrosAtivosEnv}
                   </span>
                 )}
@@ -446,22 +446,23 @@ export default function Processos() {
             </div>
 
             {mostrarFiltrosEnv && (
-              <div className="border-t border-gray-100 dark:border-slate-700/50 p-4 space-y-3">
+              <div className="border-t border-ink-100 p-4 space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Tipo</label>
+                    <label className="block text-xs font-semibold text-ink-500 mb-1.5 uppercase tracking-wide">Tipo</label>
                     <select value={tipoEnv} onChange={(e) => setTipoEnv(e.target.value)} className="input-field text-sm w-full">
                       <option value="">Todos os Tipos</option>
                       <option value="Did">Did</option>
                       <option value="Despacho">Despacho</option>
                       <option value="Pauta">Pauta</option>
+                      <option value="Protocolo">Protocolo</option>
                       <option value="Requisição">Requisição</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Prioridade</label>
+                    <label className="block text-xs font-semibold text-ink-500 mb-1.5 uppercase tracking-wide">Prioridade</label>
                     <select value={prioridadeEnv} onChange={(e) => setPrioridadeEnv(e.target.value)} className="input-field text-sm w-full">
                       <option value="">Todas</option>
                       <option value="urgente">Urgente</option>
@@ -472,7 +473,7 @@ export default function Processos() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Secretaria</label>
+                    <label className="block text-xs font-semibold text-ink-500 mb-1.5 uppercase tracking-wide">Secretaria</label>
                     <select
                       value={secretariaIdEnv}
                       onChange={(e) => { setSecretariaIdEnv(e.target.value); setSetorIdEnv('') }}
@@ -486,7 +487,7 @@ export default function Processos() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Setor</label>
+                    <label className="block text-xs font-semibold text-ink-500 mb-1.5 uppercase tracking-wide">Setor</label>
                     <select value={setorIdEnv} onChange={(e) => setSetorIdEnv(e.target.value)} className="input-field text-sm w-full">
                       <option value="">Todos</option>
                       {setorOptsEnv.map(s => (
@@ -496,7 +497,7 @@ export default function Processos() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">Responsável</label>
+                    <label className="block text-xs font-semibold text-ink-500 mb-1.5 uppercase tracking-wide">Responsável</label>
                     <select value={usuarioIdEnv} onChange={(e) => setUsuarioIdEnv(e.target.value)} className="input-field text-sm w-full">
                       <option value="">Todos</option>
                       {usuarioOpts.map(u => (
@@ -511,7 +512,7 @@ export default function Processos() {
                   <div className="flex justify-end pt-1">
                     <button
                       onClick={limparFiltrosEnv}
-                      className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                      className="flex items-center gap-1.5 text-xs text-ink-500 hover:text-danger-500 dark:hover:text-danger-400 transition-colors"
                     >
                       <X className="h-3.5 w-3.5" />
                       Limpar filtros
@@ -523,10 +524,7 @@ export default function Processos() {
           </div>
 
           {loadEnv && (
-            <div className="flex flex-col items-center justify-center py-16">
-              <div className="h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-3" />
-              <p className="text-gray-400 dark:text-slate-500 text-sm">Carregando processos enviados...</p>
-            </div>
+            <LoadingBar label="Carregando processos enviados..." />
           )}
 
           {!loadEnv && processosEnv.length > 0 && (
@@ -543,20 +541,20 @@ export default function Processos() {
                   <Link
                     key={processo.id}
                     to={`/${subdomain}/processos/${processo.id}`}
-                    className={`group flex items-stretch gap-4 px-4 py-3.5 bg-white dark:bg-slate-900/75 border border-gray-100 dark:border-slate-700/50 border-l-4 border-l-indigo-400 rounded-xl hover:shadow-sm dark:hover:shadow-slate-900/40 hover:border-gray-200 dark:hover:border-slate-600/60 transition-all`}
+                    className={`group flex items-stretch gap-4 px-4 py-3.5 bg-surface border border-ink-100 border-l-4 border-l-indigo-400 rounded-xl hover:shadow-sm dark:hover:shadow-slate-900/40 hover:border-ink-200 transition-all`}
                   >
                     {/* Conteúdo principal */}
                     <div className="flex-1 min-w-0 space-y-1">
                       {/* Assunto */}
-                      <p className="text-sm font-semibold text-gray-900 dark:text-slate-100 truncate leading-snug">
+                      <p className="text-sm font-semibold text-ink-900 truncate leading-snug">
                         {processo.assunto}
                       </p>
 
                       {/* Número + tipo + tramitação + prioridade */}
                       <div className="flex items-center flex-wrap gap-1.5">
-                        <span className="text-[11px] font-mono text-gray-400 dark:text-slate-500">{processo.numero}</span>
+                        <span className="text-[11px] font-mono text-ink-400">{processo.numero}</span>
                         {processo.tipoTramitacao && (
-                          <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded ring-1 ring-inset bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 ring-indigo-200 dark:ring-indigo-800/40">
+                          <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-sm ring-1 ring-inset bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 ring-indigo-200 dark:ring-indigo-800/40">
                             {tramLabel}
                           </span>
                         )}
@@ -568,20 +566,20 @@ export default function Processos() {
                       {/* Destinatário */}
                       <div className="flex items-center flex-wrap gap-x-3 gap-y-0.5">
                         {processo.destinatario && (
-                          <span className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-slate-500">
-                            <MapPin className="h-3 w-3 flex-shrink-0" />
+                          <span className="flex items-center gap-1 text-[11px] text-ink-400">
+                            <MapPin className="h-3 w-3 shrink-0" />
                             {processo.destinatario}
                           </span>
                         )}
                         {processo.destinatarioSetor && (
-                          <span className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-slate-500">
-                            <Layers className="h-3 w-3 flex-shrink-0" />
+                          <span className="flex items-center gap-1 text-[11px] text-ink-400">
+                            <Layers className="h-3 w-3 shrink-0" />
                             {processo.destinatarioSetor}
                           </span>
                         )}
                         {processo.destinatarioUsuario && (
-                          <span className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-slate-500">
-                            <User className="h-3 w-3 flex-shrink-0" />
+                          <span className="flex items-center gap-1 text-[11px] text-ink-400">
+                            <User className="h-3 w-3 shrink-0" />
                             {processo.destinatarioUsuario}
                           </span>
                         )}
@@ -589,14 +587,14 @@ export default function Processos() {
                     </div>
 
                     {/* Direita: status + data + seta */}
-                    <div className="flex-shrink-0 flex flex-col items-end justify-between gap-2 min-w-[90px]">
+                    <div className="shrink-0 flex flex-col items-end justify-between gap-2 min-w-[90px]">
                       <div className="flex flex-col items-end gap-1">
                         <span className={s.cls}>{s.label}</span>
-                        <span className="text-[11px] text-gray-400 dark:text-slate-500 tabular-nums">
+                        <span className="text-[11px] text-ink-400 tabular-nums">
                           {new Date(dataEnvio).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                         </span>
                       </div>
-                      <ArrowRight className="h-4 w-4 text-gray-300 dark:text-slate-600 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all" />
+                      <ArrowRight className="h-4 w-4 text-ink-400 group-hover:text-info-500 group-hover:translate-x-0.5 transition-all" />
                     </div>
                   </Link>
                 )
@@ -631,7 +629,7 @@ function ProcessoCard({ processo, subdomain, onClickSecretaria, onClickSetor, on
   const isAlta      = processo.prioridade === 'alta'
 
   return (
-    <div className={`group bg-white dark:bg-slate-900/75 border border-gray-100 dark:border-slate-700/50 border-l-4 ${s.border} rounded-xl hover:shadow-sm dark:hover:shadow-slate-900/40 hover:border-gray-200 dark:hover:border-slate-600/60 transition-all`}>
+    <div className={`group bg-surface border border-ink-100 border-l-4 ${s.border} rounded-xl hover:shadow-sm dark:hover:shadow-slate-900/40 hover:border-ink-200 transition-all`}>
       <Link
         to={`/${subdomain}/processos/${processo.id}`}
         className="flex items-stretch gap-4 px-4 py-3.5"
@@ -639,15 +637,15 @@ function ProcessoCard({ processo, subdomain, onClickSecretaria, onClickSetor, on
         {/* Conteúdo principal */}
         <div className="flex-1 min-w-0 space-y-1">
           {/* Assunto — texto principal */}
-          <p className="text-sm font-semibold text-gray-900 dark:text-slate-100 truncate leading-snug">
+          <p className="text-sm font-semibold text-ink-900 truncate leading-snug">
             {processo.assunto}
           </p>
 
           {/* Número + tipo + prioridade (metadados discretos) */}
           <div className="flex items-center flex-wrap gap-1.5">
-            <span className="text-[11px] font-mono text-gray-400 dark:text-slate-500">{processo.numero}</span>
+            <span className="text-[11px] font-mono text-ink-400">{processo.numero}</span>
             {processo.tipo_processo && (
-              <span className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded ring-1 ring-inset ${TIPO_CLS[processo.tipo_processo] || 'bg-gray-50 dark:bg-slate-700/50 text-gray-500 dark:text-slate-400 ring-gray-200 dark:ring-slate-600/50'}`}>
+              <span className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-sm ring-1 ring-inset ${TIPO_CLS[processo.tipo_processo] || 'bg-ink-50 text-ink-500 ring-ink-200'}`}>
                 {processo.tipo_processo}
               </span>
             )}
@@ -662,14 +660,14 @@ function ProcessoCard({ processo, subdomain, onClickSecretaria, onClickSetor, on
               <button
                 type="button"
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClickSecretaria(secretaria.id) }}
-                className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                className="flex items-center gap-1 text-[11px] text-ink-400 hover:text-brand-600 dark:hover:text-info-400 transition-colors"
                 title={`Filtrar por ${secretaria.nome}`}
               >
-                <Building2 className="h-3 w-3 flex-shrink-0" />
+                <Building2 className="h-3 w-3 shrink-0" />
                 {secretaria.sigla || secretaria.nome}
               </button>
             ) : (
-              <span className="text-[11px] text-gray-300 dark:text-slate-700 flex items-center gap-1">
+              <span className="text-[11px] text-ink-400 flex items-center gap-1">
                 <Building2 className="h-3 w-3" /> —
               </span>
             )}
@@ -678,14 +676,14 @@ function ProcessoCard({ processo, subdomain, onClickSecretaria, onClickSetor, on
               <button
                 type="button"
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClickSetor(setor.id) }}
-                className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                className="flex items-center gap-1 text-[11px] text-ink-400 hover:text-brand-600 dark:hover:text-info-400 transition-colors"
                 title={`Filtrar por ${setor.nome}`}
               >
-                <Layers className="h-3 w-3 flex-shrink-0" />
+                <Layers className="h-3 w-3 shrink-0" />
                 {setor.nome}
               </button>
             ) : (
-              <span className="text-[11px] text-gray-300 dark:text-slate-700 flex items-center gap-1">
+              <span className="text-[11px] text-ink-400 flex items-center gap-1">
                 <Layers className="h-3 w-3" /> —
               </span>
             )}
@@ -694,14 +692,14 @@ function ProcessoCard({ processo, subdomain, onClickSecretaria, onClickSetor, on
               <button
                 type="button"
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClickUsuario(responsavel.id) }}
-                className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                className="flex items-center gap-1 text-[11px] text-ink-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
                 title={`Filtrar por ${responsavel.nome}`}
               >
-                <User className="h-3 w-3 flex-shrink-0" />
+                <User className="h-3 w-3 shrink-0" />
                 {responsavel.nome}
               </button>
             ) : (
-              <span className="text-[11px] text-gray-300 dark:text-slate-700 flex items-center gap-1">
+              <span className="text-[11px] text-ink-400 flex items-center gap-1">
                 <User className="h-3 w-3" /> —
               </span>
             )}
@@ -709,17 +707,17 @@ function ProcessoCard({ processo, subdomain, onClickSecretaria, onClickSetor, on
         </div>
 
         {/* Direita: status + data + seta */}
-        <div className="flex-shrink-0 flex flex-col items-end justify-between gap-2 min-w-[90px]">
+        <div className="shrink-0 flex flex-col items-end justify-between gap-2 min-w-[90px]">
           <div className="flex flex-col items-end gap-1">
             <span className={s.cls}>{s.label}</span>
-            <span className="text-[11px] text-gray-400 dark:text-slate-500 tabular-nums">
+            <span className="text-[11px] text-ink-400 tabular-nums">
               {new Date(dataRef).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
             </span>
-            <span className="text-[11px] text-gray-300 dark:text-slate-600 tabular-nums">
+            <span className="text-[11px] text-ink-400 tabular-nums">
               {new Date(dataRef).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>
-          <ChevronRight className="h-4 w-4 text-gray-300 dark:text-slate-600 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all" />
+          <ChevronRight className="h-4 w-4 text-ink-400 group-hover:text-info-500 group-hover:translate-x-0.5 transition-all" />
         </div>
       </Link>
     </div>
@@ -733,26 +731,26 @@ function Paginacao({ page, totalPages, total, limit, onPrev, onNext }) {
 
   return (
     <div className="flex items-center justify-between py-1">
-      <p className="text-xs text-gray-400 dark:text-slate-500">
+      <p className="text-xs text-ink-400">
         {total > 0 ? `${inicio}–${fim} de ${total} processos` : '0 processos'}
       </p>
       <div className="flex items-center gap-1.5">
         <button
           onClick={onPrev}
           disabled={page === 1}
-          className="flex items-center gap-1 px-3 py-1.5 text-xs border border-gray-200 dark:border-slate-600 rounded-lg text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          className="flex items-center gap-1 px-3 py-1.5 text-xs border border-ink-200 rounded-lg text-ink-600 hover:bg-ink-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
         >
           <ChevronLeft className="h-3.5 w-3.5" /> Anterior
         </button>
 
-        <span className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-slate-300">
+        <span className="px-3 py-1.5 text-xs font-medium text-ink-600">
           {page} / {totalPages || 1}
         </span>
 
         <button
           onClick={onNext}
           disabled={page >= (totalPages || 1)}
-          className="flex items-center gap-1 px-3 py-1.5 text-xs border border-gray-200 dark:border-slate-600 rounded-lg text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          className="flex items-center gap-1 px-3 py-1.5 text-xs border border-ink-200 rounded-lg text-ink-600 hover:bg-ink-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
         >
           Próxima <ChevronRight className="h-3.5 w-3.5" />
         </button>

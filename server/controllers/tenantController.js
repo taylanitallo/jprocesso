@@ -87,17 +87,25 @@ const createTenant = async (req, res) => {
       return res.status(400).json({ error: 'Dados do administrador são obrigatórios' });
     }
 
+    // Normalizar CNPJ: remover máscara (pontos, barra, traço) e manter só dígitos
+    const cnpjDigits = String(cnpj).replace(/\D/g, '');
+    if (cnpjDigits.length !== 14) {
+      return res.status(400).json({
+        error: `CNPJ inválido: deve conter 14 dígitos (recebido ${cnpjDigits.length}).`
+      });
+    }
+
     // Verificar se subdomínio já existe
-    const subdominioExistente = await Tenant.findOne({ 
-      where: { subdominio } 
+    const subdominioExistente = await Tenant.findOne({
+      where: { subdominio }
     });
-    
+
     if (subdominioExistente) {
       return res.status(400).json({ error: 'Subdomínio já está em uso' });
     }
 
     // Verificar se CNPJ já existe
-    const cnpjExistente = await Tenant.findOne({ where: { cnpj } });
+    const cnpjExistente = await Tenant.findOne({ where: { cnpj: cnpjDigits } });
     if (cnpjExistente) {
       return res.status(400).json({ error: 'CNPJ já cadastrado' });
     }
@@ -108,7 +116,7 @@ const createTenant = async (req, res) => {
     // Criar tenant no banco master
     const tenant = await Tenant.create({
       nome_municipio: nome,
-      cnpj,
+      cnpj: cnpjDigits,
       subdominio,
       schema,
       cidade,
@@ -130,10 +138,11 @@ const createTenant = async (req, res) => {
         senha: adminSenha
       });
     } catch (schemaError) {
-      console.error('Erro ao criar estrutura isolada');
+      console.error('Erro ao criar estrutura isolada:', schemaError);
       // Rollback: deletar tenant
       await tenant.destroy();
-      throw new Error('Erro ao criar banco de dados isolado');
+      const detalhe = schemaError?.message || 'erro desconhecido';
+      throw new Error(`Erro ao criar banco de dados isolado: ${detalhe}`);
     }
 
     res.status(201).json({
@@ -149,8 +158,28 @@ const createTenant = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Erro ao criar município');
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    console.error('Erro ao criar município:', error);
+
+    // Erro de unicidade (subdomínio/CNPJ/schema já existentes)
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      const campo = error.errors?.[0]?.path || 'campo único';
+      return res.status(400).json({ error: `Já existe um registro com esse ${campo}.` });
+    }
+
+    // Erro de validação do Sequelize
+    if (error.name === 'SequelizeValidationError') {
+      const msg = error.errors?.map(e => e.message).join('; ') || 'dados inválidos';
+      return res.status(400).json({ error: msg });
+    }
+
+    // Erro vindo do banco (ex: valor muito longo para a coluna)
+    if (error.name === 'SequelizeDatabaseError') {
+      return res.status(400).json({
+        error: `Erro no banco de dados: ${error.original?.message || error.message}`
+      });
+    }
+
+    res.status(500).json({ error: error.message || 'Erro interno do servidor' });
   }
 };
 
@@ -312,14 +341,141 @@ async function migrarAgentes(schema, pool) {
   `);
 }
 
+async function migrarTesouraria(schema, pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ${schema}.contas_bancarias (
+      id             UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+      nome           VARCHAR(120)  NOT NULL,
+      secretaria_id  UUID          REFERENCES ${schema}.secretarias(id) ON DELETE SET NULL,
+      banco_nome     VARCHAR(150),
+      banco_codigo   VARCHAR(10),
+      agencia        VARCHAR(20),
+      agencia_digito VARCHAR(2),
+      conta          VARCHAR(30),
+      conta_digito   VARCHAR(2),
+      tipo           VARCHAR(20)   NOT NULL DEFAULT 'corrente'
+        CHECK (tipo IN ('corrente','poupanca','pagamento','investimento','especial')),
+      natureza       VARCHAR(20)   NOT NULL DEFAULT 'custeio'
+        CHECK (natureza IN ('custeio','pessoal','investimento','transferencia','receita','convenio','outras')),
+      titular        VARCHAR(200),
+      cnpj_titular   VARCHAR(14),
+      observacao     TEXT,
+      ativo          BOOLEAN       NOT NULL DEFAULT TRUE,
+      created_at     TIMESTAMP     NOT NULL DEFAULT NOW(),
+      updated_at     TIMESTAMP     NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS ${schema}.tes_receitas (
+      id          UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+      conta_id    UUID          NOT NULL REFERENCES ${schema}.contas_bancarias(id) ON DELETE RESTRICT,
+      data        DATE          NOT NULL,
+      descricao   VARCHAR(300)  NOT NULL,
+      valor       DECIMAL(15,2) NOT NULL,
+      observacao  TEXT,
+      created_at  TIMESTAMP     NOT NULL DEFAULT NOW(),
+      updated_at  TIMESTAMP     NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS ${schema}.tes_despesas (
+      id              UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+      ordem_id        INTEGER       NOT NULL,
+      conta_id        UUID          NOT NULL REFERENCES ${schema}.contas_bancarias(id) ON DELETE RESTRICT,
+      data_pagamento  DATE          NOT NULL,
+      valor_bruto     DECIMAL(15,2) NOT NULL,
+      valor_liquido   DECIMAL(15,2) NOT NULL,
+      observacao      TEXT,
+      created_at      TIMESTAMP     NOT NULL DEFAULT NOW(),
+      updated_at      TIMESTAMP     NOT NULL DEFAULT NOW(),
+      UNIQUE (ordem_id)
+    );
+  `);
+}
+
 // Migração automática: adiciona colunas ausentes em schemas já existentes
 async function migrarSchemaUsuarios(schema, pool) {
   // usuarios
   await pool.query(`
     ALTER TABLE IF EXISTS ${schema}.usuarios
       ADD COLUMN IF NOT EXISTS nome_reduzido VARCHAR(60),
-      ADD COLUMN IF NOT EXISTS permissoes JSONB NOT NULL DEFAULT '{"criar_processo":true,"editar_processo":true,"excluir_processo":false,"tramitar_processo":true,"acessar_almoxarifado":false,"acessar_financeiro":false,"acessar_contratos":false,"visualizar_relatorios":false,"gerenciar_usuarios":false,"gerenciar_secretarias":false,"gerenciar_configuracoes":false}'::jsonb;
+      ADD COLUMN IF NOT EXISTS permissoes JSONB NOT NULL DEFAULT '{"processos":{"ver":true,"criar":true,"editar":true,"excluir":false,"tramitar":true,"devolver":true,"concluir":true,"arquivar":false,"anexar_documento":true,"excluir_documento":false},"arquivo":{"acessar":false},"almoxarifado":{"acessar":false,"painel":{"ver":true},"estoque":{"ver":true,"editar":true},"entradas":{"ver":true,"registrar":true},"saidas":{"ver":true,"registrar":true},"requisicoes":{"ver":true,"criar":true,"aprovar":false,"cancelar":false},"cotas":{"ver":true,"gerenciar":false},"inventario":{"ver":true,"realizar":false},"auditoria":{"ver":false}},"patrimonio":{"acessar":false,"painel":{"ver":true},"bens":{"ver":true,"criar":false,"editar":false,"excluir":false},"tombamento":{"ver":true,"realizar":false},"transferencia":{"ver":true,"realizar":false},"baixa":{"ver":true,"realizar":false},"inventario":{"ver":true,"realizar":false},"grupos":{"ver":false,"gerenciar":false}},"financeiro":{"acessar":false,"painel":{"ver":true},"processos_did":{"ver":true},"relatorio":{"ver":false}},"contratos":{"acessar":false,"itens":{"ver":true,"criar":false,"editar":false,"excluir":false},"credores":{"ver":true,"criar":false,"editar":false,"excluir":false},"contratos":{"ver":true,"criar":false,"editar":false,"excluir":false},"ordens":{"ver":true,"criar":false,"editar":false,"excluir":false},"relatorios":{"ver":true}},"tesouraria":{"acessar":false,"contas":{"ver":true,"criar":false,"editar":false,"excluir":false},"receitas":{"ver":true,"criar":false,"editar":false,"excluir":false},"despesas":{"ver":true,"criar":false,"editar":false,"excluir":false},"relatorios":{"ver":true}},"administracao":{"gerenciar_usuarios":false,"gerenciar_secretarias":false,"gerenciar_configuracoes":false,"visualizar_relatorios":false,"visualizar_registros":false}}'::jsonb;
     ALTER TABLE IF EXISTS ${schema}.usuarios ALTER COLUMN email DROP NOT NULL;
+    DO $$
+    DECLARE
+      u RECORD;
+      old JSONB;
+      np  JSONB;
+    BEGIN
+      FOR u IN SELECT id, permissoes FROM ${schema}.usuarios WHERE NOT (permissoes ? 'processos') LOOP
+        old := u.permissoes;
+        np := jsonb_build_object(
+          'processos', jsonb_build_object(
+            'ver', true,
+            'criar',             COALESCE((old->>'criar_processo')::boolean, true),
+            'editar',            COALESCE((old->>'editar_processo')::boolean, true),
+            'excluir',           COALESCE((old->>'excluir_processo')::boolean, false),
+            'tramitar',          COALESCE((old->>'tramitar_processo')::boolean, true),
+            'devolver',          true,
+            'concluir',          true,
+            'arquivar',          false,
+            'anexar_documento',  true,
+            'excluir_documento', false
+          ),
+          'arquivo', jsonb_build_object(
+            'acessar', COALESCE((old->>'acessar_arquivo')::boolean, false)
+          ),
+          'almoxarifado', jsonb_build_object(
+            'acessar',     COALESCE((old->>'acessar_almoxarifado')::boolean, false),
+            'painel',      jsonb_build_object('ver', COALESCE((old->>'almox_tab_painel')::boolean, true)),
+            'estoque',     jsonb_build_object('ver', COALESCE((old->>'almox_tab_itens')::boolean, true),      'editar',    true),
+            'entradas',    jsonb_build_object('ver', COALESCE((old->>'almox_tab_lotes')::boolean, true),      'registrar', true),
+            'saidas',      jsonb_build_object('ver', COALESCE((old->>'almox_tab_saidas')::boolean, true),     'registrar', true),
+            'requisicoes', jsonb_build_object('ver', COALESCE((old->>'almox_tab_requisicoes')::boolean, true),'criar', true, 'aprovar', false, 'cancelar', false),
+            'cotas',       jsonb_build_object('ver', COALESCE((old->>'almox_tab_cotas')::boolean, true),      'gerenciar', false),
+            'inventario',  jsonb_build_object('ver', COALESCE((old->>'almox_tab_inventario')::boolean, true), 'realizar',  false),
+            'auditoria',   jsonb_build_object('ver', COALESCE((old->>'almox_tab_auditoria')::boolean, false))
+          ),
+          'patrimonio', jsonb_build_object(
+            'acessar',      COALESCE((old->>'acessar_almoxarifado')::boolean, false),
+            'painel',       jsonb_build_object('ver', COALESCE((old->>'pat_tab_painel')::boolean, true)),
+            'bens',         jsonb_build_object('ver', COALESCE((old->>'pat_tab_bens')::boolean, true),          'criar', false, 'editar', false, 'excluir', false),
+            'tombamento',   jsonb_build_object('ver', COALESCE((old->>'pat_tab_tombamento')::boolean, true),    'realizar', false),
+            'transferencia',jsonb_build_object('ver', COALESCE((old->>'pat_tab_transferencia')::boolean, true), 'realizar', false),
+            'baixa',        jsonb_build_object('ver', COALESCE((old->>'pat_tab_baixa')::boolean, true),         'realizar', false),
+            'inventario',   jsonb_build_object('ver', COALESCE((old->>'pat_tab_inventario')::boolean, true),    'realizar', false),
+            'grupos',       jsonb_build_object('ver', COALESCE((old->>'pat_tab_grupos')::boolean, false),       'gerenciar', false)
+          ),
+          'financeiro', jsonb_build_object(
+            'acessar',       COALESCE((old->>'acessar_financeiro')::boolean, false),
+            'painel',        jsonb_build_object('ver', COALESCE((old->>'fin_tab_painel')::boolean, true)),
+            'processos_did', jsonb_build_object('ver', COALESCE((old->>'fin_tab_processos')::boolean, true)),
+            'relatorio',     jsonb_build_object('ver', COALESCE((old->>'fin_tab_relatorio')::boolean, false))
+          ),
+          'contratos', jsonb_build_object(
+            'acessar',   COALESCE((old->>'acessar_contratos')::boolean, false),
+            'itens',     jsonb_build_object('ver', COALESCE((old->>'cont_tab_itens')::boolean, true),      'criar', false, 'editar', false, 'excluir', false),
+            'credores',  jsonb_build_object('ver', COALESCE((old->>'cont_tab_credor')::boolean, true),     'criar', false, 'editar', false, 'excluir', false),
+            'contratos', jsonb_build_object('ver', COALESCE((old->>'cont_tab_contratos')::boolean, true),  'criar', false, 'editar', false, 'excluir', false),
+            'ordens',    jsonb_build_object('ver', COALESCE((old->>'cont_tab_ordens')::boolean, true),     'criar', false, 'editar', false, 'excluir', false),
+            'relatorios',jsonb_build_object('ver', COALESCE((old->>'cont_tab_relatorios')::boolean, true))
+          ),
+          'tesouraria', jsonb_build_object(
+            'acessar',   COALESCE((old->>'acessar_tesouraria')::boolean, false),
+            'contas',    jsonb_build_object('ver', COALESCE((old->>'tes_tab_contas')::boolean, true),    'criar', false, 'editar', false, 'excluir', false),
+            'receitas',  jsonb_build_object('ver', COALESCE((old->>'tes_tab_receitas')::boolean, true),  'criar', false, 'editar', false, 'excluir', false),
+            'despesas',  jsonb_build_object('ver', COALESCE((old->>'tes_tab_despesas')::boolean, true),  'criar', false, 'editar', false, 'excluir', false),
+            'relatorios',jsonb_build_object('ver', COALESCE((old->>'tes_tab_relatorios')::boolean, true))
+          ),
+          'administracao', jsonb_build_object(
+            'gerenciar_usuarios',    COALESCE((old->>'gerenciar_usuarios')::boolean, false),
+            'gerenciar_secretarias', COALESCE((old->>'gerenciar_secretarias')::boolean, false),
+            'gerenciar_configuracoes',COALESCE((old->>'gerenciar_configuracoes')::boolean, false),
+            'visualizar_relatorios', COALESCE((old->>'visualizar_relatorios')::boolean, false),
+            'visualizar_registros',  COALESCE((old->>'visualizar_registros')::boolean, false)
+          )
+        );
+        UPDATE ${schema}.usuarios SET permissoes = np WHERE id = u.id;
+      END LOOP;
+    END $$;
   `);
 
   // processos
@@ -409,6 +565,8 @@ async function migrarSchemaUsuarios(schema, pool) {
       data_upload   TIMESTAMP     DEFAULT NOW(),
       descricao     TEXT,
       versao        INTEGER       DEFAULT 1,
+      tipo_origem   VARCHAR(30)   DEFAULT 'anexo',
+      ordem         INTEGER       DEFAULT 0,
       created_at    TIMESTAMP     DEFAULT NOW(),
       updated_at    TIMESTAMP     DEFAULT NOW()
     );
@@ -423,12 +581,26 @@ async function migrarSchemaUsuarios(schema, pool) {
       ADD COLUMN IF NOT EXISTS data_upload   TIMESTAMP             DEFAULT NOW(),
       ADD COLUMN IF NOT EXISTS descricao     TEXT,
       ADD COLUMN IF NOT EXISTS versao        INTEGER               DEFAULT 1,
+      ADD COLUMN IF NOT EXISTS tipo_origem   VARCHAR(30)           DEFAULT 'anexo',
+      ADD COLUMN IF NOT EXISTS ordem         INTEGER               DEFAULT 0,
       ADD COLUMN IF NOT EXISTS created_at    TIMESTAMP             DEFAULT NOW(),
       ADD COLUMN IF NOT EXISTS updated_at    TIMESTAMP             DEFAULT NOW();
-    ALTER TABLE ${schema}.anexos
-      ALTER COLUMN nome_original SET DEFAULT '',
-      ALTER COLUMN caminho       SET DEFAULT '',
-      ALTER COLUMN tamanho       SET DEFAULT 0;
+    -- Colunas legadas (schemas antigos): só ajustar default se existirem
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_schema = '${schema}' AND table_name = 'anexos' AND column_name = 'nome_original') THEN
+        ALTER TABLE ${schema}.anexos ALTER COLUMN nome_original SET DEFAULT '';
+      END IF;
+      IF EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_schema = '${schema}' AND table_name = 'anexos' AND column_name = 'caminho') THEN
+        ALTER TABLE ${schema}.anexos ALTER COLUMN caminho SET DEFAULT '';
+      END IF;
+      IF EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_schema = '${schema}' AND table_name = 'anexos' AND column_name = 'tamanho') THEN
+        ALTER TABLE ${schema}.anexos ALTER COLUMN tamanho SET DEFAULT 0;
+      END IF;
+    END$$;
   `);
 
   // =====================================================================
@@ -617,6 +789,54 @@ async function migrarSchemaUsuarios(schema, pool) {
     );
   `);
 
+  // dids: coluna de arquivos das certidões da Seção I
+  await pool.query(`
+    ALTER TABLE IF EXISTS ${schema}.dids
+      ADD COLUMN IF NOT EXISTS cert_sec1_arquivos JSONB DEFAULT '{}';
+  `);
+
+  // processos: coluna para documento de despacho
+  await pool.query(`
+    ALTER TABLE IF EXISTS ${schema}.processos
+      ADD COLUMN IF NOT EXISTS despacho_doc JSONB DEFAULT NULL;
+  `);
+
+  // anexos: tornar processo_id opcional + adicionar tipo_origem
+  await pool.query(`
+    ALTER TABLE IF EXISTS ${schema}.anexos
+      ALTER COLUMN processo_id DROP NOT NULL;
+    ALTER TABLE IF EXISTS ${schema}.anexos
+      ADD COLUMN IF NOT EXISTS tipo_origem VARCHAR(30) DEFAULT 'anexo';
+  `);
+
+  // tramitacoes: adicionar valor 'recebimento' ao ENUM tipo_acao (apenas se o tipo enum existir)
+  await pool.query(`
+    DO $$ BEGIN
+      IF EXISTS (
+        SELECT 1 FROM pg_type t
+        JOIN pg_namespace n ON t.typnamespace = n.oid
+        WHERE n.nspname = '${schema}'
+          AND t.typname = 'enum_tramitacoes_tipo_acao'
+      ) AND NOT EXISTS (
+        SELECT 1 FROM pg_enum e
+        JOIN pg_type t ON e.enumtypid = t.oid
+        JOIN pg_namespace n ON t.typnamespace = n.oid
+        WHERE n.nspname = '${schema}'
+          AND t.typname = 'enum_tramitacoes_tipo_acao'
+          AND e.enumlabel = 'recebimento'
+      ) THEN
+        ALTER TYPE ${schema}.enum_tramitacoes_tipo_acao ADD VALUE 'recebimento';
+      END IF;
+    END $$;
+  `);
+
+  // usuarios: cargo e portaria de nomeação
+  await pool.query(`
+    ALTER TABLE IF EXISTS ${schema}.usuarios
+      ADD COLUMN IF NOT EXISTS cargo VARCHAR(120) DEFAULT NULL,
+      ADD COLUMN IF NOT EXISTS portaria_nomeacao VARCHAR(60) DEFAULT NULL;
+  `);
+
   // Itens do inventário patrimonial
   await pool.query(`
     CREATE TABLE IF NOT EXISTS ${schema}.pat_inventario_itens (
@@ -653,6 +873,7 @@ const migrarTodosOsSchemas = async () => {
         try {
           await migrarSchemaUsuarios(tenant.schema, pool);
           await migrarAgentes(tenant.schema, pool);
+          await migrarTesouraria(tenant.schema, pool);
         } catch (_) {
           // schema pode não ter sido criado ainda
         }
@@ -707,20 +928,30 @@ async function criarEstruturaIsolada(schema, tenant, usuarioAdmin) {
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         nome VARCHAR(255) NOT NULL,
         nome_reduzido VARCHAR(60),
-        email VARCHAR(255) UNIQUE,
-        cpf VARCHAR(11) NOT NULL UNIQUE,
+        email VARCHAR(255),
+        cpf VARCHAR(11) NOT NULL,
         senha VARCHAR(255) NOT NULL,
         telefone VARCHAR(11),
         tipo VARCHAR(20) NOT NULL DEFAULT 'operacional'
-          CHECK (tipo IN ('admin', 'gestor', 'operacional')),
+          CHECK (tipo IN ('admin', 'gestor', 'operacional', 'jeos')),
         ativo BOOLEAN DEFAULT TRUE,
         secretaria_id UUID REFERENCES ${schema}.secretarias(id),
         setor_id UUID REFERENCES ${schema}.setores(id),
-        permissoes JSONB NOT NULL DEFAULT '{"criar_processo":true,"editar_processo":true,"excluir_processo":false,"tramitar_processo":true,"acessar_almoxarifado":false,"acessar_financeiro":false,"acessar_contratos":false,"visualizar_relatorios":false,"gerenciar_usuarios":false,"gerenciar_secretarias":false,"gerenciar_configuracoes":false}'::jsonb,
+        cargo VARCHAR(120) DEFAULT NULL,
+        portaria_nomeacao VARCHAR(60) DEFAULT NULL,
+        permissoes JSONB NOT NULL DEFAULT '{"criar_processo":true,"editar_processo":true,"excluir_processo":false,"tramitar_processo":true,"acessar_arquivo":false,"acessar_almoxarifado":false,"acessar_financeiro":false,"acessar_contratos":false,"acessar_tesouraria":false,"visualizar_relatorios":false,"gerenciar_usuarios":false,"gerenciar_secretarias":false,"gerenciar_configuracoes":false,"visualizar_registros":false,"almox_tab_painel":true,"almox_tab_itens":true,"almox_tab_lotes":true,"almox_tab_saidas":true,"almox_tab_requisicoes":true,"almox_tab_cotas":true,"almox_tab_inventario":true,"almox_tab_auditoria":true,"pat_tab_painel":true,"pat_tab_bens":true,"pat_tab_tombamento":true,"pat_tab_transferencia":true,"pat_tab_baixa":true,"pat_tab_inventario":true,"pat_tab_grupos":true,"fin_tab_painel":true,"fin_tab_processos":true,"fin_tab_relatorio":true,"cont_tab_itens":true,"cont_tab_credor":true,"cont_tab_contratos":true,"cont_tab_ordens":true,"cont_tab_relatorios":true,"tes_tab_contas":true,"tes_tab_receitas":true,"tes_tab_despesas":true,"tes_tab_relatorios":true}'::jsonb,
         ultimo_acesso TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      -- CPF/e-mail únicos apenas entre usuários "normais" — Administrador Jeos (tipo='jeos')
+      -- fica de fora, pois é a mesma pessoa (equipe JEOS) logando em todos os municípios
+      -- com o mesmo CPF/e-mail.
+      CREATE UNIQUE INDEX IF NOT EXISTS usuarios_cpf_unico_idx
+        ON ${schema}.usuarios (cpf) WHERE tipo <> 'jeos';
+      CREATE UNIQUE INDEX IF NOT EXISTS usuarios_email_unico_idx
+        ON ${schema}.usuarios (email) WHERE tipo <> 'jeos';
 
       -- Processos
       CREATE TABLE IF NOT EXISTS ${schema}.processos (
@@ -803,6 +1034,14 @@ async function criarEstruturaIsolada(schema, tenant, usuarioAdmin) {
     `;
 
     await pool.query(createTables);
+
+    // Aplicar migrações de schema para alinhar o schema recém-criado ao model atual
+    // (adiciona colunas como cargo/portaria_nomeacao e atualiza a estrutura de permissões)
+    await migrarSchemaUsuarios(schema, pool);
+    await migrarAgentes(schema, pool);
+
+    // Tabelas do módulo Tesouraria
+    await migrarTesouraria(schema, pool);
 
     // Inserir secretaria padrão
     const secretariaResult = await pool.query(`
@@ -907,6 +1146,59 @@ const getTenantInfo = async (req, res) => {
   }
 };
 
+// Servir a logo (login/interna) do tenant a partir do bucket privado.
+// Rota PÚBLICA por subdomain — usada na tela de login e no layout interno.
+const getTenantLogo = async (req, res) => {
+  try {
+    const storageService = require('../services/storageService');
+    const { subdomain, tipo } = req.params;
+
+    if (!['login', 'interna', 'timbrado'].includes(tipo)) {
+      return res.status(400).json({ error: 'Tipo inválido. Use "login", "interna" ou "timbrado"' });
+    }
+
+    const tenant = await Tenant.findOne({
+      where: { subdominio: subdomain, ativo: true },
+      attributes: ['configuracoes']
+    });
+    if (!tenant) return res.status(404).json({ error: 'Município não encontrado' });
+
+    const campoMap = { login: 'logo_login_url', interna: 'logo_interna_url', timbrado: 'timbrado_url' };
+    let storagePath = (tipo === 'timbrado' && tenant.configuracoes?.timbrado_path) || tenant.configuracoes?.[campoMap[tipo]];
+    if (!storagePath) return res.status(404).json({ error: 'Logo não configurada' });
+
+    // Se for URL completa do Supabase, extrair o caminho relativo dentro do bucket
+    if (storagePath.startsWith('http')) {
+      const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'jprocesso-documentos';
+      const markers = [`/object/public/${bucket}/`, `/object/sign/${bucket}/`, `/object/authenticated/${bucket}/`];
+      for (const marker of markers) {
+        if (storagePath.includes(marker)) { storagePath = storagePath.split(marker)[1].split('?')[0]; break; }
+      }
+      if (storagePath.startsWith('http')) {
+        const m = storagePath.match(new RegExp(`${bucket}/(.+?)(?:\\?|$)`));
+        if (m) storagePath = m[1];
+      }
+    }
+
+    const buffer = await storageService.downloadDocumento(storagePath);
+    const ext = (storagePath.split('.').pop() || 'png').toLowerCase();
+    const mime = ext === 'svg' ? 'image/svg+xml'
+      : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg'
+      : ext === 'webp' ? 'image/webp'
+      : 'image/png';
+    res.setHeader('Content-Type', mime);
+    // URL fixa por tenant: revalidar sempre (ETag → 304) para a troca de logo aparecer na hora
+    res.setHeader('Cache-Control', 'no-cache');
+    // Imagem pública exibida pelo site em outro domínio (front ≠ API em produção):
+    // sem isto o helmet manda CORP same-origin e o navegador bloqueia o <img>.
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.send(buffer);
+  } catch (error) {
+    console.error('Erro ao servir logo do tenant:', error);
+    res.status(404).json({ error: 'Logo não encontrada' });
+  }
+};
+
 // Atualizar apenas as configurações gerais do tenant (logos, cores)
 // Endpoint usado pela aba Gerais das Configurações
 const updateTenantConfiguracoes = async (req, res) => {
@@ -933,6 +1225,7 @@ module.exports = {
   listTenants,
   getTenantById,
   getTenantInfo,
+  getTenantLogo,
   updateTenant,
   updateTenantConfiguracoes,
   deleteTenant,

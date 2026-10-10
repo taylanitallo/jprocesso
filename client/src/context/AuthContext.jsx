@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import api, { setAccessToken, clearAccessToken } from '../services/api'
+import api, { setAccessToken, clearAccessToken, isAdminContext, getPageSubdomain } from '../services/api'
 
 const AuthContext = createContext({})
 
@@ -21,9 +21,15 @@ export default function AuthProvider({ children }) {
   }
 
   useEffect(() => {
-    const subdomain = localStorage.getItem('subdomain')
+    // Páginas do superadmin têm sessão própria (cookie admin) — não restaurar município aqui
+    const stored = localStorage.getItem('subdomain')
+    const subdomain = isAdminContext() ? null : ((stored && stored !== 'admin' ? stored : null) || getPageSubdomain())
+
+    // Segurança: forçar loading=false em até 5s independente do que acontecer
+    const safetyTimer = setTimeout(() => setLoading(false), 5000)
 
     if (!subdomain) {
+      clearTimeout(safetyTimer)
       setLoading(false)
       return
     }
@@ -33,13 +39,15 @@ export default function AuthProvider({ children }) {
 
     // M-3: ao recarregar a página, access token não existe em memória.
     // Restaurar sessão via refresh token (httpOnly cookie) — sem tocar localStorage.
-    api.post('/auth/refresh')
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 4000)
+    api.post('/auth/refresh', {}, { signal: controller.signal })
       .then(({ data }) => {
         setAccessToken(data.token)
         // Buscar usuário e tenant em paralelo com o novo token em memória
         return Promise.all([
           api.get('/auth/profile'),
-          fetch(`/api/tenants/info?subdomain=${subdomain}`).then(r => r.json()),
+          api.get(`/tenants/info?subdomain=${subdomain}`).then(r => r.data),
         ])
       })
       .then(([profileRes, tenantInfoData]) => {
@@ -47,20 +55,27 @@ export default function AuthProvider({ children }) {
         if (tenantInfoData?.tenant) setTenant(tenantInfoData.tenant)
       })
       .catch(() => {
-        // Refresh falhou (cookie expirado/ausente) — limpa sessão local
         clearAccessToken()
         localStorage.removeItem('subdomain')
         delete api.defaults.headers.common['x-tenant-subdomain']
       })
-      .finally(() => setLoading(false))
+      .finally(() => {
+        clearTimeout(timeout)
+        clearTimeout(safetyTimer)
+        setLoading(false)
+      })
+
+    return () => { clearTimeout(safetyTimer); clearTimeout(timeout) }
   }, [])
 
-  const login = async (cpf, senha, subdomain) => {
-    const { data } = await api.post('/auth/login', { cpf, senha, subdomain })
+  // Aceita CPF (fluxo direto /{subdomain}/login) ou e-mail (fluxo por e-mail na tela inicial)
+  const login = async ({ cpf, email, senha, subdomain }) => {
+    const { data } = await api.post('/auth/login', { cpf, email, senha, subdomain })
 
     // M-3: access token em memória — nunca no localStorage
     setAccessToken(data.token)
     localStorage.setItem('subdomain', data.tenant.subdominio)
+    // isAdmin/token pertencem à sessão do superadmin, que é independente — não mexer
 
     setUser(data.user)
     setTenant(data.tenant)
@@ -91,7 +106,7 @@ export default function AuthProvider({ children }) {
     const currentPath = window.location.pathname
     if (!currentPath.includes('/login')) {
       window.location.href =
-        subdomain && subdomain !== 'admin' ? `/${subdomain}/login` : '/login'
+        subdomain && subdomain !== 'admin' ? `/${subdomain}/login` : '/'
     }
   }
 

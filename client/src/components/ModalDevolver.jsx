@@ -1,8 +1,10 @@
 import { ArrowLeftCircle, ArrowRight, User, Building2, LayoutGrid } from 'lucide-react'
 import { useState } from 'react'
 import api from '../services/api'
+import { useAssinatura } from './assinatura/AssinaturaProvider'
 
 export default function ModalDevolver({ processoId, destinoDevolucao, onClose, onSuccess }) {
+  const { assinar } = useAssinatura()
   const [justificativa, setJustificativa] = useState('')
   const [error, setError] = useState('')
 
@@ -16,8 +18,13 @@ export default function ModalDevolver({ processoId, destinoDevolucao, onClose, o
     }
 
     try {
-      await api.post(`/processos/${processoId}/devolver`, { justificativa })
-      onSuccess('Processo devolvido com sucesso!')
+      const r = await assinar({
+        titulo: 'Devolver processo',
+        resumo: <p><strong>Justificativa:</strong> {justificativa.substring(0, 200)}{justificativa.length > 200 ? '...' : ''}</p>,
+        executar: (cred) => api.post(`/processos/${processoId}/devolver`, { justificativa, ...cred }),
+      })
+      if (!r) return // cancelou a assinatura
+      onSuccess('Processo devolvido e assinado eletronicamente!')
     } catch (err) {
       setError(err.response?.data?.error || 'Erro ao devolver processo')
     }
@@ -25,25 +32,25 @@ export default function ModalDevolver({ processoId, destinoDevolucao, onClose, o
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-slate-900 rounded-xl p-6 max-w-lg w-full shadow-xl">
-        <h3 className="text-2xl font-bold mb-4 text-red-600 flex items-center gap-2">
+      <div className="bg-surface rounded-xl p-6 max-w-lg w-full shadow-xl">
+        <h3 className="text-2xl font-bold mb-4 text-danger-600 flex items-center gap-2">
           <ArrowLeftCircle className="h-7 w-7" />
           Devolver Processo
         </h3>
 
         {/* Destino da devolução */}
         {destinoDevolucao && (
-          <div className="mb-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
-            <p className="text-xs font-semibold text-blue-500 dark:text-blue-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+          <div className="mb-4 bg-info-50 dark:bg-info-900/20 border border-info-200 dark:border-info-700 rounded-lg p-4">
+            <p className="text-xs font-semibold text-info-500 dark:text-info-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
               <ArrowRight className="h-3.5 w-3.5" /> Devolvendo para
             </p>
             <div className="grid grid-cols-2 gap-2">
               {destinoDevolucao.setor?.secretaria && (
                 <div className="flex items-start gap-2">
-                  <Building2 className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                  <Building2 className="h-4 w-4 text-info-500 mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-xs text-gray-500 dark:text-slate-400">Secretaria</p>
-                    <p className="text-sm font-semibold text-gray-800 dark:text-slate-200">
+                    <p className="text-xs text-ink-500">Secretaria</p>
+                    <p className="text-sm font-semibold text-ink-800">
                       {destinoDevolucao.setor.secretaria.nome || destinoDevolucao.setor.secretaria.sigla}
                     </p>
                   </div>
@@ -51,10 +58,10 @@ export default function ModalDevolver({ processoId, destinoDevolucao, onClose, o
               )}
               {destinoDevolucao.setor && (
                 <div className="flex items-start gap-2">
-                  <LayoutGrid className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                  <LayoutGrid className="h-4 w-4 text-info-500 mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-xs text-gray-500 dark:text-slate-400">Setor</p>
-                    <p className="text-sm font-semibold text-gray-800 dark:text-slate-200">
+                    <p className="text-xs text-ink-500">Setor</p>
+                    <p className="text-sm font-semibold text-ink-800">
                       {destinoDevolucao.setor.nome}
                     </p>
                   </div>
@@ -62,10 +69,10 @@ export default function ModalDevolver({ processoId, destinoDevolucao, onClose, o
               )}
               {destinoDevolucao.usuario && (
                 <div className="flex items-start gap-2 col-span-2">
-                  <User className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                  <User className="h-4 w-4 text-info-500 mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-xs text-gray-500 dark:text-slate-400">Usuário</p>
-                    <p className="text-sm font-semibold text-gray-800 dark:text-slate-200">
+                    <p className="text-xs text-ink-500">Usuário</p>
+                    <p className="text-sm font-semibold text-ink-800">
                       {destinoDevolucao.usuario.nome}
                     </p>
                   </div>
@@ -76,21 +83,21 @@ export default function ModalDevolver({ processoId, destinoDevolucao, onClose, o
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-3">
-            <p className="text-sm text-red-800 dark:text-red-300">
+          <div className="bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-700 rounded-lg p-3">
+            <p className="text-sm text-danger-800 dark:text-danger-300">
               <strong>Atenção:</strong> A devolução ficará registrada no histórico do processo.
               Certifique-se de descrever claramente o motivo.
             </p>
           </div>
 
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
+            <div className="bg-danger-50 dark:bg-danger-900/20 border border-danger-200 text-danger-700 dark:text-danger-400 px-4 py-3 rounded-lg text-sm">
               {error}
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">
+            <label className="block text-sm font-semibold text-ink-700 mb-2">
               Justificativa da Devolução *
             </label>
             <textarea
@@ -101,10 +108,10 @@ export default function ModalDevolver({ processoId, destinoDevolucao, onClose, o
               placeholder="Descreva detalhadamente o motivo da devolução (mínimo 20 caracteres)..."
               className="input-field resize-none"
             />
-            <p className="text-xs text-gray-400 mt-1 text-right">{justificativa.length} caracteres</p>
+            <p className="text-xs text-ink-400 mt-1 text-right">{justificativa.length} caracteres</p>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-2 border-t dark:border-slate-700/50">
+          <div className="flex justify-end space-x-3 pt-2 border-t">
             <button type="button" onClick={onClose} className="btn-secondary">
               Cancelar
             </button>

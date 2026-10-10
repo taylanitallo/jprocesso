@@ -1,6 +1,6 @@
 import { Calculator } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { Field, Input, SectionCard, SecaoBotoes } from './didShared'
+import { Field, Input, UserSelect, SectionCard, SecaoBotoes } from './didShared'
 
 export default function DidSecaoIV({ form, inp, saving, didId, onSave }) {
   const [locked, setLocked] = useState(false)
@@ -18,7 +18,7 @@ export default function DidSecaoIV({ form, inp, saving, didId, onSave }) {
         <Input type="date" value={form.contabil_recebido_em} onChange={inp('contabil_recebido_em')} disabled={locked} />
       </Field>
       <Field label="Responsável" half>
-        <Input value={form.contabil_responsavel} onChange={inp('contabil_responsavel')} disabled={locked} />
+        <UserSelect value={form.contabil_responsavel} onChange={inp('contabil_responsavel')} disabled={locked} secretaria="contabil" />
       </Field>
       <Field label="Auditor">
         <Input value={form.contabil_auditor} onChange={inp('contabil_auditor')} disabled={locked} />
@@ -28,7 +28,7 @@ export default function DidSecaoIV({ form, inp, saving, didId, onSave }) {
       </Field>
       <Field label="Tipo de Empenho" half>
         <select value={form.tipo_empenho} onChange={inp('tipo_empenho')} disabled={locked}
-          className={`input-field text-sm${locked ? ' opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800' : ''}`}>
+          className={`input-field text-sm${locked ? ' opacity-60 cursor-not-allowed bg-ink-50' : ''}`}>
           <option value="">Selecione...</option>
           <option value="ordinario">Ordinário</option>
           <option value="estimativo">Estimativo</option>

@@ -52,26 +52,26 @@ export default function Enviados() {
       {isLoading && (
         <div className="card p-12 text-center">
           <div className="text-4xl animate-pulse-soft mb-3">⏳</div>
-          <p className="text-gray-400 dark:text-slate-500 text-sm">Carregando processos enviados...</p>
+          <p className="text-ink-400 text-sm">Carregando processos enviados...</p>
         </div>
       )}
 
       {/* List */}
       {!isLoading && processos.length > 0 && (
         <div className="card overflow-hidden">
-          <div className="divide-y divide-gray-100 dark:divide-slate-700/50">
+          <div className="divide-y divide-ink-100">
             {processos.map((processo) => {
               const s = STATUS_INFO[processo.status] || STATUS_INFO.aberto
               return (
                 <Link
                   key={processo.id}
                   to={`/${subdomain}/processos/${processo.id}`}
-                  className="group flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-slate-700/50/40 transition-all"
+                  className="group flex items-center gap-4 p-4 hover:bg-ink-50/40 transition-all"
                 >
-                  <div className="flex-shrink-0 text-2xl">📤</div>
+                  <div className="shrink-0 text-2xl">📤</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center flex-wrap gap-2 mb-1">
-                      <span className="font-bold text-gray-900 dark:text-slate-100 text-sm">{processo.numero}</span>
+                      <span className="font-bold text-ink-900 text-sm">{processo.numero}</span>
                       <span className={s.cls}>{s.emoji} {s.label}</span>
                       {processo.tipoTramitacao && (
                         <span className="badge bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
@@ -79,24 +79,24 @@ export default function Enviados() {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm font-medium text-gray-700 dark:text-slate-300 truncate">{processo.assunto}</p>
+                    <p className="text-sm font-medium text-ink-700 truncate">{processo.assunto}</p>
                     <div className="flex flex-wrap gap-3 mt-1">
                       {processo.destinatario && (
-                        <span className="text-xs text-gray-400 dark:text-slate-500">🏛️ {processo.destinatario}</span>
+                        <span className="text-xs text-ink-400">🏛️ {processo.destinatario}</span>
                       )}
                       {processo.destinatarioSetor && (
-                        <span className="text-xs text-gray-400 dark:text-slate-500">📍 {processo.destinatarioSetor}</span>
+                        <span className="text-xs text-ink-400">📍 {processo.destinatarioSetor}</span>
                       )}
                       {processo.destinatarioUsuario && (
-                        <span className="text-xs text-gray-400 dark:text-slate-500">👤 {processo.destinatarioUsuario}</span>
+                        <span className="text-xs text-ink-400">👤 {processo.destinatarioUsuario}</span>
                       )}
                     </div>
                   </div>
-                  <div className="flex-shrink-0 text-right">
-                    <p className="text-xs text-gray-400 dark:text-slate-500">
+                  <div className="shrink-0 text-right">
+                    <p className="text-xs text-ink-400">
                       {new Date(processo.dataEnvio || processo.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                     </p>
-                    <ArrowRight className="h-4 w-4 text-gray-300 dark:text-slate-600 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all mt-1 ml-auto" />
+                    <ArrowRight className="h-4 w-4 text-ink-400 group-hover:text-info-500 group-hover:translate-x-0.5 transition-all mt-1 ml-auto" />
                   </div>
                 </Link>
               )
@@ -109,8 +109,8 @@ export default function Enviados() {
       {!isLoading && processos.length === 0 && (
         <div className="card p-14 text-center">
           <div className="text-5xl mb-4">📭</div>
-          <p className="font-semibold text-gray-500 dark:text-slate-400">Nenhum processo enviado</p>
-          <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">Você ainda não tramitou nenhum processo</p>
+          <p className="font-semibold text-ink-500">Nenhum processo enviado</p>
+          <p className="text-xs text-ink-400 mt-1">Você ainda não tramitou nenhum processo</p>
         </div>
       )}
     </div>

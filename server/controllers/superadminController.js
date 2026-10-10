@@ -788,20 +788,52 @@ const updateLogos = async (req, res) => {
 
     await storageService.uploadArquivo({ buffer: req.file.buffer, path: storagePath, contentType: req.file.mimetype });
 
-    const { createClient } = require('@supabase/supabase-js');
-    const supabase  = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
-    const bucket    = process.env.SUPABASE_STORAGE_BUCKET || 'jprocesso-documentos';
-    const { data }  = supabase.storage.from(bucket).getPublicUrl(storagePath);
-    const logoUrl   = data?.publicUrl || storagePath;
-
     const campoMap = { login: 'logo_login_url', interna: 'logo_interna_url', timbrado: 'timbrado_url' };
     const campo    = campoMap[tipo];
-    await tenant.update({ configuracoes: { ...(tenant.configuracoes || {}), [campo]: logoUrl } });
 
-    res.json({ success: true, url: logoUrl, campo });
+    const configUpdate = { ...(tenant.configuracoes || {}), [campo]: storagePath };
+    if (tipo === 'timbrado') configUpdate.timbrado_path = storagePath;
+    await tenant.update({ configuracoes: configUpdate });
+
+    res.json({ success: true, path: storagePath, campo });
   } catch (error) {
     console.error('Erro ao fazer upload do logo:', error);
-    res.status(500).json({ error: 'Erro ao enviar logo' });
+    res.status(500).json({ error: error.message || 'Erro ao enviar logo' });
+  }
+};
+
+const getTimbrado = async (req, res) => {
+  try {
+    const tenant = await getTenantOrFail(req.params.id, res);
+    if (!tenant) return;
+
+    let storagePath = tenant.configuracoes?.timbrado_path || tenant.configuracoes?.timbrado_url;
+    if (!storagePath) return res.status(404).json({ error: 'Timbrado não configurado' });
+
+    // Se for URL completa do Supabase, extrair apenas o caminho relativo dentro do bucket
+    if (storagePath.startsWith('http')) {
+      const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'jprocesso-documentos';
+      const markers = [`/object/public/${bucket}/`, `/object/sign/${bucket}/`, `/object/authenticated/${bucket}/`];
+      for (const marker of markers) {
+        if (storagePath.includes(marker)) {
+          storagePath = storagePath.split(marker)[1].split('?')[0];
+          break;
+        }
+      }
+      // fallback genérico: pegar tudo após o nome do bucket
+      if (storagePath.startsWith('http')) {
+        const m = storagePath.match(new RegExp(`${bucket}/(.+?)(?:\\?|$)`));
+        if (m) storagePath = m[1];
+      }
+    }
+
+    const buffer = await storageService.downloadDocumento(storagePath);
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.send(buffer);
+  } catch (error) {
+    console.error('Erro ao servir timbrado:', error);
+    res.status(500).json({ error: 'Erro ao carregar timbrado' });
   }
 };
 
@@ -883,6 +915,6 @@ module.exports = {
   listBackups, createBackup, downloadBackup, deleteBackup, clearBackupHistory,
   getSchedule, updateSchedule, runBackupNow,
   restoreTenant, restoreBackup: restoreTenant,
-  updateLogos, deleteLogo, updateConfig, uploadLogo: updateLogos,
+  updateLogos, deleteLogo, updateConfig, getTimbrado, uploadLogo: updateLogos,
   criarBucket, ativarTenant,
 };

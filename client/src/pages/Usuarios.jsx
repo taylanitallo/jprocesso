@@ -2,15 +2,17 @@ import { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import PageHeader from '../components/ui/PageHeader';
+import PermissoesEditor from '../components/PermissoesEditor';
+import LoadingBar from '../components/LoadingBar';
 import StatCard from '../components/ui/StatCard';
 import SectionTitle from '../components/ui/SectionTitle';
 import EmptyState from '../components/ui/EmptyState';
 import FilterBar from '../components/ui/FilterBar';
 import ActionBar from '../components/ui/ActionBar';
-import { 
-  Users, 
-  UserPlus, 
+import {
+  Smartphone,
+  Users,
+  UserPlus,
   Edit2, 
   Trash2, 
   Shield, 
@@ -30,6 +32,17 @@ import {
   FileSpreadsheet,
   ChevronDown
 } from 'lucide-react';
+
+const DEFAULT_PERMISSOES = () => ({
+  processos:     { ver: true, criar: true, editar: true, excluir: false, tramitar: true, devolver: true, concluir: true, arquivar: false, anexar_documento: true, excluir_documento: false },
+  arquivo:       { acessar: false },
+  almoxarifado:  { acessar: false, painel: { ver: true }, estoque: { ver: true, editar: true }, entradas: { ver: true, registrar: true }, saidas: { ver: true, registrar: true }, requisicoes: { ver: true, criar: true, aprovar: false, cancelar: false }, cotas: { ver: true, gerenciar: false }, inventario: { ver: true, realizar: false }, auditoria: { ver: false } },
+  patrimonio:    { acessar: false, painel: { ver: true }, bens: { ver: true, criar: false, editar: false, excluir: false }, tombamento: { ver: true, realizar: false }, transferencia: { ver: true, realizar: false }, baixa: { ver: true, realizar: false }, inventario: { ver: true, realizar: false }, grupos: { ver: false, gerenciar: false } },
+  financeiro:    { acessar: false, painel: { ver: true }, processos_did: { ver: true }, relatorio: { ver: false } },
+  contratos:     { acessar: false, itens: { ver: true, criar: false, editar: false, excluir: false }, credores: { ver: true, criar: false, editar: false, excluir: false }, contratos: { ver: true, criar: false, editar: false, excluir: false }, ordens: { ver: true, criar: false, editar: false, excluir: false }, relatorios: { ver: true } },
+  tesouraria:    { acessar: false, contas: { ver: true, criar: false, editar: false, excluir: false }, receitas: { ver: true, criar: false, editar: false, excluir: false }, despesas: { ver: true, criar: false, editar: false, excluir: false }, relatorios: { ver: true } },
+  administracao: { gerenciar_usuarios: false, gerenciar_secretarias: false, gerenciar_configuracoes: false, visualizar_relatorios: false, visualizar_registros: false },
+})
 
 export default function Usuarios() {
   const { user, refreshUser } = useAuth();
@@ -131,12 +144,7 @@ export default function Usuarios() {
             tipo,
             secretariaId: secretaria?.id || null,
             setorId: setor?.id || null,
-            permissoes: {
-              criar_processo: true, editar_processo: true, excluir_processo: false,
-              tramitar_processo: true, acessar_almoxarifado: false, acessar_financeiro: false,
-              acessar_contratos: false, visualizar_relatorios: false,
-              gerenciar_usuarios: false, gerenciar_secretarias: false, gerenciar_configuracoes: false,
-            },
+            permissoes: DEFAULT_PERMISSOES(),
           });
           results.push({ nome, status: 'ok', msg: 'Importado com sucesso' });
         } catch (err) {
@@ -202,19 +210,7 @@ export default function Usuarios() {
     tipo: 'operacional',
     secretariaId: '',
     setorId: '',
-    permissoes: {
-      criar_processo: true,
-      editar_processo: true,
-      excluir_processo: false,
-      tramitar_processo: true,
-      acessar_almoxarifado: false,
-      acessar_financeiro: false,
-      acessar_contratos: false,
-      visualizar_relatorios: false,
-      gerenciar_usuarios: false,
-      gerenciar_secretarias: false,
-      gerenciar_configuracoes: false,
-    },
+    permissoes: DEFAULT_PERMISSOES(),
   });
 
   const handleSubmit = async (e) => {
@@ -239,19 +235,7 @@ export default function Usuarios() {
         tipo: 'operacional',
         secretariaId: '',
         setorId: '',
-        permissoes: {
-          criar_processo: true,
-          editar_processo: true,
-          excluir_processo: false,
-          tramitar_processo: true,
-          acessar_almoxarifado: false,
-          acessar_financeiro: false,
-          acessar_contratos: false,
-          visualizar_relatorios: false,
-          gerenciar_usuarios: false,
-          gerenciar_secretarias: false,
-          gerenciar_configuracoes: false,
-        },
+        permissoes: DEFAULT_PERMISSOES(),
       });
       
       setSuccessMessage('Usuário criado com sucesso!');
@@ -276,20 +260,7 @@ export default function Usuarios() {
       setorId: usuario.setor?.id || usuario.setorId || '',
       ativo: usuario.ativo,
       novaSenha: '',
-      permissoes: {
-        criar_processo: true,
-        editar_processo: true,
-        excluir_processo: false,
-        tramitar_processo: true,
-        acessar_almoxarifado: false,
-        acessar_financeiro: false,
-        acessar_contratos: false,
-        visualizar_relatorios: false,
-        gerenciar_usuarios: false,
-        gerenciar_secretarias: false,
-        gerenciar_configuracoes: false,
-        ...(usuario.permissoes || {}),
-      },
+      permissoes: { ...DEFAULT_PERMISSOES(), ...(usuario.permissoes || {}) },
     });
     setShowEditPassword(false);
     setShowEditModal(true);
@@ -334,6 +305,18 @@ export default function Usuarios() {
   const handleDelete = (usuario) => {
     setDeleteTarget(usuario);
     setShowDeleteModal(true);
+  };
+
+  // Revoga o app autenticador da assinatura eletrônica (celular perdido/trocado).
+  // O usuário cadastra um novo app na próxima vez que for assinar.
+  const handleRevogarAutenticador = async (usuario) => {
+    if (!confirm(`Revogar o aplicativo autenticador de ${usuario.nome}?\n\nUse quando o celular for perdido ou trocado. O usuário precisará cadastrar o app de novo para assinar.`)) return;
+    try {
+      await api.post(`/assinaturas/totp/resetar/${usuario.id}`);
+      alert('Autenticador revogado. O usuário fará um novo cadastro na próxima assinatura.');
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao revogar o autenticador.');
+    }
   };
 
   const confirmDelete = async () => {
@@ -392,41 +375,23 @@ export default function Usuarios() {
     { value: 'operacional', label: 'Operacional', color: 'green' },
   ];
 
-  const permissoesDisponiveis = [
-    // Processos
-    { key: 'criar_processo',       label: '📋 Criar Processos',       description: 'Abrir novos processos no sistema' },
-    { key: 'editar_processo',      label: '✏️ Editar Processos',      description: 'Editar dados de processos existentes' },
-    { key: 'excluir_processo',     label: '🗑️ Excluir Processos',     description: 'Excluir processos do sistema' },
-    { key: 'tramitar_processo',    label: '🔄 Tramitar Processos',    description: 'Tramitar e despachar processos entre setores' },
-    // Módulos
-    { key: 'acessar_almoxarifado', label: '📦 Almoxarifado',          description: 'Acessar o módulo de almoxarifado' },
-    { key: 'acessar_financeiro',   label: '💵 Financeiro / DID',      description: 'Acessar o módulo financeiro e empenhos' },
-    { key: 'acessar_contratos',    label: '📝 Contratos',             description: 'Acessar o módulo de contratos' },
-    // Administração
-    { key: 'visualizar_relatorios',  label: '📊 Relatórios',            description: 'Visualizar relatórios e estatísticas' },
-    { key: 'gerenciar_usuarios',     label: '👥 Gerenciar Usuários',    description: 'Criar, editar e excluir usuários' },
-    { key: 'gerenciar_secretarias',  label: '🏛️ Gerenciar Organização', description: 'Gerenciar secretarias e setores' },
-    { key: 'gerenciar_configuracoes',label: '⚙️ Configurações',         description: 'Acessar configurações do sistema' },
-    { key: 'visualizar_registros',   label: '📋 Registros de Atividade', description: 'Visualizar o histórico de ações dos usuários' },
-  ];
 
   return (
-    <div className="max-w-7xl mx-auto space-y-5 animate-fade-in">
+    <div className="space-y-5">
       {/* Mensagem de Sucesso */}
       {successMessage && (
-        <div className="p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 rounded-lg flex items-center gap-3">
-          <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-          <p className="text-green-800 dark:text-green-300 font-medium">{successMessage}</p>
+        <div className="p-4 bg-success-50 dark:bg-success-900/30 border border-success-200 dark:border-success-700 rounded-lg flex items-center gap-3">
+          <CheckCircle className="h-5 w-5 text-success-600 dark:text-success-400" />
+          <p className="text-success-800 dark:text-success-300 font-medium">{successMessage}</p>
         </div>
       )}
 
       {/* Header */}
-      <PageHeader
+      <SectionTitle
         icon={Users}
-        eyebrow="Administração"
         title="Gerenciamento de Usuários"
         subtitle="Gerencie usuários, permissões e acessos ao sistema"
-        actions={<>
+        action={<div className="flex items-center gap-2 flex-wrap">
             {/* Menu Importar / Exportar */}
             <div className="relative">
               <button
@@ -440,35 +405,35 @@ export default function Usuarios() {
               {showIoMenu && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowIoMenu(false)} />
-                  <div className="absolute right-0 mt-1 w-56 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700/50 rounded-lg shadow-lg z-20 overflow-hidden">
+                  <div className="absolute right-0 mt-1 w-56 bg-surface border border-ink-200 rounded-lg shadow-lg z-20 overflow-hidden">
                     <button
                       onClick={() => { setShowIoMenu(false); handleExportUsuarios(); }}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700/50 text-left"
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-ink-700 hover:bg-ink-50 text-left"
                     >
-                      <Download className="h-4 w-4 text-green-600" />
+                      <Download className="h-4 w-4 text-success-600" />
                       <div>
                         <div className="font-medium">Exportar usuários</div>
-                        <div className="text-xs text-gray-400">Baixar lista em .xlsx</div>
+                        <div className="text-xs text-ink-400">Baixar lista em .xlsx</div>
                       </div>
                     </button>
                     <button
                       onClick={() => { setShowIoMenu(false); importInputRef.current?.click(); }}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700/50 text-left border-t border-gray-100 dark:border-slate-700/50"
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-ink-700 hover:bg-ink-50 text-left border-t border-ink-100"
                     >
-                      <Upload className="h-4 w-4 text-blue-600" />
+                      <Upload className="h-4 w-4 text-brand-600" />
                       <div>
                         <div className="font-medium">Importar usuários</div>
-                        <div className="text-xs text-gray-400">Carregar planilha .xlsx</div>
+                        <div className="text-xs text-ink-400">Carregar planilha .xlsx</div>
                       </div>
                     </button>
                     <button
                       onClick={() => { setShowIoMenu(false); handleDownloadModelo(); }}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700/50 text-left border-t border-gray-100 dark:border-slate-700/50"
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-ink-700 hover:bg-ink-50 text-left border-t border-ink-100"
                     >
                       <FileSpreadsheet className="h-4 w-4 text-orange-500" />
                       <div>
                         <div className="font-medium">Baixar modelo</div>
-                        <div className="text-xs text-gray-400">Planilha de importação</div>
+                        <div className="text-xs text-ink-400">Planilha de importação</div>
                       </div>
                     </button>
                   </div>
@@ -487,13 +452,13 @@ export default function Usuarios() {
               <UserPlus className="h-5 w-5" />
               Novo Usuário
             </button>
-        </>}
+        </div>}
       />
 
       {/* Filtros */}
       <FilterBar>
         <div className="relative flex-1 min-w-48">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-ink-400" />
           <input type="text" placeholder="Buscar por nome, email ou CPF..." value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setPageUsuarios(1); }} className="input-field pl-10" />
         </div>
         <select value={filterTipo} onChange={(e) => { setFilterTipo(e.target.value); setPageUsuarios(1); }} className="input-field w-48">
@@ -517,38 +482,38 @@ export default function Usuarios() {
         <div className="px-6 pt-5 pb-2">
           <SectionTitle icon={Users} title="Lista de Usuários" subtitle={`${filteredUsuarios.length} usuário(s)`} />
         </div>
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700/50">
-          <thead className="bg-gray-50 dark:bg-slate-700/30">
+        <table className="min-w-full divide-y divide-ink-200">
+          <thead className="bg-ink-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Usuário</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Tipo</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Secretaria/Setor</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">Ações</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-ink-500 uppercase tracking-wider">Usuário</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-ink-500 uppercase tracking-wider">Tipo</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-ink-500 uppercase tracking-wider">Secretaria/Setor</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-ink-500 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-ink-500 uppercase tracking-wider">Ações</th>
             </tr>
           </thead>
-          <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700/50">
+          <tbody className="bg-surface divide-y divide-ink-200">
             {usuariosPaginados.map((usuario) => (
-              <tr key={usuario.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/40 transition-colors">
+              <tr key={usuario.id} className="hover:bg-ink-50 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-full flex items-center justify-center">
+                    <div className="shrink-0 h-10 w-10 bg-gradient-to-br from-info-400 to-indigo-600 rounded-full flex items-center justify-center">
                       <span className="text-white font-bold text-sm">
                         {usuario.nome.charAt(0).toUpperCase()}
                       </span>
                     </div>
                     <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900 dark:text-slate-100">{usuario.nome}</div>
-                      <div className="text-sm text-gray-500 dark:text-slate-400">{usuario.email}</div>
+                      <div className="text-sm font-medium text-ink-900">{usuario.nome}</div>
+                      <div className="text-sm text-ink-500">{usuario.email}</div>
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`
                     px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
-                    ${usuario.tipo === 'admin' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' : ''}
-                    ${usuario.tipo === 'gestor' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : ''}
-                    ${usuario.tipo === 'operacional' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : ''}
+                    ${usuario.tipo === 'admin' ? 'bg-danger-100 text-danger-800 dark:bg-danger-900/30 dark:text-danger-400' : ''}
+                    ${usuario.tipo === 'gestor' ? 'bg-info-100 text-info-800 dark:bg-info-900/30 dark:text-info-400' : ''}
+                    ${usuario.tipo === 'operacional' ? 'bg-success-100 text-success-800 dark:bg-success-900/30 dark:text-success-400' : ''}
                   `}>
                     {usuario.tipo === 'admin' ? 'Administrador' : ''}
                     {usuario.tipo === 'gestor' ? 'Gestor' : ''}
@@ -556,8 +521,8 @@ export default function Usuarios() {
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="text-sm font-medium text-gray-800 dark:text-slate-200">{usuario.secretaria?.sigla || '-'}</div>
-                  <div className="text-sm text-gray-500 dark:text-slate-400">{usuario.setor?.nome || '-'}</div>
+                  <div className="text-sm font-medium text-ink-800">{usuario.secretaria?.sigla || '-'}</div>
+                  <div className="text-sm text-ink-500">{usuario.setor?.nome || '-'}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <button
@@ -567,13 +532,13 @@ export default function Usuarios() {
                   >
                     {usuario.ativo ? (
                       <>
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                        <span className="text-sm text-green-600">Ativo</span>
+                        <CheckCircle className="h-5 w-5 text-success-500" />
+                        <span className="text-sm text-success-600">Ativo</span>
                       </>
                     ) : (
                       <>
-                        <XCircle className="h-5 w-5 text-red-500" />
-                        <span className="text-sm text-red-600">Inativo</span>
+                        <XCircle className="h-5 w-5 text-danger-500" />
+                        <span className="text-sm text-danger-600">Inativo</span>
                       </>
                     )}
                   </button>
@@ -581,13 +546,20 @@ export default function Usuarios() {
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <button
                     onClick={() => handleEdit(usuario)}
-                    className="text-blue-600 hover:text-blue-900 mr-3"
+                    className="text-brand-600 hover:text-info-900 mr-3"
                   >
                     <Edit2 className="h-4 w-4" />
                   </button>
                   <button
+                    onClick={() => handleRevogarAutenticador(usuario)}
+                    title="Revogar aplicativo autenticador (celular perdido ou trocado)"
+                    className="text-amber-600 hover:text-amber-800 mr-3"
+                  >
+                    <Smartphone className="h-4 w-4" />
+                  </button>
+                  <button
                     onClick={() => handleDelete(usuario)}
-                    className="text-red-600 hover:text-red-900"
+                    className="text-danger-600 hover:text-danger-900"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -601,31 +573,31 @@ export default function Usuarios() {
           <EmptyState icon={Users} title="Nenhum usuário encontrado" description="Tente ajustar os filtros de busca" />
         )}
         {totalPagesUsuarios > 1 && (
-          <div className="px-6 py-3 border-t border-gray-200 dark:border-slate-700/50 flex items-center justify-between bg-gray-50 dark:bg-slate-800/50">
-            <span className="text-xs text-gray-500 dark:text-slate-400">
+          <div className="px-6 py-3 border-t border-ink-200 flex items-center justify-between bg-ink-50">
+            <span className="text-xs text-ink-500">
               Página {pageUsuarios} de {totalPagesUsuarios} · {filteredUsuarios.length} usuário(s)
             </span>
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setPageUsuarios(1)}
                 disabled={pageUsuarios === 1}
-                className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                className="px-2 py-1 text-xs rounded-sm border border-ink-300 disabled:opacity-40 hover:bg-ink-100 transition-colors"
               >«</button>
               <button
                 onClick={() => setPageUsuarios(p => Math.max(1, p - 1))}
                 disabled={pageUsuarios === 1}
-                className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                className="px-2 py-1 text-xs rounded-sm border border-ink-300 disabled:opacity-40 hover:bg-ink-100 transition-colors"
               >‹</button>
-              <span className="px-3 py-1 text-xs font-semibold bg-blue-600 text-white rounded">{pageUsuarios}</span>
+              <span className="px-3 py-1 text-xs font-semibold bg-brand-600 text-white rounded-sm">{pageUsuarios}</span>
               <button
                 onClick={() => setPageUsuarios(p => Math.min(totalPagesUsuarios, p + 1))}
                 disabled={pageUsuarios === totalPagesUsuarios}
-                className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                className="px-2 py-1 text-xs rounded-sm border border-ink-300 disabled:opacity-40 hover:bg-ink-100 transition-colors"
               >›</button>
               <button
                 onClick={() => setPageUsuarios(totalPagesUsuarios)}
                 disabled={pageUsuarios === totalPagesUsuarios}
-                className="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                className="px-2 py-1 text-xs rounded-sm border border-ink-300 disabled:opacity-40 hover:bg-ink-100 transition-colors"
               >»</button>
             </div>
           </div>
@@ -635,10 +607,10 @@ export default function Usuarios() {
       {/* Modal Criar Usuário */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-xl max-w-4xl w-full my-8 shadow-xl">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700/50 sticky top-0 bg-white dark:bg-slate-900 z-10">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100">Novo Usuário</h2>
-              <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Preencha as informações do usuário</p>
+          <div className="bg-surface rounded-xl max-w-4xl w-full my-8 shadow-xl">
+            <div className="px-6 py-4 border-b border-ink-200 sticky top-0 bg-surface z-10">
+              <h2 className="text-xl font-semibold text-ink-900">Novo Usuário</h2>
+              <p className="text-sm text-ink-500 mt-1">Preencha as informações do usuário</p>
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[calc(90vh-120px)] overflow-y-auto">
@@ -647,26 +619,26 @@ export default function Usuarios() {
                 <SectionTitle icon={Users} title="Dados Pessoais" />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Nome Completo *</label>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">Nome Completo *</label>
                     <input type="text" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} required className="input-field" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Nome Reduzido <span className="text-gray-400 font-normal">(exibido na tela)</span></label>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">Nome Reduzido <span className="text-ink-400 font-normal">(exibido na tela)</span></label>
                     <input type="text" value={formData.nomeReduzido} onChange={(e) => setFormData({ ...formData, nomeReduzido: e.target.value })} maxLength="60" className="input-field" placeholder="Ex: João Silva" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">CPF *</label>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">CPF *</label>
                     <input type="text" value={formData.cpf} onChange={(e) => setFormData({ ...formData, cpf: e.target.value })} required maxLength="11" className="input-field" placeholder="Apenas números" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">E-mail *</label>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">E-mail *</label>
                     <input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required className="input-field" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Senha *</label>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">Senha *</label>
                     <div className="relative">
                       <input type={showPassword ? 'text' : 'password'} value={formData.senha} onChange={(e) => setFormData({ ...formData, senha: e.target.value })} required minLength="6" className="input-field pr-10" />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-400">
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
@@ -675,24 +647,24 @@ export default function Usuarios() {
               </div>
 
               {/* Vinculação */}
-              <div className="border-t dark:border-slate-700/50 pt-6">
+              <div className="border-t pt-6">
                 <SectionTitle icon={Building2} title="Vinculação Organizacional" />
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Tipo de Usuário *</label>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">Tipo de Usuário *</label>
                     <select value={formData.tipo} onChange={(e) => setFormData({ ...formData, tipo: e.target.value })} className="input-field">
                       {tiposUsuario.map(tipo => (<option key={tipo.value} value={tipo.value}>{tipo.label}</option>))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Secretaria *</label>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">Secretaria *</label>
                     <select value={formData.secretariaId} onChange={(e) => setFormData({ ...formData, secretariaId: e.target.value, setorId: '' })} required className="input-field">
                       <option value="">Selecione...</option>
                       {secretarias.map(sec => (<option key={sec.id} value={sec.id}>{sec.sigla} - {sec.nome}</option>))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Setor *</label>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">Setor *</label>
                     <select value={formData.setorId} onChange={(e) => setFormData({ ...formData, setorId: e.target.value })} required disabled={!formData.secretariaId} className="input-field disabled:opacity-60">
                       <option value="">Selecione...</option>
                       {setores.filter(s => s.secretaria_id === formData.secretariaId || s.secretariaId === formData.secretariaId).sort((a, b) => a.nome.localeCompare(b.nome)).map(setor => (<option key={setor.id} value={setor.id}>{setor.nome}</option>))}
@@ -701,25 +673,18 @@ export default function Usuarios() {
                 </div>
               </div>
 
-              <div className="border-t dark:border-slate-700/50 pt-6">
+              <div className="border-t pt-6">
                 <SectionTitle icon={Shield} title="Permissões de Acesso" />
-                <div className="bg-gray-50 dark:bg-slate-700/20 rounded-lg p-4 space-y-3">
-                  {permissoesDisponiveis.map((perm) => (
-                    <div key={perm.key} className="flex items-start justify-between py-2">
-                      <div className="flex-1">
-                        <label className="font-medium text-gray-800 dark:text-slate-200 text-sm">{perm.label}</label>
-                        <p className="text-xs text-gray-500 dark:text-slate-400">{perm.description}</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer ml-4">
-                        <input type="checkbox" checked={formData.permissoes[perm.key]} onChange={(e) => setFormData({ ...formData, permissoes: { ...formData.permissoes, [perm.key]: e.target.checked } })} className="sr-only peer" />
-                        <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
-                      </label>
-                    </div>
-                  ))}
+                <div className="mt-3">
+                  <PermissoesEditor
+                    permissoes={formData.permissoes}
+                    onChange={(p) => setFormData({ ...formData, permissoes: p })}
+                    secretariasList={secretarias}
+                  />
                 </div>
               </div>
 
-              <div className="pt-4 border-t dark:border-slate-700/50 sticky bottom-0 bg-white dark:bg-slate-900">
+              <div className="pt-4 border-t sticky bottom-0 bg-surface">
                 <ActionBar>
                   <button type="button" onClick={() => setShowModal(false)} className="btn-secondary">Cancelar</button>
                   <button type="submit" disabled={loading} className="btn-primary flex items-center gap-2">
@@ -735,10 +700,10 @@ export default function Usuarios() {
       {/* Modal Editar Usuário */}
       {showEditModal && selectedUser && editData && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-xl max-w-4xl w-full my-8 shadow-xl">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700/50 sticky top-0 bg-white dark:bg-slate-900 z-10">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100">Editar Usuário</h2>
-              <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Atualize as informações e permissões</p>
+          <div className="bg-surface rounded-xl w-[95%] my-8 shadow-xl">
+            <div className="px-6 py-4 border-b border-ink-200 sticky top-0 bg-surface z-10">
+              <h2 className="text-xl font-semibold text-ink-900">Editar Usuário</h2>
+              <p className="text-sm text-ink-500 mt-1">Atualize as informações e permissões</p>
             </div>
 
             <form onSubmit={handleSubmitEdit} className="p-6 space-y-6 max-h-[calc(90vh-120px)] overflow-y-auto">
@@ -748,26 +713,26 @@ export default function Usuarios() {
                 <SectionTitle icon={Users} title="Dados Pessoais" />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Nome Completo *</label>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">Nome Completo *</label>
                     <input type="text" value={editData.nome} onChange={(e) => setEditData({ ...editData, nome: e.target.value })} required className="input-field" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Nome Reduzido <span className="text-gray-400 font-normal">(exibido na tela)</span></label>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">Nome Reduzido <span className="text-ink-400 font-normal">(exibido na tela)</span></label>
                     <input type="text" value={editData.nomeReduzido} onChange={(e) => setEditData({ ...editData, nomeReduzido: e.target.value })} maxLength="60" className="input-field" placeholder="Ex: João Silva" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">CPF</label>
-                    <input type="text" value={editData.cpf} disabled className="input-field disabled:bg-gray-50 disabled:text-gray-500 dark:disabled:bg-slate-700/30" />
+                    <label className="block text-sm font-medium text-ink-700 mb-1">CPF</label>
+                    <input type="text" value={editData.cpf} disabled className="input-field disabled:bg-ink-50 disabled:text-ink-500" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">E-mail *</label>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">E-mail *</label>
                     <input type="email" value={editData.email} onChange={(e) => setEditData({ ...editData, email: e.target.value })} required className="input-field" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Nova Senha <span className="text-gray-400 font-normal">(opcional)</span></label>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">Nova Senha <span className="text-ink-400 font-normal">(opcional)</span></label>
                     <div className="relative">
                       <input type={showEditPassword ? 'text' : 'password'} value={editData.novaSenha} onChange={(e) => setEditData({ ...editData, novaSenha: e.target.value })} minLength="6" className="input-field pr-10" placeholder="Deixe em branco para manter" />
-                      <button type="button" onClick={() => setShowEditPassword(!showEditPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <button type="button" onClick={() => setShowEditPassword(!showEditPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-400">
                         {showEditPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
@@ -776,24 +741,24 @@ export default function Usuarios() {
               </div>
 
               {/* Vinculação */}
-              <div className="border-t dark:border-slate-700/50 pt-6">
+              <div className="border-t pt-6">
                 <SectionTitle icon={Building2} title="Vinculação Organizacional" />
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Tipo de Usuário *</label>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">Tipo de Usuário *</label>
                     <select value={editData.tipo} onChange={(e) => setEditData({ ...editData, tipo: e.target.value })} className="input-field">
                       {tiposUsuario.map(tipo => (<option key={tipo.value} value={tipo.value}>{tipo.label}</option>))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Secretaria</label>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">Secretaria</label>
                     <select value={editData.secretariaId} onChange={(e) => setEditData({ ...editData, secretariaId: e.target.value, setorId: '' })} className="input-field">
                       <option value="">Selecione...</option>
                       {secretarias.map(sec => (<option key={sec.id} value={sec.id}>{sec.sigla} - {sec.nome}</option>))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Setor</label>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">Setor</label>
                     <select value={editData.setorId} onChange={(e) => setEditData({ ...editData, setorId: e.target.value })} disabled={!editData.secretariaId} className="input-field disabled:opacity-60">
                       <option value="">Selecione...</option>
                       {setores.filter(s => s.secretaria_id === editData.secretariaId || s.secretariaId === editData.secretariaId).sort((a, b) => a.nome.localeCompare(b.nome)).map(setor => (<option key={setor.id} value={setor.id}>{setor.nome}</option>))}
@@ -803,32 +768,25 @@ export default function Usuarios() {
                 <div className="mt-4">
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input type="checkbox" checked={editData.ativo} onChange={(e) => setEditData({ ...editData, ativo: e.target.checked })} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 relative" />
-                    <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Usuário ativo (pode fazer login)</span>
+                    <div className="w-11 h-6 bg-ink-200 peer-focus:outline-hidden peer-focus:ring-4 peer-focus:ring-info-300 dark:peer-focus:ring-info-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface after:border-ink-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-600 relative" />
+                    <span className="text-sm font-medium text-ink-700">Usuário ativo (pode fazer login)</span>
                   </label>
                 </div>
               </div>
 
               {/* Permissões */}
-              <div className="border-t dark:border-slate-700/50 pt-6">
+              <div className="border-t pt-6">
                 <SectionTitle icon={Shield} title="Permissões de Acesso" />
-                <div className="bg-gray-50 dark:bg-slate-700/20 rounded-lg p-4 space-y-3">
-                  {permissoesDisponiveis.map((perm) => (
-                    <div key={perm.key} className="flex items-start justify-between py-2">
-                      <div className="flex-1">
-                        <label className="font-medium text-gray-800 dark:text-slate-200 text-sm">{perm.label}</label>
-                        <p className="text-xs text-gray-500 dark:text-slate-400">{perm.description}</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer ml-4">
-                        <input type="checkbox" checked={!!editData.permissoes[perm.key]} onChange={(e) => setEditData({ ...editData, permissoes: { ...editData.permissoes, [perm.key]: e.target.checked } })} className="sr-only peer" />
-                        <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
-                      </label>
-                    </div>
-                  ))}
+                <div className="mt-3">
+                  <PermissoesEditor
+                    permissoes={editData.permissoes}
+                    onChange={(p) => setEditData({ ...editData, permissoes: p })}
+                    secretariasList={secretarias}
+                  />
                 </div>
               </div>
 
-              <div className="pt-4 border-t dark:border-slate-700/50 sticky bottom-0 bg-white dark:bg-slate-900">
+              <div className="pt-4 border-t sticky bottom-0 bg-surface">
                 <ActionBar>
                   <button type="button" onClick={() => { setShowEditModal(false); setSelectedUser(null); setEditData(null); }} className="btn-secondary">Cancelar</button>
                   <button type="submit" disabled={loading} className="btn-primary flex items-center gap-2">
@@ -844,41 +802,41 @@ export default function Usuarios() {
       {/* Modal de Confirmação de Exclusão */}
       {showDeleteModal && deleteTarget && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-xl max-w-md w-full shadow-xl">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700/50">
+          <div className="bg-surface rounded-xl max-w-md w-full shadow-xl">
+            <div className="px-6 py-4 border-b border-ink-200">
               <div className="flex items-center gap-3">
-                <div className="flex-shrink-0 w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-                  <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
+                <div className="shrink-0 w-10 h-10 bg-danger-100 dark:bg-danger-900/30 rounded-full flex items-center justify-center">
+                  <AlertTriangle className="h-6 w-6 text-danger-600 dark:text-danger-400" />
                 </div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                <h2 className="text-xl font-semibold text-ink-900 dark:text-white">
                   Confirmar Exclusão
                 </h2>
               </div>
             </div>
 
             <div className="p-6">
-              <p className="text-gray-700 dark:text-slate-300 mb-4">
+              <p className="text-ink-700 mb-4">
                 Tem certeza que deseja excluir o usuário <strong>{deleteTarget.nome}</strong>?
               </p>
-              <p className="text-sm text-gray-600 dark:text-slate-400">
+              <p className="text-sm text-ink-600">
                 Esta ação não pode ser desfeita.
               </p>
             </div>
 
-            <div className="px-6 py-4 bg-gray-50 dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700/50">
+            <div className="px-6 py-4 bg-ink-50 border-t border-ink-200">
               <ActionBar>
                 <button
                   onClick={() => {
                     setShowDeleteModal(false);
                     setDeleteTarget(null);
                   }}
-                  className="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700/50"
+                  className="px-4 py-2 border border-ink-300 rounded-md text-ink-700 hover:bg-ink-50"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={confirmDelete}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  className="px-4 py-2 bg-danger-600 text-white rounded-md hover:bg-danger-700"
                 >
                   Excluir
                 </button>
@@ -890,32 +848,29 @@ export default function Usuarios() {
       {/* Modal Resultado da Importação */}
       {showImportModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-xl max-w-lg w-full shadow-xl">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700/50 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100 flex items-center gap-2">
-                <Upload className="h-5 w-5 text-blue-600" />
+          <div className="bg-surface rounded-xl max-w-lg w-full shadow-xl">
+            <div className="px-6 py-4 border-b border-ink-200 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-ink-900 flex items-center gap-2">
+                <Upload className="h-5 w-5 text-brand-600" />
                 Resultado da Importação
               </h2>
               {!importLoading && (
-                <button onClick={() => setShowImportModal(false)} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg">
+                <button onClick={() => setShowImportModal(false)} className="p-1.5 text-ink-400 hover:text-ink-600 rounded-lg">
                   <XCircle className="h-5 w-5" />
                 </button>
               )}
             </div>
             <div className="p-6">
               {importLoading ? (
-                <div className="flex flex-col items-center gap-3 py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                  <p className="text-sm text-gray-500 dark:text-slate-400">Importando usuários...</p>
-                </div>
+                <LoadingBar label="Importando usuários..." />
               ) : (
                 <>
                   <div className="flex gap-4 mb-4 text-sm">
-                    <span className="flex items-center gap-1.5 text-green-600 font-medium">
+                    <span className="flex items-center gap-1.5 text-success-600 font-medium">
                       <CheckCircle className="h-4 w-4" />
                       {importResults.filter(r => r.status === 'ok').length} importados
                     </span>
-                    <span className="flex items-center gap-1.5 text-red-600 font-medium">
+                    <span className="flex items-center gap-1.5 text-danger-600 font-medium">
                       <XCircle className="h-4 w-4" />
                       {importResults.filter(r => r.status === 'erro').length} com erro
                     </span>
@@ -924,8 +879,8 @@ export default function Usuarios() {
                     {importResults.map((r, i) => (
                       <div key={i} className={`flex items-start gap-2 text-sm px-3 py-2 rounded-lg ${
                         r.status === 'ok'
-                          ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300'
-                          : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300'
+                          ? 'bg-success-50 dark:bg-success-900/20 text-success-800 dark:text-success-300'
+                          : 'bg-danger-50 dark:bg-danger-900/20 text-danger-800 dark:text-danger-300'
                       }`}>
                         {r.status === 'ok'
                           ? <CheckCircle className="h-4 w-4 shrink-0 mt-0.5" />

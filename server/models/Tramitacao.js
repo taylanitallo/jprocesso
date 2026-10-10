@@ -33,7 +33,7 @@ const defineTramitacaoModel = (sequelize) => {
       comment: 'FK: Usuário destinatário (opcional)'
     },
     tipo_acao: {
-      type: DataTypes.ENUM('abertura', 'tramite', 'devolucao', 'conclusao', 'arquivamento'),
+      type: DataTypes.ENUM('abertura', 'tramite', 'devolucao', 'conclusao', 'arquivamento', 'recebimento'),
       allowNull: false,
       comment: 'Tipo de ação realizada'
     },

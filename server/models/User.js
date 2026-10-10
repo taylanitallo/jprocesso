@@ -59,22 +59,29 @@ const defineUserModel = (sequelize) => {
       allowNull: true,
       comment: 'FK: Setor específico do usuário'
     },
+    cargo: {
+      type: DataTypes.STRING(120),
+      allowNull: true,
+      comment: 'Cargo/função do usuário (ex: Prefeito Municipal, Secretário de Finanças)'
+    },
+    portaria_nomeacao: {
+      type: DataTypes.STRING(60),
+      allowNull: true,
+      comment: 'Número da portaria de nomeação (ex: Portaria nº 001/2026)'
+    },
     permissoes: {
       type: DataTypes.JSONB,
       defaultValue: {
-        criar_processo: true,
-        editar_processo: true,
-        excluir_processo: false,
-        tramitar_processo: true,
-        acessar_almoxarifado: false,
-        acessar_financeiro: false,
-        acessar_contratos: false,
-        visualizar_relatorios: false,
-        gerenciar_usuarios: false,
-        gerenciar_secretarias: false,
-        gerenciar_configuracoes: false
+        processos:     { ver: true, criar: true, editar: true, excluir: false, tramitar: true, devolver: true, concluir: true, arquivar: false, anexar_documento: true, excluir_documento: false },
+        arquivo:       { acessar: false },
+        almoxarifado:  { acessar: false, painel: { ver: true }, estoque: { ver: true, editar: true }, entradas: { ver: true, registrar: true }, saidas: { ver: true, registrar: true }, requisicoes: { ver: true, criar: true, aprovar: false, cancelar: false }, cotas: { ver: true, gerenciar: false }, inventario: { ver: true, realizar: false }, auditoria: { ver: false } },
+        patrimonio:    { acessar: false, painel: { ver: true }, bens: { ver: true, criar: false, editar: false, excluir: false }, tombamento: { ver: true, realizar: false }, transferencia: { ver: true, realizar: false }, baixa: { ver: true, realizar: false }, inventario: { ver: true, realizar: false }, grupos: { ver: false, gerenciar: false } },
+        financeiro:    { acessar: false, painel: { ver: true }, processos_did: { ver: true }, relatorio: { ver: false } },
+        contratos:     { acessar: false, itens: { ver: true, criar: false, editar: false, excluir: false }, credores: { ver: true, criar: false, editar: false, excluir: false }, contratos: { ver: true, criar: false, editar: false, excluir: false }, ordens: { ver: true, criar: false, editar: false, excluir: false }, relatorios: { ver: true } },
+        tesouraria:    { acessar: false, contas: { ver: true, criar: false, editar: false, excluir: false }, receitas: { ver: true, criar: false, editar: false, excluir: false }, despesas: { ver: true, criar: false, editar: false, excluir: false }, relatorios: { ver: true } },
+        administracao: { gerenciar_usuarios: false, gerenciar_secretarias: false, gerenciar_configuracoes: false, visualizar_relatorios: false, visualizar_registros: false },
       },
-      comment: 'Permissões específicas do usuário'
+      comment: 'Permissões específicas do usuário (nested por módulo/aba/ação)'
     },
     ultimoAcesso: {
       type: DataTypes.DATE,

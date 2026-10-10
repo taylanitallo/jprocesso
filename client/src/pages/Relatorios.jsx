@@ -3,11 +3,14 @@ import { useQuery } from 'react-query'
 import { BarChart3, TrendingUp, FileText, Building2, Clock, CheckCircle, ClipboardList, Calendar, ListFilter, FileDown, FileSpreadsheet, Trash2, Loader2, Inbox } from 'lucide-react'
 import api from '../services/api'
 import { PageHeader, SectionTitle } from '../components/ui'
+import LoadingBar from '../components/LoadingBar'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
 import { format } from 'date-fns'
 import { useAuth } from '../context/AuthContext'
+import { applyTimbradoToPage } from '../utils/timbradoStore'
+import { getMargens } from '../utils/margensStore'
 
 export default function Relatorios() {
   const [dataInicio, setDataInicio] = useState('')
@@ -115,68 +118,71 @@ export default function Relatorios() {
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.width
     const pageHeight = doc.internal.pageSize.height
+    const mg = getMargens()
+    const M  = mg.left
+    const MR = mg.right
     let currentPage = 1
 
-    // Função para adicionar cabeçalho institucional
+    // Função para adicionar cabeçalho institucional (timbrado + texto, sem faixa)
     const addHeader = () => {
-      // Fundo azul do cabeçalho
-      doc.setFillColor(37, 99, 235)
-      doc.rect(0, 0, pageWidth, 35, 'F')
-      
-      // Linha de detalhe
-      doc.setFillColor(29, 78, 216)
-      doc.rect(0, 35, pageWidth, 2, 'F')
-      
+      applyTimbradoToPage(doc)
+
       // Título do sistema
-      doc.setTextColor(255, 255, 255)
-      doc.setFontSize(20)
+      doc.setTextColor(37, 99, 235)
+      doc.setFontSize(18)
       doc.setFont('helvetica', 'bold')
-      doc.text('jProcesso - Sistema de Tramitação', pageWidth / 2, 15, { align: 'center' })
-      
+      doc.text('jProcesso - Sistema de Tramitação', pageWidth / 2, mg.top, { align: 'center' })
+
       // Nome do município/instituição
-      doc.setFontSize(12)
+      doc.setFontSize(11)
       doc.setFont('helvetica', 'normal')
+      doc.setTextColor(60, 70, 90)
       const nomeMunicipio = tenant?.nome_municipio || tenant?.nome || 'Prefeitura Municipal'
-      doc.text(nomeMunicipio.toUpperCase(), pageWidth / 2, 25, { align: 'center' })
-      
+      doc.text(nomeMunicipio.toUpperCase(), pageWidth / 2, mg.top + 7, { align: 'center' })
+
       // Cidade/Estado
       if (tenant?.cidade && tenant?.estado) {
         doc.setFontSize(9)
-        doc.text(`${tenant.cidade} - ${tenant.estado}`, pageWidth / 2, 31, { align: 'center' })
+        doc.text(`${tenant.cidade} - ${tenant.estado}`, pageWidth / 2, mg.top + 12, { align: 'center' })
       }
-      
+
+      // Linha separadora
+      doc.setDrawColor(37, 99, 235)
+      doc.line(M, mg.top + 15, pageWidth - MR, mg.top + 15)
+
       // Resetar cor do texto
       doc.setTextColor(0, 0, 0)
     }
+    // Posição Y onde o conteúdo pode começar (logo abaixo do cabeçalho)
+    const headerBottom = mg.top + 20
 
     // Função para adicionar rodapé
     const addFooter = (pageNum) => {
       doc.setFontSize(8)
       doc.setTextColor(100, 100, 100)
-      
+
       // Linha superior do rodapé
       doc.setDrawColor(200, 200, 200)
-      doc.line(14, pageHeight - 15, pageWidth - 14, pageHeight - 15)
-      
-      // Informações do rodapé
-      const dataGeracao = format(new Date(), 'dd/MM/yyyy HH:mm')
-      doc.text(`Gerado em: ${dataGeracao}`, 14, pageHeight - 10)
-      doc.text(`Usuário: ${user?.nome || 'Sistema'}`, pageWidth / 2, pageHeight - 10, { align: 'center' })
-      doc.text(`Página ${pageNum}`, pageWidth - 14, pageHeight - 10, { align: 'right' })
-      
+      doc.line(M, pageHeight - mg.bottom + 2, pageWidth - MR, pageHeight - mg.bottom + 2)
+
+      // Rodapé enxuto: apenas o número da página (demais infos constam no topo)
+      doc.text(`Página ${pageNum}`, pageWidth - MR, pageHeight - mg.bottom + 7, { align: 'right' })
+
       doc.setTextColor(0, 0, 0)
     }
 
     // ========== PÁGINA 1: CAPA E RESUMO ==========
     addHeader()
-    
+
     // Título do relatório
+    let yTitulo = headerBottom + 8
     doc.setFontSize(18)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(37, 99, 235)
-    doc.text('RELATÓRIO DE PROCESSOS', pageWidth / 2, 50, { align: 'center' })
-    
+    doc.text('RELATÓRIO DE PROCESSOS', pageWidth / 2, yTitulo, { align: 'center' })
+
     // Subtítulo com período
+    yTitulo += 8
     doc.setFontSize(11)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(100, 100, 100)
@@ -184,44 +190,45 @@ export default function Relatorios() {
       doc.text(
         `Período: ${format(new Date(dataInicio), 'dd/MM/yyyy')} a ${format(new Date(dataFim), 'dd/MM/yyyy')}`,
         pageWidth / 2,
-        58,
+        yTitulo,
         { align: 'center' }
       )
     } else {
-      doc.text('Relatório Geral - Todos os Períodos', pageWidth / 2, 58, { align: 'center' })
+      doc.text('Relatório Geral - Todos os Períodos', pageWidth / 2, yTitulo, { align: 'center' })
     }
-    
+
     doc.setTextColor(0, 0, 0)
 
     // Box de informações gerais
+    const boxY = yTitulo + 10
     doc.setFillColor(240, 249, 255)
-    doc.roundedRect(14, 70, pageWidth - 28, 35, 3, 3, 'F')
-    
+    doc.roundedRect(M, boxY, pageWidth - M - MR, 35, 3, 3, 'F')
+
     doc.setFontSize(10)
     doc.setFont('helvetica', 'bold')
-    doc.text('INFORMAÇÕES DO RELATÓRIO', 20, 78)
-    
+    doc.text('INFORMAÇÕES DO RELATÓRIO', M + 6, boxY + 8)
+
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(9)
-    doc.text(`Sistema: jProcesso - Gestão de Processos Administrativos`, 20, 85)
-    doc.text(`Instituição: ${tenant?.nome_municipio || 'Não informado'}`, 20, 91)
-    doc.text(`Gerado por: ${user?.nome || 'Sistema'} (${user?.tipo || 'usuário'})`, 20, 97)
-    
+    doc.text(`Sistema: jProcesso - Gestão de Processos Administrativos`, M + 6, boxY + 15)
+    doc.text(`Instituição: ${tenant?.nome_municipio || 'Não informado'}`, M + 6, boxY + 21)
+    doc.text(`Gerado por: ${user?.nome || 'Sistema'} (${user?.tipo || 'usuário'})`, M + 6, boxY + 27)
+
     // Estatísticas principais em cards
-    const cardY = 115
-    const cardWidth = (pageWidth - 38) / 4
+    const cardY = boxY + 45
+    const cardWidth = (pageWidth - M - MR - 6) / 4
     const cardHeight = 30
     const cardSpacing = 2
-    
+
     const cards = [
       { label: 'Total', value: estatisticas.totalProcessos, color: [59, 130, 246] },
       { label: 'Concluídos', value: estatisticas.processosConcluidos, color: [34, 197, 94] },
       { label: 'Em Andamento', value: estatisticas.processosAbertos + estatisticas.processosEmAnalise, color: [234, 179, 8] },
       { label: 'Atrasados', value: estatisticas.processosAtrasados, color: [239, 68, 68] }
     ]
-    
+
     cards.forEach((card, index) => {
-      const x = 14 + (index * (cardWidth + cardSpacing))
+      const x = M + (index * (cardWidth + cardSpacing))
       
       // Fundo do card
       doc.setFillColor(...card.color)
@@ -271,7 +278,8 @@ export default function Relatorios() {
       columnStyles: {
         0: { fontStyle: 'bold', cellWidth: 120 },
         1: { halign: 'center', cellWidth: 60 }
-      }
+      },
+      margin: { left: M, right: MR }
     })
 
     addFooter(currentPage)
@@ -285,9 +293,9 @@ export default function Relatorios() {
       doc.setFontSize(16)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(37, 99, 235)
-      doc.text('DISTRIBUIÇÃO POR SETOR', 14, 50)
+      doc.text('DISTRIBUIÇÃO POR SETOR', M, headerBottom + 6)
       doc.setTextColor(0, 0, 0)
-      
+
       const dadosSetor = estatisticas.processosPorSecretaria
         .sort((a, b) => b.total - a.total)
         .map((s, index) => [
@@ -296,9 +304,9 @@ export default function Relatorios() {
           s.total.toString(),
           `${((s.total / estatisticas.totalProcessos) * 100).toFixed(1)}%`
         ])
-      
+
       autoTable(doc, {
-        startY: 60,
+        startY: headerBottom + 12,
         head: [['#', 'Setor', 'Quantidade', '% do Total']],
         body: dadosSetor,
         theme: 'striped',
@@ -319,7 +327,8 @@ export default function Relatorios() {
           1: { cellWidth: 100 },
           2: { halign: 'center', cellWidth: 35 },
           3: { halign: 'center', cellWidth: 35 }
-        }
+        },
+        margin: { left: M, right: MR }
       })
       
       addFooter(currentPage)
@@ -334,13 +343,13 @@ export default function Relatorios() {
       doc.setFontSize(16)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(37, 99, 235)
-      doc.text('LISTA DETALHADA DE PROCESSOS', 14, 50)
+      doc.text('LISTA DETALHADA DE PROCESSOS', M, headerBottom + 6)
       doc.setTextColor(0, 0, 0)
-      
+
       doc.setFontSize(9)
       doc.setFont('helvetica', 'italic')
       doc.setTextColor(100, 100, 100)
-      doc.text(`Total de ${estatisticas.processosFiltrados.length} processo(s)`, 14, 56)
+      doc.text(`Total de ${estatisticas.processosFiltrados.length} processo(s)`, M, headerBottom + 12)
       doc.setTextColor(0, 0, 0)
       
       const dadosProcessos = estatisticas.processosFiltrados.map((p, index) => [
@@ -354,7 +363,7 @@ export default function Relatorios() {
       ])
       
       autoTable(doc, {
-        startY: 62,
+        startY: headerBottom + 18,
         head: [['#', 'Número', 'Assunto', 'Interessado', 'Status', 'Setor', 'Data']],
         body: dadosProcessos,
         theme: 'grid',
@@ -376,6 +385,7 @@ export default function Relatorios() {
           5: { cellWidth: 28 },
           6: { halign: 'center', cellWidth: 18 }
         },
+        margin: { left: M, right: MR, top: headerBottom + 6, bottom: mg.bottom },
         didDrawPage: function (data) {
           if (data.pageNumber > 1) {
             addHeader()
@@ -533,7 +543,6 @@ export default function Relatorios() {
       {/* Cabeçalho */}
       <PageHeader
         icon={BarChart3}
-        eyebrow="Administração"
         title="Relatórios e Estatísticas"
         subtitle="Visualize e exporte relatórios sobre a tramitação de processos"
       />
@@ -543,7 +552,7 @@ export default function Relatorios() {
         <SectionTitle icon={ClipboardList} title="Gerar Relatório" />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div>
-            <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+            <label className="flex items-center gap-1.5 text-sm font-medium text-ink-700 mb-2">
               <Calendar className="h-3.5 w-3.5" />Data Inicial
             </label>
             <input
@@ -554,7 +563,7 @@ export default function Relatorios() {
             />
           </div>
           <div>
-            <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+            <label className="flex items-center gap-1.5 text-sm font-medium text-ink-700 mb-2">
               <Calendar className="h-3.5 w-3.5" />Data Final
             </label>
             <input
@@ -565,7 +574,7 @@ export default function Relatorios() {
             />
           </div>
           <div>
-            <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+            <label className="flex items-center gap-1.5 text-sm font-medium text-ink-700 mb-2">
               <ListFilter className="h-3.5 w-3.5" />Tipo de Relatório
             </label>
             <select 
@@ -611,9 +620,7 @@ export default function Relatorios() {
           )}
         </div>
         {isLoading && (
-          <p className="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400 mt-3">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />Carregando dados...
-          </p>
+          <LoadingBar label="Carregando dados..." />
         )}
       </div>
 
@@ -621,42 +628,42 @@ export default function Relatorios() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="card p-6 hover:shadow-md transition-shadow animate-bounce-in">
           <div className="flex items-center mb-4">
-            <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-lg">
-              <FileText className="h-6 w-6 text-blue-600" />
+            <div className="bg-info-100 dark:bg-info-900/30 p-3 rounded-lg">
+              <FileText className="h-6 w-6 text-brand-600" />
             </div>
           </div>
-          <p className="text-sm text-gray-600 dark:text-slate-400 mb-1">Total de Processos</p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">{estatisticas.totalProcessos}</p>
+          <p className="text-sm text-ink-600 mb-1">Total de Processos</p>
+          <p className="text-3xl font-bold text-ink-900 dark:text-white">{estatisticas.totalProcessos}</p>
         </div>
 
         <div className="card p-6 hover:shadow-md transition-shadow animate-bounce-in" style={{animationDelay: '75ms'}}>
           <div className="flex items-center mb-4">
-            <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-lg">
-              <CheckCircle className="h-6 w-6 text-green-600" />
+            <div className="bg-success-100 dark:bg-success-900/30 p-3 rounded-lg">
+              <CheckCircle className="h-6 w-6 text-success-600" />
             </div>
           </div>
-          <p className="text-sm text-gray-600 dark:text-slate-400 mb-1">Concluídos</p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">{estatisticas.processosConcluidos}</p>
+          <p className="text-sm text-ink-600 mb-1">Concluídos</p>
+          <p className="text-3xl font-bold text-ink-900 dark:text-white">{estatisticas.processosConcluidos}</p>
         </div>
 
         <div className="card p-6 hover:shadow-md transition-shadow animate-bounce-in" style={{animationDelay: '150ms'}}>
           <div className="flex items-center mb-4">
-            <div className="bg-yellow-100 dark:bg-yellow-900/30 p-3 rounded-lg">
-              <TrendingUp className="h-6 w-6 text-yellow-600" />
+            <div className="bg-warning-100 dark:bg-warning-900/30 p-3 rounded-lg">
+              <TrendingUp className="h-6 w-6 text-warning-600" />
             </div>
           </div>
-          <p className="text-sm text-gray-600 dark:text-slate-400 mb-1">Em Andamento</p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">{estatisticas.processosAbertos + estatisticas.processosEmAnalise}</p>
+          <p className="text-sm text-ink-600 mb-1">Em Andamento</p>
+          <p className="text-3xl font-bold text-ink-900 dark:text-white">{estatisticas.processosAbertos + estatisticas.processosEmAnalise}</p>
         </div>
 
         <div className="card p-6 hover:shadow-md transition-shadow animate-bounce-in" style={{animationDelay: '225ms'}}>
           <div className="flex items-center mb-4">
-            <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-lg">
-              <Clock className="h-6 w-6 text-red-600" />
+            <div className="bg-danger-100 dark:bg-danger-900/30 p-3 rounded-lg">
+              <Clock className="h-6 w-6 text-danger-600" />
             </div>
           </div>
-          <p className="text-sm text-gray-600 dark:text-slate-400 mb-1">Atrasados</p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">{estatisticas.processosAtrasados}</p>
+          <p className="text-sm text-ink-600 mb-1">Atrasados</p>
+          <p className="text-3xl font-bold text-ink-900 dark:text-white">{estatisticas.processosAtrasados}</p>
         </div>
       </div>
 
@@ -671,17 +678,17 @@ export default function Relatorios() {
               .map((setor, index) => (
                 <div key={index} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3 flex-1">
-                    <Building2 className="h-5 w-5 text-gray-400 dark:text-slate-500" />
-                    <span className="text-sm font-medium text-gray-700 dark:text-slate-300">{setor.nome}</span>
+                    <Building2 className="h-5 w-5 text-ink-400" />
+                    <span className="text-sm font-medium text-ink-700">{setor.nome}</span>
                   </div>
                   <div className="flex items-center space-x-4">
-                    <div className="w-48 bg-gray-200 dark:bg-slate-600 rounded-full h-2.5">
+                    <div className="w-48 bg-ink-200 rounded-full h-2.5">
                       <div
-                        className="bg-blue-600 h-2.5 rounded-full transition-all"
+                        className="bg-brand-600 h-2.5 rounded-full transition-all"
                         style={{ width: `${Math.min((setor.total / estatisticas.totalProcessos) * 100, 100)}%` }}
                       ></div>
                     </div>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white w-12 text-right">
+                    <span className="text-sm font-semibold text-ink-900 dark:text-white w-12 text-right">
                       {setor.total}
                     </span>
                   </div>
@@ -689,7 +696,7 @@ export default function Relatorios() {
               ))}
           </div>
         ) : (
-          <p className="flex items-center justify-center gap-2 text-gray-500 dark:text-slate-400 text-center py-8">
+          <p className="flex items-center justify-center gap-2 text-ink-500 text-center py-8">
             <Inbox className="h-5 w-5" />Nenhum dado disponível para exibir
           </p>
         )}
@@ -699,12 +706,12 @@ export default function Relatorios() {
       <div className="card p-6">
         <SectionTitle icon={Clock} title="Tempo Médio de Conclusão" />
         <div className="flex items-center space-x-4">
-          <div className="bg-blue-100 dark:bg-blue-900/30 p-4 rounded-xl">
-            <Clock className="h-8 w-8 text-blue-600" />
+          <div className="bg-info-100 dark:bg-info-900/30 p-4 rounded-xl">
+            <Clock className="h-8 w-8 text-brand-600" />
           </div>
           <div>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white">{estatisticas.tempoMedioConclusao}</p>
-            <p className="text-sm text-gray-600 dark:text-slate-400">Tempo médio para concluir processos</p>
+            <p className="text-3xl font-bold text-ink-900 dark:text-white">{estatisticas.tempoMedioConclusao}</p>
+            <p className="text-sm text-ink-600">Tempo médio para concluir processos</p>
           </div>
         </div>
       </div>

@@ -1,8 +1,20 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+import { readFileSync } from 'fs'
+
+const now = new Date()
+const ano = now.getFullYear()
+const mes = String(now.getMonth() + 1).padStart(2, '0')
+const dia = String(now.getDate()).padStart(2, '0')
+const hora = String(now.getHours()).padStart(2, '0')
+const buildVersion = `${ano}.${mes}.${dia}.${hora}`
 
 export default defineConfig({
-  plugins: [react()],
+  define: {
+    __APP_VERSION__: JSON.stringify(buildVersion),
+  },
+  plugins: [react(), tailwindcss()],
   server: {
     port: 3000,
     proxy: {

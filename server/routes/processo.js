@@ -8,12 +8,14 @@ const {
   tramitarProcesso,
   devolverProcesso,
   concluirProcesso,
+  receberProcesso,
   listProcessosEnviados,
   getArquivoProcessos,
   moverProcessoTipo,
   buscarProcessosPublico,
   consultarProcessoPublico,
   deleteProcesso,
+  salvarDespachoDoc,
 } = require('../controllers/processoController');
 const { authenticate, tenantMiddleware, requireTenant, authorize } = require('../middleware/auth');
 
@@ -30,6 +32,8 @@ router.get('/:id',          ...tenantAuth, getProcessoById);
 router.post('/:id/tramitar', ...tenantAuth, tramitarProcesso);
 router.post('/:id/devolver', ...tenantAuth, devolverProcesso);
 router.post('/:id/concluir', ...tenantAuth, concluirProcesso);
+router.post('/:id/receber',  ...tenantAuth, receberProcesso);
+router.patch('/:id/despacho-doc', ...tenantAuth, salvarDespachoDoc);
 router.delete('/:id', ...tenantAuth, authorize('admin'), deleteProcesso);
 
 // Rotas públicas (sem autenticação) — ainda exigem tenant válido

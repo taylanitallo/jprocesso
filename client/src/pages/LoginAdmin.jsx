@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Shield } from 'lucide-react';
-import api from '../services/api';
+import api, { setAccessToken } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import BotaoTema from '../components/BotaoTema';
 
 export default function LoginAdmin() {
   const navigate = useNavigate();
+  const aviso = useLocation().state?.aviso;
   const { refreshUser } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
@@ -27,14 +29,14 @@ export default function LoginAdmin() {
         subdomain: 'admin' // Identificador especial para superadmin
       });
 
-      // Salvar apenas token + flags de sessão (sem dados volumosos)
+      // Flags da sessão admin. A sessão de município (localStorage 'subdomain' e
+      // cookie próprio) é independente e permanece intacta; o header
+      // x-tenant-subdomain=admin é definido pelo interceptor nas páginas /superadmin.
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('isAdmin', 'true');
-      localStorage.setItem('subdomain', 'admin');
-      
-      // Configurar header de autenticação
-      api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
-      api.defaults.headers.common['x-tenant-subdomain'] = 'admin';
+
+      // M-3: access token em memória
+      setAccessToken(response.data.token);
 
       // Redirecionar para área de gestão
       navigate('/superadmin/painel');
@@ -46,26 +48,34 @@ export default function LoginAdmin() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 flex items-center justify-center p-4">
+    // Fundo: claro no tema claro, azul-escuro fixo no escuro (ink-* inverteria aqui)
+    <div className="relative min-h-screen bg-gradient-to-br from-brand-50 via-canvas to-brand-100 dark:from-[#0b1020] dark:via-[#050816] dark:to-[#0b1020] flex items-center justify-center p-4">
+      <BotaoTema className="absolute top-4 right-4" />
       <div className="max-w-md w-full">
         {/* Login Card */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
+        <div className="bg-surface rounded-2xl shadow-2xl p-8">
 
           {/* Header */}
           <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4 shadow-lg">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-600 rounded-2xl mb-4 shadow-lg">
               <Shield className="h-8 w-8 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-1">Administrador Geral</h1>
-            <p className="text-gray-500 text-sm">Acesso ao painel de gerenciamento de prefeituras</p>
+            <h1 className="text-2xl font-bold text-ink-900 mb-1">Administrador Geral</h1>
+            <p className="text-ink-500 text-sm">Acesso ao painel de gerenciamento de prefeituras</p>
           </div>
 
+          {aviso && !error && (
+            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 dark:border-amber-700 rounded-lg text-sm text-amber-800 dark:text-amber-300">
+              {aviso}
+            </div>
+          )}
+
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-              <div className="text-red-600 mt-0.5">⚠️</div>
+            <div className="mb-4 p-3 bg-danger-50 border border-danger-200 dark:border-danger-700 rounded-lg flex items-start gap-3">
+              <div className="text-danger-600 mt-0.5">⚠️</div>
               <div className="flex-1">
-                <p className="text-sm text-red-800 font-medium">Erro de autenticação</p>
-                <p className="text-sm text-red-700 mt-0.5">{error}</p>
+                <p className="text-sm text-danger-800 dark:text-danger-300 font-medium">Erro de autenticação</p>
+                <p className="text-sm text-danger-700 dark:text-danger-400 mt-0.5">{error}</p>
               </div>
             </div>
           )}
@@ -73,7 +83,7 @@ export default function LoginAdmin() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* E-mail */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-ink-700 mb-1.5">
                 E-mail
               </label>
               <input
@@ -81,14 +91,14 @@ export default function LoginAdmin() {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="Digite seu e-mail"
-                className="block w-full px-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="block w-full px-3 py-2.5 border border-ink-300 rounded-lg bg-surface text-ink-900 focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                 required
               />
             </div>
 
             {/* Senha */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-ink-700 mb-1.5">
                 Senha
               </label>
               <input
@@ -96,7 +106,7 @@ export default function LoginAdmin() {
                 value={formData.senha}
                 onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
                 placeholder="••••••••"
-                className="block w-full px-3 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="block w-full px-3 py-2.5 border border-ink-300 rounded-lg bg-surface text-ink-900 focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                 required
               />
             </div>
@@ -105,7 +115,7 @@ export default function LoginAdmin() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 text-white py-2.5 px-4 rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-brand-600 text-white py-2.5 px-4 rounded-lg hover:bg-brand-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Autenticando...' : 'Entrar'}
             </button>

@@ -41,8 +41,7 @@ const listSecretarias = async (req, res) => {
     const { Secretaria, Setor } = req.models;
 
     const where = { ativo: true };
-    // Restringe ao usuÃ¡rio operacional a apenas sua secretaria; admin e gestor veem todas
-    if (req.user.tipo !== 'admin' && req.user.tipo !== 'gestor' && req.user.secretariaId) {
+    if (req.user.tipo !== 'admin' && req.user.tipo !== 'jeos' && req.user.secretariaId) {
       where.id = req.user.secretariaId;
     }
 
@@ -152,6 +151,8 @@ const listSetores = async (req, res) => {
     const where = { ativo: true };
     if (secretariaId) {
       where.secretaria_id = secretariaId;
+    } else if (req.user.tipo !== 'admin' && req.user.tipo !== 'jeos' && req.user.secretariaId) {
+      where.secretaria_id = req.user.secretariaId;
     }
 
     const setores = await Setor.findAll({
