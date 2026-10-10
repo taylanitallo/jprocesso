@@ -1,7 +1,10 @@
 import { CheckCircle } from 'lucide-react'
 import api from '../services/api'
+import { useAssinatura } from './assinatura/AssinaturaProvider'
 
 export default function ModalConcluir({ processoId, onClose, onSuccess }) {
+  const { assinar } = useAssinatura()
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     const formData = new FormData(e.target)
@@ -13,8 +16,13 @@ export default function ModalConcluir({ processoId, onClose, onSuccess }) {
     }
 
     try {
-      await api.post(`/processos/${processoId}/concluir`, { despachoFinal })
-      onSuccess('Processo concluído com sucesso!')
+      const r = await assinar({
+        titulo: 'Concluir processo',
+        resumo: <p><strong>Despacho final:</strong> {despachoFinal.substring(0, 200)}{despachoFinal.length > 200 ? '...' : ''}</p>,
+        executar: (cred) => api.post(`/processos/${processoId}/concluir`, { despachoFinal, ...cred }),
+      })
+      if (!r) return // cancelou a assinatura
+      onSuccess('Processo concluído e assinado eletronicamente!')
     } catch (error) {
       alert(error.response?.data?.error || 'Erro ao concluir processo')
     }

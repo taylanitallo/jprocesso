@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import JSZip from 'jszip';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
+import api, { apiUrl } from '../services/api';
 import PermissoesEditor from '../components/PermissoesEditor';
 import { ConfirmModal } from '../components/ui';
 import {
@@ -12,8 +12,10 @@ import {
   Users, FileText, HardDrive, RotateCcw, Settings, ExternalLink,
   RefreshCw, Download, Power, ChevronRight, Image, Palette,
   Upload as CloudUpload, Layers, Archive, Clock, Calendar, Bell, Zap,
-  TrendingUp, Activity, Server, Eye, MoreVertical,
+  TrendingUp, Activity, Server, Eye, MoreVertical, Scale,
 } from 'lucide-react';
+import AbaLegislacao from './superadmin/AbaLegislacao';
+import BotaoTema from '../components/BotaoTema';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -33,6 +35,7 @@ const TABS = [
   { id: 'relatorio',  label: 'Relatório',   Icon: Activity },
   { id: 'backup',     label: 'Backup',      Icon: HardDrive },
   { id: 'restore',    label: 'Restore',     Icon: RotateCcw },
+  { id: 'legislacao', label: 'Legislação',  Icon: Scale },
   { id: 'configurar', label: 'Configurar',  Icon: Settings },
 ];
 
@@ -159,7 +162,7 @@ function TenantCard({ tenant, onGerenciar, onDelete, onAtivar }) {
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-info-500 to-info-700 flex items-center justify-center shrink-0 shadow-sm">
             {tenant.configuracoes?.logo_interna_url
-              ? <img src={`/api/tenants/${tenant.subdominio}/logo/interna`} alt="" className="w-8 h-8 object-contain rounded-lg" />
+              ? <img src={apiUrl(`/tenants/${tenant.subdominio}/logo/interna`)} alt="" className="w-8 h-8 object-contain rounded-lg" />
               : <Building className="h-5 w-5 text-white" />}
           </div>
           <div className="min-w-0">
@@ -249,7 +252,7 @@ function TenantCard({ tenant, onGerenciar, onDelete, onAtivar }) {
       {/* Delete */}
       <button
         onClick={() => onDelete(tenant, 'excluir')}
-        className="flex items-center justify-center gap-1.5 text-xs py-1.5 text-danger-400 hover:text-danger-600 dark:hover:text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-900/20 rounded-xl transition-colors w-full"
+        className="flex items-center justify-center gap-1.5 text-xs py-1.5 text-danger-600 dark:text-danger-400 hover:text-danger-700 dark:hover:text-danger-300 hover:bg-danger-50 dark:hover:bg-danger-900/20 rounded-xl transition-colors w-full"
       >
         <Trash2 className="h-3.5 w-3.5" /> Excluir definitivamente
       </button>
@@ -849,8 +852,9 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-surface rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl">
+    <div className="fixed inset-0 bg-black/60 flex z-50 p-0 sm:p-3">
+      {/* Painel em tela cheia (área útil inteira, sem rolagem lateral) */}
+      <div className="bg-surface sm:rounded-2xl w-full h-full flex flex-col shadow-2xl overflow-hidden">
 
         {/* Modal header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-ink-200 shrink-0">
@@ -887,7 +891,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6">
 
           {/* ── Informações ─────────────────────────────────────────────────── */}
           {tab === 'info' && (
@@ -1603,7 +1607,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                   })}
                   {!relLogs.length && (
                     <div className="text-center py-10">
-                      <Activity className="h-10 w-10 text-ink-300 mx-auto mb-2" />
+                      <Activity className="h-10 w-10 text-ink-400 mx-auto mb-2" />
                       <p className="text-ink-400 text-sm">Nenhum acesso registrado</p>
                       <p className="text-ink-400 text-xs mt-1">Os logins e logouts aparecem aqui</p>
                     </div>
@@ -1763,7 +1767,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                 ))}
                 {!backups.length && (
                   <div className="text-center py-8">
-                    <Archive className="h-12 w-12 text-ink-300 mx-auto mb-3" />
+                    <Archive className="h-12 w-12 text-ink-400 mx-auto mb-3" />
                     <p className="text-ink-400 text-sm">Nenhum backup encontrado</p>
                     <p className="text-ink-400 text-xs mt-1">Clique em "Fazer Backup" para criar o primeiro</p>
                   </div>
@@ -2034,6 +2038,8 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
           )}
 
           {/* ── Configurar ──────────────────────────────────────────────────── */}
+          {tab === 'legislacao' && <AbaLegislacao tenant={tenant} />}
+
           {tab === 'configurar' && (
             <div className="space-y-6">
               {/* Logos */}
@@ -2041,7 +2047,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                 <h3 className="font-semibold text-ink-800 dark:text-white mb-4 flex items-center gap-2">
                   <Image className="h-5 w-5" /> Identidade Visual
                 </h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {[
                     { tipo: 'login',    label: 'Logo da tela de login',     field: 'logo_login_url',   file: logoLoginFile,    setFile: setLogoLoginFile },
                     { tipo: 'interna',  label: 'Logo interna do sistema',   field: 'logo_interna_url', file: logoInternaFile,  setFile: setLogoInternaFile },
@@ -2049,16 +2055,16 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                   ].map(({ tipo, label, field, file, setFile, accept }) => {
                     const currentUrl = tenant.configuracoes?.[field];
                     const isTimbrado = tipo === 'timbrado';
-                    // login/interna: bucket é privado → servir via endpoint proxy por subdomain
+                    // Bucket é privado → login, interna e timbrado servidos pelo endpoint proxy por subdomain
                     const proxySrc = currentUrl
-                      ? `/api/tenants/${tenant.subdominio}/logo/${tipo}?v=${logoVersion}`
+                      ? apiUrl(`/tenants/${tenant.subdominio}/logo/${tipo}?v=${logoVersion}`)
                       : null;
                     const previewSrc = isTimbrado
-                      ? (timbradoPreviewUrl || currentUrl)
+                      ? (timbradoPreviewUrl || proxySrc)
                       : (localPreview[tipo] || proxySrc);
 
                     return (
-                      <div key={tipo} className={`border border-ink-200 rounded-xl p-4${isTimbrado ? ' col-span-2' : ''}`}>
+                      <div key={tipo} className={`border border-ink-200 rounded-xl p-4 min-w-0${isTimbrado ? ' md:col-span-2' : ''}`}>
                         <p className="text-sm font-medium text-ink-700 mb-3">{label}</p>
 
                         {isTimbrado ? (
@@ -2070,7 +2076,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                                 {previewSrc
                                   ? <img src={previewSrc} alt="Timbrado" className="w-full h-full object-fill opacity-100" />
                                   : <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-ink-50">
-                                      <Image className="h-8 w-8 text-ink-300" />
+                                      <Image className="h-8 w-8 text-ink-400" />
                                       <span className="text-[10px] text-ink-400">A4 retrato</span>
                                     </div>
                                 }
@@ -2112,7 +2118,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                             <div className="border-2 border-dashed border-ink-300 rounded-lg flex items-center justify-center bg-ink-50 overflow-hidden shrink-0 w-20 h-20">
                               {previewSrc
                                 ? <img src={previewSrc} alt="Logo" className="max-w-full max-h-full object-contain" />
-                                : <Image className="h-8 w-8 text-ink-300" />}
+                                : <Image className="h-8 w-8 text-ink-400" />}
                             </div>
                             <div className="flex-1 space-y-2">
                               <input type="file" accept={accept || 'image/*'}
@@ -2397,6 +2403,7 @@ export default function AdminTenants() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <BotaoTema />
             <span className="text-sm font-medium text-ink-700 hidden sm:block">Administrador Geral</span>
             <button onClick={handleLogout}
               className="flex items-center gap-1.5 text-sm text-ink-600 hover:text-danger-600 hover:bg-danger-50 dark:hover:bg-danger-900/20 px-3 py-1.5 rounded-lg transition-colors">

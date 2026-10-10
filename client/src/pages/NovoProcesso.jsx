@@ -1,8 +1,9 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
+import { useAssinatura } from '../components/assinatura/AssinaturaProvider'
 import {
   ArrowLeft, Save, FileText, ChevronRight, FilePlus2,
   FileCheck, Calendar, Send, AlertTriangle, Stamp, User, Building2, Route,
@@ -14,12 +15,13 @@ const TIPOS_PROCESSO = [
   { value: 'Despacho',   label: 'Despacho',   descricao: 'Ato administrativo de encaminhamento ou deliberações',         icon: Send,          cor: 'text-purple-500 dark:text-purple-400', iconBg: 'bg-purple-100 dark:bg-purple-900/40', borda: 'hover:border-purple-400 dark:hover:border-purple-500' },
   { value: 'Did',        label: 'DID',         descricao: 'Documento de Intenção de Despesas',                            icon: FileCheck,     cor: 'text-info-500 dark:text-info-400',   iconBg: 'bg-info-100 dark:bg-info-900/40',   borda: 'hover:border-info-400 dark:hover:border-brand-500'   },
   { value: 'Pauta',      label: 'Pauta',       descricao: 'Solicitação de processo para contratação de bens ou serviços', icon: Calendar,      cor: 'text-success-500 dark:text-success-400', iconBg: 'bg-success-100 dark:bg-success-900/40', borda: 'hover:border-success-400 dark:hover:border-success-500' },
-  { value: 'Protocolo',  label: 'Protocolo',   descricao: 'Registro e autuação de documento ou requerimento recebido',   icon: Stamp,         cor: 'text-amber-500 dark:text-amber-400', iconBg: 'bg-amber-100 dark:bg-amber-900/40', borda: 'hover:border-amber-400 dark:hover:border-amber-500' },
+  { value: 'Protocolo',  label: 'Protocolo',   descricao: 'Registro e autuação de documento ou requerimento recebido',   icon: Stamp,         cor: 'text-amber-700 dark:text-amber-400', iconBg: 'bg-amber-100 dark:bg-amber-900/40', borda: 'hover:border-amber-400 dark:hover:border-amber-500' },
 ]
 
 export default function NovoProcesso() {
   const { subdomain } = useParams()
   const { user } = useAuth()
+  const { assinar } = useAssinatura()
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm({
     defaultValues: { protocolo_origem: 'externo', protocolo_natureza: 'atendimento' }
   })
@@ -92,7 +94,21 @@ export default function NovoProcesso() {
         payload.despachoEncaminhamento = data.despachoEncaminhamento || ''
       }
 
-      const res = await api.post('/processos', payload)
+      // Abertura é ato assinado eletronicamente (senha + código do app)
+      const res = await assinar({
+        titulo: tipoSelecionado === 'Protocolo' && payload.destinoSetorId
+          ? 'Registrar e encaminhar protocolo'
+          : 'Abrir processo',
+        resumo: (
+          <>
+            <p><strong>Tipo:</strong> {tipoSelecionado}</p>
+            <p><strong>Assunto:</strong> {data.assunto}</p>
+            {data.interessado_nome && <p><strong>Interessado:</strong> {data.interessado_nome}</p>}
+          </>
+        ),
+        executar: (cred) => api.post('/processos', { ...payload, ...cred }),
+      })
+      if (!res) return // cancelou a assinatura
       const processoId = res.data?.processo?.id || res.data?.id
       if (processoId) {
         if (tipoSelecionado === 'Did') {

@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react'
-import { X, Send, Lock, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react'
+import { X, Send, Lock, AlertTriangle } from 'lucide-react'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
+import { useAssinatura } from './assinatura/AssinaturaProvider'
 
 export default function ModalTramitacao({ processo, onClose, onSuccess }) {
   const { user } = useAuth()
+  const { assinar } = useAssinatura()
   const [secretarias, setSecretarias] = useState([])
   const [setores, setSetores] = useState([])
   const [usuarios, setUsuarios] = useState([])
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [step, setStep] = useState(1) // 1: dados, 2: confirmação senha
 
   // Operador só pode tramitar dentro da própria secretaria,
   // a menos que tenha sido designado por um gestor neste processo
@@ -21,8 +21,7 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
     despacho: '',
     destinoSecretariaId: isOperadorRestrito ? (user?.secretariaId || '') : '',
     destinoSetorId: '',
-    destinoUsuarioId: '',
-    senhaConfirmacao: ''
+    destinoUsuarioId: ''
   })
 
   // Carregar secretarias
@@ -83,7 +82,7 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
     }))
   }
 
-  const handleSubmitStep1 = (e) => {
+  const handleSubmitStep1 = async (e) => {
     e.preventDefault()
     setError('')
 
@@ -97,34 +96,29 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
       return
     }
 
-    setStep(2)
-  }
-
-  const handleConfirmarTramitacao = async (e) => {
-    e.preventDefault()
-    setError('')
-
-    if (!formData.senhaConfirmacao) {
-      setError('Digite sua senha para assinar eletronicamente')
-      return
-    }
-
-    setLoading(true)
-
+    // Assinatura eletrônica (senha + código do app) e envio
     try {
-      const response = await api.post(`/processos/${processo.id}/tramitar`, {
-        despacho: formData.despacho,
-        destinoSetorId: formData.destinoSetorId,
-        destinoUsuarioId: formData.destinoUsuarioId || null,
-        senhaConfirmacao: formData.senhaConfirmacao
+      const response = await assinar({
+        titulo: `Tramitar o processo ${processo.numero}`,
+        resumo: (
+          <>
+            <p><strong>Despacho:</strong> {formData.despacho.substring(0, 160)}{formData.despacho.length > 160 ? '...' : ''}</p>
+            <p><strong>Destino:</strong> {secretarias.find(s => s.id === formData.destinoSecretariaId)?.nome} › {setores.find(s => s.id === formData.destinoSetorId)?.nome}</p>
+            {formData.destinoUsuarioId && <p><strong>Para:</strong> {usuarios.find(u => u.id === formData.destinoUsuarioId)?.nome}</p>}
+          </>
+        ),
+        executar: (cred) => api.post(`/processos/${processo.id}/tramitar`, {
+          despacho: formData.despacho,
+          destinoSetorId: formData.destinoSetorId,
+          destinoUsuarioId: formData.destinoUsuarioId || null,
+          ...cred,
+        }),
       })
-
+      if (!response) return // cancelou a assinatura
       onSuccess(response.data)
       onClose()
     } catch (err) {
       setError(err.response?.data?.error || 'Erro ao tramitar processo')
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -145,25 +139,6 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
           </button>
         </div>
 
-        {/* Progress indicator */}
-        <div className="px-6 pt-4">
-          <div className="flex items-center justify-center space-x-4">
-            <div className={`flex items-center ${step >= 1 ? 'text-brand-600' : 'text-ink-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${step >= 1 ? 'bg-brand-600 text-white' : 'bg-ink-200'}`}>
-                1
-              </div>
-              <span className="ml-2 text-sm font-medium hidden sm:inline">Dados</span>
-            </div>
-            <div className={`w-16 h-0.5 ${step >= 2 ? 'bg-brand-600' : 'bg-ink-300'}`}></div>
-            <div className={`flex items-center ${step >= 2 ? 'text-brand-600' : 'text-ink-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${step >= 2 ? 'bg-brand-600 text-white' : 'bg-ink-200'}`}>
-                2
-              </div>
-              <span className="ml-2 text-sm font-medium hidden sm:inline">Assinatura</span>
-            </div>
-          </div>
-        </div>
-
         {/* Error message */}
         {error && (
           <div className="mx-6 mt-4 bg-danger-50 dark:bg-danger-500/10 border border-danger-200 dark:border-danger-500/20 text-danger-700 dark:text-danger-300 px-4 py-3 rounded-lg flex items-center space-x-2">
@@ -172,14 +147,14 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
           </div>
         )}
 
-        {/* Step 1: Dados da tramitação */}
-        {step === 1 && (
+        {/* Dados da tramitação */}
+        {(
           <form onSubmit={handleSubmitStep1} className="p-6 space-y-4">
             {/* Alerta de Assinatura Obrigatória */}
             <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg p-4 flex items-start space-x-3">
               <Lock className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
               <div className="text-sm text-amber-800 dark:text-amber-300">
-                <strong>Assinatura Eletrônica Obrigatória:</strong> Após preencher os dados, você precisará confirmar com sua senha para tramitar o processo.
+                <strong>Assinatura Eletrônica Obrigatória:</strong> Após preencher os dados, você assinará com sua senha e o código do aplicativo autenticador.
               </div>
             </div>
 
@@ -302,80 +277,6 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
           </form>
         )}
 
-        {/* Step 2: Confirmação com senha */}
-        {step === 2 && (
-          <form onSubmit={handleConfirmarTramitacao} className="p-6 space-y-6">
-            <div className="bg-info-50 dark:bg-info-900/20 border border-info-200 dark:border-info-700 rounded-lg p-4">
-              <div className="flex items-start space-x-3">
-                <Lock className="h-6 w-6 text-brand-600 mt-0.5 shrink-0" />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-info-900 dark:text-info-300 mb-2">Assinatura Eletrônica</h3>
-                  <p className="text-sm text-info-800 dark:text-info-400 mb-3">
-                    Para garantir a autenticidade e rastreabilidade da tramitação, é necessário confirmar com sua senha.
-                  </p>
-                  <div className="bg-surface rounded-sm p-3 text-sm text-ink-700 space-y-1">
-                    <p><strong>Despacho:</strong> {formData.despacho.substring(0, 100)}{formData.despacho.length > 100 ? '...' : ''}</p>
-                    <p><strong>Destino:</strong> {secretarias.find(s => s.id === formData.destinoSecretariaId)?.nome} › {setores.find(s => s.id === formData.destinoSetorId)?.nome}</p>
-                    {formData.destinoUsuarioId && (
-                      <p><strong>Para:</strong> {usuarios.find(u => u.id === formData.destinoUsuarioId)?.nome}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-ink-700 mb-2">
-                Digite sua senha para confirmar *
-              </label>
-              <input
-                type="password"
-                name="senhaConfirmacao"
-                value={formData.senhaConfirmacao}
-                onChange={handleChange}
-                required
-                placeholder="••••••••"
-                className="input-field"
-                autoFocus
-              />
-              <p className="text-xs text-ink-500 mt-2">
-                Sua senha será verificada para gerar a assinatura digital desta tramitação.
-              </p>
-            </div>
-
-            <div className="flex justify-between pt-4 border-t">
-              <button
-                type="button"
-                onClick={() => {
-                  setStep(1)
-                  setError('')
-                  setFormData(prev => ({ ...prev, senhaConfirmacao: '' }))
-                }}
-                className="btn-secondary"
-                disabled={loading}
-              >
-                Voltar
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-6 py-2.5 bg-success-600 text-white rounded-lg hover:bg-success-700 transition-colors font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    <span>Tramitando...</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-5 w-5" />
-                    <span>Confirmar Tramitação</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-        )}
       </div>
     </div>
   )

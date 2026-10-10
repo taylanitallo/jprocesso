@@ -8,6 +8,8 @@ import LoadingBar from '../components/LoadingBar'
 import ModalDevolver from '../components/ModalDevolver'
 import ModalConcluir from '../components/ModalConcluir'
 import ModalDespacho from '../components/ModalDespacho'
+import { useAssinatura } from '../components/assinatura/AssinaturaProvider'
+import TarjaAssinatura from '../components/assinatura/TarjaAssinatura'
 import { gerarPautaPDF, gerarProtocoloPDF, gerarRequisicaoPDF } from '../utils/gerarDocumentoPDF'
 import { ORIGEM_PROTOCOLO_LABEL, NATUREZA_PROTOCOLO_LABEL } from '../utils/protocoloConstants'
 import {
@@ -92,6 +94,7 @@ export default function DetalhesProcesso() {
   }, [processo?.documentos])
 
   const { user: currentUser } = useAuth()
+  const { assinar } = useAssinatura()
 
   const isResponsavel = !!(currentUser && processo && processo.status !== 'concluido' && (
     processo.usuario_atual_id === currentUser.id ||
@@ -124,8 +127,13 @@ export default function DetalhesProcesso() {
   const handleReceber = async () => {
     setRecebendo(true)
     try {
-      await api.post(`/processos/${id}/receber`)
-      setSuccessMessage('Processo recebido com sucesso! Agora você pode tramitar ou concluir.')
+      const r = await assinar({
+        titulo: `Receber o processo ${processo?.numero || ''}`,
+        resumo: <p>Confirmo o recebimento deste processo no meu setor.</p>,
+        executar: (cred) => api.post(`/processos/${id}/receber`, cred),
+      })
+      if (!r) return // cancelou a assinatura
+      setSuccessMessage('Processo recebido e assinado eletronicamente! Agora você pode tramitar ou concluir.')
       setTimeout(() => setSuccessMessage(''), 6000)
       refetch()
     } catch (err) {
@@ -144,7 +152,10 @@ export default function DetalhesProcesso() {
   } : null
 
   const handleTramitacaoSuccess = (data) => {
-    setSuccessMessage(`Processo tramitado com sucesso! Assinatura: ${data.assinatura_digital.substring(0, 16)}...`)
+    const a = data.assinatura
+    setSuccessMessage(a
+      ? `Processo tramitado e assinado eletronicamente. Código verificador ${a.codigo_verificador} · CRC ${a.codigo_crc}`
+      : 'Processo tramitado com sucesso!')
     setTimeout(() => setSuccessMessage(''), 5000)
     refetch()
   }
@@ -554,7 +565,7 @@ export default function DetalhesProcesso() {
                   >
                     <div
                       className="shrink-0 flex items-center justify-center w-6 h-6 cursor-grab active:cursor-grabbing
-                                 text-ink-300 hover:text-ink-500 transition-colors"
+                                 text-ink-400 hover:text-ink-500 transition-colors"
                       title="Arraste para reordenar"
                     >
                       <GripVertical className="h-4 w-4" />
@@ -714,6 +725,15 @@ export default function DetalhesProcesso() {
                               </blockquote>
                             )}
 
+                            {/* Justificativa da devolução */}
+                            {tramitacao.justificativa_devolucao && (
+                              <blockquote className="text-sm text-ink-700 bg-danger-50 dark:bg-danger-900/20
+                                                     border-l-2 border-danger-300 rounded-r-lg px-3 py-2 mb-2.5 leading-relaxed italic">
+                                <span className="not-italic font-semibold text-danger-700 dark:text-danger-300">Justificativa: </span>
+                                {tramitacao.justificativa_devolucao}
+                              </blockquote>
+                            )}
+
                             {/* Autor */}
                             {tramitacao.origemUsuario?.nome && (
                               <p className="flex items-center gap-1.5 text-xs text-ink-500">
@@ -721,6 +741,9 @@ export default function DetalhesProcesso() {
                                 {tramitacao.origemUsuario.nome}
                               </p>
                             )}
+
+                            {/* Tarja de assinatura eletrônica */}
+                            <TarjaAssinatura assinatura={tramitacao.assinatura_eletronica} subdomain={subdomain} />
                           </div>
                         </div>
                       </div>

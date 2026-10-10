@@ -2,8 +2,35 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
-import { Eye, EyeOff, Search, LogIn, Building2 } from 'lucide-react'
-import api from '../services/api'
+import { Eye, EyeOff, Search, LogIn, Building2, Scale, ShieldCheck } from 'lucide-react'
+import api, { apiUrl } from '../services/api'
+import BotaoTema from '../components/BotaoTema'
+
+// Acessos públicos do município: consulta, legislação e verificação de assinaturas
+function LinksPublicos({ subdomain }) {
+  const botao = 'flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-xl border border-violet-200 dark:border-violet-500/25 bg-white/70 dark:bg-white/5 text-xs font-semibold text-ink-600 dark:text-ink-400 hover:text-ink-900 dark:hover:text-white hover:border-violet-400/60 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-all'
+  return (
+    <div className="mt-4 space-y-3 relative z-10">
+      <div className="flex gap-2">
+        <Link to={`/${subdomain}/legislacao`} className={botao}>
+          <Scale className="h-3.5 w-3.5" /> Legislação
+        </Link>
+        <Link to={`/${subdomain}/verificar`} className={botao}>
+          <ShieldCheck className="h-3.5 w-3.5" /> Verificar documento
+        </Link>
+      </div>
+      <div className="text-center">
+        <Link
+          to={`/${subdomain}/consulta`}
+          className="inline-flex items-center gap-1.5 text-xs text-ink-500 hover:text-violet-600 dark:hover:text-violet-300 transition-all"
+        >
+          <Search className="h-3 w-3" />
+          Consultar processo sem login
+        </Link>
+      </div>
+    </div>
+  )
+}
 
 export default function Login() {
   const [cpf, setCpf] = useState('')
@@ -16,7 +43,7 @@ export default function Login() {
   const [searchQuery, setSearchQuery] = useState('')
 
   const { login } = useAuth()
-  useTheme()
+  const { isDark } = useTheme()
   const navigate = useNavigate()
   const { subdomain } = useParams()
 
@@ -29,7 +56,9 @@ export default function Login() {
       const response = await api.get(`/tenants/info?subdomain=${sub}`)
       setTenantInfo(response.data)
     } catch (err) {
-      setTenantNotFound(true)
+      // Só 404 significa município inexistente. Limite de requisições, rede ou
+      // servidor fora não podem esconder a tela de login atrás de "não encontrada".
+      if (err.response?.status === 404) setTenantNotFound(true)
     }
   }
 
@@ -59,7 +88,7 @@ export default function Login() {
   // Bucket privado → logo de login servida via endpoint proxy por subdomain.
   // Mantém compatibilidade com brasao_url (URL pública legada), se existir.
   const brasaoUrl = tenantInfo?.tenant?.configuracoes?.logo_login_url
-    ? `/api/tenants/${subdomain}/logo/login`
+    ? apiUrl(`/tenants/${subdomain}/logo/login`)
     : tenantInfo?.tenant?.configuracoes?.brasao_url
 
   if (tenantNotFound) {
@@ -68,18 +97,19 @@ export default function Login() {
         className="relative h-screen overflow-hidden flex items-center justify-center"
         style={{ backgroundImage: "url('/background.png')", backgroundSize: 'cover', backgroundPosition: 'center' }}
       >
-        <div className="absolute inset-0 bg-ink-900/60 pointer-events-none" />
+        <div className="absolute inset-0 bg-white/75 dark:bg-[#050816]/60 pointer-events-none" />
+        <BotaoTema className="absolute top-4 right-4 z-30" />
         <div className="relative z-10 text-center px-8 max-w-md">
           <div className="mb-6 flex justify-center">
-            <img src="/logo_jprocesso.png" alt="jProcesso" className="w-48 object-contain drop-shadow-[0_0_20px_rgba(168,85,247,0.40)]" />
+            <img src={isDark ? '/logo_jprocesso.png' : '/logo_dark.png'} alt="jProcesso" className="w-48 object-contain drop-shadow-[0_0_20px_rgba(168,85,247,0.40)]" />
           </div>
-          <div className="bg-[#050816]/90 backdrop-blur-xl border border-danger-500/30 shadow-[0_0_40px_rgba(239,68,68,0.20)] rounded-[28px] px-8 py-8">
+          <div className="bg-white/90 dark:bg-[#050816]/90 backdrop-blur-xl border border-danger-200 dark:border-danger-500/30 shadow-[0_0_40px_rgba(239,68,68,0.20)] rounded-[28px] px-8 py-8">
             <div className="mb-4 w-16 h-16 rounded-full bg-danger-500/10 border border-danger-500/30 flex items-center justify-center mx-auto">
               <span className="text-3xl">🔒</span>
             </div>
-            <h1 className="text-xl font-bold text-white mb-2">Página não encontrada</h1>
+            <h1 className="text-xl font-bold text-ink-900 mb-2">Página não encontrada</h1>
             <p className="text-ink-400 text-sm mb-6">
-              O município <span className="text-white font-semibold">/{subdomain}</span> não existe ou foi desativado no sistema.
+              O município <span className="text-ink-900 font-semibold">/{subdomain}</span> não existe ou foi desativado no sistema.
             </p>
             <a
               href="/"
@@ -88,7 +118,7 @@ export default function Login() {
               Voltar ao início
             </a>
           </div>
-          <p className="mt-6 text-xs text-white/30 uppercase tracking-widest">
+          <p className="mt-6 text-xs text-ink-400 dark:text-white/30 uppercase tracking-widest">
             © 2026 JEOS SISTEMAS E ASSESSORIAS LTDA
           </p>
         </div>
@@ -107,7 +137,8 @@ export default function Login() {
       }}
     >
       {/* Overlay */}
-      <div className="absolute inset-0 bg-ink-900/40 pointer-events-none" />
+      <div className="absolute inset-0 bg-white/75 dark:bg-[#050816]/40 pointer-events-none" />
+      <BotaoTema className="absolute top-4 right-4 z-30" />
 
       {/* ── Desktop: grid 2 colunas ── */}
       <div className="hidden lg:grid h-full relative z-10 px-16 xl:px-20 gap-12"
@@ -117,17 +148,17 @@ export default function Login() {
         <div className="flex flex-col h-full justify-center">
           {/* Logo jProcesso */}
           <img
-            src="/logo_jprocesso.png"
+            src={isDark ? '/logo_jprocesso.png' : '/logo_dark.png'}
             alt="jProcesso"
             className="mb-8 w-[500px] max-w-full object-contain drop-shadow-[0_0_28px_rgba(168,85,247,0.40)]"
           />
 
           {/* Card consulta pública */}
-          <div className="w-full max-w-2xl p-6 bg-black/45 backdrop-blur-md border border-white/10 rounded-3xl">
-            <h2 className="text-white font-semibold text-base mb-1">
+          <div className="w-full max-w-2xl p-6 bg-white/80 dark:bg-black/45 backdrop-blur-md border border-ink-200 dark:border-white/10 rounded-3xl">
+            <h2 className="text-ink-900 font-semibold text-base mb-1">
               Consultar processos
             </h2>
-            <p className="text-white/50 text-sm mb-4">
+            <p className="text-ink-500 text-sm mb-4">
               {nomeMunicipio
                 ? `Pesquise processos de ${nomeMunicipio} sem precisar de login`
                 : 'Pesquise processos sem precisar de login'}
@@ -157,8 +188,8 @@ export default function Login() {
 
         {/* Coluna direita — card login centralizado */}
         <div className="flex items-center justify-center h-full px-4 lg:px-8">
-          <div className="relative overflow-hidden w-full max-w-md bg-[#050816]/90 backdrop-blur-xl border border-violet-500/30 shadow-[0_0_40px_rgba(168,85,247,0.35)] rounded-[28px] px-8 py-7">
-            <div className="pointer-events-none absolute inset-0 rounded-[28px] border border-white/5" />
+          <div className="relative overflow-hidden w-full max-w-md bg-white/90 dark:bg-[#050816]/90 backdrop-blur-xl border border-violet-200 dark:border-violet-500/30 shadow-[0_12px_40px_rgba(124,58,237,0.18)] dark:shadow-[0_0_40px_rgba(168,85,247,0.35)] rounded-[28px] px-8 py-7">
+            <div className="pointer-events-none absolute inset-0 rounded-[28px] border border-black/5 dark:border-white/5" />
 
             {/* Cabeçalho */}
             <div className="mb-6 flex flex-col items-center text-center relative z-10">
@@ -173,7 +204,7 @@ export default function Login() {
                   <Building2 className="h-7 w-7 text-violet-400" />
                 </div>
               )}
-              <h1 className="text-lg font-bold text-white">
+              <h1 className="text-lg font-bold text-ink-900">
                 {nomeMunicipio || 'Acesso ao Sistema'}
               </h1>
               <p className="mt-0.5 text-sm text-ink-400">
@@ -183,7 +214,7 @@ export default function Login() {
 
             {/* Erro */}
             {error && (
-              <div className="bg-danger-900/30 border border-danger-500/30 text-danger-300 px-4 py-2.5 rounded-xl mb-4 text-sm relative z-10">
+              <div className="bg-danger-50 dark:bg-danger-900/30 border border-danger-200 dark:border-danger-500/30 text-danger-700 dark:text-danger-300 px-4 py-2.5 rounded-xl mb-4 text-sm relative z-10">
                 {error}
               </div>
             )}
@@ -238,15 +269,8 @@ export default function Login() {
               </button>
             </form>
 
-            <div className="mt-4 text-center relative z-10">
-              <Link
-                to={`/${subdomain}/consulta`}
-                className="inline-flex items-center gap-1.5 text-xs text-ink-400 hover:text-violet-300 transition-all"
-              >
-                <Search className="h-3 w-3" />
-                Consultar processo sem login
-              </Link>
-            </div>
+            <LinksPublicos subdomain={subdomain} />
+
           </div>
         </div>
       </div>
@@ -255,14 +279,14 @@ export default function Login() {
       <div className="lg:hidden flex flex-col items-center px-5 py-8 relative z-10 min-h-screen justify-center gap-5">
         {/* Logo mobile */}
         <img
-          src="/logo_jprocesso.png"
+          src={isDark ? '/logo_jprocesso.png' : '/logo_dark.png'}
           alt="jProcesso"
           className="w-48 max-w-full object-contain drop-shadow-[0_0_20px_rgba(168,85,247,0.40)]"
         />
 
         {/* Card login */}
-        <div className="relative overflow-hidden w-full max-w-sm bg-[#050816]/90 backdrop-blur-xl border border-violet-500/30 shadow-[0_0_40px_rgba(168,85,247,0.35)] rounded-[28px] px-6 py-7">
-          <div className="pointer-events-none absolute inset-0 rounded-[28px] border border-white/5" />
+        <div className="relative overflow-hidden w-full max-w-sm bg-white/90 dark:bg-[#050816]/90 backdrop-blur-xl border border-violet-200 dark:border-violet-500/30 shadow-[0_12px_40px_rgba(124,58,237,0.18)] dark:shadow-[0_0_40px_rgba(168,85,247,0.35)] rounded-[28px] px-6 py-7">
+          <div className="pointer-events-none absolute inset-0 rounded-[28px] border border-black/5 dark:border-white/5" />
 
           <div className="mb-5 flex flex-col items-center text-center relative z-10">
             {brasaoUrl ? (
@@ -276,14 +300,14 @@ export default function Login() {
                 <Building2 className="h-6 w-6 text-violet-400" />
               </div>
             )}
-            <h1 className="text-lg font-bold text-white">
+            <h1 className="text-lg font-bold text-ink-900">
               {nomeMunicipio || 'Acesso ao Sistema'}
             </h1>
             <p className="mt-0.5 text-sm text-ink-400">Informe suas credenciais</p>
           </div>
 
           {error && (
-            <div className="bg-danger-900/30 border border-danger-500/30 text-danger-300 px-4 py-2.5 rounded-xl mb-4 text-sm relative z-10">
+            <div className="bg-danger-50 dark:bg-danger-900/30 border border-danger-200 dark:border-danger-500/30 text-danger-700 dark:text-danger-300 px-4 py-2.5 rounded-xl mb-4 text-sm relative z-10">
               {error}
             </div>
           )}
@@ -334,20 +358,13 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="mt-4 text-center relative z-10">
-            <Link
-              to={`/${subdomain}/consulta`}
-              className="inline-flex items-center gap-1.5 text-xs text-ink-400 hover:text-violet-300 transition-all"
-            >
-              <Search className="h-3 w-3" />
-              Consultar processo sem login
-            </Link>
-          </div>
+          <LinksPublicos subdomain={subdomain} />
+
         </div>
 
         {/* Consulta pública — mobile */}
-        <div className="w-full max-w-sm bg-surface/5 border border-white/10 rounded-xl p-4">
-          <p className="text-white/60 text-xs font-semibold uppercase tracking-wider mb-3">
+        <div className="w-full max-w-sm bg-white/80 dark:bg-surface/5 border border-ink-200 dark:border-white/10 rounded-xl p-4">
+          <p className="text-ink-500 text-xs font-semibold uppercase tracking-wider mb-3">
             Consultar processos
           </p>
           <form onSubmit={handleSearch} className="flex gap-2">
@@ -374,13 +391,13 @@ export default function Login() {
 
       {/* Footer institucional — desktop only */}
       <div className="pointer-events-none absolute bottom-5 left-1/2 z-20 hidden -translate-x-1/2 lg:flex">
-        <p className="text-xs font-medium tracking-[0.18em] text-white/50 uppercase drop-shadow-[0_0_8px_rgba(255,255,255,0.10)]">
+        <p className="text-xs font-medium tracking-[0.18em] text-ink-500 dark:text-white/50 uppercase dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.10)]">
           © 2026{' '}
           <a
             href="https://jeossistemas.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="pointer-events-auto text-white/70 hover:text-violet-300 transition-colors"
+            className="pointer-events-auto text-ink-700 dark:text-white/70 hover:text-violet-600 dark:hover:text-violet-300 transition-colors"
           >
             JEOS SISTEMAS E ASSESSORIAS LTDA
           </a>

@@ -91,4 +91,11 @@ router.delete('/tenants/:id/logos/:tipo', ...sa, deleteLogo);
 router.put   ('/tenants/:id/config',      ...sa, updateConfig);
 router.get   ('/tenants/:id/timbrado',    ...sa, getTimbrado);
 
+// ─── Legislação do município (normas exibidas na tela de login) ──────────────
+const legislacao = require('../controllers/legislacaoController');
+router.get   ('/tenants/:id/legislacoes',      ...sa, legislacao.listar);
+router.post  ('/tenants/:id/legislacoes',      ...sa, upload.single('arquivo'), legislacao.criar);
+router.put   ('/tenants/:id/legislacoes/:lid', ...sa, upload.single('arquivo'), legislacao.atualizar);
+router.delete('/tenants/:id/legislacoes/:lid', ...sa, legislacao.remover);
+
 module.exports = router;

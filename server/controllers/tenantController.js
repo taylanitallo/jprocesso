@@ -1153,8 +1153,8 @@ const getTenantLogo = async (req, res) => {
     const storageService = require('../services/storageService');
     const { subdomain, tipo } = req.params;
 
-    if (!['login', 'interna'].includes(tipo)) {
-      return res.status(400).json({ error: 'Tipo inválido. Use "login" ou "interna"' });
+    if (!['login', 'interna', 'timbrado'].includes(tipo)) {
+      return res.status(400).json({ error: 'Tipo inválido. Use "login", "interna" ou "timbrado"' });
     }
 
     const tenant = await Tenant.findOne({
@@ -1163,8 +1163,8 @@ const getTenantLogo = async (req, res) => {
     });
     if (!tenant) return res.status(404).json({ error: 'Município não encontrado' });
 
-    const campoMap = { login: 'logo_login_url', interna: 'logo_interna_url' };
-    let storagePath = tenant.configuracoes?.[campoMap[tipo]];
+    const campoMap = { login: 'logo_login_url', interna: 'logo_interna_url', timbrado: 'timbrado_url' };
+    let storagePath = (tipo === 'timbrado' && tenant.configuracoes?.timbrado_path) || tenant.configuracoes?.[campoMap[tipo]];
     if (!storagePath) return res.status(404).json({ error: 'Logo não configurada' });
 
     // Se for URL completa do Supabase, extrair o caminho relativo dentro do bucket
@@ -1189,6 +1189,9 @@ const getTenantLogo = async (req, res) => {
     res.setHeader('Content-Type', mime);
     // URL fixa por tenant: revalidar sempre (ETag → 304) para a troca de logo aparecer na hora
     res.setHeader('Cache-Control', 'no-cache');
+    // Imagem pública exibida pelo site em outro domínio (front ≠ API em produção):
+    // sem isto o helmet manda CORP same-origin e o navegador bloqueia o <img>.
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     res.send(buffer);
   } catch (error) {
     console.error('Erro ao servir logo do tenant:', error);

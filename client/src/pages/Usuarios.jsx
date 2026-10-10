@@ -9,9 +9,10 @@ import SectionTitle from '../components/ui/SectionTitle';
 import EmptyState from '../components/ui/EmptyState';
 import FilterBar from '../components/ui/FilterBar';
 import ActionBar from '../components/ui/ActionBar';
-import { 
-  Users, 
-  UserPlus, 
+import {
+  Smartphone,
+  Users,
+  UserPlus,
   Edit2, 
   Trash2, 
   Shield, 
@@ -306,6 +307,18 @@ export default function Usuarios() {
     setShowDeleteModal(true);
   };
 
+  // Revoga o app autenticador da assinatura eletrônica (celular perdido/trocado).
+  // O usuário cadastra um novo app na próxima vez que for assinar.
+  const handleRevogarAutenticador = async (usuario) => {
+    if (!confirm(`Revogar o aplicativo autenticador de ${usuario.nome}?\n\nUse quando o celular for perdido ou trocado. O usuário precisará cadastrar o app de novo para assinar.`)) return;
+    try {
+      await api.post(`/assinaturas/totp/resetar/${usuario.id}`);
+      alert('Autenticador revogado. O usuário fará um novo cadastro na próxima assinatura.');
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao revogar o autenticador.');
+    }
+  };
+
   const confirmDelete = async () => {
     if (deleteTarget) {
       setLoading(true);
@@ -536,6 +549,13 @@ export default function Usuarios() {
                     className="text-brand-600 hover:text-info-900 mr-3"
                   >
                     <Edit2 className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => handleRevogarAutenticador(usuario)}
+                    title="Revogar aplicativo autenticador (celular perdido ou trocado)"
+                    className="text-amber-600 hover:text-amber-800 mr-3"
+                  >
+                    <Smartphone className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => handleDelete(usuario)}

@@ -19,6 +19,7 @@ import LoginAdmin from './pages/LoginAdmin'
 import MunicipioSelector from './pages/MunicipioSelector'
 import Dashboard from './pages/Dashboard'
 import ConsultaPublica from './pages/ConsultaPublica'
+import AssinaturaProvider from './components/assinatura/AssinaturaProvider'
 
 // ── Lazy — páginas pesadas carregadas sob demanda ─────────────────────────────
 const Processos          = lazy(() => import('./pages/Processos'))
@@ -38,6 +39,8 @@ const Registros          = lazy(() => import('./pages/Registros'))
 const AdminTenants       = lazy(() => import('./pages/AdminTenants'))
 const Arquivo            = lazy(() => import('./pages/Arquivo'))
 const Tesouraria         = lazy(() => import('./pages/Tesouraria'))
+const VerificarDocumento = lazy(() => import('./pages/VerificarDocumento'))
+const Legislacao         = lazy(() => import('./pages/Legislacao'))
 
 // ── PageLoader — fallback enquanto chunk carrega ──────────────────────────────
 function PageLoader({ label = 'Carregando módulo...' }) {
@@ -154,6 +157,7 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <AssinaturaProvider>
         <GlobalProgressBar />
         <TimbradoSync />
         <MargensSync />
@@ -175,6 +179,8 @@ function App() {
             <Route path="/:subdomain" element={<TenantGuard />}>
               <Route path="login" element={<LoginRoute />} />
               <Route path="consulta/:numero?" element={<ConsultaPublica />} />
+              <Route path="verificar"  element={<VerificarDocumento />} />
+              <Route path="legislacao" element={<Legislacao />} />
 
               <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
                 <Route index element={<Dashboard />} />
@@ -231,6 +237,7 @@ function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
+        </AssinaturaProvider>
       </AuthProvider>
     </ThemeProvider>
   )

@@ -47,7 +47,7 @@ export default function AuthProvider({ children }) {
         // Buscar usuário e tenant em paralelo com o novo token em memória
         return Promise.all([
           api.get('/auth/profile'),
-          fetch(`/api/tenants/info?subdomain=${subdomain}`).then(r => r.json()),
+          api.get(`/tenants/info?subdomain=${subdomain}`).then(r => r.data),
         ])
       })
       .then(([profileRes, tenantInfoData]) => {

@@ -3,6 +3,43 @@ const crypto = require('crypto');
 const { Op, Sequelize } = require('sequelize');
 const { registrarLog } = require('../middleware/activityLogger');
 const { getScopeSetorInclude, getScopeSecretariaInclude } = require('../utils/scopeFilter');
+const { masterDb } = require('../config/database');
+const assinaturaService = require('../services/assinaturaService');
+const { AssinaturaError } = assinaturaService;
+
+// ── Assinatura eletrônica avançada dos atos de tramitação ────────────────────
+// Todo ato (abertura, trâmite, devolução, conclusão, recebimento) exige senha +
+// código do app autenticador e gera registro assinado, com código verificador.
+
+// Norma municipal que regulamenta a assinatura (cadastrada em Legislação)
+const fundamentoMunicipal = async (tenant) => {
+  if (!tenant?.id) return null;
+  const rows = await masterDb.query(
+    `SELECT titulo FROM public.legislacoes
+      WHERE tenant_id = :tid AND regulamenta_assinatura AND ativo
+      ORDER BY data_publicacao DESC NULLS LAST, criado_em DESC LIMIT 1`,
+    { replacements: { tid: tenant.id }, type: Sequelize.QueryTypes.SELECT }
+  ).catch(() => []);
+  return rows[0]?.titulo || null;
+};
+
+const validarAssinante = (req, usuario, transaction) => assinaturaService.validarCredenciais({
+  db: req.tenantDb, transaction, usuario,
+  senha: req.body?.senhaConfirmacao, codigo: req.body?.codigoTotp,
+});
+
+const assinarTramitacao = async (req, transaction, processo, tramitacao, signatario) => {
+  const row = await assinaturaService.assinarAto({
+    db: req.tenantDb, transaction, masterDb, tenant: req.tenant, processo, tramitacao, signatario, req,
+    fundamentoMunicipal: await fundamentoMunicipal(req.tenant),
+  });
+  await tramitacao.update({ assinatura_digital: row.hash_conteudo }, { transaction });
+  return { codigo_verificador: row.codigo_verificador, codigo_crc: row.codigo_crc, assinado_em: row.assinado_em };
+};
+
+// Erros de assinatura (senha/código) voltam ao cliente com o código para a UI tratar
+const responderErroAssinatura = (res, error) =>
+  res.status(error.status).json({ error: error.message, codigo: error.codigo });
 
 // ── Protocolo digital: normaliza o bloco protocolo_doc vindo do cliente ───────
 // Só campos conhecidos são persistidos — o JSONB nunca recebe payload arbitrário.
@@ -61,8 +98,11 @@ const createProcesso = async (req, res) => {
         as: 'setor',
         include: [{ model: Secretaria, as: 'secretaria' }]
       }],
-      transaction 
+      transaction
     });
+
+    // Abertura é ato assinado: senha + código do app autenticador
+    await validarAssinante(req, user, transaction);
 
     const secretariaNome = user.setor?.secretaria?.sigla || 'SEC';
     const numero = `Proc.${ano}.${String(sequencial).padStart(7, '0')} - ${secretariaNome}`;
@@ -94,7 +134,7 @@ const createProcesso = async (req, res) => {
       .update(`${processo.id}-${req.user.id}-${new Date().toISOString()}`)
       .digest('hex');
 
-    await Tramitacao.create({
+    const tramAbertura = await Tramitacao.create({
       processo_id: processo.id,
       tipo_acao: 'abertura',
       despacho: `Processo aberto por ${user.nome}`,
@@ -104,6 +144,7 @@ const createProcesso = async (req, res) => {
       ip_origem: req.ip || req.connection.remoteAddress,
       assinatura_digital: assinaturaDigital
     }, { transaction });
+    const assinaturas = [await assinarTramitacao(req, transaction, processo, tramAbertura, user)];
 
     // ── Encaminhamento no ato do protocolo ───────────────────────────────────
     // O balcão de protocolo registra e já encaminha ao setor competente. É o
@@ -131,7 +172,7 @@ const createProcesso = async (req, res) => {
         ? despachoEncaminhamento.trim()
         : `Protocolo registrado por ${user.nome} e encaminhado a ${destinoSetor.nome} para providências.`;
 
-      await Tramitacao.create({
+      const tramEnc = await Tramitacao.create({
         processo_id: processo.id,
         tipo_acao: 'tramite',
         despacho: despachoEnc,
@@ -143,6 +184,7 @@ const createProcesso = async (req, res) => {
         ip_origem: req.ip || req.connection.remoteAddress,
         assinatura_digital: assinaturaEnc
       }, { transaction });
+      assinaturas.push(await assinarTramitacao(req, transaction, processo, tramEnc, user));
 
       await processo.update({
         status: 'em_analise',
@@ -177,11 +219,13 @@ const createProcesso = async (req, res) => {
         qrcode: processo.qrcode,
         protocolo_doc: processo.protocolo_doc,
         encaminhado_para: encaminhadoPara,
-        assinatura_digital: assinaturaDigital
+        assinatura_digital: assinaturaDigital,
+        assinaturas
       }
     });
   } catch (error) {
     await transaction.rollback();
+    if (error instanceof AssinaturaError) return responderErroAssinatura(res, error);
     console.error('Erro ao criar processo:', error);
 
     // M-6: nunca vazar error.message/stack ao cliente
@@ -201,9 +245,8 @@ const tramitarProcesso = async (req, res) => {
   
   try {
     const { id } = req.params;
-    const { despacho, destinoSetorId, destinoUsuarioId, senhaConfirmacao } = req.body;
+    const { despacho, destinoSetorId, destinoUsuarioId } = req.body;
     const { Processo, Tramitacao, User } = req.models;
-    const bcrypt = require('bcryptjs');
 
     // Validações
     if (!despacho || despacho.trim().length === 0) {
@@ -221,11 +264,6 @@ const tramitarProcesso = async (req, res) => {
       return res.status(400).json({ error: 'Setor de destino é obrigatório' });
     }
 
-    if (!senhaConfirmacao) {
-      await transaction.rollback();
-      return res.status(400).json({ error: 'Senha de confirmação é obrigatória para assinatura eletrônica' });
-    }
-
     // Buscar processo
     const processo = await Processo.findByPk(id, { transaction });
     if (!processo) {
@@ -239,14 +277,9 @@ const tramitarProcesso = async (req, res) => {
       return res.status(400).json({ error: 'Não é possível tramitar um processo concluído ou arquivado' });
     }
 
-    // Buscar usuário e verificar senha
+    // Buscar usuário e validar a assinatura eletrônica (senha + código do app)
     const user = await User.findByPk(req.user.id, { transaction });
-    const senhaValida = await bcrypt.compare(senhaConfirmacao, user.senha);
-    
-    if (!senhaValida) {
-      await transaction.rollback();
-      return res.status(400).json({ error: 'Senha incorreta. A assinatura eletrônica requer confirmação da senha' });
-    }
+    await validarAssinante(req, user, transaction);
 
     // Verificar permissão - APENAS o usuário atual pode tramitar
     if (processo.usuario_atual_id && processo.usuario_atual_id !== req.user.id) {
@@ -311,7 +344,7 @@ const tramitarProcesso = async (req, res) => {
       .digest('hex');
 
     // Criar tramitação
-    await Tramitacao.create({
+    const tramitacao = await Tramitacao.create({
       processo_id: processo.id,
       tipo_acao: 'tramite',
       despacho,
@@ -323,6 +356,7 @@ const tramitarProcesso = async (req, res) => {
       ip_origem: req.ip || req.connection.remoteAddress,
       assinatura_digital: assinaturaDigital
     }, { transaction });
+    const assinatura = await assinarTramitacao(req, transaction, processo, tramitacao, user);
 
     // Atualizar processo
     await processo.update({
@@ -344,11 +378,13 @@ const tramitarProcesso = async (req, res) => {
     res.json({ 
       message: 'Processo tramitado com sucesso',
       assinatura_digital: assinaturaDigital,
+      assinatura,
       timestamp,
       tramitado_por: user.nome
     });
   } catch (error) {
     await transaction.rollback();
+    if (error instanceof AssinaturaError) return responderErroAssinatura(res, error);
     console.error('Erro ao tramitar processo:', error);
     
     let errorMessage = 'Erro ao tramitar processo';
@@ -417,13 +453,14 @@ const devolverProcesso = async (req, res) => {
     }
 
     const user = await User.findByPk(req.user.id, { transaction });
+    await validarAssinante(req, user, transaction);
 
     const assinaturaDigital = crypto
       .createHash('sha256')
       .update(`${processo.id}-${req.user.id}-devolucao-${new Date().toISOString()}`)
       .digest('hex');
 
-    await Tramitacao.create({
+    const tramitacao = await Tramitacao.create({
       processo_id: processo.id,
       tipo_acao: 'devolucao',
       despacho: null,
@@ -435,6 +472,7 @@ const devolverProcesso = async (req, res) => {
       ip_origem: req.ip || req.connection.remoteAddress,
       assinatura_digital: assinaturaDigital
     }, { transaction });
+    const assinatura = await assinarTramitacao(req, transaction, processo, tramitacao, user);
 
     await processo.update({
       status: 'devolvido',
@@ -455,10 +493,12 @@ const devolverProcesso = async (req, res) => {
     res.json({ 
       message: 'Processo devolvido com sucesso',
       setor_devolucao: ultimaTramitacao.origem_setor_id,
-      assinatura_digital: assinaturaDigital
+      assinatura_digital: assinaturaDigital,
+      assinatura
     });
   } catch (error) {
     await transaction.rollback();
+    if (error instanceof AssinaturaError) return responderErroAssinatura(res, error);
     console.error('Erro ao devolver processo:', error);
     res.status(500).json({ error: 'Erro ao devolver processo' });
   }
@@ -494,13 +534,14 @@ const concluirProcesso = async (req, res) => {
     }
 
     const user = await User.findByPk(req.user.id, { transaction });
+    await validarAssinante(req, user, transaction);
 
     const assinaturaDigital = crypto
       .createHash('sha256')
       .update(`${processo.id}-${req.user.id}-conclusao-${new Date().toISOString()}`)
       .digest('hex');
 
-    await Tramitacao.create({
+    const tramitacao = await Tramitacao.create({
       processo_id: processo.id,
       tipo_acao: 'conclusao',
       despacho: despachoFinal,
@@ -509,6 +550,7 @@ const concluirProcesso = async (req, res) => {
       ip_origem: req.ip || req.connection.remoteAddress,
       assinatura_digital: assinaturaDigital
     }, { transaction });
+    const assinatura = await assinarTramitacao(req, transaction, processo, tramitacao, user);
 
     await processo.update({
       status: 'concluido',
@@ -527,10 +569,12 @@ const concluirProcesso = async (req, res) => {
 
     res.json({ 
       message: 'Processo concluído com sucesso',
-      assinatura_digital: assinaturaDigital
+      assinatura_digital: assinaturaDigital,
+      assinatura
     });
   } catch (error) {
     await transaction.rollback();
+    if (error instanceof AssinaturaError) return responderErroAssinatura(res, error);
     console.error('Erro ao concluir processo:', error);
     res.status(500).json({ error: 'Erro ao concluir processo' });
   }
@@ -859,7 +903,13 @@ const getProcessoById = async (req, res) => {
       return res.status(404).json({ error: 'Processo não encontrado' });
     }
 
-    res.json({ processo });
+    // Tarja de assinatura eletrônica de cada ato (tramitações antigas não têm)
+    const obj = processo.toJSON();
+    const assinaturas = await assinaturaService.listarPorProcesso(req.tenantDb, processo.id).catch(() => []);
+    const porTramitacao = new Map(assinaturas.map(a => [a.tramitacao_id, a]));
+    (obj.tramitacoes || []).forEach(t => { t.assinatura_eletronica = porTramitacao.get(t.id) || null; });
+
+    res.json({ processo: obj });
   } catch (error) {
     console.error('Erro ao buscar processo:', error);
     res.status(500).json({ error: 'Erro ao buscar processo' });
@@ -1359,23 +1409,25 @@ const salvarDespachoDoc = async (req, res) => {
 };
 
 const receberProcesso = async (req, res) => {
+  const transaction = await req.tenantDb.transaction();
   try {
     const { id } = req.params;
     const { Processo, Tramitacao, User } = req.models;
     const usuarioId = req.user.id;
 
-    const processo = await Processo.findByPk(id);
-    if (!processo) return res.status(404).json({ error: 'Processo não encontrado' });
-    if (processo.status === 'concluido') return res.status(400).json({ error: 'Processo já concluído.' });
+    const processo = await Processo.findByPk(id, { transaction });
+    if (!processo) { await transaction.rollback(); return res.status(404).json({ error: 'Processo não encontrado' }); }
+    if (processo.status === 'concluido') { await transaction.rollback(); return res.status(400).json({ error: 'Processo já concluído.' }); }
 
-    const user = await User.findByPk(usuarioId);
+    const user = await User.findByPk(usuarioId, { transaction });
 
     // Verifica se o usuário é o destinatário (está no setor atual ou é o usuário atual)
     const isDestinatario =
       processo.usuario_atual_id === usuarioId ||
-      (processo.usuario_atual_id === null && processo.setor_atual_id === user?.setor_id);
+      (processo.usuario_atual_id === null && processo.setor_atual_id === user?.setorId);
 
     if (!isDestinatario) {
+      await transaction.rollback();
       return res.status(403).json({ error: 'Você não é o destinatário deste processo.' });
     }
 
@@ -1383,19 +1435,22 @@ const receberProcesso = async (req, res) => {
     const ultimaTramitacao = await Tramitacao.findOne({
       where: { processo_id: id },
       order: [['data_hora', 'DESC']],
+      transaction,
     });
 
     if (!ultimaTramitacao || !['tramite', 'devolucao'].includes(ultimaTramitacao.tipo_acao)) {
+      await transaction.rollback();
       return res.status(400).json({ error: 'Este processo não requer recebimento no momento.' });
     }
 
-    const crypto = require('crypto');
+    await validarAssinante(req, user, transaction);
+
     const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
-    const assinatura = crypto.createHash('sha256')
+    const assinaturaDigital = crypto.createHash('sha256')
       .update(`${processo.numero}-recebimento-${usuarioId}-${Date.now()}`)
       .digest('hex');
 
-    await Tramitacao.create({
+    const tramitacao = await Tramitacao.create({
       processo_id: id,
       tipo_acao: 'recebimento',
       origem_usuario_id: usuarioId,
@@ -1405,19 +1460,23 @@ const receberProcesso = async (req, res) => {
       despacho: `Processo recebido por ${user?.nome || 'usuário'}`,
       data_hora: new Date(),
       ip_origem: ip,
-      assinatura_digital: assinatura,
-    });
+      assinatura_digital: assinaturaDigital,
+    }, { transaction });
+    const assinatura = await assinarTramitacao(req, transaction, processo, tramitacao, user);
 
     // Se o processo estava apenas no setor (sem usuário), atribui ao receptor
     if (!processo.usuario_atual_id) {
       processo.usuario_atual_id = usuarioId;
-      await processo.save();
+      await processo.save({ transaction });
     }
 
-    res.json({ message: 'Processo recebido com sucesso!' });
+    await transaction.commit();
+    res.json({ message: 'Processo recebido com sucesso!', assinatura });
   } catch (err) {
+    await transaction.rollback();
+    if (err instanceof AssinaturaError) return responderErroAssinatura(res, err);
     console.error('Erro ao receber processo:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Erro ao receber processo' });
   }
 };
 

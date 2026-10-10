@@ -145,6 +145,57 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
         ADD COLUMN IF NOT EXISTS dotacoes TEXT[] NOT NULL DEFAULT '{}'
     `),
 
+    // 0i. Assinatura eletrônica avançada (Lei 14.063/2020) — atos de tramitação
+    run(`
+      CREATE TABLE IF NOT EXISTS assinaturas_eletronicas (
+        id                 UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+        codigo_verificador VARCHAR(12)   NOT NULL UNIQUE,
+        codigo_crc         VARCHAR(8)    NOT NULL,
+        processo_id        UUID          NOT NULL,
+        tramitacao_id      UUID,
+        tipo_ato           VARCHAR(30)   NOT NULL,
+        signatario_id      UUID          NOT NULL,
+        signatario_nome    VARCHAR(255)  NOT NULL,
+        signatario_cpf     VARCHAR(11),
+        signatario_cargo   VARCHAR(120),
+        nivel              VARCHAR(20)   NOT NULL DEFAULT 'avancada',
+        metodo             VARCHAR(40)   NOT NULL,
+        conteudo           JSONB         NOT NULL,
+        hash_conteudo      CHAR(64)      NOT NULL,
+        hash_anterior      CHAR(64),
+        assinatura         TEXT          NOT NULL,
+        chave_id           VARCHAR(32)   NOT NULL,
+        ip                 VARCHAR(64),
+        user_agent         VARCHAR(300),
+        assinado_em        TIMESTAMPTZ   NOT NULL,
+        created_at         TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS assinaturas_processo_idx   ON assinaturas_eletronicas (processo_id, assinado_em);
+      CREATE INDEX IF NOT EXISTS assinaturas_tramitacao_idx ON assinaturas_eletronicas (tramitacao_id);
+
+      -- Registro de assinatura é imutável: bloqueia UPDATE
+      CREATE OR REPLACE FUNCTION assinaturas_bloquear_update() RETURNS trigger AS $$
+      BEGIN
+        RAISE EXCEPTION 'Assinaturas eletrônicas são imutáveis';
+      END;
+      $$ LANGUAGE plpgsql;
+      DROP TRIGGER IF EXISTS assinaturas_imutaveis ON assinaturas_eletronicas;
+      CREATE TRIGGER assinaturas_imutaveis BEFORE UPDATE ON assinaturas_eletronicas
+        FOR EACH ROW EXECUTE FUNCTION assinaturas_bloquear_update();
+
+      -- 2º fator (app autenticador). Separado de usuarios para o segredo nunca
+      -- sair em listagens de usuários.
+      CREATE TABLE IF NOT EXISTS usuario_totp (
+        usuario_id      UUID         PRIMARY KEY,
+        segredo_cifrado TEXT         NOT NULL,
+        ativo           BOOLEAN      NOT NULL DEFAULT false,
+        ultimo_passo    BIGINT,
+        ativado_em      TIMESTAMPTZ,
+        created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+      );
+    `),
+
     // 0h. Contratos — Licitações (processos licitatórios / contratações diretas)
     run(`
       CREATE TABLE IF NOT EXISTS licitacoes (
@@ -983,6 +1034,33 @@ const criarTabelasBackup = async () => {
   `).catch(() => {});
 };
 
+// Tabelas públicas: chaves de assinatura eletrônica e legislação por município
+const criarTabelasAssinaturaLegislacao = async () => {
+  await masterDb.query(`
+    CREATE TABLE IF NOT EXISTS public.assinatura_chaves (
+      kid               VARCHAR(32)  PRIMARY KEY,
+      chave_publica_pem TEXT         NOT NULL,
+      criado_em         TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS public.legislacoes (
+      id                     UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id              UUID          NOT NULL REFERENCES public.clientes(id) ON DELETE CASCADE,
+      titulo                 VARCHAR(300)  NOT NULL,
+      descricao              TEXT,
+      data_publicacao        DATE,
+      arquivo_path           TEXT,
+      arquivo_nome           VARCHAR(255),
+      regulamenta_assinatura BOOLEAN       NOT NULL DEFAULT false,
+      ordem                  INTEGER       NOT NULL DEFAULT 0,
+      ativo                  BOOLEAN       NOT NULL DEFAULT true,
+      criado_em              TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      atualizado_em          TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS legislacoes_tenant_idx ON public.legislacoes (tenant_id, ordem);
+  `).catch((err) => console.warn('[migration] assinatura/legislação:', err.message));
+};
+
 // Garante que a tabela public.refresh_tokens existe no masterDb (para admin users)
 const ensureMasterRefreshTokensTable = async () => {
   await masterDb.query(`
@@ -1019,4 +1097,5 @@ module.exports = {
   ensureMasterRefreshTokensTable,
   ensureAdminsEmailColumn,
   criarTabelasBackup,
+  criarTabelasAssinaturaLegislacao,
 };

@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, Save, Loader2, CheckCircle, AlertCircle, FileCheck, FileDown, Eye } from 'lucide-react'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
+import { useAssinatura } from '../components/assinatura/AssinaturaProvider'
 import { EMPTY, DidReadOnlyContext, ConfirmModal } from './did/didShared'
 import { gerarDidPDF } from './did/gerarDidPDF'
 import DidFixasSecaoI from './did/fixas/DidFixasSecaoI'
@@ -229,6 +230,7 @@ export default function FormularioDid() {
   const navigate = useNavigate()
   const location = useLocation()
   const { tenant, user } = useAuth()
+  const { assinar } = useAssinatura()
   // Modo somente leitura: ativado quando o processo está em outro setor/secretaria
   const readOnly = location.state?.readOnly === true
 
@@ -463,14 +465,21 @@ export default function FormularioDid() {
 
   const criarProcessoSeNovo = async () => {
     if (processoId !== 'novo') return processoId
-    const resP = await api.post('/processos', {
-      assunto: form.objeto,
-      descricao: form.objeto,
-      interessado_nome: form.credor_sec1 || 'DID - Instrução de Despesa',
-      interessado_cpf_cnpj: (form.cnpj_cpf_credor_sec1 || '').replace(/\D/g, '') || '00000000000000',
-      tipo_processo: 'Did',
-      prioridade: 'normal'
+    // Abertura do processo é ato assinado eletronicamente (senha + código do app)
+    const resP = await assinar({
+      titulo: 'Abrir processo de DID',
+      resumo: <p><strong>Objeto:</strong> {form.objeto}</p>,
+      executar: (cred) => api.post('/processos', {
+        assunto: form.objeto,
+        descricao: form.objeto,
+        interessado_nome: form.credor_sec1 || 'DID - Instrução de Despesa',
+        interessado_cpf_cnpj: (form.cnpj_cpf_credor_sec1 || '').replace(/\D/g, '') || '00000000000000',
+        tipo_processo: 'Did',
+        prioridade: 'normal',
+        ...cred,
+      }),
     })
+    if (!resP) throw new Error('Assinatura cancelada — o processo não foi aberto.')
     return resP.data?.processo?.id || resP.data?.id
   }
 
@@ -694,7 +703,7 @@ export default function FormularioDid() {
             type="button"
             onClick={() => setEditando(true)}
             disabled={editando}
-            className="flex items-center gap-2 px-3 py-1.5 bg-warning-500 hover:bg-warning-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+            className="flex items-center gap-2 px-3 py-1.5 bg-warning-600 hover:bg-warning-700 dark:bg-warning-700 dark:hover:bg-warning-800 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
             ✏️ Alterar
           </button>
           <button onClick={handleSaveDid} disabled={savingDid || !editando} className="btn-primary flex items-center gap-2 py-1.5 text-sm">
@@ -896,7 +905,7 @@ export default function FormularioDid() {
           type="button"
           onClick={() => setEditando(true)}
           disabled={editando}
-          className="flex items-center gap-2 px-4 py-2 bg-warning-500 hover:bg-warning-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+          className="flex items-center gap-2 px-4 py-2 bg-warning-600 hover:bg-warning-700 dark:bg-warning-700 dark:hover:bg-warning-800 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
           ✏️ Alterar
         </button>
         <button onClick={handleSaveDid} disabled={savingDid || !editando} className="btn-primary flex items-center gap-2">

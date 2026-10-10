@@ -1,8 +1,10 @@
 import { ArrowLeftCircle, ArrowRight, User, Building2, LayoutGrid } from 'lucide-react'
 import { useState } from 'react'
 import api from '../services/api'
+import { useAssinatura } from './assinatura/AssinaturaProvider'
 
 export default function ModalDevolver({ processoId, destinoDevolucao, onClose, onSuccess }) {
+  const { assinar } = useAssinatura()
   const [justificativa, setJustificativa] = useState('')
   const [error, setError] = useState('')
 
@@ -16,8 +18,13 @@ export default function ModalDevolver({ processoId, destinoDevolucao, onClose, o
     }
 
     try {
-      await api.post(`/processos/${processoId}/devolver`, { justificativa })
-      onSuccess('Processo devolvido com sucesso!')
+      const r = await assinar({
+        titulo: 'Devolver processo',
+        resumo: <p><strong>Justificativa:</strong> {justificativa.substring(0, 200)}{justificativa.length > 200 ? '...' : ''}</p>,
+        executar: (cred) => api.post(`/processos/${processoId}/devolver`, { justificativa, ...cred }),
+      })
+      if (!r) return // cancelou a assinatura
+      onSuccess('Processo devolvido e assinado eletronicamente!')
     } catch (err) {
       setError(err.response?.data?.error || 'Erro ao devolver processo')
     }

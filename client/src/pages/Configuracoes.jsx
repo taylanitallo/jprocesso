@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -109,8 +109,8 @@ export default function Configuracoes() {
   // Busca configurações globais diretamente do banco ao montar
   useEffect(() => {
     if (!tenant?.subdominio) return;
-    fetch(`/api/tenants/info?subdomain=${tenant.subdominio}`)
-      .then(r => r.json())
+    api.get(`/tenants/info?subdomain=${tenant.subdominio}`)
+      .then(r => r.data)
       .then(data => {
         const c = data?.tenant?.configuracoes;
         if (!c) return;
@@ -652,7 +652,7 @@ export default function Configuracoes() {
                   <button
                     type="button"
                     onClick={() => { setGeraisOriginal({ ...geraisData }); setEditandoGerais(true); }}
-                    className="flex items-center gap-2 px-4 py-2 bg-warning-500 hover:bg-warning-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm"
+                    className="flex items-center gap-2 px-4 py-2 bg-warning-600 hover:bg-warning-700 dark:bg-warning-700 dark:hover:bg-warning-800 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm"
                   >
                     Alterar
                   </button>
@@ -800,7 +800,7 @@ export default function Configuracoes() {
                       className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-ink-300 bg-ink-50 cursor-pointer hover:border-info-400 transition-colors"
                       onClick={() => importInputRef.current?.click()}
                     >
-                      <Database className="h-8 w-8 text-ink-300 mb-2" />
+                      <Database className="h-8 w-8 text-ink-400 mb-2" />
                       {importFile ? (
                         <p className="text-sm text-brand-600 dark:text-info-400 font-medium">{importFile.name}</p>
                       ) : (

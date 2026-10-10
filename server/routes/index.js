@@ -14,6 +14,7 @@ const logRoutes          = require('./log');
 const aylaRoutes         = require('./ayla');
 const superadminRoutes   = require('./superadmin');
 const tesourariaRoutes   = require('./tesouraria');
+const assinaturaRoutes   = require('./assinatura');
 
 module.exports = (app) => {
   app.use('/api/auth', authRoutes);
@@ -33,4 +34,5 @@ module.exports = (app) => {
   app.use('/api/ayla',       aylaRoutes);
   app.use('/api/superadmin', superadminRoutes);
   app.use('/api/tesouraria', tesourariaRoutes);
+  app.use('/api/assinaturas', assinaturaRoutes);
 };

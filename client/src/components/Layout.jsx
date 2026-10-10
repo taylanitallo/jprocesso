@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import JAI from './JAI'
-import api from '../services/api'
+import api, { apiUrl } from '../services/api'
 
 export default function Layout() {
   const { user, tenant, logout } = useAuth()
@@ -168,7 +168,7 @@ export default function Layout() {
         <div className="h-16 px-4 flex items-center justify-between border-b border-ink-200 shrink-0 overflow-hidden">
           {!sidebarCollapsed && (
             tenant?.configuracoes?.logo_interna_url && tenant?.subdominio
-              ? <img src={`/api/tenants/${tenant.subdominio}/logo/interna`} alt="logo" className="max-h-10 w-auto max-w-full object-contain" />
+              ? <img src={apiUrl(`/tenants/${tenant.subdominio}/logo/interna`)} alt="logo" className="max-h-10 w-auto max-w-full object-contain" />
               /*
                * A arte tem "Processo" e o subtítulo em branco — foi desenhada
                * para fundo escuro e sumia no tema claro. `brightness-0` achata

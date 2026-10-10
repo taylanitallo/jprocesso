@@ -6,7 +6,7 @@ const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
-const { masterDb, getTenantConnection, ensureMasterRefreshTokensTable, ensureAdminsEmailColumn, criarTabelasBackup } = require('./config/database');
+const { masterDb, getTenantConnection, ensureMasterRefreshTokensTable, ensureAdminsEmailColumn, criarTabelasBackup, criarTabelasAssinaturaLegislacao } = require('./config/database');
 const Tenant = require('./models/Tenant');
 const { migrarTodosOsSchemas } = require('./controllers/tenantController');
 const routes = require('./routes');
@@ -251,3 +251,5 @@ initDatabase().then(() => {
 module.exports = app;
  
  
+    // Chaves de assinatura eletrônica e legislação por município
+    await criarTabelasAssinaturaLegislacao();

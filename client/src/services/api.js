@@ -25,6 +25,13 @@ const getStoredTenantSubdomain = () => {
 // ── Instância axios ───────────────────────────────────────────────────────────
 const getApiUrl = () => import.meta.env.VITE_API_URL || '/api'
 
+/**
+ * URL absoluta de um recurso da API para uso fora do axios (<img src>, links de
+ * PDF, window.open). Em produção a API fica em outro domínio (VITE_API_URL);
+ * um '/api/...' relativo apontaria para o domínio do site e falharia.
+ */
+export const apiUrl = (path) => `${getApiUrl()}${path.startsWith('/') ? path : `/${path}`}`
+
 const api = axios.create({
   baseURL: getApiUrl(),
   // withCredentials: envia o cookie httpOnly refreshToken em requisições cross-origin
