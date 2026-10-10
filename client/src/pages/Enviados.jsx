@@ -4,6 +4,7 @@ import { useQuery } from 'react-query'
 import { ArrowRight } from 'lucide-react'
 import api from '../services/api'
 
+import NumeroProcesso from '../components/NumeroProcesso'
 const STATUS_INFO = {
   aberto:     { label: 'Aberto',     cls: 'status-aberto',     emoji: '🔵' },
   em_analise: { label: 'Em Análise', cls: 'status-em_analise', emoji: '🟡' },
@@ -71,7 +72,7 @@ export default function Enviados() {
                   <div className="shrink-0 text-2xl">📤</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center flex-wrap gap-2 mb-1">
-                      <span className="font-bold text-ink-900 text-sm">{processo.numero}</span>
+                      <NumeroProcesso numero={processo.numero} className="font-bold text-ink-900 text-sm" />
                       <span className={s.cls}>{s.emoji} {s.label}</span>
                       {processo.tipoTramitacao && (
                         <span className="badge bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">

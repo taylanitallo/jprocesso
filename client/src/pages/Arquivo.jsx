@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from 'react-query'
 import api from '../services/api'
+import NumeroProcesso from '../components/NumeroProcesso'
 import {
   Archive, Folder, FolderOpen, FileText, ExternalLink,
   ChevronRight, ChevronDown, Download, FolderInput, X, Zap, Trash2,
@@ -265,7 +266,7 @@ function MoveModal({ modal, processos, onConfirm, onClose, loading }) {
                                 ? <FolderOpen className="h-4 w-4 shrink-0 text-white" />
                                 : <Folder    className="h-4 w-4 shrink-0 text-indigo-400" />
                               }
-                              <span className="font-semibold shrink-0">{p.numero}</span>
+                              <NumeroProcesso numero={p.numero} className="font-semibold shrink-0" />
                               <span className={`truncate flex-1 ${isSel ? 'text-info-100' : 'text-ink-400'}`}>
                                 {p.assunto}
                               </span>
@@ -285,7 +286,7 @@ function MoveModal({ modal, processos, onConfirm, onClose, loading }) {
         {selectedProcesso && (
           <div className="mx-5 mb-3 px-3 py-2 bg-info-50 dark:bg-info-900/20 rounded-xl border border-info-100 dark:border-info-800/40">
             <p className="text-[11px] text-info-500 dark:text-info-400">
-              Mover para: <span className="font-bold">{selectedProcesso.numero}</span>
+              Mover para: <NumeroProcesso numero={selectedProcesso.numero} className="font-bold" />
             </p>
             <p className="text-[11px] text-info-400 dark:text-info-500 truncate">{selectedProcesso.assunto}</p>
           </div>
@@ -390,7 +391,7 @@ function ProcessoNode({ processo, depth, onView, onDownloadZip, onMove }) {
         >
           {open ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-ink-400" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-ink-400" />}
           {open ? <FolderOpen className="h-4 w-4 shrink-0 text-indigo-500" /> : <Folder className="h-4 w-4 shrink-0 text-indigo-400" />}
-          <span className="text-xs font-semibold text-ink-800 shrink-0">{processo.numero}</span>
+          <NumeroProcesso numero={processo.numero} className="text-xs font-semibold text-ink-800 shrink-0" />
           <span className="text-[11px] text-ink-400 truncate flex-1">{processo.assunto}</span>
           <span className="shrink-0 text-[11px] text-ink-400 tabular-nums">{processo.documentos?.length || 0} arq.</span>
         </button>

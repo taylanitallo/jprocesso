@@ -10,6 +10,7 @@ import ModalConcluir from '../components/ModalConcluir'
 import ModalDespacho from '../components/ModalDespacho'
 import { useAssinatura } from '../components/assinatura/AssinaturaProvider'
 import TarjaAssinatura from '../components/assinatura/TarjaAssinatura'
+import NumeroProcesso from '../components/NumeroProcesso'
 import { gerarPautaPDF, gerarProtocoloPDF, gerarRequisicaoPDF } from '../utils/gerarDocumentoPDF'
 import { ORIGEM_PROTOCOLO_LABEL, NATUREZA_PROTOCOLO_LABEL } from '../utils/protocoloConstants'
 import {
@@ -410,7 +411,12 @@ export default function DetalhesProcesso() {
       <PageHeader
         icon={FileText}
         eyebrow={processo.tipo_processo ? `Processo · ${processo.tipo_processo}` : 'Processo'}
-        title={processo.numero}
+        title={
+          <NumeroProcesso
+            numero={processo.numero}
+            linkConsulta={`${window.location.origin}/${subdomain}/consulta/${encodeURIComponent(processo.numero)}`}
+          />
+        }
         subtitle={processo.assunto}
         actions={
           <div className="flex items-center gap-2 flex-wrap">

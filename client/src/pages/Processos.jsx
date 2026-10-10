@@ -2,6 +2,7 @@ import { useQuery } from 'react-query'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useState, useCallback } from 'react'
 import api from '../services/api'
+import NumeroProcesso from '../components/NumeroProcesso'
 import {
   Plus, ChevronLeft, ChevronRight, ArrowRight,
   Inbox, Send, ClipboardList, Search, FileText,
@@ -552,7 +553,7 @@ export default function Processos() {
 
                       {/* Número + tipo + tramitação + prioridade */}
                       <div className="flex items-center flex-wrap gap-1.5">
-                        <span className="text-[11px] font-mono text-ink-400">{processo.numero}</span>
+                        <NumeroProcesso numero={processo.numero} className="text-[11px] font-mono text-ink-400" />
                         {processo.tipoTramitacao && (
                           <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-sm ring-1 ring-inset bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 ring-indigo-200 dark:ring-indigo-800/40">
                             {tramLabel}
@@ -643,7 +644,7 @@ function ProcessoCard({ processo, subdomain, onClickSecretaria, onClickSetor, on
 
           {/* Número + tipo + prioridade (metadados discretos) */}
           <div className="flex items-center flex-wrap gap-1.5">
-            <span className="text-[11px] font-mono text-ink-400">{processo.numero}</span>
+            <NumeroProcesso numero={processo.numero} className="text-[11px] font-mono text-ink-400" />
             {processo.tipo_processo && (
               <span className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-sm ring-1 ring-inset ${TIPO_CLS[processo.tipo_processo] || 'bg-ink-50 text-ink-500 ring-ink-200'}`}>
                 {processo.tipo_processo}
