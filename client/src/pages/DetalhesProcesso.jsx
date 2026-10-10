@@ -11,6 +11,8 @@ import ModalDespacho from '../components/ModalDespacho'
 import { useAssinatura } from '../components/assinatura/AssinaturaProvider'
 import TarjaAssinatura from '../components/assinatura/TarjaAssinatura'
 import NumeroProcesso from '../components/NumeroProcesso'
+import QRCodeSvg from 'react-qr-code'
+import { urlConsultaProcesso } from '../utils/qrProcesso'
 import { gerarPautaPDF, gerarProtocoloPDF, gerarRequisicaoPDF } from '../utils/gerarDocumentoPDF'
 import { ORIGEM_PROTOCOLO_LABEL, NATUREZA_PROTOCOLO_LABEL } from '../utils/protocoloConstants'
 import {
@@ -95,6 +97,8 @@ export default function DetalhesProcesso() {
   }, [processo?.documentos])
 
   const { user: currentUser } = useAuth()
+  // Link completo da consulta pública (menu do número, QR code e comprovante do protocolo)
+  const urlConsulta = processo ? urlConsultaProcesso(subdomain, processo.numero) : ''
   const { assinar } = useAssinatura()
 
   const isResponsavel = !!(currentUser && processo && processo.status !== 'concluido' && (
@@ -414,7 +418,7 @@ export default function DetalhesProcesso() {
         title={
           <NumeroProcesso
             numero={processo.numero}
-            linkConsulta={`${window.location.origin}/${subdomain}/consulta/${encodeURIComponent(processo.numero)}`}
+            linkConsulta={urlConsulta}
           />
         }
         subtitle={processo.assunto}
@@ -803,24 +807,23 @@ export default function DetalhesProcesso() {
             </div>
           )}
 
-          {/* QR Code */}
-          {processo.qrcode && (
-            <div className="card p-4">
-              <SectionTitle icon={QrCode} title="QR Code" />
-              <div className="flex justify-center">
-                <div className="bg-surface p-2 rounded-xl border border-ink-100 inline-block">
-                  <img
-                    src={processo.qrcode}
-                    alt="QR Code do processo"
-                    className="w-36 h-36 object-contain"
-                  />
-                </div>
+          {/* QR Code — aponta para o link completo da consulta pública do processo */}
+          <div className="card p-4">
+            <SectionTitle icon={QrCode} title="QR Code" />
+            <div className="flex justify-center">
+              {/* fundo branco fixo: leitura confiável também no tema escuro */}
+              <div className="bg-white p-2.5 rounded-xl border border-ink-100 inline-block">
+                <QRCodeSvg value={urlConsulta} size={144} level="M" title="QR Code de consulta do processo" />
               </div>
-              <p className="text-xs text-center text-ink-400 mt-3 leading-snug">
-                Compartilhe para consulta pública
-              </p>
             </div>
-          )}
+            <p className="text-xs text-center text-ink-400 mt-3 leading-snug">
+              Aponte a câmera para abrir o processo na consulta pública
+            </p>
+            <a href={urlConsulta} target="_blank" rel="noopener noreferrer"
+              className="mt-1 block text-[11px] text-center text-brand-600 dark:text-info-400 hover:underline break-all">
+              {urlConsulta}
+            </a>
+          </div>
 
           {/* Ações Rápidas */}
           <div className="card p-4">
@@ -911,7 +914,7 @@ export default function DetalhesProcesso() {
               {processo.tipo_processo === 'Protocolo' && (
                 <button
                   onClick={() => gerarProtocoloPDF(processo, {
-                    consultaUrl: `${window.location.origin}/${subdomain}/consulta/${encodeURIComponent(processo.numero)}`
+                    consultaUrl: urlConsulta
                   })}
                   className="w-full inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
                              bg-amber-600 text-white hover:bg-amber-700 shadow-sm hover:shadow-md
