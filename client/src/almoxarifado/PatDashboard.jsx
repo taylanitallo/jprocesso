@@ -54,10 +54,11 @@ export default function PatDashboard() {
           </button>
         }
       />
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      {/* Mesmo padrão do painel do Almoxarifado: 6 indicadores em 2 linhas de 3 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard icon={Landmark}      label="Bens Ativos"         value={kpis.ativos ?? 0}              tone="blue" />
         <StatCard icon={DollarSign}    label="Valor Patrimonial"   value={fmtMoney(kpis.valorTotal)}     tone="green" />
-        <StatCard icon={ArrowLeftRight} label="Transf. (30d)"      value={transferencias30dias ?? 0}     tone="amber" />
+        <StatCard icon={ArrowLeftRight} label="Transferências (30 dias)" value={transferencias30dias ?? 0} tone="amber" />
         <StatCard icon={PackageX}      label="Baixados"            value={kpis.baixados ?? 0}            tone="red" />
         <StatCard icon={ClipboardCheck} label="Cedidos"            value={kpis.cedidos ?? 0}             tone="violet" />
         <StatCard icon={TrendingDown}  label="Extraviados"         value={kpis.extraviados ?? 0}         tone="cyan" />
@@ -72,15 +73,16 @@ export default function PatDashboard() {
           ) : (
             <div className="space-y-2">
               {porGrupo.map(g => (
-                <div key={g.grupo_id || 'sem-grupo'} className="flex items-center justify-between py-2 border-b border-ink-100 last:border-0">
-                  <div>
-                    <p className="text-sm font-medium text-ink-900 dark:text-white">
+                <div key={g.grupo_id || 'sem-grupo'} className="flex items-center justify-between gap-3 py-2 border-b border-ink-100 last:border-0">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-ink-900 dark:text-white break-words">
                       {g.grupo?.nome || 'Sem grupo'}
                     </p>
-                    <p className="text-xs text-ink-500">{g.dataValues?.total || 0} bens</p>
+                    {/* A API devolve total/valor no próprio objeto (JSON), não em dataValues */}
+                    <p className="text-xs text-ink-500">{Number(g.total ?? g.dataValues?.total ?? 0)} bens</p>
                   </div>
-                  <span className="text-sm font-semibold text-ink-700">
-                    {fmtMoney(g.dataValues?.valor)}
+                  <span className="shrink-0 text-sm font-semibold text-ink-700 tabular-nums">
+                    {fmtMoney(g.valor ?? g.dataValues?.valor)}
                   </span>
                 </div>
               ))}
@@ -96,14 +98,15 @@ export default function PatDashboard() {
           ) : (
             <div className="space-y-2">
               {ultimosTombamentos.map(b => (
-                <div key={b.id} className="flex items-center justify-between py-2 border-b border-ink-100 last:border-0">
-                  <div>
+                <div key={b.id} className="flex items-center justify-between gap-3 py-2 border-b border-ink-100 last:border-0">
+                  <div className="min-w-0">
                     <p className="text-sm font-medium text-ink-900 dark:text-white font-mono">
                       {b.numero_tombamento}
                     </p>
-                    <p className="text-xs text-ink-500 truncate max-w-[180px]">{b.descricao}</p>
+                    {/* Descrição completa (quebra linha em vez de cortar) */}
+                    <p className="text-xs text-ink-500 break-words">{b.descricao}</p>
                   </div>
-                  <span className="text-xs text-ink-500 whitespace-nowrap">
+                  <span className="shrink-0 text-xs text-ink-500 whitespace-nowrap">
                     {b.secretaria?.sigla || '–'}
                   </span>
                 </div>

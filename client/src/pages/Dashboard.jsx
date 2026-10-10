@@ -215,7 +215,7 @@ export default function Dashboard() {
         <p className="text-[11px] font-bold text-ink-400 uppercase tracking-widest mb-3 px-0.5">
           Processos
         </p>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           <StatCard
             icon={Inbox}
             label="Minha Caixa"
@@ -252,7 +252,7 @@ export default function Dashboard() {
         <p className="text-[11px] font-bold text-ink-400 uppercase tracking-widest mb-3 px-0.5">
           Operações
         </p>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           <StatCard
             icon={TrendingUp}
             label="Valor Pago"
@@ -340,7 +340,7 @@ export default function Dashboard() {
                           <NumeroProcesso numero={p.numero} className="font-semibold text-ink-900 text-sm" />
                           <span className={`badge ${STATUS_CLS[p.status] || ''}`}>{STATUS_LABEL[p.status] || p.status}</span>
                         </div>
-                        <p className="text-sm text-ink-500 truncate mt-0.5">{p.assunto}</p>
+                        <p className="text-sm text-ink-500 break-words mt-0.5">{p.assunto}</p>
                       </div>
                       <ArrowRight className="h-4 w-4 text-ink-400 group-hover:text-info-500 group-hover:translate-x-0.5 transition-all shrink-0" />
                     </Link>
@@ -403,7 +403,7 @@ export default function Dashboard() {
                     <div className="w-1 self-stretch bg-danger-500 rounded-full shrink-0" />
                     <div className="flex-1 min-w-0">
                       <NumeroProcesso numero={p.numero} className="font-semibold text-ink-900 text-sm" />
-                      <p className="text-xs text-ink-500 truncate mt-0.5">{p.assunto}</p>
+                      <p className="text-xs text-ink-500 break-words mt-0.5">{p.assunto}</p>
                       {p.setorAtual && (
                         <p className="text-xs text-ink-400 mt-0.5 flex items-center gap-1">
                           <MapPin className="h-3 w-3 shrink-0" />
@@ -466,7 +466,7 @@ export default function Dashboard() {
                               <span className="badge bg-danger-100 dark:bg-danger-900/40 text-danger-700 dark:text-danger-300">Urgente</span>
                             )}
                           </div>
-                          <p className="text-sm text-ink-500 truncate mt-0.5">{p.assunto}</p>
+                          <p className="text-sm text-ink-500 break-words mt-0.5">{p.assunto}</p>
                           {p.setorAtual && (
                             <p className="text-xs text-ink-400 mt-0.5 flex items-center gap-1">
                               <MapPin className="h-3 w-3 shrink-0" />
