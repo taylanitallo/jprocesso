@@ -147,6 +147,14 @@ const decifrar = (payload) => {
   return Buffer.concat([d.update(ct), d.final()]).toString('utf8');
 };
 
+// Segredo que não decifra (ASSINATURA_SEGREDO foi alterado): o cadastro antigo
+// é inválido — o usuário recadastra o app em vez de receber erro 500.
+const decifrarOuRecadastrar = (payload) => {
+  try { return decifrar(payload); } catch {
+    throw new AssinaturaError(428, 'TOTP_NAO_CONFIGURADO', 'Seu aplicativo autenticador precisa ser cadastrado novamente.');
+  }
+};
+
 const gerarSegredoTotp = () => base32Encode(crypto.randomBytes(20));
 const uriOtpAuth = ({ segredoBase32, conta, emissor }) =>
   `otpauth://totp/${encodeURIComponent(`${emissor}:${conta}`)}?secret=${segredoBase32}&issuer=${encodeURIComponent(emissor)}&algorithm=SHA1&digits=6&period=${TOTP_PASSO}`;
@@ -177,7 +185,7 @@ const ativarTotp = async (db, usuarioId, codigo) => {
     { replacements: { id: usuarioId }, type: QueryTypes.SELECT }
   );
   if (!rows[0]) throw new AssinaturaError(400, 'TOTP_NAO_INICIADO', 'Inicie o cadastro do aplicativo autenticador.');
-  const passo = verificarTotp(decifrar(rows[0].segredo_cifrado), codigo);
+  const passo = verificarTotp(decifrarOuRecadastrar(rows[0].segredo_cifrado), codigo);
   if (passo === null) throw new AssinaturaError(400, 'TOTP_INVALIDO', 'Código do aplicativo inválido. Confira o horário do celular e tente de novo.');
   // O código de ativação não assina ato algum: não entra no controle anti-reuso,
   // para a primeira assinatura não ter de esperar o próximo código.
@@ -207,7 +215,7 @@ const validarCredenciais = async ({ db, transaction, usuario, senha, codigo }) =
     throw new AssinaturaError(428, 'TOTP_NAO_CONFIGURADO', 'Configure o aplicativo autenticador para assinar eletronicamente.');
   }
   if (!codigo) throw new AssinaturaError(400, 'CODIGO_OBRIGATORIO', 'Informe o código de 6 dígitos do aplicativo autenticador.');
-  const passo = verificarTotp(decifrar(rows[0].segredo_cifrado), codigo);
+  const passo = verificarTotp(decifrarOuRecadastrar(rows[0].segredo_cifrado), codigo);
   if (passo === null) throw new AssinaturaError(400, 'TOTP_INVALIDO', 'Código do aplicativo inválido ou expirado.');
   if (rows[0].ultimo_passo !== null && passo <= Number(rows[0].ultimo_passo)) {
     throw new AssinaturaError(400, 'TOTP_REUTILIZADO', 'Este código já foi usado. Aguarde o próximo código do aplicativo.');

@@ -10,6 +10,7 @@ import {
 import { useState, useEffect, useRef } from 'react'
 import JAI from './JAI'
 import api, { apiUrl } from '../services/api'
+import AvisoAssinatura from './assinatura/AvisoAssinatura'
 
 export default function Layout() {
   const { user, tenant, logout } = useAuth()
@@ -387,6 +388,7 @@ export default function Layout() {
         {/* Conteúdo */}
         <main className="flex-1 overflow-auto">
           <div className="px-4 py-6 sm:px-6 lg:px-8 max-w-[1400px] mx-auto animate-fade-in">
+            <AvisoAssinatura />
             <Outlet />
           </div>
         </main>

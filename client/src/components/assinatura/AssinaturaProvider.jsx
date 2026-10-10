@@ -13,11 +13,11 @@
 //  feito ali mesmo. Erros de senha/código mantêm o modal aberto para corrigir;
 //  qualquer outro erro é repassado a quem chamou.
 // ══════════════════════════════════════════════════════════════════════════════
-import { createContext, useCallback, useContext, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { ShieldCheck, Smartphone, X, Loader2, AlertTriangle, KeyRound } from 'lucide-react'
 import api from '../../services/api'
 
-const AssinaturaContext = createContext({ assinar: async () => null })
+const AssinaturaContext = createContext({ assinar: async () => null, configurarAutenticador: async () => false })
 export const useAssinatura = () => useContext(AssinaturaContext)
 
 // Erros que o próprio modal resolve (o usuário corrige e tenta de novo)
@@ -32,6 +32,12 @@ export default function AssinaturaProvider({ children }) {
     setPedido(opcoes)
   }), [])
 
+  // Só cadastra o app autenticador (sem assinar nada). Resolve true se concluiu.
+  const configurarAutenticador = useCallback(() => new Promise((resolve, reject) => {
+    promessa.current = { resolve, reject }
+    setPedido({ modo: 'cadastro', titulo: 'Preparar sua assinatura eletrônica' })
+  }), [])
+
   const finalizar = (tipo, valor) => {
     const p = promessa.current
     promessa.current = null
@@ -40,7 +46,7 @@ export default function AssinaturaProvider({ children }) {
   }
 
   return (
-    <AssinaturaContext.Provider value={{ assinar }}>
+    <AssinaturaContext.Provider value={{ assinar, configurarAutenticador }}>
       {children}
       {pedido && (
         <ModalAssinatura
@@ -55,7 +61,8 @@ export default function AssinaturaProvider({ children }) {
 }
 
 function ModalAssinatura({ pedido, onSucesso, onCancelar, onErro }) {
-  const [etapa, setEtapa] = useState('assinar') // 'assinar' | 'cadastro'
+  const soCadastro = pedido.modo === 'cadastro'
+  const [etapa, setEtapa] = useState(soCadastro ? 'cadastro' : 'assinar') // 'assinar' | 'cadastro'
   const [senha, setSenha] = useState('')
   const [codigo, setCodigo] = useState('')
   const [erro, setErro] = useState('')
@@ -68,15 +75,20 @@ function ModalAssinatura({ pedido, onSucesso, onCancelar, onErro }) {
       const { data } = await api.post('/assinaturas/totp/iniciar')
       setCadastro(data)
     } catch (e) {
+      if (soCadastro && e.response?.data?.codigo === 'TOTP_JA_CONFIGURADO') return onSucesso(true)
       setErro(e.response?.data?.error || 'Não foi possível iniciar o cadastro do aplicativo.')
     }
   }
+
+  // Modo "só cadastro" (aviso do sistema): já abre gerando o QR code
+  useEffect(() => { if (soCadastro) iniciarCadastro() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const confirmarCadastro = async (e) => {
     e.preventDefault()
     setErro(''); setEnviando(true)
     try {
       await api.post('/assinaturas/totp/ativar', { codigo })
+      if (soCadastro) return onSucesso(true)
       setCadastro(null); setCodigo(''); setEtapa('assinar')
     } catch (er) {
       setErro(er.response?.data?.error || 'Código inválido.')
