@@ -5,7 +5,7 @@ import api from '../services/api'
 import { useTheme } from '../context/ThemeContext'
 
 export default function ConsultaPublica() {
-  const { subdomain } = useParams()
+  const { subdomain, numero: numeroNaUrl } = useParams()
   const location = useLocation()
   const [numeroProcesso, setNumeroProcesso] = useState('')
   const [processo, setProcesso] = useState(null)
@@ -51,13 +51,16 @@ export default function ConsultaPublica() {
     arquivamento: 'Arquivado'
   }
 
+  // Busca inicial: termo vindo da tela de login (state) ou número no endereço
+  // (/consulta/<número> — link de consulta pública e QR code do processo)
   useEffect(() => {
-    const query = location.state?.query
+    // ?processo= mantido para links compartilhados antes da padronização
+    const query = location.state?.query || numeroNaUrl || new URLSearchParams(location.search).get('processo')
     if (query) {
       setNumeroProcesso(query)
       buscarProcesso(query)
     }
-  }, [])
+  }, [numeroNaUrl]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Filtros ativos como array de chips
   const filtrosAtivos = [
@@ -169,7 +172,7 @@ export default function ConsultaPublica() {
   }
 
   const handleCompartilhar = async () => {
-    const url = `${window.location.origin}${window.location.pathname}?processo=${encodeURIComponent(processo?.numero || numeroProcesso)}`
+    const url = `${window.location.origin}/${subdomain}/consulta/${encodeURIComponent(processo?.numero || numeroProcesso)}`
     if (navigator.share) {
       try {
         await navigator.share({
