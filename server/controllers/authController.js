@@ -78,12 +78,20 @@ const generateAccessToken = (payload) =>
   jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE || '30m',
   });
-const REFRESH_COOKIE_OPTS = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-  maxAge: REFRESH_EXPIRE_MS,
-  path: '/api/auth', // restringe o cookie apenas às rotas de auth
+// Front (Vercel) e API (Railway) ficam em domínios diferentes: em HTTPS o cookie
+// precisa de SameSite=None; Secure para o navegador enviá-lo de volta — em qualquer
+// ambiente (produção ou teste). Só o HTTP local (localhost, mesmo site via proxy
+// do Vite) usa Lax. Decidir pelo NODE_ENV derrubava a sessão do ambiente de teste
+// a cada recarga da página.
+const _cookieOpts = (req) => {
+  const https = process.env.NODE_ENV === 'production' || !!req?.secure;
+  return {
+    httpOnly: true,
+    secure: https,
+    sameSite: https ? 'none' : 'lax',
+    maxAge: REFRESH_EXPIRE_MS,
+    path: '/api/auth', // restringe o cookie apenas às rotas de auth
+  };
 };
 
 // Sessões separadas: superadmin e município usam cookies distintos, para que
@@ -95,10 +103,10 @@ const _cookieName = (isAdmin) => isAdmin ? REFRESH_COOKIE_ADMIN : REFRESH_COOKIE
 const _isAdminContext = (req) => req.headers['x-auth-context'] === 'admin';
 
 const setRefreshTokenCookie = (res, token, isAdmin = false) =>
-  res.cookie(_cookieName(isAdmin), token, REFRESH_COOKIE_OPTS);
+  res.cookie(_cookieName(isAdmin), token, _cookieOpts(res.req));
 
 const clearRefreshTokenCookie = (res, isAdmin = false) =>
-  res.clearCookie(_cookieName(isAdmin), { ...REFRESH_COOKIE_OPTS, maxAge: 0 });
+  res.clearCookie(_cookieName(isAdmin), { ..._cookieOpts(res.req), maxAge: 0 });
 
 // ── Busca de municípios por e-mail ──────────────────────────────────────────
 // Usuários vivem em {schema}.usuarios (um schema por município) — o e-mail só
