@@ -56,7 +56,7 @@ export default function StatCard({ icon: Icon, label, value, hint, tone = 'blue'
 
   return (
     <div className={`
-      flex items-center gap-4 px-4 py-5 min-h-[104px]
+      flex items-center gap-4 px-4 py-5 min-h-[104px] min-w-0 overflow-hidden
       bg-surface
       rounded-2xl border ${t.border}
       shadow-sm hover:shadow-md hover:-translate-y-0.5
@@ -71,21 +71,22 @@ export default function StatCard({ icon: Icon, label, value, hint, tone = 'blue'
 
       {/* Textos */}
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold text-ink-500 leading-tight mb-1 uppercase tracking-wide truncate">
+        {/* Rótulo nunca é cortado: quebra em mais linhas se faltar largura */}
+        <p className="text-xs font-semibold text-ink-500 leading-snug mb-1 uppercase tracking-wide break-words">
           {label}
         </p>
         <AutoFitValue
           className={`font-bold leading-none ${t.value}`}
           title={value != null ? String(value) : undefined}
           max={30}
-          min={16}
+          min={13}
         >
           {value ?? '—'}
         </AutoFitValue>
         {(hint || trend) && (
-          <div className="flex items-center gap-2 mt-1.5">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1.5">
             {hint && (
-              <span className="text-xs text-ink-400 truncate">
+              <span className="text-xs text-ink-400 leading-snug break-words">
                 {hint}
               </span>
             )}
