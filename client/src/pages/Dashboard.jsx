@@ -2,6 +2,7 @@ import { Suspense, lazy, useState, useEffect, useCallback } from 'react'
 import { useQuery, useQueryClient } from 'react-query'
 import { Link, useParams } from 'react-router-dom'
 import api from '../services/api'
+import NumeroProcesso from '../components/NumeroProcesso'
 import { useAuth } from '../context/AuthContext'
 import {
   Inbox, FilePlus2, Clock, CheckCircle2, AlertTriangle,
@@ -336,7 +337,7 @@ export default function Dashboard() {
                       <div className={`w-1 self-stretch rounded-full shrink-0 ${PRIO_CLS[p.prioridade] || 'bg-ink-300'}`} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-ink-900 text-sm">{p.numero}</span>
+                          <NumeroProcesso numero={p.numero} className="font-semibold text-ink-900 text-sm" />
                           <span className={`badge ${STATUS_CLS[p.status] || ''}`}>{STATUS_LABEL[p.status] || p.status}</span>
                         </div>
                         <p className="text-sm text-ink-500 truncate mt-0.5">{p.assunto}</p>
@@ -401,7 +402,7 @@ export default function Dashboard() {
                   >
                     <div className="w-1 self-stretch bg-danger-500 rounded-full shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <span className="font-semibold text-ink-900 text-sm">{p.numero}</span>
+                      <NumeroProcesso numero={p.numero} className="font-semibold text-ink-900 text-sm" />
                       <p className="text-xs text-ink-500 truncate mt-0.5">{p.assunto}</p>
                       {p.setorAtual && (
                         <p className="text-xs text-ink-400 mt-0.5 flex items-center gap-1">
@@ -459,9 +460,7 @@ export default function Dashboard() {
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-semibold text-ink-900 group-hover:text-brand-600 dark:group-hover:text-info-400 transition-colors">
-                              {p.numero}
-                            </span>
+                            <NumeroProcesso numero={p.numero} className="text-sm font-semibold text-ink-900 group-hover:text-brand-600 dark:group-hover:text-info-400 transition-colors" />
                             <span className={`badge ${STATUS_CLS[p.status] || ''}`}>{STATUS_LABEL[p.status] || p.status}</span>
                             {p.prioridade === 'urgente' && (
                               <span className="badge bg-danger-100 dark:bg-danger-900/40 text-danger-700 dark:text-danger-300">Urgente</span>
