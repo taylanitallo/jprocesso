@@ -5,6 +5,7 @@ import { applyTimbradoToPage } from './timbradoStore'
 import { getMargens } from './margensStore'
 import { setPDFLoading } from './pdfLoadingStore'
 import { ORIGEM_PROTOCOLO_LABEL, NATUREZA_PROTOCOLO_LABEL } from './protocoloConstants'
+import { qrPngDataUrl } from './qrProcesso'
 
 function _download(blob, nome) {
   const url = URL.createObjectURL(blob)
@@ -712,11 +713,12 @@ export async function gerarProtocoloPDF(processo, { consultaUrl } = {}) {
   doc.roundedRect(M, y, UW, boxAcompH, 2, 2, 'FD')
 
   let txtX = M + 4
-  if (processo.qrcode) {
+  // QR do link completo da consulta pública (abre o processo direto ao ler)
+  if (consultaUrl) {
     try {
-      doc.addImage(processo.qrcode, 'PNG', M + 3, y + 3, 28, 28)
+      doc.addImage(qrPngDataUrl(consultaUrl), 'PNG', M + 3, y + 3, 28, 28)
       txtX = M + 35
-    } catch { /* QR ausente ou inválido — segue sem a imagem */ }
+    } catch { /* falha ao gerar o QR — segue sem a imagem */ }
   }
 
   doc.setFontSize(9)
