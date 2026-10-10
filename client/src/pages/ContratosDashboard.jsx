@@ -536,7 +536,7 @@ export default function ContratosDashboard() {
         <LoadingBar label="Carregando contratos..." />
       ) : contratos.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 gap-3 text-ink-400">
-          <FileText className="w-12 h-12 text-ink-300" />
+          <FileText className="w-12 h-12 text-ink-400" />
           <p className="text-sm font-medium">Nenhum contrato cadastrado</p>
         </div>
       ) : (
@@ -708,7 +708,7 @@ export default function ContratosDashboard() {
                           const pct = kpiValorTotal > 0 ? Math.round((c.valor / kpiValorTotal) * 100) : 0
                           return (
                             <tr key={c.label} className="hover:bg-ink-50 transition-colors group">
-                              <td className="py-3 px-1 text-xs font-bold text-ink-300">{rank}</td>
+                              <td className="py-3 px-1 text-xs font-bold text-ink-400">{rank}</td>
                               <td className="py-3 px-2 font-medium text-ink-900 dark:text-white max-w-[200px]">
                                 <span className="truncate block" title={c.label}>{c.label}</span>
                               </td>
@@ -882,7 +882,7 @@ export default function ContratosDashboard() {
                           const alerta = d !== null && d >= 0 && d <= 30
                           return (
                             <tr key={c.id} className="hover:bg-ink-50 transition-colors">
-                              <td className="py-3 px-1 text-xs font-bold text-ink-300">{rank}</td>
+                              <td className="py-3 px-1 text-xs font-bold text-ink-400">{rank}</td>
                               <td className="py-3 px-2 font-mono font-semibold text-brand-600 dark:text-info-400 whitespace-nowrap text-xs">{c.numero_contrato}</td>
                               <td className="py-3 px-2 text-ink-600 max-w-[180px] hidden md:table-cell">
                                 <span className="truncate block" title={c.objeto}>{c.objeto || '—'}</span>

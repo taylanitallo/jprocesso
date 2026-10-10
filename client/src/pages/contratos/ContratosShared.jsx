@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { FileText, ShoppingBag, User, BarChart2, ClipboardList, Gavel } from 'lucide-react'
 
@@ -108,7 +108,7 @@ export function ViewField({ label, value, mono = false, badge = null, className 
       <p className="text-[11px] font-semibold text-ink-400 uppercase tracking-wider">{label}</p>
       {badge ? badge : (
         <p className={`text-sm font-medium text-ink-800 ${mono ? 'font-mono' : ''}`}>
-          {value || <span className="text-ink-300">—</span>}
+          {value || <span className="text-ink-400">—</span>}
         </p>
       )}
     </div>

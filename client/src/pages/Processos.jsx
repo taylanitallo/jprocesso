@@ -594,7 +594,7 @@ export default function Processos() {
                           {new Date(dataEnvio).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                         </span>
                       </div>
-                      <ArrowRight className="h-4 w-4 text-ink-300 group-hover:text-info-500 group-hover:translate-x-0.5 transition-all" />
+                      <ArrowRight className="h-4 w-4 text-ink-400 group-hover:text-info-500 group-hover:translate-x-0.5 transition-all" />
                     </div>
                   </Link>
                 )
@@ -667,7 +667,7 @@ function ProcessoCard({ processo, subdomain, onClickSecretaria, onClickSetor, on
                 {secretaria.sigla || secretaria.nome}
               </button>
             ) : (
-              <span className="text-[11px] text-ink-300 flex items-center gap-1">
+              <span className="text-[11px] text-ink-400 flex items-center gap-1">
                 <Building2 className="h-3 w-3" /> —
               </span>
             )}
@@ -683,7 +683,7 @@ function ProcessoCard({ processo, subdomain, onClickSecretaria, onClickSetor, on
                 {setor.nome}
               </button>
             ) : (
-              <span className="text-[11px] text-ink-300 flex items-center gap-1">
+              <span className="text-[11px] text-ink-400 flex items-center gap-1">
                 <Layers className="h-3 w-3" /> —
               </span>
             )}
@@ -699,7 +699,7 @@ function ProcessoCard({ processo, subdomain, onClickSecretaria, onClickSetor, on
                 {responsavel.nome}
               </button>
             ) : (
-              <span className="text-[11px] text-ink-300 flex items-center gap-1">
+              <span className="text-[11px] text-ink-400 flex items-center gap-1">
                 <User className="h-3 w-3" /> —
               </span>
             )}
@@ -713,11 +713,11 @@ function ProcessoCard({ processo, subdomain, onClickSecretaria, onClickSetor, on
             <span className="text-[11px] text-ink-400 tabular-nums">
               {new Date(dataRef).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
             </span>
-            <span className="text-[11px] text-ink-300 tabular-nums">
+            <span className="text-[11px] text-ink-400 tabular-nums">
               {new Date(dataRef).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>
-          <ChevronRight className="h-4 w-4 text-ink-300 group-hover:text-info-500 group-hover:translate-x-0.5 transition-all" />
+          <ChevronRight className="h-4 w-4 text-ink-400 group-hover:text-info-500 group-hover:translate-x-0.5 transition-all" />
         </div>
       </Link>
     </div>

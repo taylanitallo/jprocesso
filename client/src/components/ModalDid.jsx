@@ -549,7 +549,7 @@ export default function ModalDid({ processo, onClose }) {
                                       <Edit3 className="h-4 w-4" />
                                     </button>
                                   ) : (
-                                    <Lock className="h-4 w-4 text-ink-300 mx-auto" title="Sem permissão para editar" />
+                                    <Lock className="h-4 w-4 text-ink-400 mx-auto" title="Sem permissão para editar" />
                                   )}
                                 </td>
                               </>

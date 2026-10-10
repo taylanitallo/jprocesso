@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Shield } from 'lucide-react';
 import api, { setAccessToken } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import BotaoTema from '../components/BotaoTema';
 
 export default function LoginAdmin() {
   const navigate = useNavigate();
@@ -47,7 +48,9 @@ export default function LoginAdmin() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-ink-800 via-ink-900 to-ink-800 flex items-center justify-center p-4">
+    // Fundo: claro no tema claro, azul-escuro fixo no escuro (ink-* inverteria aqui)
+    <div className="relative min-h-screen bg-gradient-to-br from-brand-50 via-canvas to-brand-100 dark:from-[#0b1020] dark:via-[#050816] dark:to-[#0b1020] flex items-center justify-center p-4">
+      <BotaoTema className="absolute top-4 right-4" />
       <div className="max-w-md w-full">
         {/* Login Card */}
         <div className="bg-surface rounded-2xl shadow-2xl p-8">
@@ -62,17 +65,17 @@ export default function LoginAdmin() {
           </div>
 
           {aviso && !error && (
-            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 dark:border-amber-700 rounded-lg text-sm text-amber-800 dark:text-amber-300">
               {aviso}
             </div>
           )}
 
           {error && (
-            <div className="mb-4 p-3 bg-danger-50 border border-danger-200 rounded-lg flex items-start gap-3">
+            <div className="mb-4 p-3 bg-danger-50 border border-danger-200 dark:border-danger-700 rounded-lg flex items-start gap-3">
               <div className="text-danger-600 mt-0.5">⚠️</div>
               <div className="flex-1">
-                <p className="text-sm text-danger-800 font-medium">Erro de autenticação</p>
-                <p className="text-sm text-danger-700 mt-0.5">{error}</p>
+                <p className="text-sm text-danger-800 dark:text-danger-300 font-medium">Erro de autenticação</p>
+                <p className="text-sm text-danger-700 dark:text-danger-400 mt-0.5">{error}</p>
               </div>
             </div>
           )}

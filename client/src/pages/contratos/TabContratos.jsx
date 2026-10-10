@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
@@ -1547,7 +1547,7 @@ function TabContratos() {
                     <td className="px-3 py-2 text-right font-semibold whitespace-nowrap">{fmtValor(c.valor)}</td>
                     <td className="px-3 py-2 whitespace-nowrap hidden sm:table-cell">{fmtData(c.vigencia_fim)}</td>
                     <td className="px-3 py-2 text-center hidden sm:table-cell">
-                      {dv === null ? <span className="text-ink-300">—</span>
+                      {dv === null ? <span className="text-ink-400">—</span>
                         : dv < 0   ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-danger-100 text-danger-600 dark:bg-danger-900/30 dark:text-danger-400">{Math.abs(dv)}d exp.</span>
                         : dv === 0 ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-danger-100 text-danger-600">Hoje</span>
                         : dv <= 30 ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-warning-100 text-warning-700 dark:bg-warning-900/30 dark:text-warning-400">{dv}d</span>
@@ -1621,7 +1621,7 @@ function TabContratos() {
           <Plus className="w-4 h-4" /> Incluir
         </button>
         <button onClick={() => podeAgir && setModal('editar')} disabled={!podeAgir}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
           <Edit3 className="w-4 h-4" /> Alterar
         </button>
         <button onClick={() => podeAgir && setModal('excluir')} disabled={!podeAgir}

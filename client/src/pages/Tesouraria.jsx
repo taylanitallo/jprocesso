@@ -1490,7 +1490,7 @@ function ContasMultiSelect({ contas, value, onAplicar, sinalAbrir = 0 }) {
               <button type="button" onClick={marcarVisiveis} className="text-brand-600 dark:text-info-400 hover:underline">
                 {termo ? 'Marcar filtradas' : 'Marcar todas'}
               </button>
-              <span className="text-ink-300">|</span>
+              <span className="text-ink-400">|</span>
               <button type="button" onClick={() => setDraft([])} className="text-ink-500 hover:underline">Limpar</button>
             </div>
             <span className="text-[11px] text-ink-500">{draft.length} marcada{draft.length !== 1 ? 's' : ''}</span>

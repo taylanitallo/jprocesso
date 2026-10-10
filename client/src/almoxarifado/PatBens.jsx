@@ -338,7 +338,7 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
                   {detalhe.status !== 'BAIXADO' && onTransferir && (
                     <button
                       onClick={() => { setDetalhe(null); onTransferir(detalhe) }}
-                      className="px-4 py-2 bg-warning-600 text-white rounded-lg text-sm hover:bg-warning-700"
+                      className="px-4 py-2 bg-warning-600 dark:bg-warning-700 text-white rounded-lg text-sm hover:bg-warning-700 dark:hover:bg-warning-800"
                     >
                       Transferir
                     </button>

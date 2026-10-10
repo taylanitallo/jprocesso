@@ -35,7 +35,9 @@
   --color-ink-100: #f1f5f9;
   --color-ink-200: #e2e8f0;
   --color-ink-300: #cbd5e1;
-  --color-ink-400: #94a3b8;
+  /* Texto secundário no claro: #94a3b8 dava 2,6:1 sobre branco (ilegível).
+     #748094 dá ~4:1 e segue mais claro que o -500, preservando a hierarquia. */
+  --color-ink-400: #748094;
   --color-ink-500: #64748b;
   --color-ink-600: #475569;
   --color-ink-700: #334155;
@@ -50,7 +52,9 @@
   --color-warning-200: #fde68a;
   --color-warning-300: #fcd34d;
   --color-warning-500: #eab308;
-  --color-warning-600: #ca8a04;
+  /* Texto/botão de aviso no claro: #ca8a04 dava 2,8:1 (sobre fundo e com texto
+     branco). #a16207 dá ~4,9:1. No escuro mantém o tom anterior (ver .dark). */
+  --color-warning-600: #a16207;
   --color-danger-50: #fef2f2;
   --color-danger-500: #ef4444;
   --color-danger-600: #dc2626;
@@ -73,9 +77,9 @@
 
   --color-warning-100: #fef9c3;
   --color-warning-400: #facc15;
-  --color-warning-700: #a16207;
-  --color-warning-800: #854d0e;
-  --color-warning-900: #713f12;
+  --color-warning-700: #854d0e;
+  --color-warning-800: #713f12;
+  --color-warning-900: #5c3310;
 
   --color-danger-100: #fee2e2;
   --color-danger-200: #fecaca;
@@ -292,6 +296,10 @@
      */
     --color-warning-200: #7c5e10;
     --color-warning-300: #9c7515;
+
+    /* Texto de aviso sobre fundo escuro: o tom claro original já contrasta bem */
+    --color-warning-600: #ca8a04;
+    --color-warning-700: #a16207;
   }
 
   /* Foco visível e consistente em todo o produto */

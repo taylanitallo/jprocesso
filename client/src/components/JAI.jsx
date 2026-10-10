@@ -326,7 +326,7 @@ export default function JAI() {
                     <Send className="w-3 h-3" />
                   </button>
                 </div>
-                <p className="text-center text-[9px] text-ink-300 mt-1.5">
+                <p className="text-center text-[9px] text-ink-400 mt-1.5">
                   Ayla · JEOS SISTEMAS E ASSESSORIAS LTDA
                 </p>
               </div>
@@ -462,7 +462,7 @@ export function JAIButton({ campo, valorAtual, onSugestao, label, className = ''
                 </button>
               ))}
             </div>
-            <p className="text-[9px] text-ink-300 text-center mt-2">
+            <p className="text-[9px] text-ink-400 text-center mt-2">
               Ayla · JEOS Sistemas
             </p>
           </div>

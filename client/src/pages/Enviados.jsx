@@ -96,7 +96,7 @@ export default function Enviados() {
                     <p className="text-xs text-ink-400">
                       {new Date(processo.dataEnvio || processo.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                     </p>
-                    <ArrowRight className="h-4 w-4 text-ink-300 group-hover:text-info-500 group-hover:translate-x-0.5 transition-all mt-1 ml-auto" />
+                    <ArrowRight className="h-4 w-4 text-ink-400 group-hover:text-info-500 group-hover:translate-x-0.5 transition-all mt-1 ml-auto" />
                   </div>
                 </Link>
               )

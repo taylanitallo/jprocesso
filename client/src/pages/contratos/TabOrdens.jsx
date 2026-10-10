@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   ClipboardList, ShoppingCart, Wrench, Plus, Pencil, Trash2, Eye,
   Search, X, AlertTriangle, CheckCircle2, XCircle,
@@ -211,7 +211,7 @@ function SelecionarContratoModal({ contratos, tipoOrdem, onSelect, onClose }) {
                       <p className="text-[9px] text-ink-400 mt-0.5">{(pct || 0).toFixed(0)}% utilizado</p>
                     </div>
                   ) : (
-                    <p className="text-[10px] text-ink-300">...</p>
+                    <p className="text-[10px] text-ink-400">...</p>
                   )}
                 </div>
 
@@ -1713,7 +1713,7 @@ function TabOrdens() {
                             {fmtBRL(saldoInfo.saldo)}
                           </p>
                         </div>
-                      ) : <span className="text-ink-300">—</span>}
+                      ) : <span className="text-ink-400">—</span>}
                     </td>
                     <td className="px-3 py-2 text-center">
                       <div className="flex flex-col items-center gap-1">
@@ -1757,7 +1757,7 @@ function TabOrdens() {
         </button>
         <button onClick={() => ordemSel && setModal('editar')}
           disabled={!selecionada || ordemSel?.status === 'CANCELADA' || (ordemSel?.status === 'EMITIDA' && (ordemSel?.did_vinculado || ordemSel?.dataValues?.did_vinculado))}
-          className="flex items-center gap-1.5 px-4 py-2 text-xs rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-sm transition-colors">
+          className="flex items-center gap-1.5 px-4 py-2 text-xs rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-sm transition-colors">
           <Pencil className="w-3.5 h-3.5" /> Alterar
         </button>
         <button onClick={() => ordemSel && ordemSel.status !== 'CANCELADA' && !(ordemSel.status === 'EMITIDA' && (ordemSel.did_vinculado || ordemSel.dataValues?.did_vinculado)) && setModal('cancelar')}

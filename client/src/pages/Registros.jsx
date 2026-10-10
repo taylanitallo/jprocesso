@@ -462,7 +462,7 @@ export default function Registros() {
                               <p className="text-xs font-medium text-ink-700">{log.secretaria.sigla || log.secretaria.nome}</p>
                               {log.setor && <p className="text-xs text-ink-400">{log.setor.nome}</p>}
                             </div>
-                          ) : <span className="text-ink-300">—</span>}
+                          ) : <span className="text-ink-400">—</span>}
                         </td>
 
                         {/* Módulo */}

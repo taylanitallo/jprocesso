@@ -1376,7 +1376,7 @@ export default function Financeiro() {
                           className="bg-warning-400 flex items-center justify-center transition-all"
                           style={{ width: (100 - pctPago) + '%' }}
                         >
-                          {(100 - pctPago) > 12 && <span className="text-white text-xs font-bold drop-shadow-sm">{100 - pctPago}%</span>}
+                          {(100 - pctPago) > 12 && <span className="text-warning-900 text-xs font-bold">{100 - pctPago}%</span>}
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
@@ -1427,7 +1427,7 @@ export default function Financeiro() {
                       <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                       <YAxis tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={48} />
                       <RTooltip formatter={(v, name) => [fmtMoeda(v), name === 'total' ? 'Total' : name === 'pago' ? 'Pago' : 'Pendente']} labelStyle={{ fontWeight: 600, color: '#374151' }} contentStyle={{ borderRadius: 10, border: '1px solid #e5e7eb', fontSize: 12 }} />
-                      <RLegend formatter={v => v === 'total' ? 'Total' : v === 'pago' ? 'Pago' : 'Pendente'} wrapperStyle={{ fontSize: 11 }} />
+                      <RLegend formatter={v => <span style={{ color: 'var(--color-ink-600)' }}>{v === 'total' ? 'Total' : v === 'pago' ? 'Pago' : 'Pendente'}</span>} wrapperStyle={{ fontSize: 11 }} />
                       <Area type="monotone" dataKey="total"    stroke="#3b82f6" strokeWidth={2} fill="url(#gradTotal)"    dot={false} activeDot={{ r: 5 }} isAnimationActive />
                       <Area type="monotone" dataKey="pago"     stroke="#22c55e" strokeWidth={2} fill="url(#gradPago)"     dot={false} activeDot={{ r: 5 }} isAnimationActive />
                       <Area type="monotone" dataKey="pendente" stroke="#facc15" strokeWidth={2} fill="url(#gradPendente)" dot={false} activeDot={{ r: 5 }} isAnimationActive />
@@ -1590,7 +1590,7 @@ export default function Financeiro() {
                       const paleta = [
                         { bg: 'bg-info-500',   light: 'bg-info-50 dark:bg-info-900/20',     text: 'text-brand-600 dark:text-info-400' },
                         { bg: 'bg-purple-500', light: 'bg-purple-50 dark:bg-purple-900/20', text: 'text-purple-600 dark:text-purple-400' },
-                        { bg: 'bg-teal-500',   light: 'bg-teal-50 dark:bg-teal-900/20',     text: 'text-teal-600 dark:text-teal-400' },
+                        { bg: 'bg-teal-600',   light: 'bg-teal-50 dark:bg-teal-900/20',     text: 'text-teal-600 dark:text-teal-400' },
                         { bg: 'bg-indigo-500', light: 'bg-indigo-50 dark:bg-indigo-900/20', text: 'text-indigo-600 dark:text-indigo-400' },
                         { bg: 'bg-danger-500',   light: 'bg-danger-50 dark:bg-danger-900/20',     text: 'text-danger-600 dark:text-danger-400' },
                       ]
@@ -2101,7 +2101,7 @@ export default function Financeiro() {
                         <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                         <YAxis tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={48} />
                         <RTooltip formatter={(v, name) => [fmtMoeda(v), name === 'total' ? 'Total' : name === 'pago' ? 'Pago' : 'Pendente']} labelStyle={{ fontWeight: 600 }} contentStyle={{ borderRadius: 10, border: '1px solid #e5e7eb', fontSize: 12 }} />
-                        <RLegend formatter={v => v === 'total' ? 'Total' : v === 'pago' ? 'Pago' : 'Pendente'} wrapperStyle={{ fontSize: 11 }} />
+                        <RLegend formatter={v => <span style={{ color: 'var(--color-ink-600)' }}>{v === 'total' ? 'Total' : v === 'pago' ? 'Pago' : 'Pendente'}</span>} wrapperStyle={{ fontSize: 11 }} />
                         <Area type="monotone" dataKey="total"    stroke="#3b82f6" strokeWidth={2} fill="url(#gradRelTotal)" dot={false} activeDot={{ r: 5 }} isAnimationActive />
                         <Area type="monotone" dataKey="pago"     stroke="#22c55e" strokeWidth={2} fill="url(#gradRelPago)"  dot={false} activeDot={{ r: 5 }} isAnimationActive />
                         <Area type="monotone" dataKey="pendente" stroke="#facc15" strokeWidth={2} fill="url(#gradRelPend)"  dot={false} activeDot={{ r: 5 }} isAnimationActive />
@@ -2435,7 +2435,7 @@ export default function Financeiro() {
           ) : (
             <div className="flex flex-col items-center justify-center py-24 gap-4 text-ink-400">
               <div className="w-16 h-16 rounded-2xl bg-ink-100 flex items-center justify-center">
-                <BarChart3 className="w-8 h-8 text-ink-300" />
+                <BarChart3 className="w-8 h-8 text-ink-400" />
               </div>
               <div className="text-center">
                 <p className="text-sm font-medium text-ink-500">Nenhum relatório gerado</p>

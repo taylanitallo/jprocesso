@@ -123,14 +123,14 @@ function MoveModal({ modal, processos, onConfirm, onClose, loading }) {
                         onClick={() => !isCurrent && setSelected(tipo)}
                         className={`w-full flex items-center gap-2 py-2 rounded-xl text-sm transition-colors
                           ${isSel     ? 'bg-brand-600 text-white' :
-                            isCurrent ? 'text-ink-300 cursor-not-allowed' :
+                            isCurrent ? 'text-ink-400 cursor-not-allowed' :
                                         'hover:bg-ink-100 text-ink-700'}
                         `}
                         style={{ paddingLeft: 12 + 18 + 8, paddingRight: 10 }}
                       >
                         {isSel
                           ? <FolderOpen className="h-4 w-4 shrink-0 text-white" />
-                          : <Folder    className={`h-4 w-4 shrink-0 ${isCurrent ? 'text-ink-300' : 'text-info-400'}`} />
+                          : <Folder    className={`h-4 w-4 shrink-0 ${isCurrent ? 'text-ink-400' : 'text-info-400'}`} />
                         }
                         <span className="flex-1 text-left font-medium">{tipo}</span>
                         {isCurrent && (
@@ -611,12 +611,12 @@ export default function Arquivo() {
                       {meta.label}
                     </span>
                     <ExternalLink
-                      className="h-3.5 w-3.5 text-ink-300 group-hover:text-info-400 transition-colors cursor-pointer shrink-0"
+                      className="h-3.5 w-3.5 text-ink-400 group-hover:text-info-400 transition-colors cursor-pointer shrink-0"
                       onClick={() => handleViewDoc(doc)}
                     />
                     {isAdmin && (
                       <Trash2
-                        className="h-3.5 w-3.5 text-ink-300 hover:text-danger-500 transition-colors cursor-pointer shrink-0"
+                        className="h-3.5 w-3.5 text-ink-400 hover:text-danger-500 transition-colors cursor-pointer shrink-0"
                         title="Excluir documento"
                         onClick={() => setConfirmarExcluirDoc(doc)}
                       />
@@ -654,7 +654,7 @@ export default function Arquivo() {
             <span className="flex items-center gap-1"><Folder className="h-3.5 w-3.5 text-emerald-400" /> Secretaria</span>
             <span className="flex items-center gap-1"><Folder className="h-3.5 w-3.5 text-indigo-400" /> Processo</span>
             <span className="flex items-center gap-1"><FileText className="h-3.5 w-3.5 text-danger-400" /> Arquivo</span>
-            <span className="flex items-center gap-1 ml-auto text-ink-300">
+            <span className="flex items-center gap-1 ml-auto text-ink-400">
               <FolderInput className="h-3.5 w-3.5" /> hover para mover
             </span>
           </div>

@@ -164,7 +164,7 @@ export default function PatTransferencia({ bem, onSuccess, onCancel }) {
             </button>
           )}
           <button type="submit" disabled={loading}
-            className="flex items-center gap-2 px-6 py-2 bg-warning-600 text-white rounded-lg text-sm hover:bg-warning-700 disabled:opacity-60">
+            className="flex items-center gap-2 px-6 py-2 bg-warning-600 dark:bg-warning-700 text-white rounded-lg text-sm hover:bg-warning-700 dark:hover:bg-warning-800 disabled:opacity-60">
             {loading && <RefreshCw className="h-4 w-4 animate-spin" />}
             Confirmar Transferência
           </button>

@@ -28,7 +28,7 @@ const SCOPE_OPTIONS = [
   { value: 'none',    label: 'Bloqueado',     cls: 'bg-danger-500 text-white' },
   { value: 'propria', label: 'Só sua sec.',   cls: 'bg-info-500 text-white' },
   { value: 'todas',   label: 'Todas',         cls: 'bg-success-500 text-white' },
-  { value: 'algumas', label: 'Específicas…',  cls: 'bg-amber-500 text-white' },
+  { value: 'algumas', label: 'Específicas…',  cls: 'bg-amber-600 text-white' },
 ]
 
 function ScopeSelect({ value, onChange }) {

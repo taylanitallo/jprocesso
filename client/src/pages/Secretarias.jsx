@@ -1139,12 +1139,12 @@ export default function Secretarias() {
                               const st = assigns.length === 0 ? null : getStatusVigencia(curr?.data_inicio, curr?.data_fim);
                               return (<>
                                 <td className={`px-4 py-2.5 text-xs ${isSelected ? 'text-info-100' : 'text-ink-600'}`}>
-                                  {curr?.cargo || <span className="text-ink-300">—</span>}
+                                  {curr?.cargo || <span className="text-ink-400">—</span>}
                                 </td>
                                 <td className="px-4 py-2.5 text-xs">
                                   {curr?._secSigla
                                     ? <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono font-semibold ${isSelected ? 'bg-info-500/40 text-info-100' : 'bg-info-100 text-brand-700 dark:bg-info-900/30 dark:text-info-300'}`}>{curr._secSigla}</span>
-                                    : <span className="text-ink-300">—</span>}
+                                    : <span className="text-ink-400">—</span>}
                                 </td>
                                 <td className="px-4 py-2.5">
                                   {st === null
@@ -1969,7 +1969,7 @@ export default function Secretarias() {
                       <td colSpan={2} className="text-center py-10 text-ink-400">
                         <Briefcase className="h-8 w-8 mx-auto mb-2 opacity-40" />
                         <p className="text-sm">Nenhum setor cadastrado para esta secretaria</p>
-                        <p className="text-xs mt-1 text-ink-300">Clique em "Incluir" para adicionar</p>
+                        <p className="text-xs mt-1 text-ink-400">Clique em "Incluir" para adicionar</p>
                       </td>
                     </tr>
                   ) : (

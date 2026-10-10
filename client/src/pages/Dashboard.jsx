@@ -169,7 +169,7 @@ export default function Dashboard() {
           <span className="flex items-center gap-2 flex-wrap">
             <Building2 className="h-3.5 w-3.5 text-ink-400 shrink-0" />
             <span>{user?.secretaria?.nome || 'Secretaria'}</span>
-            <span className="text-ink-300">·</span>
+            <span className="text-ink-400">·</span>
             <span>{user?.setor?.nome || 'Setor'}</span>
           </span>
         }
@@ -341,7 +341,7 @@ export default function Dashboard() {
                         </div>
                         <p className="text-sm text-ink-500 truncate mt-0.5">{p.assunto}</p>
                       </div>
-                      <ArrowRight className="h-4 w-4 text-ink-300 group-hover:text-info-500 group-hover:translate-x-0.5 transition-all shrink-0" />
+                      <ArrowRight className="h-4 w-4 text-ink-400 group-hover:text-info-500 group-hover:translate-x-0.5 transition-all shrink-0" />
                     </Link>
                   ))}
                 </div>
@@ -475,7 +475,7 @@ export default function Dashboard() {
                             </p>
                           )}
                         </div>
-                        <ArrowRight className="h-4 w-4 text-ink-300 group-hover:text-info-500 mt-1 shrink-0" />
+                        <ArrowRight className="h-4 w-4 text-ink-400 group-hover:text-info-500 mt-1 shrink-0" />
                       </Link>
                     </div>
                   </div>

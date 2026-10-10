@@ -449,7 +449,7 @@ function TabRelatorios() {
             <div className="space-y-3">
               {topCred.map(([nome, v], i) => (
                 <div key={nome} className="flex items-center gap-3">
-                  <span className="text-xs font-bold text-ink-300 w-5 text-right shrink-0">{i + 1}</span>
+                  <span className="text-xs font-bold text-ink-400 w-5 text-right shrink-0">{i + 1}</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-sm font-medium text-ink-800 truncate max-w-[55%]" title={nome}>{nome}</span>

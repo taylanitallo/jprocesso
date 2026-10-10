@@ -140,7 +140,7 @@ function InventarioDetalheModal({ inventario, onClose, onRefresh }) {
                           <span className={`text-xs font-semibold ${parseFloat(linha.diferenca) === 0 ? 'text-success-600' : 'text-danger-600'}`}>
                             {parseFloat(linha.diferenca) > 0 ? '+' : ''}{fmt(linha.diferenca)}
                           </span>
-                        ) : <span className="text-xs text-ink-300">—</span>}
+                        ) : <span className="text-xs text-ink-400">—</span>}
                       </td>
                       <td className="px-3 py-2 text-center">
                         {linha.contado && parseFloat(linha.diferenca) === 0 && (
@@ -419,7 +419,7 @@ export default function AlmoxInventario() {
                   <td className="px-4 py-3 text-center">
                     {(inv.total_divergencias || 0) > 0
                       ? <span className="font-semibold text-danger-600">{inv.total_divergencias}</span>
-                      : <span className="text-ink-300">0</span>
+                      : <span className="text-ink-400">0</span>
                     }
                   </td>
                   <td className="px-4 py-3 text-xs text-ink-500">{inv.responsavel?.nome || '—'}</td>

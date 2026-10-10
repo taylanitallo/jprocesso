@@ -728,7 +728,7 @@ export default function DidSecaoI({
         <div className="col-span-2 flex justify-end gap-2 pt-2 border-t border-ink-100 mt-1">
           {locked ? (
             <button type="button" onClick={() => setLocked(false)}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
               <Pencil className="w-3.5 h-3.5" /> Alterar
             </button>
           ) : (

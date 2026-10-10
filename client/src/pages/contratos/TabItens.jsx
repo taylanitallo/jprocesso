@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   PackageOpen, Tag, FileText, Search, X, Plus, Edit3, Trash2, Eye,
   BarChart2, List, Check, AlertTriangle, Printer, ChevronUp, ChevronDown,
@@ -1331,7 +1331,7 @@ function TabItens() {
           <Plus className="w-4 h-4" /> Incluir
         </button>
         <button onClick={abrirEditar} disabled={!podeAgir}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
           <Edit3 className="w-4 h-4" /> Alterar
         </button>
         <button onClick={abrirExcluir} disabled={!podeAgir}
