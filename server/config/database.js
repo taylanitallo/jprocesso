@@ -196,6 +196,22 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
       );
     `),
 
+    // 0j. Lixeira — quem excluiu e quando. O registro em si continua na tabela de
+    // origem (status EXCLUÍDO); só o administrador apaga de vez, pela tela Excluídos
+    run(`
+      CREATE TABLE IF NOT EXISTS registros_excluidos (
+        id                SERIAL        PRIMARY KEY,
+        entidade          VARCHAR(50)   NOT NULL,
+        registro_id       VARCHAR(100)  NOT NULL,
+        descricao         TEXT,
+        status_anterior   VARCHAR(30),
+        excluido_por_id   UUID,
+        excluido_por_nome VARCHAR(255),
+        excluido_em       TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS registros_excluidos_uq ON registros_excluidos (entidade, registro_id);
+    `),
+
     // 0h. Contratos — Licitações (processos licitatórios / contratações diretas)
     run(`
       CREATE TABLE IF NOT EXISTS licitacoes (

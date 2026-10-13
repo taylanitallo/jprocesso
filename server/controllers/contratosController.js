@@ -4,6 +4,7 @@
 const { Op } = require('sequelize');
 const { registrarLog } = require('../middleware/activityLogger');
 const { applyScopeToWhereByName } = require('../utils/scopeFilter');
+const { registrarExclusao } = require('../services/lixeiraService');
 
 // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -69,6 +70,7 @@ const deleteCredor = async (req, res) => {
       }
     }
 
+    await registrarExclusao(req, 'credores', credor);
     await credor.update({ status: 'EXCLUÍDO' });
     res.json({ success: true });
   } catch (err) {
@@ -172,6 +174,7 @@ const deleteItem = async (req, res) => {
       });
     }
 
+    await registrarExclusao(req, 'itens', item);
     await item.update({ status: 'EXCLUÍDO' });
     res.json({ success: true });
   } catch (err) {
@@ -357,6 +360,7 @@ const deleteContrato = async (req, res) => {
       }
     }
 
+    await registrarExclusao(req, 'contratos', contrato);
     await contrato.update({ status: 'EXCLUÍDO' });
     res.json({ success: true });
   } catch (err) {
@@ -604,9 +608,14 @@ const excluirItensInativos = async (req, res) => {
   try {
     const { ContratoItem } = req.models;
     const { Sequelize } = require('sequelize');
+    const alvos = await ContratoItem.findAll({
+      where: Sequelize.where(Sequelize.fn('UPPER', Sequelize.col('status')), 'INATIVO'),
+    });
+    if (alvos.length === 0) return res.json({ excluidos: 0 });
+    await registrarExclusao(req, 'itens', alvos);
     const [count] = await ContratoItem.update(
       { status: 'EXCLUÍDO' },
-      { where: Sequelize.where(Sequelize.fn('UPPER', Sequelize.col('status')), 'INATIVO') }
+      { where: { id: { [Op.in]: alvos.map(i => i.id) } } }
     );
     res.json({ excluidos: count });
   } catch (err) {
@@ -651,7 +660,13 @@ const excluirItensSemVinculo = async (req, res) => {
       status: { [Op.ne]: 'EXCLUÍDO' },
       ...(vinculados.size > 0 ? { id: { [Op.notIn]: [...vinculados] } } : {}),
     };
-    const [count] = await ContratoItem.update({ status: 'EXCLUÍDO' }, { where: whereClause });
+    const alvos = await ContratoItem.findAll({ where: whereClause });
+    if (alvos.length === 0) return res.json({ excluidos: 0 });
+    await registrarExclusao(req, 'itens', alvos);
+    const [count] = await ContratoItem.update(
+      { status: 'EXCLUÍDO' },
+      { where: { id: { [Op.in]: alvos.map(i => i.id) } } }
+    );
     res.json({ excluidos: count });
   } catch (err) {
     console.error('excluirItensSemVinculo:', err);
@@ -754,6 +769,7 @@ const deleteLicitacao = async (req, res) => {
     if (totalContratos > 0) {
       return res.status(409).json({ error: `Esta licitação está vinculada a ${totalContratos} contrato(s). Exclua ou desvincule os contratos primeiro.` });
     }
+    await registrarExclusao(req, 'licitacoes', licitacao);
     await licitacao.update({ status: 'EXCLUÍDO' });
     registrarLog(req, { acao: 'excluir_licitacao', modulo: 'contratos', referencia_id: String(licitacao.id), referencia_numero: licitacao.numero_licitacao, descricao: `Licitação ${licitacao.numero_licitacao} excluída` });
     res.json({ success: true });

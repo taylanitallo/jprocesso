@@ -1,5 +1,9 @@
 const { Op, fn, col, literal } = require('sequelize');
 const { registrarLog } = require('../middleware/activityLogger');
+const { registrarExclusao } = require('../services/lixeiraService');
+
+// Ordens que não consomem saldo do contrato
+const STATUS_SEM_SALDO = ['CANCELADA', 'EXCLUÍDA'];
 
 const notFound = (res, entity) => res.status(404).json({ error: `${entity} não encontrado(a)` });
 
@@ -57,10 +61,10 @@ const respostaCamposFaltando = (res, faltando) => res.status(400).json({
 /** Calcula saldo disponível de um contrato */
 const calcularSaldo = async (ContratoOrdem, contrato_id, ignorarOrdemId = null) => {
   const { Contrato } = global._tmpModels || {};
-  // Soma das ordens não canceladas
+  // Soma das ordens não canceladas nem excluídas
   const where = {
     contrato_id,
-    status: { [Op.ne]: 'CANCELADA' },
+    status: { [Op.notIn]: STATUS_SEM_SALDO },
   };
   if (ignorarOrdemId) where.id = { [Op.ne]: ignorarOrdemId };
 
@@ -392,15 +396,14 @@ const excluirOrdemDefinitivo = async (req, res) => {
       }
     }
 
-    if (ContratoOrdemItem) {
-      await ContratoOrdemItem.destroy({ where: { ordem_id: ordem.id } });
-    }
+    // Itens ficam com a ordem: vão para a lixeira e só somem se o admin apagar de vez
+    await registrarExclusao(req, 'ordens', ordem);
     await ordem.update({ status: 'EXCLUÍDA' });
 
     await registrarLog(req, {
       acao: 'excluir_ordem',
       modulo: 'contratos',
-      descricao: `Excluiu definitivamente a ordem cancelada ${ordem.numero}`,
+      descricao: `Excluiu a ordem cancelada ${ordem.numero}`,
       referencia_id: ordem.id,
       referencia_numero: ordem.numero
     });
@@ -428,7 +431,7 @@ const getItensContrato = async (req, res) => {
 
     // Para cada vínculo, soma qtd já usada em ordens não canceladas deste contrato
     const ordens = await ContratoOrdem.findAll({
-      where: { contrato_id, status: { [Op.ne]: 'CANCELADA' } },
+      where: { contrato_id, status: { [Op.notIn]: STATUS_SEM_SALDO } },
       attributes: ['id'],
       raw: true,
     });

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import api from '../../services/api'
 import { ESTADOS_BR, SectionCard, PremiumInput, PremiumSelect, ViewField, PortalDropdown } from './ContratosShared'
+import BotaoExcluidos from '../../components/lixeira/BotaoExcluidos'
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  MODAL: FORMULÁRIO DE CREDOR (Incluir / Alterar / Visualizar)
@@ -786,6 +787,7 @@ function TabCredor() {
           className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
           <FileText className="w-4 h-4" /> Ver Contratos
         </button>
+        <BotaoExcluidos entidade="credores" />
         <button onClick={syncDids} disabled={syncando}
           className="flex items-center gap-1.5 px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-60 ml-auto">
           {syncando ? <><Loader2 className="w-4 h-4 animate-spin" /> Importando...</> : <><RefreshCw className="w-4 h-4" /> Importar do DID</>}
