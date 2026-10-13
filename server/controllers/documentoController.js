@@ -4,6 +4,13 @@ const crypto = require('crypto');
 const archiver = require('archiver');
 const { PDFDocument } = require('pdf-lib');
 const storage = require('../services/storageService');
+const { situacaoRecebimento, MSG_BLOQUEADO } = require('../utils/recebimento');
+
+// Documentos de processo ainda não recebido pelo destino ficam inacessíveis a ele
+const bloqueadoAteReceber = async (req, processo) =>
+  !!processo && (await situacaoRecebimento(req, processo)).bloqueado;
+
+const ATRIBUTOS_ACESSO = ['id', 'numero', 'status', 'setor_atual_id', 'usuario_atual_id'];
 
 const uploadDocumento = async (req, res) => {
   try {
@@ -21,6 +28,9 @@ const uploadDocumento = async (req, res) => {
 
     if (processo.status === 'concluido') {
       return res.status(400).json({ error: 'Processos concluídos não aceitam novos documentos' });
+    }
+    if (await bloqueadoAteReceber(req, processo)) {
+      return res.status(403).json({ error: MSG_BLOQUEADO });
     }
 
     const buffer = req.file.buffer;
@@ -80,11 +90,14 @@ const downloadDocumento = async (req, res) => {
     // não excluir documentos gerados avulsos (sem processo_id), como ordens.
     const documento = await Documento.findOne({
       where: { id },
-      include: [{ model: Processo, as: 'processo', required: false, attributes: ['id'] }],
+      include: [{ model: Processo, as: 'processo', required: false, attributes: ATRIBUTOS_ACESSO }],
     });
 
     if (!documento) {
       return res.status(404).json({ error: 'Documento não encontrado' });
+    }
+    if (await bloqueadoAteReceber(req, documento.processo)) {
+      return res.status(403).json({ error: MSG_BLOQUEADO });
     }
 
     // Fallback local para documentos legados
@@ -121,6 +134,7 @@ const listDocumentos = async (req, res) => {
       // Valida que o processo existe no tenant antes de listar seus documentos
       const processo = await Processo.findByPk(processoId);
       if (!processo) return res.status(404).json({ error: 'Processo não encontrado' });
+      if (await bloqueadoAteReceber(req, processo)) return res.status(403).json({ error: MSG_BLOQUEADO });
       where.processo_id = processoId;
     }
 
@@ -224,11 +238,14 @@ const viewDocumento = async (req, res) => {
 
     const documento = await Documento.findOne({
       where: { id },
-      include: [{ model: Processo, as: 'processo', required: false, attributes: ['id'] }],
+      include: [{ model: Processo, as: 'processo', required: false, attributes: ATRIBUTOS_ACESSO }],
     });
 
     if (!documento) {
       return res.status(404).json({ error: 'Documento não encontrado' });
+    }
+    if (await bloqueadoAteReceber(req, documento.processo)) {
+      return res.status(403).json({ error: MSG_BLOQUEADO });
     }
 
     if (storage.isLocalPath(documento.url_arquivo)) {
@@ -250,8 +267,9 @@ const downloadZip = async (req, res) => {
     const { processoId } = req.params;
     const { Documento, Processo } = req.models;
 
-    const processo = await Processo.findByPk(processoId, { attributes: ['id', 'numero'] });
+    const processo = await Processo.findByPk(processoId, { attributes: ATRIBUTOS_ACESSO });
     if (!processo) return res.status(404).json({ error: 'Processo não encontrado' });
+    if (await bloqueadoAteReceber(req, processo)) return res.status(403).json({ error: MSG_BLOQUEADO });
 
     const documentos = await Documento.findAll({
       where: { processo_id: processoId },
@@ -304,8 +322,9 @@ const downloadMerged = async (req, res) => {
     const { processoId } = req.params;
     const { Documento, Processo } = req.models;
 
-    const processo = await Processo.findByPk(processoId, { attributes: ['id', 'numero'] });
+    const processo = await Processo.findByPk(processoId, { attributes: ATRIBUTOS_ACESSO });
     if (!processo) return res.status(404).json({ error: 'Processo não encontrado' });
+    if (await bloqueadoAteReceber(req, processo)) return res.status(403).json({ error: MSG_BLOQUEADO });
 
     const documentos = await Documento.findAll({
       where: { processo_id: processoId },

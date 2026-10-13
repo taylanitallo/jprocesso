@@ -5,15 +5,19 @@ const { getByProcesso, createOrUpdate, getProximoNumero, getEstoque, getAlmEstoq
 const upload = require('../middleware/upload');
 const { validateFileContent } = require('../middleware/upload');
 
+const { exigirRecebimento } = require('../utils/recebimento');
+
 const mid = [tenantMiddleware, requireTenant, authenticate];
+// DID do processo só fica acessível ao destino depois que ele recebe o processo
+const midProcesso = [...mid, exigirRecebimento];
 
 router.get('/proximo-numero', mid, getProximoNumero);
 router.get('/alm-estoque', mid, getAlmEstoque);
 router.get('/estoque/:contratoRef', mid, getEstoque);
-router.get('/processo/:processoId', mid, getByProcesso);
-router.post('/processo/:processoId', mid, createOrUpdate);
-router.post('/processo/:processoId/certidao/:certKey', mid, upload.single('file'), validateFileContent, uploadCertidao);
-router.get('/processo/:processoId/certidao/:certKey/url', mid, downloadCertidaoUrl);
-router.delete('/processo/:processoId/certidao/:certKey', mid, deleteCertidao);
+router.get('/processo/:processoId', midProcesso, getByProcesso);
+router.post('/processo/:processoId', midProcesso, createOrUpdate);
+router.post('/processo/:processoId/certidao/:certKey', midProcesso, upload.single('file'), validateFileContent, uploadCertidao);
+router.get('/processo/:processoId/certidao/:certKey/url', midProcesso, downloadCertidaoUrl);
+router.delete('/processo/:processoId/certidao/:certKey', midProcesso, deleteCertidao);
 
 module.exports = router;

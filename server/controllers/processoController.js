@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const { Op, Sequelize } = require('sequelize');
 const { registrarLog } = require('../middleware/activityLogger');
 const { getScopeSetorInclude, getScopeSecretariaInclude } = require('../utils/scopeFilter');
+const { situacaoRecebimento } = require('../utils/recebimento');
 const { masterDb } = require('../config/database');
 const assinaturaService = require('../services/assinaturaService');
 const { AssinaturaError } = assinaturaService;
@@ -276,6 +277,10 @@ const tramitarProcesso = async (req, res) => {
       await transaction.rollback();
       return res.status(400).json({ error: 'Não é possível tramitar um processo concluído ou arquivado' });
     }
+    if ((await situacaoRecebimento(req, processo)).bloqueado) {
+      await transaction.rollback();
+      return res.status(403).json({ error: 'Receba o processo antes de tramitá-lo.' });
+    }
 
     // Buscar usuário e validar a assinatura eletrônica (senha + código do app)
     const user = await User.findByPk(req.user.id, { transaction });
@@ -431,9 +436,13 @@ const devolverProcesso = async (req, res) => {
       if (req.user.tipo !== 'admin' && req.user.tipo !== 'gestor') {
         await transaction.rollback();
         return res.status(403).json({ 
-          error: 'Somente o usuário responsável atual pode devolver este processo.' 
+          error: 'Somente o usuário responsável atual pode devolver este processo.'
         });
       }
+    }
+    if ((await situacaoRecebimento(req, processo)).bloqueado) {
+      await transaction.rollback();
+      return res.status(403).json({ error: 'Receba o processo antes de devolvê-lo.' });
     }
 
     const ultimaTramitacao = await Tramitacao.findOne({
@@ -528,9 +537,13 @@ const concluirProcesso = async (req, res) => {
       if (req.user.tipo !== 'admin' && req.user.tipo !== 'gestor') {
         await transaction.rollback();
         return res.status(403).json({ 
-          error: 'Somente o usuário responsável atual pode concluir este processo.' 
+          error: 'Somente o usuário responsável atual pode concluir este processo.'
         });
       }
+    }
+    if ((await situacaoRecebimento(req, processo)).bloqueado) {
+      await transaction.rollback();
+      return res.status(403).json({ error: 'Receba o processo antes de concluí-lo.' });
     }
 
     const user = await User.findByPk(req.user.id, { transaction });
@@ -901,6 +914,30 @@ const getProcessoById = async (req, res) => {
 
     if (!processo) {
       return res.status(404).json({ error: 'Processo não encontrado' });
+    }
+
+    // Ainda não recebido pelo destino: só o necessário para identificar o
+    // processo e quem enviou — conteúdo, documentos e histórico após receber
+    const recebimento = await situacaoRecebimento(req, processo);
+    if (recebimento.bloqueado) {
+      const p = processo.toJSON();
+      const envio = p.tramitacoes.find(t => t.id === recebimento.ultima.id);
+      return res.json({
+        processo: {
+          id: p.id, numero: p.numero, assunto: p.assunto, tipo_processo: p.tipo_processo,
+          status: p.status, prioridade: p.prioridade, data_abertura: p.data_abertura, created_at: p.created_at,
+          setor_atual_id: p.setor_atual_id, usuario_atual_id: p.usuario_atual_id,
+          setorAtual: p.setorAtual, usuarioAtual: p.usuarioAtual ? { id: p.usuarioAtual.id, nome: p.usuarioAtual.nome } : null,
+          aguardando_recebimento: true,
+          pode_receber: recebimento.podeReceber,
+          envio: envio ? {
+            tipo_acao: envio.tipo_acao, data_hora: envio.data_hora,
+            despacho: envio.despacho, justificativa_devolucao: envio.justificativa_devolucao,
+            origemUsuario: envio.origemUsuario, origemSetor: envio.origemSetor,
+            destinoUsuario: envio.destinoUsuario, destinoSetor: envio.destinoSetor,
+          } : null,
+        },
+      });
     }
 
     // Tarja de assinatura eletrônica de cada ato (tramitações antigas não têm)

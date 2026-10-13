@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { ShieldCheck, ShieldAlert, Search, ArrowLeft, Loader2, CheckCircle2, XCircle } from 'lucide-react'
 import api from '../services/api'
-import CabecalhoPublico from '../components/assinatura/CabecalhoPublico'
+import LayoutPublico, { CardPublico, usePaletaPublica } from '../components/LayoutPublico'
 
 const CHECKS = [
   ['assinatura_valida', 'Assinatura criptográfica confere com a chave do sistema'],
@@ -47,47 +47,50 @@ export default function VerificarDocumento() {
   }, [])
 
   const a = resultado?.assinatura
+  const p = usePaletaPublica()
+  const inputCls = 'w-full h-11 rounded-xl border border-ink-300 dark:border-white/20 bg-surface/95 px-3 text-sm font-mono text-ink-900 placeholder:text-ink-400 outline-hidden focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20'
 
   return (
-    <div className="min-h-screen bg-ink-50">
-      <CabecalhoPublico subdomain={subdomain} />
-
-      <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-ink-900 dark:text-white">Verificar documento</h1>
-          <p className="text-sm text-ink-600 mt-1">
+    <LayoutPublico subdomain={subdomain}>
+      <div className="relative z-10 flex-1 overflow-y-auto">
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-5">
+        <CardPublico className="p-6 shadow-[0_0_40px_rgba(139,92,246,0.12)]">
+          <h1 className={`text-lg font-bold ${p.txt1} mb-1`}>Verificar documento</h1>
+          <p className={`text-sm ${p.txt3} mb-5`}>
             Confira a autenticidade de um ato assinado eletronicamente informando o código verificador e o código CRC
             presentes na tarja de assinatura.
           </p>
-        </div>
 
-        <form onSubmit={e => { e.preventDefault(); verificar() }}
-          className="card p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 items-end">
-          <div>
-            <label className="block text-xs font-semibold text-ink-600 mb-1.5">Código verificador</label>
-            <input value={codigo} onChange={e => setCodigo(e.target.value.replace(/\D/g, '').slice(0, 12))}
-              inputMode="numeric" placeholder="Ex.: 51138820" className="input-field font-mono" />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-ink-600 mb-1.5">Código CRC</label>
-            <input value={crc} onChange={e => setCrc(e.target.value.replace(/[^0-9a-fA-F]/g, '').slice(0, 8).toUpperCase())}
-              placeholder="Ex.: AD71E1B3" className="input-field font-mono uppercase" />
-          </div>
-          <button type="submit" disabled={carregando}
-            className="h-10 inline-flex items-center justify-center gap-2 px-5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold disabled:opacity-60">
-            {carregando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Verificar
-          </button>
-        </form>
+          <form onSubmit={e => { e.preventDefault(); verificar() }}
+            className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 items-end">
+            <div>
+              <label className={`block text-xs font-medium ${p.txt3} mb-1.5`}>Código verificador</label>
+              <input value={codigo} onChange={e => setCodigo(e.target.value.replace(/\D/g, '').slice(0, 12))}
+                inputMode="numeric" placeholder="Ex.: 51138820" className={inputCls} />
+            </div>
+            <div>
+              <label className={`block text-xs font-medium ${p.txt3} mb-1.5`}>Código CRC</label>
+              <input value={crc} onChange={e => setCrc(e.target.value.replace(/[^0-9a-fA-F]/g, '').slice(0, 8).toUpperCase())}
+                placeholder="Ex.: AD71E1B3" className={`${inputCls} uppercase`} />
+            </div>
+            <button type="submit" disabled={carregando}
+              className="h-11 inline-flex items-center justify-center gap-2 px-5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold transition-colors shadow-lg shadow-violet-600/25 disabled:opacity-60">
+              {carregando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Verificar
+            </button>
+          </form>
+        </CardPublico>
 
         {erro && (
-          <div role="alert" className="card p-4 flex items-start gap-3 border-danger-200 dark:border-danger-700">
-            <ShieldAlert className="w-5 h-5 text-danger-600 shrink-0 mt-0.5" />
-            <p className="text-sm text-danger-700 dark:text-danger-300">{erro}</p>
-          </div>
+          <CardPublico className="p-4">
+            <div role="alert" className="flex items-start gap-3">
+              <ShieldAlert className="w-5 h-5 text-danger-600 shrink-0 mt-0.5" />
+              <p className="text-sm text-danger-700 dark:text-danger-300">{erro}</p>
+            </div>
+          </CardPublico>
         )}
 
         {resultado && a && (
-          <section className="card overflow-hidden">
+          <CardPublico>
             <div className={`px-5 py-4 flex items-center gap-3 ${resultado.valida
               ? 'bg-success-50 dark:bg-success-900/20 border-b border-success-200 dark:border-success-800'
               : 'bg-danger-50 dark:bg-danger-900/20 border-b border-danger-200 dark:border-danger-800'}`}>
@@ -145,13 +148,15 @@ export default function VerificarDocumento() {
                 ))}
               </ul>
             </div>
-          </section>
+          </CardPublico>
         )}
 
-        <Link to={`/${subdomain}/login`} className="inline-flex items-center gap-1.5 text-sm text-ink-600 hover:text-brand-600">
+        <Link to={`/${subdomain}/login`}
+          className={`inline-flex items-center gap-1.5 text-sm font-medium transition-colors ${p.mc ? 'text-violet-700 hover:text-violet-900' : 'text-violet-400 hover:text-violet-300'}`}>
           <ArrowLeft className="w-4 h-4" /> Voltar ao login
         </Link>
       </main>
-    </div>
+      </div>
+    </LayoutPublico>
   )
 }
