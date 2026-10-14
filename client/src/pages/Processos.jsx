@@ -543,10 +543,10 @@ export default function Processos() {
                   <Link
                     key={processo.id}
                     to={`/${subdomain}/processos/${processo.id}`}
-                    className={`group flex items-stretch gap-4 px-4 py-3.5 bg-surface border border-ink-100 border-l-4 border-l-indigo-400 rounded-xl hover:shadow-sm dark:hover:shadow-slate-900/40 hover:border-ink-200 transition-all`}
+                    className={`group flex items-center gap-4 px-4 py-2 bg-surface border border-ink-100 border-l-4 border-l-indigo-400 rounded-xl hover:shadow-sm dark:hover:shadow-slate-900/40 hover:border-ink-200 transition-all`}
                   >
                     {/* Conteúdo principal */}
-                    <div className="flex-1 min-w-0 space-y-1">
+                    <div className="flex-1 min-w-0 space-y-0.5">
                       {/* Assunto */}
                       <p className="text-sm font-semibold text-ink-900 truncate leading-snug">
                         {processo.assunto}
@@ -589,13 +589,11 @@ export default function Processos() {
                     </div>
 
                     {/* Direita: status + data + seta */}
-                    <div className="shrink-0 flex flex-col items-end justify-between gap-2 min-w-[90px]">
-                      <div className="flex flex-col items-end gap-1">
-                        <span className={s.cls}>{s.label}</span>
-                        <span className="text-[11px] text-ink-400 tabular-nums">
-                          {new Date(dataEnvio).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
-                        </span>
-                      </div>
+                    <div className="shrink-0 flex items-center gap-3">
+                      <span className="text-[11px] text-ink-400 tabular-nums">
+                        {new Date(dataEnvio).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                      </span>
+                      <span className={s.cls}>{s.label}</span>
                       <ArrowRight className="h-4 w-4 text-ink-400 group-hover:text-info-500 group-hover:translate-x-0.5 transition-all" />
                     </div>
                   </Link>
@@ -637,10 +635,10 @@ function ProcessoCard({ processo, subdomain, onClickSecretaria, onClickSetor, on
     <div className={`group bg-surface border border-ink-100 border-l-4 ${s.border} rounded-xl hover:shadow-sm dark:hover:shadow-slate-900/40 hover:border-ink-200 transition-all`}>
       <Link
         to={`/${subdomain}/processos/${processo.id}`}
-        className="flex items-stretch gap-4 px-4 py-3.5"
+        className="flex items-center gap-4 px-4 py-2"
       >
         {/* Conteúdo principal */}
-        <div className="flex-1 min-w-0 space-y-1">
+        <div className="flex-1 min-w-0 space-y-0.5">
           {/* Assunto — texto principal */}
           <p className="text-sm font-semibold text-ink-900 truncate leading-snug">
             {processo.assunto}
@@ -712,16 +710,13 @@ function ProcessoCard({ processo, subdomain, onClickSecretaria, onClickSetor, on
         </div>
 
         {/* Direita: status + data + seta */}
-        <div className="shrink-0 flex flex-col items-end justify-between gap-2 min-w-[90px]">
-          <div className="flex flex-col items-end gap-1">
-            <span className={s.cls}>{s.label}</span>
-            <span className="text-[11px] text-ink-400 tabular-nums">
-              {new Date(dataRef).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
-            </span>
-            <span className="text-[11px] text-ink-400 tabular-nums">
-              {new Date(dataRef).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-            </span>
-          </div>
+        <div className="shrink-0 flex items-center gap-3">
+          <span className="text-[11px] text-ink-400 tabular-nums text-right leading-tight">
+            {new Date(dataRef).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+            <br />
+            {new Date(dataRef).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+          </span>
+          <span className={s.cls}>{s.label}</span>
           <ChevronRight className="h-4 w-4 text-ink-400 group-hover:text-info-500 group-hover:translate-x-0.5 transition-all" />
         </div>
       </Link>

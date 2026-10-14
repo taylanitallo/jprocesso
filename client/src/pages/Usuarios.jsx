@@ -492,30 +492,30 @@ export default function Usuarios() {
         <table className="min-w-full divide-y divide-ink-200">
           <thead className="bg-ink-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-ink-500 uppercase tracking-wider">Usuário</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-ink-500 uppercase tracking-wider">Tipo</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-ink-500 uppercase tracking-wider">Secretaria/Setor</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-ink-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-ink-500 uppercase tracking-wider">Ações</th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-ink-500 uppercase tracking-wider">Usuário</th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-ink-500 uppercase tracking-wider">Tipo</th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-ink-500 uppercase tracking-wider">Secretaria/Setor</th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-ink-500 uppercase tracking-wider">Status</th>
+              <th className="px-4 py-2 text-right text-xs font-medium text-ink-500 uppercase tracking-wider">Ações</th>
             </tr>
           </thead>
           <tbody className="bg-surface divide-y divide-ink-200">
             {usuariosPaginados.map((usuario) => (
               <tr key={usuario.id} className="hover:bg-ink-50 transition-colors">
-                <td className="px-4 py-3 whitespace-nowrap">
+                <td className="px-4 py-2 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className="shrink-0 h-10 w-10 bg-gradient-to-br from-info-400 to-indigo-600 rounded-full flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">
+                    <div className="shrink-0 h-8 w-8 bg-gradient-to-br from-info-400 to-indigo-600 rounded-full flex items-center justify-center">
+                      <span className="text-white font-bold text-xs">
                         {usuario.nome.charAt(0).toUpperCase()}
                       </span>
                     </div>
-                    <div className="ml-4">
+                    <div className="ml-3">
                       <div className="text-sm font-medium text-ink-900">{usuario.nome}</div>
-                      <div className="text-sm text-ink-500">{usuario.email}</div>
+                      <div className="text-xs text-ink-500">{usuario.email}</div>
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                <td className="px-4 py-2 whitespace-nowrap">
                   <span className={`
                     px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
                     ${usuario.tipo === 'admin' ? 'bg-danger-100 text-danger-800 dark:bg-danger-900/30 dark:text-danger-400' : ''}
@@ -527,11 +527,11 @@ export default function Usuarios() {
                     {usuario.tipo === 'operacional' ? 'Operacional' : ''}
                   </span>
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-2">
                   <div className="text-sm font-medium text-ink-800">{usuario.secretaria?.sigla || '-'}</div>
-                  <div className="text-sm text-ink-500">{usuario.setor?.nome || '-'}</div>
+                  <div className="text-xs text-ink-500">{usuario.setor?.nome || '-'}</div>
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                <td className="px-4 py-2 whitespace-nowrap">
                   <button
                     type="button"
                     onClick={() => handleToggleStatus(usuario)}
@@ -539,18 +539,18 @@ export default function Usuarios() {
                   >
                     {usuario.ativo ? (
                       <>
-                        <CheckCircle className="h-5 w-5 text-success-500" />
+                        <CheckCircle className="h-4 w-4 text-success-500" />
                         <span className="text-sm text-success-600">Ativo</span>
                       </>
                     ) : (
                       <>
-                        <XCircle className="h-5 w-5 text-danger-500" />
+                        <XCircle className="h-4 w-4 text-danger-500" />
                         <span className="text-sm text-danger-600">Inativo</span>
                       </>
                     )}
                   </button>
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                <td className="px-4 py-2 whitespace-nowrap text-right text-sm font-medium">
                   <button
                     onClick={() => handleEdit(usuario)}
                     className="text-brand-600 hover:text-info-900 mr-3"
