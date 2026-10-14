@@ -199,7 +199,7 @@ export default function Processos() {
           <div className="flex items-center gap-2">
             <BotaoExcluidos entidade="processos" onAlterado={() => queryClient.invalidateQueries('processos')} />
             <Link to={`/${subdomain}/processos/novo`} className="btn-primary">
-              <Plus className="h-4 w-4" />
+              <Plus className="h-3.5 w-3.5" />
               Novo Processo
             </Link>
           </div>

@@ -36,20 +36,21 @@ export const podeVerExcluidos = (user, entidade) => {
   return obj?.excluidos === true
 }
 
-// compacto: mesmo tamanho dos botões das barras em text-xs (ex.: Ordens)
+// Mesma altura dos botões das barras de ações (compactos, text-xs). `compacto`
+// fica por compatibilidade: hoje os dois tamanhos são iguais.
 // onAlterado: recarrega a tela quando algo é restaurado
 export default function BotaoExcluidos({ entidade, rotulo = 'Excluídos', compacto = false, className = '', onAlterado }) {
   const { user } = useAuth()
   const [aberto, setAberto] = useState(false)
   if (!podeVerExcluidos(user, entidade)) return null
 
-  const tamanho = compacto ? 'px-4 py-2 rounded-xl text-xs' : 'px-4 py-1.5 rounded-lg text-sm'
+  const tamanho = 'px-3 py-1 rounded-lg text-xs'
   return (
     <>
       <button type="button" onClick={() => setAberto(true)} title="Registros excluídos desta tela"
         className={`flex items-center gap-1.5 font-semibold shadow-sm transition-colors ${tamanho}
           border border-ink-300 bg-surface text-ink-700 hover:bg-ink-100 ${className}`}>
-        <Archive className={compacto ? 'w-3.5 h-3.5' : 'w-4 h-4'} /> {rotulo}
+        <Archive className="w-3.5 h-3.5" /> {rotulo}
       </button>
       {aberto && <ModalExcluidos entidade={entidade} onClose={() => setAberto(false)} onAlterado={onAlterado} />}
     </>

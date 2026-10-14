@@ -253,8 +253,11 @@ export default function Secretarias() {
   // Agentes
   const [agentes, setAgentes]                   = useState([])
   const [agenteSearch, setAgenteSearch]         = useState('')
+  const [agFiltroEmail, setAgFiltroEmail]       = useState('')
+  const [agFiltroTelefone, setAgFiltroTelefone] = useState('')
+  const [agFiltroNasc, setAgFiltroNasc]         = useState('')
   // Reset paginação dos agentes quando filtro mudar
-  useEffect(() => { setAgPage(1) }, [agenteSearch])
+  useEffect(() => { setAgPage(1) }, [agenteSearch, agFiltroEmail, agFiltroTelefone, agFiltroNasc])
   const [selectedAgente, setSelectedAgente]     = useState(null)
   const [showModalAgente, setShowModalAgente]   = useState(false)
   const [editingAgente, setEditingAgente]       = useState(null)
@@ -867,62 +870,62 @@ export default function Secretarias() {
             </div>
           </FilterBar>
 
+          {/* Barra de ações (fora do card, acima da tabela) */}
+          <div className="flex items-center justify-end flex-wrap gap-2">
+            <div className="mr-auto flex items-center gap-2 flex-wrap">
+              <BotaoExcluidos entidade="secretarias" rotulo="Secretarias excluídas" onAlterado={fetchSecretarias} />
+              <BotaoExcluidos entidade="setores" rotulo="Setores excluídos" onAlterado={fetchSecretarias} />
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => { setSelectedSecretaria(null); handleCreateSecretaria(); }}
+                className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1"
+              >
+                <Plus className="h-3.5 w-3.5" /> Incluir
+              </button>
+              <button
+                onClick={() => selectedSecretaria && handleEditSecretaria(selectedSecretaria)}
+                disabled={!selectedSecretaria}
+                className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Edit2 className="h-3.5 w-3.5" /> Alterar
+              </button>
+              <button
+                onClick={() => selectedSecretaria && handleDeleteSecretaria(selectedSecretaria)}
+                disabled={!selectedSecretaria}
+                className="btn-danger flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Excluir
+              </button>
+              <button
+                onClick={() => { if (selectedSecretaria) { setSelectedSetorInPanel(null); setShowSetoresPanel(true); } }}
+                disabled={!selectedSecretaria}
+                className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Briefcase className="h-3.5 w-3.5" /> Setores
+              </button>
+              <button
+                onClick={() => selectedSecretaria && openOrcamentoPanel()}
+                disabled={!selectedSecretaria}
+                className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Wallet className="h-3.5 w-3.5" /> Orçamento
+              </button>
+              <button
+                onClick={() => selectedSecretaria && openDotacoesPanel()}
+                disabled={!selectedSecretaria}
+                className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Database className="h-3.5 w-3.5" /> Dotações
+              </button>
+            </div>
+          </div>
+
           {/* Tabela de secretarias */}
           <div className="card overflow-hidden">
             <div className="px-4 py-2 border-b border-ink-200">
               <SectionTitle icon={Building2} title="Tabela de secretarias" />
             </div>
-            {/* Barra de ações (acima da tabela) */}
-            <div className="px-4 py-2.5 border-b border-ink-200 bg-ink-50 flex items-center justify-end flex-wrap gap-2">
-              <div className="mr-auto flex items-center gap-2 flex-wrap">
-                <BotaoExcluidos entidade="secretarias" rotulo="Secretarias excluídas" onAlterado={fetchSecretarias} />
-                <BotaoExcluidos entidade="setores" rotulo="Setores excluídos" onAlterado={fetchSecretarias} />
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  onClick={() => { setSelectedSecretaria(null); handleCreateSecretaria(); }}
-                  className="btn-primary flex items-center gap-1.5 text-sm px-3 py-1.5"
-                >
-                  <Plus className="h-4 w-4" /> Incluir
-                </button>
-                <button
-                  onClick={() => selectedSecretaria && handleEditSecretaria(selectedSecretaria)}
-                  disabled={!selectedSecretaria}
-                  className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Edit2 className="h-4 w-4" /> Alterar
-                </button>
-                <button
-                  onClick={() => selectedSecretaria && handleDeleteSecretaria(selectedSecretaria)}
-                  disabled={!selectedSecretaria}
-                  className="btn-danger flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Trash2 className="h-4 w-4" /> Excluir
-                </button>
-                <button
-                  onClick={() => { if (selectedSecretaria) { setSelectedSetorInPanel(null); setShowSetoresPanel(true); } }}
-                  disabled={!selectedSecretaria}
-                  className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Briefcase className="h-4 w-4" /> Setores
-                </button>
-                <button
-                  onClick={() => selectedSecretaria && openOrcamentoPanel()}
-                  disabled={!selectedSecretaria}
-                  className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Wallet className="h-4 w-4" /> Orçamento
-                </button>
-                <button
-                  onClick={() => selectedSecretaria && openDotacoesPanel()}
-                  disabled={!selectedSecretaria}
-                  className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Database className="h-4 w-4" /> Dotações
-                </button>
-              </div>
-            </div>
-
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-ink-100 border-b border-ink-200">
@@ -1031,58 +1034,89 @@ export default function Secretarias() {
       )}
 
       {/* ── Tab: Cadastro de Agentes ── */}
-      {activeTab === 'agentes' && (
+      {activeTab === 'agentes' && (() => {
+        const soDigitos = (v) => String(v || '').replace(/\D/g, '');
+        const agentesFiltrados = agentes.filter(a => {
+          const busca = agenteSearch.trim().toLowerCase();
+          if (busca && !(a.nome || '').toLowerCase().includes(busca)
+            && !(soDigitos(busca) && soDigitos(a.cpf).includes(soDigitos(busca)))) return false;
+          if (agFiltroEmail && !(a.email || '').toLowerCase().includes(agFiltroEmail.trim().toLowerCase())) return false;
+          if (agFiltroTelefone && !soDigitos(a.telefone).includes(soDigitos(agFiltroTelefone))) return false;
+          if (agFiltroNasc && a.nascimento !== agFiltroNasc) return false;
+          return true;
+        });
+        const pageAg = agentesFiltrados.slice((agPage - 1) * agPorPagina, agPage * agPorPagina);
+        const fmtNasc = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '—');
+        const filtrosAtivos = [agenteSearch, agFiltroEmail, agFiltroTelefone, agFiltroNasc].filter(Boolean).length;
+        return (
         <div className="space-y-3">
           {/* Opções de filtro */}
           <FilterBar>
             <div className="flex-1 min-w-48">
               <label className="block text-xs font-medium text-ink-600 mb-1">Nome / CPF</label>
-              <input
-                value={agenteSearch}
-                onChange={e => setAgenteSearch(e.target.value)}
-                className="input-field text-sm"
-                placeholder="Buscar por nome ou CPF..."
-              />
+              <input value={agenteSearch} onChange={e => setAgenteSearch(e.target.value)}
+                className="input-field text-sm" placeholder="Buscar por nome ou CPF..." />
             </div>
+            <div className="w-56">
+              <label className="block text-xs font-medium text-ink-600 mb-1">E-mail</label>
+              <input value={agFiltroEmail} onChange={e => setAgFiltroEmail(e.target.value)}
+                className="input-field text-sm" placeholder="email@..." />
+            </div>
+            <div className="w-44">
+              <label className="block text-xs font-medium text-ink-600 mb-1">Telefone</label>
+              <input value={agFiltroTelefone} onChange={e => setAgFiltroTelefone(e.target.value)}
+                className="input-field text-sm" placeholder="(00) 00000-0000" />
+            </div>
+            <div className="w-44">
+              <label className="block text-xs font-medium text-ink-600 mb-1">Nascimento</label>
+              <input type="date" value={agFiltroNasc} onChange={e => setAgFiltroNasc(e.target.value)}
+                className="input-field text-sm" />
+            </div>
+            {filtrosAtivos > 0 && (
+              <button type="button"
+                onClick={() => { setAgenteSearch(''); setAgFiltroEmail(''); setAgFiltroTelefone(''); setAgFiltroNasc(''); }}
+                className="self-end btn-secondary text-xs px-3 py-1.5">
+                Limpar filtros ({filtrosAtivos})
+              </button>
+            )}
           </FilterBar>
+
+          {/* Barra de ações (fora do card, acima da tabela) */}
+          <div className="flex items-center justify-end flex-wrap gap-2">
+            <div className="mr-auto">
+              <BotaoExcluidos entidade="agentes" rotulo="Agentes excluídos" onAlterado={fetchSecretarias} />
+            </div>
+            <button
+              onClick={() => { setSelectedAgente(null); openModalAgente(); }}
+              className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1"
+            >
+              <Plus className="h-3.5 w-3.5" /> Incluir
+            </button>
+            <button
+              onClick={() => selectedAgente && openModalAgente(selectedAgente)}
+              disabled={!selectedAgente}
+              className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Edit2 className="h-3.5 w-3.5" /> Alterar
+            </button>
+            <button
+              onClick={() => {
+                if (selectedAgente) {
+                  setDeleteAgenteTarget(selectedAgente);
+                  setShowDeleteAgenteModal(true);
+                }
+              }}
+              disabled={!selectedAgente}
+              className="btn-danger flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Excluir
+            </button>
+          </div>
 
           {/* Tabela de agentes */}
           <div className="card overflow-hidden">
             <div className="px-4 py-2 border-b border-ink-200">
               <SectionTitle icon={UserCog} title="Tabela de agentes" />
-            </div>
-            {/* Barra de ações (acima da tabela) */}
-            <div className="px-4 py-2.5 border-b border-ink-200 bg-ink-50 flex items-center justify-end flex-wrap gap-2">
-              <div className="mr-auto">
-                <BotaoExcluidos entidade="agentes" rotulo="Agentes excluídos" onAlterado={fetchSecretarias} />
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => { setSelectedAgente(null); openModalAgente(); }}
-                  className="btn-primary flex items-center gap-1.5 text-sm px-3 py-1.5"
-                >
-                  <Plus className="h-4 w-4" /> Incluir
-                </button>
-                <button
-                  onClick={() => selectedAgente && openModalAgente(selectedAgente)}
-                  disabled={!selectedAgente}
-                  className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Edit2 className="h-4 w-4" /> Alterar
-                </button>
-                <button
-                  onClick={() => {
-                    if (selectedAgente) {
-                      setDeleteAgenteTarget(selectedAgente);
-                      setShowDeleteAgenteModal(true);
-                    }
-                  }}
-                  disabled={!selectedAgente}
-                  className="btn-danger flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Trash2 className="h-4 w-4" /> Excluir
-                </button>
-              </div>
             </div>
 
             <div className="overflow-x-auto">
@@ -1092,83 +1126,57 @@ export default function Secretarias() {
                     <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-8"></th>
                     <th className="text-left px-4 py-2.5 font-semibold text-ink-600">Nome</th>
                     <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-40">CPF</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-28">Status</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600">E-mail</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-40">Telefone</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-32">Nascimento</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-ink-100">
-                  {(() => {
-                    const filteredAg = agentes.filter(a =>
-                      !agenteSearch
-                      || a.nome.toLowerCase().includes(agenteSearch.toLowerCase())
-                      || (a.cpf||'').replace(/\D/g,'').includes(agenteSearch.replace(/\D/g,''))
-                    );
-                    const pageAg = filteredAg.slice((agPage - 1) * agPorPagina, agPage * agPorPagina);
-                    if (filteredAg.length === 0) return (
-                      <tr>
-                        <td colSpan={4}>
-                          <EmptyState
-                            icon={UserCog}
-                            title={agentes.length === 0 ? 'Nenhum agente cadastrado' : 'Nenhum resultado para o filtro'}
-                          />
+                  {agentesFiltrados.length === 0 ? (
+                    <tr>
+                      <td colSpan={6}>
+                        <EmptyState
+                          icon={UserCog}
+                          title={agentes.length === 0 ? 'Nenhum agente cadastrado' : 'Nenhum resultado para o filtro'}
+                        />
+                      </td>
+                    </tr>
+                  ) : pageAg.map(agente => {
+                    const isSelected = selectedAgente?.id === agente.id;
+                    const sub = isSelected ? 'text-info-100' : 'text-ink-600';
+                    return (
+                      <tr
+                        key={agente.id}
+                        onClick={() => setSelectedAgente(isSelected ? null : agente)}
+                        onDoubleClick={() => openModalAgente(agente)}
+                        className={`cursor-pointer transition-colors select-none ${
+                          isSelected
+                            ? 'bg-brand-600 text-white'
+                            : 'hover:bg-info-50 dark:hover:bg-info-900/10'
+                        }`}
+                      >
+                        <td className="px-4 py-2.5 text-center">
+                          {isSelected && <span className="text-white text-xs">▶</span>}
                         </td>
+                        <td className={`px-4 py-2.5 font-medium ${isSelected ? 'text-white' : 'text-ink-900'}`}>
+                          {agente.nome}
+                        </td>
+                        <td className={`px-4 py-2.5 font-mono text-xs ${isSelected ? 'text-info-100' : 'text-ink-500'}`}>
+                          {maskCPF(agente.cpf)}
+                        </td>
+                        <td className={`px-4 py-2.5 text-xs ${sub}`}>{agente.email || '—'}</td>
+                        <td className={`px-4 py-2.5 text-xs ${sub}`}>{agente.telefone || '—'}</td>
+                        <td className={`px-4 py-2.5 text-xs ${sub}`}>{fmtNasc(agente.nascimento)}</td>
                       </tr>
                     );
-                    return pageAg.map(agente => {
-                        const isSelected = selectedAgente?.id === agente.id;
-                        return (
-                          <tr
-                            key={agente.id}
-                            onClick={() => setSelectedAgente(isSelected ? null : agente)}
-                            onDoubleClick={() => openModalAgente(agente)}
-                            className={`cursor-pointer transition-colors select-none ${
-                              isSelected
-                                ? 'bg-brand-600 text-white'
-                                : 'hover:bg-info-50 dark:hover:bg-info-900/10'
-                            }`}
-                          >
-                            <td className="px-4 py-2.5 text-center">
-                              {isSelected && <span className="text-white text-xs">▶</span>}
-                            </td>
-                            <td className={`px-4 py-2.5 font-medium ${isSelected ? 'text-white' : 'text-ink-900'}`}>
-                              {agente.nome}
-                            </td>
-                            <td className={`px-4 py-2.5 font-mono text-xs ${isSelected ? 'text-info-100' : 'text-ink-500'}`}>
-                              {maskCPF(agente.cpf)}
-                            </td>
-                            {(() => {
-                              const hj = new Date();
-                              const assigns = todosResponsaveis.filter(r => r.agente_id === agente.id);
-                              const curr = assigns.find(r => {
-                                const ini = r.data_inicio ? new Date(r.data_inicio + 'T00:00:00') : null;
-                                const fim = r.data_fim    ? new Date(r.data_fim    + 'T23:59:59') : null;
-                                return (!ini || ini <= hj) && (!fim || fim >= hj);
-                              }) || assigns.sort((a, b) => new Date(b.data_inicio||0) - new Date(a.data_inicio||0))[0];
-                              const st = assigns.length === 0 ? null : getStatusVigencia(curr?.data_inicio, curr?.data_fim);
-                              return (<>
-                                <td className="px-4 py-2.5">
-                                  {st === null
-                                    ? <span className="text-ink-400 text-xs">Sem vínculo</span>
-                                    : isSelected
-                                      ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-info-500/30 text-info-100">{st === 'ativo' ? 'Ativo' : st === 'futuro' ? 'Futuro' : 'Encerrado'}</span>
-                                      : <StatusBadge status={st} />}
-                                </td>
-                              </>);
-                            })()}
-                          </tr>
-                        );
-                      });
-                  })()}
+                  })}
                 </tbody>
               </table>
             </div>
 
             {/* Paginação */}
             <PaginationBar
-              total={agentes.filter(a =>
-                !agenteSearch
-                || a.nome.toLowerCase().includes(agenteSearch.toLowerCase())
-                || (a.cpf||'').replace(/\D/g,'').includes(agenteSearch.replace(/\D/g,''))
-              ).length}
+              total={agentesFiltrados.length}
               page={agPage}
               setPage={setAgPage}
               porPagina={agPorPagina}
@@ -1176,7 +1184,8 @@ export default function Secretarias() {
             />
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* ── Tab: Responsáveis ── */}
       {activeTab === 'responsaveis' && (
@@ -1236,37 +1245,37 @@ export default function Secretarias() {
             </div>
           </FilterBar>
 
+          {/* Barra de ações (fora do card, acima da tabela) */}
+          <div className="flex items-center justify-end flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => { setSelectedResp(null); openModalResp(); }}
+                className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1"
+              >
+                <Plus className="h-3.5 w-3.5" /> Incluir
+              </button>
+              <button
+                onClick={() => selectedResp && openModalResp(selectedResp)}
+                disabled={!selectedResp}
+                className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Edit2 className="h-3.5 w-3.5" /> Alterar
+              </button>
+              <button
+                onClick={() => selectedResp && setConfirmarExcluirResp(selectedResp)}
+                disabled={!selectedResp}
+                className="btn-danger flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Excluir
+              </button>
+            </div>
+          </div>
+
           {/* Tabela de Responsável */}
           <div className="card overflow-hidden">
             <div className="px-4 py-2 border-b border-ink-200">
               <SectionTitle icon={UserCheck} title="Tabela de Responsável" />
             </div>
-            {/* Barra de ações (acima da tabela) */}
-            <div className="px-4 py-2.5 border-b border-ink-200 bg-ink-50 flex items-center justify-end">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => { setSelectedResp(null); openModalResp(); }}
-                  className="btn-primary flex items-center gap-1.5 text-sm px-3 py-1.5"
-                >
-                  <Plus className="h-4 w-4" /> Incluir
-                </button>
-                <button
-                  onClick={() => selectedResp && openModalResp(selectedResp)}
-                  disabled={!selectedResp}
-                  className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Edit2 className="h-4 w-4" /> Alterar
-                </button>
-                <button
-                  onClick={() => selectedResp && setConfirmarExcluirResp(selectedResp)}
-                  disabled={!selectedResp}
-                  className="btn-danger flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Trash2 className="h-4 w-4" /> Excluir
-                </button>
-              </div>
-            </div>
-
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-ink-100 border-b border-ink-200">
@@ -1928,30 +1937,30 @@ export default function Secretarias() {
 
             {/* Tabela */}
             {/* Barra de ações (acima da tabela) */}
-            <div className="px-4 py-2.5 border-b border-ink-200 bg-ink-50 flex items-center justify-between shrink-0">
+            <div className="px-4 py-2 border-b border-ink-200 bg-ink-50 flex items-center justify-between shrink-0">
               <span className="text-xs text-ink-500">
                 {(selectedSecretaria.setores || []).length} setor(es)
               </span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleCreateSetor(selectedSecretaria.id)}
-                  className="btn-primary flex items-center gap-1.5 text-sm px-3 py-1.5"
+                  className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1"
                 >
-                  <Plus className="h-4 w-4" /> Incluir
+                  <Plus className="h-3.5 w-3.5" /> Incluir
                 </button>
                 <button
                   onClick={() => selectedSetorInPanel && handleEditSetor(selectedSetorInPanel, selectedSecretaria.id)}
                   disabled={!selectedSetorInPanel}
-                  className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  <Edit2 className="h-4 w-4" /> Alterar
+                  <Edit2 className="h-3.5 w-3.5" /> Alterar
                 </button>
                 <button
                   onClick={() => selectedSetorInPanel && handleDeleteSetor(selectedSetorInPanel, selectedSecretaria)}
                   disabled={!selectedSetorInPanel}
-                  className="btn-danger flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="btn-danger flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  <Trash2 className="h-4 w-4" /> Excluir
+                  <Trash2 className="h-3.5 w-3.5" /> Excluir
                 </button>
               </div>
             </div>

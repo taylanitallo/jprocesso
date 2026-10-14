@@ -373,7 +373,7 @@ export default function AlmoxInventario() {
           <select
             value={filtroStatus}
             onChange={e => setFiltroStatus(e.target.value)}
-            className="border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900"
+            className="border border-ink-300 rounded-lg px-3 py-1 text-xs bg-surface text-ink-900"
           >
             <option value="">Todos os status</option>
             {Object.entries(STATUS_INVENTARIO).map(([k, v]) => (
@@ -381,16 +381,16 @@ export default function AlmoxInventario() {
             ))}
           </select>
           <button onClick={load} className="p-2 text-ink-400 hover:text-ink-600 rounded-lg hover:bg-ink-100">
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className="h-3.5 w-3.5" />
           </button>
         </div>
         <div className="flex items-center gap-2">
         <BotaoExcluidos entidade="almox_inventarios" rotulo="Inventários excluídos" onAlterado={load} />
         <button
           onClick={() => { setNovoModal(true); setErro('') }}
-          className="flex items-center gap-2 px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors"
+          className="flex items-center gap-2 px-3 py-1 bg-brand-600 text-white rounded-lg text-xs font-medium hover:bg-brand-700 transition-colors"
         >
-          <Plus className="h-4 w-4" /> Novo Inventario
+          <Plus className="h-3.5 w-3.5" /> Novo Inventario
         </button>
         </div>
       </div>
