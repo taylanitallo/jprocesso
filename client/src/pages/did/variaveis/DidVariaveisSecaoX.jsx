@@ -5,11 +5,11 @@ import { EtapaDidContext, ResponsavelEtapa, RecebidoEmEtapa } from '../EtapasDid
 
 export default function DidVariaveisSecaoX({ form, inp, didId }) {
   // Editável só na etapa atual, para quem pode preenchê-la (fluxo por etapas)
-  const { editavel } = useContext(EtapaDidContext)
+  const { editavel, titulo } = useContext(EtapaDidContext)
   const locked = !editavel
 
   return (
-    <SectionCard icon={Landmark} title="Seção X - Secretaria de Finanças (Cronograma de Pagamento)"
+    <SectionCard icon={Landmark} title={titulo || 'Seção X - Secretaria de Finanças (Cronograma de Pagamento)'}
       color="bg-teal-700 text-white dark:bg-teal-900">
       <Field label="Recebido em" half>
         <RecebidoEmEtapa valor={form.financas2_recebido_em} />

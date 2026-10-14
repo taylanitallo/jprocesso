@@ -16,14 +16,14 @@ function SimNao({ value, onChange, disabled }) {
 
 export default function DidVariaveisSecaoV({ form, inp, didId }) {
   // Editável só na etapa atual, para quem pode preenchê-la (fluxo por etapas)
-  const { editavel } = useContext(EtapaDidContext)
+  const { editavel, titulo } = useContext(EtapaDidContext)
   const locked = !editavel
 
   const empenhado = form.contabil_empenhado === 'sim'
   const camposEmpenhoDisabled = locked || !empenhado
 
   return (
-    <SectionCard icon={Calculator} title="Seção V - Contabilidade (Empenho)"
+    <SectionCard icon={Calculator} title={titulo || 'Seção V - Contabilidade (Empenho)'}
       color="bg-purple-700 text-white dark:bg-purple-900">
       <Field label="Recebido em" half>
         <RecebidoEmEtapa valor={form.contabil_recebido_em} />

@@ -2,6 +2,7 @@ const { Op } = require('sequelize');
 const path = require('path');
 const storage = require('../services/storageService');
 const etapasSvc = require('../services/didEtapasService');
+const blocos = require('../config/didBlocos');
 const { registrarLog } = require('../middleware/activityLogger');
 const { AssinaturaError } = require('../services/assinaturaService');
 // Mesma assinatura eletrônica dos atos de tramitação
@@ -119,20 +120,24 @@ const createOrUpdate = async (req, res) => {
 
     let did = await Did.findOne({ where: { processo_id: processoId } });
 
-    // Fluxo por etapas: só quem pode a etapa atual salva, e só os campos dela
+    // Fluxo por etapas: só quem pode a etapa atual salva, e só os campos dela.
+    // DID novo nasce com a foto do fluxo atual do município para o tipo escolhido.
     const processo = await Processo.findByPk(processoId);
-    const { tipo, etapas } = did ? etapasSvc.estadoEtapas(did) : { tipo: body.tipo_did === 'variaveis' ? 'variaveis' : 'fixas', etapas: {} };
-    const atual = etapasSvc.etapaAtualDe(tipo, etapas);
+    const tipoNovo = body.tipo_did === 'variaveis' ? 'variaveis' : 'fixas';
+    const base = did || { tipo_did: tipoNovo, etapas: {}, fluxo: etapasSvc.fotoDoFluxo(req.tenant, tipoNovo) };
+    const { atual, permissao } = await etapasSvc.situacao(req, base, processo);
     if (!atual) return res.status(409).json({ error: 'Todas as etapas deste DID estão concluídas.' });
-    const permissao = await etapasSvc.podePreencher(req, {
-      processo, tipo, etapaAtual: atual,
-      setores: await etapasSvc.setoresPorEtapa(req, tipo),
-      usuario: await etapasSvc.usuarioCompleto(req),
-    });
     if (!permissao.pode) return res.status(403).json({ error: permissao.motivo, codigo: permissao.codigo });
     const itensDid = body.itens_did;
-    body = etapasSvc.filtrarCampos(tipo, atual, body);
-    if (atual.numero === 1 && itensDid) body.itens_did = itensDid;
+    const personalizados = etapasSvc.dadosPersonalizados(atual, did, body);
+    body = etapasSvc.filtrarCampos(atual, body);
+    if (atual.bloco === 'abertura' && itensDid) body.itens_did = itensDid;
+    if (personalizados) body.etapas_dados = personalizados;
+    // Troca de tipo durante a Abertura: o DID passa a seguir o fluxo do novo tipo
+    if (did && atual.bloco === 'abertura' && body.tipo_did && body.tipo_did !== did.tipo_did) {
+      body.fluxo = etapasSvc.fotoDoFluxo(req.tenant, body.tipo_did === 'variaveis' ? 'variaveis' : 'fixas');
+      body.etapas = {};
+    }
 
     if (!did) {
       // Usa o numero_did fornecido (gerado no início do processo) ou calcula
@@ -148,6 +153,7 @@ const createOrUpdate = async (req, res) => {
         numero_did: numeroDid,
         criado_por_id: req.user.id,
         etapas: {}, // DID novo já nasce no fluxo por etapas
+        fluxo: base.fluxo,
       });
     } else {
       await did.update(body);
@@ -195,7 +201,11 @@ const getEtapas = async (req, res) => {
     const { Did, Processo } = req.models;
     const processo = req.params.processoId === 'novo' ? null : await Processo.findByPk(req.params.processoId);
     const did = processo ? await Did.findOne({ where: { processo_id: processo.id } }) : null;
-    const base = did || { tipo_did: req.query.tipo === 'variaveis' ? 'variaveis' : 'fixas', etapas: {} };
+    const tipo = req.query.tipo === 'variaveis' ? 'variaveis' : 'fixas';
+    // Sem DID ainda (ou Abertura trocando de tipo): mostra o fluxo atual do município
+    const base = did && (!req.query.tipo || did.tipo_did === tipo)
+      ? did
+      : { tipo_did: tipo, etapas: {}, fluxo: etapasSvc.fotoDoFluxo(req.tenant, tipo) };
     res.json(await etapasSvc.resumo(req, base, processo));
   } catch (err) {
     responderEtapaErro(res, err, 'Erro ao carregar as etapas do DID');
@@ -210,9 +220,8 @@ const assinadorEtapa = (req) => ({
 
 const concluirEtapa = async (req, res) => {
   try {
-    const numero = parseInt(req.params.numero, 10);
     const { did, etapa, proxima, assinatura } = await etapasSvc.concluir(req, {
-      processoId: req.params.processoId, numero, body: sanitizeBody(req.body), ...assinadorEtapa(req),
+      processoId: req.params.processoId, etapaId: req.params.etapa, body: sanitizeBody(req.body), ...assinadorEtapa(req),
     });
     await registrarLog(req, {
       acao: 'did_concluir_etapa',
@@ -228,9 +237,8 @@ const concluirEtapa = async (req, res) => {
 
 const devolverEtapa = async (req, res) => {
   try {
-    const numero = parseInt(req.params.numero, 10);
     const { anterior, assinatura } = await etapasSvc.devolver(req, {
-      processoId: req.params.processoId, numero, justificativa: req.body?.justificativa, ...assinadorEtapa(req),
+      processoId: req.params.processoId, etapaId: req.params.etapa, justificativa: req.body?.justificativa, ...assinadorEtapa(req),
     });
     await registrarLog(req, {
       acao: 'did_devolver_etapa',
@@ -244,9 +252,93 @@ const devolverEtapa = async (req, res) => {
   }
 };
 
+// ─── Configuração do fluxo (Configurações › Fluxos de Processo) ──────────────
+const TIPOS_DID = ['fixas', 'variaveis'];
+
+const getFluxos = async (req, res) => {
+  try {
+    const catalogo = Object.entries(blocos.BLOCOS).map(([key, b]) => ({
+      key, nome: b.nome, tipos: b.tipos, fixo: !!b.fixo, ultimo: !!b.ultimo, conflita: b.conflita || [],
+      sugerido: b.sugestao === 'todas' ? 'todas' : null,
+      campos: Object.fromEntries(TIPOS_DID.map(t => [t, blocos.camposDoBloco(key, t).map(c => ({
+        campo: c.campo, rotulo: c.rotulo, travado: !!c.travado, opcionalPadrao: !!c.opcionalPadrao,
+      }))])),
+    }));
+    const setores = await etapasSvc.carregarSetores(req);
+    // Setores que a sugestão automática escolheria para cada bloco (para mostrar na tela)
+    const sugestoes = Object.fromEntries(Object.entries(blocos.BLOCOS).map(([key, b]) =>
+      [key, b.sugestao === 'todas' ? 'todas' : etapasSvc.sugerirSetores(b.sugestao, setores)]));
+    const conf = req.tenant?.configuracoes || {};
+    res.json({
+      catalogo,
+      sugestoes,
+      tiposCampo: blocos.TIPOS_CAMPO_PERSONALIZADO,
+      fluxos: Object.fromEntries(TIPOS_DID.map(t => [t, etapasSvc.fluxoConfigurado(req.tenant, t)])),
+      padrao: Object.fromEntries(TIPOS_DID.map(t => [t, blocos.fluxoPadrao(t)])),
+      historico: conf.did_fluxos_historico || { fixas: [], variaveis: [] },
+    });
+  } catch (err) {
+    console.error('getFluxos:', err);
+    res.status(500).json({ error: 'Erro ao carregar os fluxos' });
+  }
+};
+
+// body: { etapas } · { etapas, somenteValidar: true } · { restaurarPadrao: true }
+const salvarFluxo = async (req, res) => {
+  try {
+    if (!['admin', 'jeos'].includes(req.user?.tipo)) {
+      return res.status(403).json({ error: 'Só administradores alteram os fluxos de processo.' });
+    }
+    const tipo = req.params.tipo;
+    if (!TIPOS_DID.includes(tipo)) return res.status(404).json({ error: 'Tipo de fluxo desconhecido.' });
+
+    const tenant = req.tenant;
+    const conf = tenant.configuracoes || {};
+    const anterior = conf.did_fluxos?.[tipo] || null;
+    const autor = await etapasSvc.usuarioCompleto(req);
+    const carimbo = { atualizado_em: new Date().toISOString(), atualizado_por: autor ? { id: autor.id, nome: autor.nome } : null };
+
+    let novo;
+    if (req.body?.restaurarPadrao) {
+      novo = null; // sem configuração = fluxo padrão
+    } else {
+      const etapas = etapasSvc.normalizarFluxo(req.body?.etapas);
+      const setores = await etapasSvc.carregarSetores(req);
+      const { erros, avisos } = blocos.validarFluxo(tipo, etapas, new Set(setores.map(s => s.id)));
+      // Validação ao vivo da tela: só responde, não grava
+      if (req.body?.somenteValidar) return res.json({ erros, avisos });
+      if (erros.length) return res.status(400).json({ error: 'O fluxo tem erros e não foi salvo.', erros, avisos });
+      novo = { versao: (anterior?.versao || 0) + 1, ...carimbo, etapas };
+    }
+
+    // Histórico: guarda a versão que está saindo (últimas 20)
+    const historico = { fixas: [], variaveis: [], ...(conf.did_fluxos_historico || {}) };
+    if (anterior) historico[tipo] = [{ ...anterior, substituida_em: carimbo.atualizado_em, substituida_por: carimbo.atualizado_por }, ...(historico[tipo] || [])].slice(0, 20);
+
+    const didFluxos = { ...(conf.did_fluxos || {}) };
+    if (novo) didFluxos[tipo] = novo; else delete didFluxos[tipo];
+    // A aba antiga guardava só setores por posição: o fluxo novo já os incorporou
+    const didEtapas = { ...(conf.did_etapas || {}) };
+    delete didEtapas[tipo];
+
+    await tenant.update({ configuracoes: { ...conf, did_fluxos: didFluxos, did_fluxos_historico: historico, did_etapas: didEtapas } });
+    await registrarLog(req, {
+      acao: 'configurar_fluxo_did',
+      modulo: 'configuracoes',
+      descricao: novo
+        ? `Fluxo do DID ${tipo === 'fixas' ? 'Contas Fixas' : 'Contas Variáveis'} salvo (versão ${novo.versao}, ${novo.etapas.length} etapas)`
+        : `Fluxo do DID ${tipo === 'fixas' ? 'Contas Fixas' : 'Contas Variáveis'} restaurado para o padrão`,
+    });
+    res.json({ ok: true, fluxo: etapasSvc.fluxoConfigurado(tenant, tipo) });
+  } catch (err) {
+    console.error('salvarFluxo:', err);
+    res.status(500).json({ error: 'Erro ao salvar o fluxo' });
+  }
+};
+
 module.exports = {
   getByProcesso, createOrUpdate, getProximoNumero, getEstoque, getAlmEstoque, uploadCertidao, downloadCertidaoUrl, deleteCertidao,
-  getEtapas, concluirEtapa, devolverEtapa,
+  getEtapas, concluirEtapa, devolverEtapa, getFluxos, salvarFluxo,
 };
 
 // ─── Sincronização automática DID → Almoxarifado ────────────────────────────

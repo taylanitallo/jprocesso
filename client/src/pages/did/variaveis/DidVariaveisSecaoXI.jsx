@@ -81,7 +81,7 @@ function ContaSelect({ value, onChange, disabled, onSelect }) {
 
 export default function DidVariaveisSecaoXI({ form, inp, chk, vliq, didId }) {
   // Editável só na etapa atual, para quem pode preenchê-la (fluxo por etapas)
-  const { editavel } = useContext(EtapaDidContext)
+  const { editavel, titulo } = useContext(EtapaDidContext)
   const locked = !editavel
 
   // "Pago" salvo (seção travada mostra o que está gravado): só então o DID já está no saldo
@@ -97,7 +97,7 @@ export default function DidVariaveisSecaoXI({ form, inp, chk, vliq, didId }) {
 
   return (
     <>
-    <SectionCard icon={Banknote} title="Seção XI - Tesouraria"
+    <SectionCard icon={Banknote} title={titulo || 'Seção XI - Tesouraria'}
       color="bg-success-700 text-white dark:bg-success-900">
 
       <Field label="Recebido em" half>

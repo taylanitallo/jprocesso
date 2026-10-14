@@ -841,6 +841,8 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
   await run(`
     ALTER TABLE dids
       ADD COLUMN IF NOT EXISTS etapas                JSONB,
+      ADD COLUMN IF NOT EXISTS fluxo                 JSONB,  -- foto do fluxo do município na abertura
+      ADD COLUMN IF NOT EXISTS etapas_dados          JSONB,  -- respostas das etapas personalizadas
       ADD COLUMN IF NOT EXISTS cert_teso_federal     BOOLEAN DEFAULT false,
       ADD COLUMN IF NOT EXISTS cert_teso_simples_nac BOOLEAN DEFAULT false
   `);

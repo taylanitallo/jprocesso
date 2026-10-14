@@ -317,6 +317,7 @@ function ModalOrdemServico({ onConfirm, onClose }) {
 
 // ─── Seção I — Contas Fixas ───────────────────────────────────────────────────
 export default function DidFixasSecaoI({
+  titulo,
   form, set, inp,
   itensDid, setItensDid, removeItemDid,
   numeroDIDFmt,
@@ -719,7 +720,7 @@ export default function DidFixasSecaoI({
 
   return (
     <>
-      <SectionCard icon={FileText} title="Seção I - Secretaria Geral · Contas Fixas"
+      <SectionCard icon={FileText} title={titulo ? `${titulo} · Contas Fixas` : 'Seção I - Secretaria Geral · Contas Fixas'}
         color="bg-ink-800 text-white">
 
         {/* ── Ordem de Serviço (seletor principal — pré-preenche toda a seção) ── */}

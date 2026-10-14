@@ -20,11 +20,11 @@ function SimNao({ value, onChange, disabled }) {
 
 export default function DidVariaveisSecaoXII({ form, inp, didId }) {
   // Editável só na etapa atual, para quem pode preenchê-la (fluxo por etapas)
-  const { editavel } = useContext(EtapaDidContext)
+  const { editavel, titulo } = useContext(EtapaDidContext)
   const locked = !editavel
 
   return (
-    <SectionCard icon={BookCheck} title="Seção XII - Contabilidade Fechamento"
+    <SectionCard icon={BookCheck} title={titulo || 'Seção XII - Contabilidade Fechamento'}
       color="bg-purple-700 text-white dark:bg-purple-900">
       <Field label="Processo Finalizado" half>
         <SimNao value={form.contab_fech_finalizado} onChange={inp('contab_fech_finalizado')} disabled={locked} />

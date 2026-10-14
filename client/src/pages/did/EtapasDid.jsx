@@ -1,4 +1,4 @@
-// Fluxo do DID por etapas (tela) — a regra mora no servidor (server/config/didEtapas.js
+// Fluxo do DID por etapas (tela) — a regra mora no servidor (server/config/didBlocos.js
 // e services/didEtapasService.js); aqui só se mostra o que ele devolve:
 //   LinhaEtapas      — todas as etapas nomeadas, com status e setor responsável
 //   EtapaRegistro    — quem concluiu (nome, cargo, secretaria), quando e a assinatura
@@ -33,11 +33,17 @@ export function useEtapasDid(processoId, tipo) {
   return { resumo, recarregar: () => setVersao(v => v + 1) }
 }
 
-/** Mesma regra de obrigatórios do servidor (didEtapas.pendencias) */
+/** Mesma regra de obrigatórios do servidor (didEtapasService.pendencias) */
 export function pendenciasEtapa(etapa, form, itensDid) {
   const vazio = (v) => v === undefined || v === null || String(v).trim() === ''
+  const dados = form.etapas_dados?.[etapa?.id] || {}
   return (etapa?.campos || []).filter((c) => {
-    if (c.opcional) return false
+    if (!c.obrigatorio) return false
+    if (c.personalizado) {
+      const v = dados[c.campo]
+      if (c.personalizado === 'checklist') return !(c.itens || []).every((_, i) => v?.[i] === true)
+      return vazio(v)
+    }
     if (c.se && form[c.se.campo] !== c.se.igual) return false
     if (c.itens) return !(itensDid || []).some(it => parseFloat(it.valor_total) > 0)
     if (c.checkbox) return form[c.campo] !== true

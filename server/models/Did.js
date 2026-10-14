@@ -103,6 +103,11 @@ const defineDidModel = (sequelize) => {
     // cargo, secretaria, setor, setor_id, concluida_em, tramitacao_id, assinatura, devolucao } }
     // NULL = DID anterior ao fluxo (etapa deduzida dos campos); novos nascem com {}
     etapas: { type: DataTypes.JSONB, defaultValue: {} },
+    // Foto do fluxo configurado pelo município quando o DID foi aberto (didBlocos.js);
+    // NULL = DID anterior aos fluxos configuráveis (segue o fluxo padrão)
+    fluxo: { type: DataTypes.JSONB },
+    // Respostas das etapas personalizadas: { [etapaId]: { [campoId]: valor } }
+    etapas_dados: { type: DataTypes.JSONB, defaultValue: {} },
     // Caixa: o pagamento debita o líquido nesta data (antiga: tesouraria_recebido_em)
     data_pagamento: { type: DataTypes.DATEONLY },
     // Retenções (INSS, ISS, IRRF…) debitadas da conta só quando recolhidas — gravado

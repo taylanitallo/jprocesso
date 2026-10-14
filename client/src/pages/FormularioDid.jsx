@@ -10,24 +10,9 @@ import {
 } from './did/EtapasDid'
 import { gerarDidPDF } from './did/gerarDidPDF'
 import DidFixasSecaoI from './did/fixas/DidFixasSecaoI'
-import DidFixasSecaoII from './did/fixas/DidFixasSecaoII'
-import DidFixasSecaoIII from './did/fixas/DidFixasSecaoIII'
-import DidFixasSecaoIV from './did/fixas/DidFixasSecaoIV'
-import DidFixasSecaoV from './did/fixas/DidFixasSecaoV'
-import DidFixasSecaoVI from './did/fixas/DidFixasSecaoVI'
-import DidFixasSecaoVII from './did/fixas/DidFixasSecaoVII'
 import DidVariaveisSecaoI from './did/variaveis/DidVariaveisSecaoI'
-import DidVariaveisSecaoII from './did/variaveis/DidVariaveisSecaoII'
-import DidVariaveisSecaoIII from './did/variaveis/DidVariaveisSecaoIII'
-import DidVariaveisSecaoIV from './did/variaveis/DidVariaveisSecaoIV'
-import DidVariaveisSecaoV from './did/variaveis/DidVariaveisSecaoV'
-import DidVariaveisSecaoVI from './did/variaveis/DidVariaveisSecaoVI'
-import DidVariaveisSecaoVII from './did/variaveis/DidVariaveisSecaoVII'
-import DidVariaveisSecaoVIII from './did/variaveis/DidVariaveisSecaoVIII'
-import DidVariaveisSecaoIX from './did/variaveis/DidVariaveisSecaoIX'
-import DidVariaveisSecaoX from './did/variaveis/DidVariaveisSecaoX'
-import DidVariaveisSecaoXI from './did/variaveis/DidVariaveisSecaoXI'
-import DidVariaveisSecaoXII from './did/variaveis/DidVariaveisSecaoXII'
+import { telaDoBloco } from './did/blocos'
+import EtapaPersonalizada from './did/EtapaPersonalizada'
 
 
 
@@ -245,7 +230,7 @@ export default function FormularioDid() {
   const handleGerarPDF = async () => {
     setGerandoPDF(true)
     try {
-      await gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, processoId })
+      await gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, processoId, etapas: etapas?.etapas })
     } finally {
       setGerandoPDF(false)
     }
@@ -519,7 +504,7 @@ export default function FormularioDid() {
       const r = await assinar({
         titulo: `Concluir a ${etapa.titulo}`,
         resumo: <p>Confirmo os dados da <strong>{etapa.titulo}</strong> do {numeroDIDFmt}. A etapa fica definitiva e a próxima é liberada ao setor responsável.</p>,
-        executar: (cred) => api.post(`/did/processo/${processoId}/etapa/${etapa.numero}/concluir`, { ...form, itens_did: itensDid, ...cred }),
+        executar: (cred) => api.post(`/did/processo/${processoId}/etapa/${etapa.id}/concluir`, { ...form, itens_did: itensDid, ...cred }),
       })
       if (!r) return
       const a = r.data?.assinatura
@@ -534,7 +519,7 @@ export default function FormularioDid() {
       const r = await assinar({
         titulo: `Devolver à etapa anterior`,
         resumo: <p>A <strong>{etapa.titulo}</strong> devolve o DID para correção. Motivo: “{justificativa}”</p>,
-        executar: (cred) => api.post(`/did/processo/${processoId}/etapa/${etapa.numero}/devolver`, { justificativa, ...cred }),
+        executar: (cred) => api.post(`/did/processo/${processoId}/etapa/${etapa.id}/devolver`, { justificativa, ...cred }),
       })
       if (!r) return
       avisar(true, `DID devolvido para a ${r.data.anterior}. O processo voltou para quem a concluiu.`, 10000)
@@ -646,7 +631,7 @@ export default function FormularioDid() {
     }
     return (
       <div key={n} id={`etapa-${n}`} className="scroll-mt-4">
-        <EtapaDidContext.Provider value={{ resumo: etapas, numero: n, editavel }}>
+        <EtapaDidContext.Provider value={{ resumo: etapas, numero: n, editavel, titulo: e.titulo }}>
           {secao}
         </EtapaDidContext.Provider>
         <EtapaRegistro etapa={e} />
@@ -818,67 +803,41 @@ export default function FormularioDid() {
         )}
       </div>
 
-      {tipoDid === 'fixas' ? (
-        <>
-          {blocoEtapa(1, (
-            <DidReadOnlyContext.Provider value={readOnly || !editavelEtapa(1)}>
-              <DidFixasSecaoI
-                form={form} set={set} inp={inp}
-                itensDid={itensDid} setItensDid={setItensDid} removeItemDid={removeItemDid}
-                numeroDIDFmt={numeroDIDFmt}
-                secretariasApi={secretariasApi}
-                secDidObj={secDidObj}
-                responsaveisDid={responsaveisDid}
-                dataRefDid={dataRefDid}
-                secretariaNome={secretariaNome}
-                didId={did?.id}
-                processoId={processoId}
-                onSaveSecaoI={handleSaveSecaoI}
-                saving={saving}
+      {/* Seções na ordem do fluxo deste DID (Configurações › Fluxos de Processo) */}
+      {(etapas?.etapas?.length ? etapas.etapas : [{ numero: 1, bloco: 'abertura' }]).map((e) => {
+        if (e.bloco === 'abertura') {
+          const SecaoI = tipoDid === 'fixas' ? DidFixasSecaoI : DidVariaveisSecaoI
+          return (
+            <Fragment key="abertura">
+              {blocoEtapa(1, (
+                <DidReadOnlyContext.Provider value={readOnly || !editavelEtapa(1)}>
+                  <SecaoI
+                    titulo={e.titulo}
+                    form={form} set={set} inp={inp}
+                    itensDid={itensDid} setItensDid={setItensDid} removeItemDid={removeItemDid}
+                    addItemDid={addItemDid} setItemDid={setItemDid}
+                    numeroDIDFmt={numeroDIDFmt}
+                    secretariasApi={secretariasApi}
+                    secDidObj={secDidObj}
+                    responsaveisDid={responsaveisDid}
+                    dataRefDid={dataRefDid}
+                    secretariaNome={secretariaNome}
+                    didId={did?.id}
+                    processoId={processoId}
+                    onSaveSecaoI={handleSaveSecaoI}
+                    saving={saving}
                   />
-            </DidReadOnlyContext.Provider>
-          ))}
-          {blocoEtapa(2, <DidFixasSecaoII form={form} inp={inp} didId={did?.id} />)}
-          {blocoEtapa(3, <DidFixasSecaoIII form={form} inp={inp} didId={did?.id} />)}
-          {blocoEtapa(4, <DidFixasSecaoIV form={form} inp={inp} didId={did?.id} />)}
-          {blocoEtapa(5, <DidFixasSecaoV form={form} inp={inp} didId={did?.id} />)}
-          {blocoEtapa(6, <DidFixasSecaoVI form={form} inp={inp} chk={chk} vliq={vliq} didId={did?.id} />)}
-          {blocoEtapa(7, <DidFixasSecaoVII form={form} inp={inp} didId={did?.id} />)}
-        </>
-      ) : (
-        <>
-          {blocoEtapa(1, (
-            <DidReadOnlyContext.Provider value={readOnly || !editavelEtapa(1)}>
-              <DidVariaveisSecaoI
-                form={form} set={set} inp={inp}
-                itensDid={itensDid} setItensDid={setItensDid} removeItemDid={removeItemDid}
-                addItemDid={addItemDid} setItemDid={setItemDid}
-                numeroDIDFmt={numeroDIDFmt}
-                secretariasApi={secretariasApi}
-                secDidObj={secDidObj}
-                responsaveisDid={responsaveisDid}
-                dataRefDid={dataRefDid}
-                secretariaNome={secretariaNome}
-                didId={did?.id}
-                processoId={processoId}
-                onSaveSecaoI={handleSaveSecaoI}
-                saving={saving}
-                  />
-            </DidReadOnlyContext.Provider>
-          ))}
-          {blocoEtapa(2, <DidVariaveisSecaoII form={form} inp={inp} didId={did?.id} />)}
-          {blocoEtapa(3, <DidVariaveisSecaoIII form={form} inp={inp} didId={did?.id} />)}
-          {blocoEtapa(4, <DidVariaveisSecaoIV form={form} inp={inp} set={set} didId={did?.id} />)}
-          {blocoEtapa(5, <DidVariaveisSecaoV form={form} inp={inp} didId={did?.id} />)}
-          {blocoEtapa(6, <DidVariaveisSecaoVI form={form} inp={inp} set={set} didId={did?.id} />)}
-          {blocoEtapa(7, <DidVariaveisSecaoVII form={form} inp={inp} chk={chk} didId={did?.id} />)}
-          {blocoEtapa(8, <DidVariaveisSecaoVIII form={form} inp={inp} set={set} didId={did?.id} />)}
-          {blocoEtapa(9, <DidVariaveisSecaoIX form={form} inp={inp} didId={did?.id} />)}
-          {blocoEtapa(10, <DidVariaveisSecaoX form={form} inp={inp} didId={did?.id} />)}
-          {blocoEtapa(11, <DidVariaveisSecaoXI form={form} inp={inp} chk={chk} vliq={vliq} didId={did?.id} />)}
-          {blocoEtapa(12, <DidVariaveisSecaoXII form={form} inp={inp} didId={did?.id} />)}
-        </>
-      )}
+                </DidReadOnlyContext.Provider>
+              ))}
+            </Fragment>
+          )
+        }
+        if (e.bloco === 'personalizada') {
+          return blocoEtapa(e.numero, <EtapaPersonalizada etapa={e} form={form} set={set} />)
+        }
+        const Tela = telaDoBloco(e.bloco, tipoDid)
+        return Tela ? blocoEtapa(e.numero, <Tela form={form} inp={inp} set={set} chk={chk} vliq={vliq} didId={did?.id} />) : null
+      })}
 
       {/* Salvar bottom */}
       <div className="flex justify-end gap-3 pb-6">

@@ -94,6 +94,8 @@ export const EMPTY = {
   analisado_por: '',
   valor_bruto: '', desconto_inss: '', desconto_iss: '', desconto_irrf: '',
   desconto_sindicato: '', desconto_bb: '', desconto_caixa: '', desconto_pensao: '', desconto_outros: '',
+  // Respostas das etapas personalizadas do fluxo ({ [etapaId]: { [campoId]: valor } })
+  etapas_dados: {},
 }
 
 // ─── Componentes UI compartilhados ────────────────────────────────────────────

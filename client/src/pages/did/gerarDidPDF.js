@@ -176,8 +176,30 @@ async function carregarImagem(url) {
   } catch { return null }
 }
 
+// ─── Ordem das seções sem o resumo de etapas (fluxo padrão) ──────────────────
+const ROMANOS_PDF = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX']
+const PADRAO_PDF = {
+  fixas: [['abertura', 'Secretaria Geral'], ['controle_interno', 'Controle Interno'], ['financas_autorizacao', 'Secretaria de Finanças'],
+    ['contab_empenho_liquidacao', 'Contabilidade'], ['financas_pagamento', 'Secretaria de Finanças'], ['tesouraria', 'Tesouraria'],
+    ['fechamento', 'Contabilidade Fechamento']],
+  variaveis: [['abertura', 'Secretaria Geral'], ['controle_interno', 'Controle Interno'], ['financas_autorizacao', 'Secretaria de Finanças'],
+    ['compras_solicitacao', 'Setor de Compras (Solicitação de Empenho)'], ['contab_empenho', 'Contabilidade (Empenho)'],
+    ['compras_ordem', 'Setor de Compras (Ordem de Compra)'], ['almox_recebimento', 'Almoxarifado (Recebimento)'],
+    ['compras_ateste', 'Setor de Compras (Ateste de NF)'], ['contab_liquidacao', 'Contabilidade (Liquidação)'],
+    ['financas_pagamento', 'Secretaria de Finanças (Cronograma de Pagamento)'], ['tesouraria', 'Tesouraria'],
+    ['fechamento', 'Contabilidade Fechamento']],
+}
+const ordemPadrao = (tipo) => PADRAO_PDF[tipo === 'variaveis' ? 'variaveis' : 'fixas'].map(([bloco, nome]) => ({ id: bloco, bloco, nome }))
+// DID impresso fora da tela do DID (ex.: Financeiro): usa a foto do fluxo gravada no próprio DID
+const etapasDaFoto = (did) => (did?.fluxo?.etapas?.length
+  ? did.fluxo.etapas.map(e => ({
+      id: e.id, bloco: e.bloco, nome: e.nome, registro: did.etapas?.[e.id] || null,
+      campos: (e.personalizada?.campos || []).map(c => ({ campo: c.id, rotulo: c.rotulo, personalizado: c.tipo, itens: c.itens })),
+    }))
+  : null)
+
 // ─── Geração Principal ────────────────────────────────────────────────────────
-export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, processoId }) {
+export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, processoId, etapas }) {
   setPDFLoading(true)
   try {
   refreshM()
@@ -272,7 +294,8 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
   // ══════════════════════════════════════════════════════════════════════════
   //  SEÇÃO I — Secretaria Geral
   // ══════════════════════════════════════════════════════════════════════════
-  const tituloSecI = tipoDid === 'variaveis' ? 'Secretaria Geral · Contas Variáveis' : 'Secretaria Geral · Contas Fixas'
+  const nomeSecI = etapas?.[0]?.nome || 'Secretaria Geral'
+  const tituloSecI = `${nomeSecI} · ${tipoDid === 'variaveis' ? 'Contas Variáveis' : 'Contas Fixas'}`
   y = divSecao(doc, y, 'I', tituloSecI, C.blue, pageH)
 
   // Linha 1 — Contrato | Data | Mês de Referência | Nº NF
@@ -359,143 +382,11 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  //  SEÇÃO II — Controle Interno  (igual para ambos os tipos)
+  //  SEÇÕES II EM DIANTE — na ordem do fluxo deste DID (Configurações ›
+  //  Fluxos de Processo). Cada bloco tem o seu desenho; a numeração vem da
+  //  posição. Abaixo de cada seção: quem concluiu e o código da assinatura.
   // ══════════════════════════════════════════════════════════════════════════
-  y = divSecao(doc, y, 'II', 'Controle Interno', C.amber, pageH)
-  y = gridRow(doc, y, [
-    { label: 'Recebido em', value: fmtData(form.ci_recebido_em), w: 1.5 },
-    { label: 'Responsável', value: form.ci_responsavel,          w: 3   },
-  ], pageH)
-  y = campoObjeto(doc, y, form.despacho_ci, pageH, 'Despacho via C.I.')
-  y += 1
-
-  // ══════════════════════════════════════════════════════════════════════════
-  //  BRANCH: DID Contas Variáveis vs Contas Fixas
-  // ══════════════════════════════════════════════════════════════════════════
-  if (tipoDid === 'variaveis') {
-
-    // ── III — Secretaria de Finanças ────────────────────────────────────────
-    y = divSecao(doc, y, 'III', 'Secretaria de Finanças', C.teal, pageH)
-    y = gridRow(doc, y, [
-      { label: 'Recebido em', value: fmtData(form.financas_recebido_em), w: 1.5 },
-      { label: 'Responsável', value: form.financas_responsavel,          w: 3   },
-    ], pageH)
-    y += 1
-
-    // ── IV — Setor de Compras (Solicitação de Empenho) ─────────────────────
-    y = divSecao(doc, y, 'IV', 'Setor de Compras (Solicitação de Empenho)', C.amber, pageH)
-    y = gridRow(doc, y, [
-      { label: 'Recebido em',            value: fmtData(form.compras2_recebido_em),        w: 1.5 },
-      { label: 'Responsável',            value: form.compras2_responsavel,                 w: 2   },
-      { label: 'Nº Solicitação Empenho', value: form.compras2_nro_empenho_solicitacao,     w: 1.5 },
-    ], pageH)
-    y += 1
-
-    // ── V — Contabilidade (Empenho) ───────────────────────────────────────
-    y = divSecao(doc, y, 'V', 'Contabilidade (Empenho)', C.purple, pageH)
-    y = gridRow(doc, y, [
-      { label: 'Recebido em',       value: fmtData(form.contabil_recebido_em), w: 1.3 },
-      { label: 'Responsável',       value: form.contabil_responsavel,          w: 2   },
-      { label: 'Auditor',           value: form.contabil_auditor,              w: 1.7 },
-      { label: 'Está empenhado?',   value: simNao(form.contabil_empenhado),    w: 1.3 },
-    ], pageH)
-    y = gridRow(doc, y, [
-      { label: 'Empenho Nº',   value: form.empenho_numero,        w: 1.5 },
-      { label: 'Tipo',         value: form.tipo_empenho,          w: 1.5 },
-      { label: 'Data Empenho', value: fmtData(form.data_empenho), w: 1.5 },
-    ], pageH)
-    y += 1
-
-    // ── VI — Setor de Compras (Ordem de Compra) ────────────────────────────
-    y = divSecao(doc, y, 'VI', 'Setor de Compras (Ordem de Compra)', C.amber, pageH)
-    y = gridRow(doc, y, [
-      { label: 'Recebido em',    value: fmtData(form.compras_recebido_em), w: 1.5 },
-      { label: 'Responsável',   value: form.compras_responsavel,          w: 2   },
-      { label: 'Nº Ordem Compra', value: form.nro_empenho_solicitacao,    w: 1.5 },
-      { label: 'Local Entrega', value: form.local_entrega,                w: 1.5 },
-    ], pageH)
-    y += 1
-
-    // ── VII — Almoxarifado (Recebimento) ───────────────────────────────────
-    y = divSecao(doc, y, 'VII', 'Almoxarifado (Recebimento)', C.navy, pageH)
-    y = gridRow(doc, y, [
-      { label: 'Ordem Recebida?', value: simNao(form.receb_ordem_recebida), w: 1.3 },
-    ], pageH)
-    y = gridRow(doc, y, [
-      { label: 'Data Recebimento',    value: fmtData(form.receb_data),               w: 1.5 },
-      { label: 'Data NF',             value: fmtData(form.receb_nf_data),            w: 1.5 },
-      { label: 'Enviado NF p/ Compras', value: fmtData(form.receb_nf_enviado_compras), w: 1.5 },
-    ], pageH)
-    y = gridRow(doc, y, [
-      { label: 'Fiscal / Responsável', value: form.receb_responsavel, w: 3 },
-      { label: 'Cargo / Matrícula',    value: form.receb_cargo,       w: 2 },
-    ], pageH)
-    y = checkRow(doc, y, 'Conferência', [
-      { label: 'NF conferida',         value: form.receb_nf_conferida },
-      { label: 'Qtd. conferida',       value: form.receb_qtd_conferida },
-      { label: 'Especificações ok',    value: form.receb_esp_conforme },
-    ], pageH)
-    if (form.receb_obs) y = campoObjeto(doc, y, form.receb_obs, pageH, 'Observações do Recebimento')
-    y += 1
-
-    // ── VIII — Setor de Compras (Ateste de NF) ────────────────────────────
-    y = divSecao(doc, y, 'VIII', 'Setor de Compras (Ateste de NF)', C.amber, pageH)
-    y = gridRow(doc, y, [
-      { label: 'Recebido em',              value: fmtData(form.compras3_recebido_em), w: 1.5 },
-      { label: 'Responsável',              value: form.compras3_responsavel,          w: 2   },
-      { label: 'Data envio p/ liquidação', value: fmtData(form.compras3_local_entrega), w: 2  },
-    ], pageH)
-    y += 1
-
-    // ── IX — Contabilidade (Liquidação) ────────────────────────────────────
-    y = divSecao(doc, y, 'IX', 'Contabilidade (Liquidação)', C.purple, pageH)
-    y = gridRow(doc, y, [
-      { label: 'Recebido em',      value: fmtData(form.contabil_pc_recebido_em), w: 1.3 },
-      { label: 'Responsável',      value: form.contabil_pc_responsavel,          w: 2   },
-      { label: 'Auditor',          value: form.contabil_pc_auditor,              w: 1.7 },
-      { label: 'Está liquidado?',  value: simNao(form.contabil_pc_liquidado),    w: 1.3 },
-    ], pageH)
-    y = gridRow(doc, y, [
-      { label: 'Liquidação Nº',    value: form.contabil_pc_liquidacao_numero,        w: 2 },
-      { label: 'Data Liquidação',  value: fmtData(form.contabil_pc_data_liquidacao), w: 2 },
-    ], pageH)
-    y += 1
-
-    // ── X — Secretaria de Finanças (Cronograma de Pagamento) ─────────────
-    y = divSecao(doc, y, 'X', 'Secretaria de Finanças (Cronograma de Pagamento)', C.teal, pageH)
-    y = gridRow(doc, y, [
-      { label: 'Recebido em',               value: fmtData(form.financas2_recebido_em),      w: 1.5 },
-      { label: 'Responsável',               value: form.financas2_responsavel,               w: 2   },
-      { label: 'Enviado para Pagamento em', value: fmtData(form.financas2_enviado_pagamento), w: 2   },
-    ], pageH)
-    y += 1
-
-    // ── XI — Tesouraria ────────────────────────────────────────────────────
-    y = divSecao(doc, y, 'XI', 'Tesouraria', C.green, pageH)
-    y = gridRow(doc, y, [
-      { label: 'Recebido em', value: fmtData(form.tesouraria_recebido_em), w: 1.5 },
-      { label: 'Responsável', value: form.tesouraria_responsavel,          w: 2   },
-    ], pageH)
-    y = gridRow(doc, y, [
-      { label: 'Banco (pagador)', value: form.banco_pagador, w: 2   },
-      { label: 'Ag.',             value: form.ag_pagador,    w: 1   },
-      { label: 'C/C',             value: form.cc_pagador,    w: 1.5 },
-    ], pageH)
-    y = gridRow(doc, y, [
-      { label: 'Banco (credor)', value: form.banco_fornecedor, w: 2   },
-      { label: 'Ag.',            value: form.ag_fornecedor,    w: 1   },
-      { label: 'C/C',            value: form.cc_fornecedor,    w: 1.5 },
-    ], pageH)
-    y = checkRow(doc, y, 'Certidões', [
-      { label: 'Unificada',   value: form.cert_teso_cnd },
-      { label: 'FGTS',        value: form.cert_teso_fgts },
-      { label: 'Estadual',    value: form.cert_teso_estadual },
-      { label: 'Trabalhista', value: form.cert_teso_trabalhista },
-      { label: 'Municipal',   value: form.cert_teso_municipal },
-    ], pageH)
-    y += 3
-
-    // Demonstrativo de descontos
+  const demonstrativo = () => {
     if (y > pageH - 50) { doc.addPage(); applyTimbradoToPage(doc); y = mTop + 4 }
     norm(doc, 5.5, C.muted)
     doc.text('DEMONSTRATIVO DE DESCONTOS', M + 1, y)
@@ -541,145 +432,215 @@ export async function gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, proce
     norm(doc, 6, C.muted); doc.text('VALOR LÍQUIDO A PAGAR', M + 5, y + 6.2)
     bold(doc, 12, C.navy); doc.text(fmtMoeda(vliq), M + UW - 1, y + 7, { align: 'right' })
     y += 14
-
-    // Doc. Caixa
-    if (form.doc_caixa) {
-      y = gridRow(doc, y, [
-        { label: 'Doc. Caixa', value: form.doc_caixa, w: 1 },
-      ], pageH)
-      y += 1
-    }
-
-    // ── XII — Contabilidade Fechamento ─────────────────────────────────────
-    y = divSecao(doc, y, 'XII', 'Contabilidade Fechamento', C.purple, pageH)
-    y = gridRow(doc, y, [
-      { label: 'Processo Finalizado',  value: simNao(form.contab_fech_finalizado), w: 2 },
-      { label: 'Enviado para TCE/SIM', value: simNao(form.contab_fech_tce),        w: 2 },
-    ], pageH)
-
-  } else {
-    // ════════════════════════════════════════════════════════════════════════
-    //  DID CONTAS FIXAS — estrutura original
-    // ════════════════════════════════════════════════════════════════════════
-
-    // ── III — Secretaria de Finanças ────────────────────────────────────────
-    y = divSecao(doc, y, 'III', 'Secretaria de Finanças', C.teal, pageH)
-    y = gridRow(doc, y, [
-      { label: 'Recebido em', value: fmtData(form.financas_recebido_em), w: 1.5 },
-      { label: 'Responsável', value: form.financas_responsavel,          w: 3   },
-    ], pageH)
-    y += 1
-
-    // ── IV — Contabilidade ─────────────────────────────────────────────────
-    y = divSecao(doc, y, 'IV', 'Contabilidade', C.purple, pageH)
-    y = gridRow(doc, y, [
-      { label: 'Recebido em', value: fmtData(form.contabil_recebido_em), w: 1.3 },
-      { label: 'Responsável', value: form.contabil_responsavel,          w: 2   },
-      { label: 'Auditor',     value: form.contabil_auditor,              w: 1.7 },
-      { label: 'Doc. Caixa',  value: form.doc_caixa,                     w: 1   },
-    ], pageH)
-    y = gridRow(doc, y, [
-      { label: 'Está empenhado?', value: simNao(form.contabil_empenhado), w: 1.5 },
-      { label: 'Empenho Nº',      value: form.empenho_numero,             w: 1.2 },
-      { label: 'Tipo',            value: form.tipo_empenho,               w: 1.5 },
-      { label: 'Data Empenho',    value: fmtData(form.data_empenho),      w: 1.3 },
-    ], pageH)
-    y = gridRow(doc, y, [
-      { label: 'Está liquidado?',  value: simNao(form.contabil_liquidado), w: 1.5 },
-      { label: 'Liquidação Nº',    value: form.liquidacao_numero,          w: 1.2 },
-      { label: 'Data Liquidação',  value: fmtData(form.data_liquidacao),   w: 1.3 },
-    ], pageH)
-    y += 1
-
-    // ── V — Secretaria de Finanças ─────────────────────────────────────────
-    y = divSecao(doc, y, 'V', 'Secretaria de Finanças', C.teal, pageH)
-    y = gridRow(doc, y, [
-      { label: 'Recebido em',               value: fmtData(form.financas2_recebido_em),      w: 1.5 },
-      { label: 'Responsável',               value: form.financas2_responsavel,               w: 2   },
-      { label: 'Enviado para Pagamento em', value: fmtData(form.financas2_enviado_pagamento), w: 2   },
-    ], pageH)
-    y += 1
-
-    // ── VI — Tesouraria ────────────────────────────────────────────────────
-    y = divSecao(doc, y, 'VI', 'Tesouraria', C.green, pageH)
-    y = gridRow(doc, y, [
-      { label: 'Recebido em', value: fmtData(form.tesouraria_recebido_em), w: 1.5 },
-      { label: 'Responsável', value: form.tesouraria_responsavel,          w: 2   },
-    ], pageH)
-    y = gridRow(doc, y, [
-      { label: 'Banco (pagador)', value: form.banco_pagador, w: 2   },
-      { label: 'Ag.',             value: form.ag_pagador,    w: 1   },
-      { label: 'C/C',             value: form.cc_pagador,    w: 1.5 },
-    ], pageH)
-    y = gridRow(doc, y, [
-      { label: 'Banco (credor)', value: form.banco_fornecedor, w: 2   },
-      { label: 'Ag.',            value: form.ag_fornecedor,    w: 1   },
-      { label: 'C/C',            value: form.cc_fornecedor,    w: 1.5 },
-    ], pageH)
-    y = checkRow(doc, y, 'Certidões', [
-      { label: 'Municipal',        value: form.cert_teso_municipal },
-      { label: 'Trabalhista',      value: form.cert_teso_trabalhista },
-      { label: 'FGTS',             value: form.cert_teso_fgts },
-      { label: 'Estadual',         value: form.cert_teso_estadual },
-      { label: 'Federal',          value: form.cert_teso_federal },
-      { label: 'Simples Nacional', value: form.cert_teso_simples_nac },
-    ], pageH)
-    y += 3
-
-    // Demonstrativo de descontos
-    if (y > pageH - 50) { doc.addPage(); applyTimbradoToPage(doc); y = mTop + 4 }
-    norm(doc, 5.5, C.muted)
-    doc.text('DEMONSTRATIVO DE DESCONTOS', M + 1, y)
-    y += 2
-    autoTable(doc, {
-      startY: y,
-      head: [['Descrição', 'Valor (R$)']],
-      body: [
-        ['Valor Bruto',      fmtMoeda(form.valor_bruto)],
-        ['Desconto INSS',    fmtMoeda(form.desconto_inss)],
-        ['Desconto ISS',     fmtMoeda(form.desconto_iss)],
-        ['Desconto IRRF',    fmtMoeda(form.desconto_irrf)],
-        ['Outros Descontos', fmtMoeda(form.desconto_outros)],
-      ],
-      theme: 'plain',
-      headStyles: {
-        textColor: C.muted, fontSize: 6, fontStyle: 'normal', fillColor: C.bg1,
-        lineColor: C.rule,
-        lineWidth: { bottom: 0.25, top: 0, left: 0, right: 0 },
-        cellPadding: { top: 1.5, bottom: 1.5, left: 5, right: 5 },
-      },
-      bodyStyles: {
-        fontSize: 7.5, textColor: C.ink, fillColor: false,
-        lineColor: C.rule,
-        lineWidth: { bottom: 0.15, top: 0, left: 0, right: 0 },
-        cellPadding: { top: 2, bottom: 2, left: 5, right: 5 },
-      },
-      alternateRowStyles: { fillColor: C.bg1 },
-      columnStyles: {
-        0: { cellWidth: 130 },
-        1: { cellWidth: 56, halign: 'right' },
-      },
-      margin: { left: M, right: M },
-      willDrawPage: (data) => { if (data.pageNumber > 1) applyTimbradoToPage(doc) },
-    })
-    y = doc.lastAutoTable.finalY + 1.5
-
-    // Valor Líquido
-    doc.setDrawColor(...C.ruleMid); doc.setLineWidth(0.2); doc.line(M, y, M + UW, y); y += 1.5
-    doc.setFillColor(...C.bg2); doc.setDrawColor(...C.rule); doc.setLineWidth(0.2)
-    doc.rect(M, y, UW, 10, 'FD')
-    doc.setFillColor(...C.navy); doc.rect(M, y, 2.5, 10, 'F')
-    norm(doc, 6, C.muted); doc.text('VALOR LÍQUIDO A PAGAR', M + 5, y + 6.2)
-    bold(doc, 12, C.navy); doc.text(fmtMoeda(vliq), M + UW - 1, y + 7, { align: 'right' })
-    y += 14
-
-    // ── VII — Contabilidade Fechamento ─────────────────────────────────────
-    y = divSecao(doc, y, 'VII', 'Contabilidade Fechamento', C.purple, pageH)
-    y = gridRow(doc, y, [
-      { label: 'Processo Finalizado',  value: simNao(form.contab_fech_finalizado), w: 2 },
-      { label: 'Enviado para TCE/SIM', value: simNao(form.contab_fech_tce),        w: 2 },
-    ], pageH)
   }
+
+  const etapasFluxo = etapas?.length ? etapas : etapasDaFoto(form) || ordemPadrao(tipoDid)
+  const blocosDoFluxo = new Set(etapasFluxo.map(e => e.bloco))
+
+  const BLOCOS_PDF = {
+    controle_interno: { cor: C.amber, desenhar: () => {
+      y = gridRow(doc, y, [
+        { label: 'Recebido em', value: fmtData(form.ci_recebido_em), w: 1.5 },
+        { label: 'Responsável', value: form.ci_responsavel,          w: 3   },
+      ], pageH)
+      y = campoObjeto(doc, y, form.despacho_ci, pageH, 'Despacho via C.I.')
+    } },
+    financas_autorizacao: { cor: C.teal, desenhar: () => {
+      y = gridRow(doc, y, [
+        { label: 'Recebido em', value: fmtData(form.financas_recebido_em), w: 1.5 },
+        { label: 'Responsável', value: form.financas_responsavel,          w: 3   },
+      ], pageH)
+    } },
+    compras_solicitacao: { cor: C.amber, desenhar: () => {
+      y = gridRow(doc, y, [
+        { label: 'Recebido em',            value: fmtData(form.compras2_recebido_em),    w: 1.5 },
+        { label: 'Responsável',            value: form.compras2_responsavel,             w: 2   },
+        { label: 'Nº Solicitação Empenho', value: form.compras2_nro_empenho_solicitacao, w: 1.5 },
+      ], pageH)
+    } },
+    contab_empenho: { cor: C.purple, desenhar: () => {
+      y = gridRow(doc, y, [
+        { label: 'Recebido em',     value: fmtData(form.contabil_recebido_em), w: 1.3 },
+        { label: 'Responsável',     value: form.contabil_responsavel,          w: 2   },
+        { label: 'Auditor',         value: form.contabil_auditor,              w: 1.7 },
+        { label: 'Está empenhado?', value: simNao(form.contabil_empenhado),    w: 1.3 },
+      ], pageH)
+      y = gridRow(doc, y, [
+        { label: 'Empenho Nº',   value: form.empenho_numero,        w: 1.5 },
+        { label: 'Tipo',         value: form.tipo_empenho,          w: 1.5 },
+        { label: 'Data Empenho', value: fmtData(form.data_empenho), w: 1.5 },
+      ], pageH)
+    } },
+    contab_empenho_liquidacao: { cor: C.purple, desenhar: () => {
+      y = gridRow(doc, y, [
+        { label: 'Recebido em', value: fmtData(form.contabil_recebido_em), w: 1.3 },
+        { label: 'Responsável', value: form.contabil_responsavel,          w: 2   },
+        { label: 'Auditor',     value: form.contabil_auditor,              w: 1.7 },
+        { label: 'Doc. Caixa',  value: form.doc_caixa,                     w: 1   },
+      ], pageH)
+      y = gridRow(doc, y, [
+        { label: 'Está empenhado?', value: simNao(form.contabil_empenhado), w: 1.5 },
+        { label: 'Empenho Nº',      value: form.empenho_numero,             w: 1.2 },
+        { label: 'Tipo',            value: form.tipo_empenho,               w: 1.5 },
+        { label: 'Data Empenho',    value: fmtData(form.data_empenho),      w: 1.3 },
+      ], pageH)
+      y = gridRow(doc, y, [
+        { label: 'Está liquidado?', value: simNao(form.contabil_liquidado), w: 1.5 },
+        { label: 'Liquidação Nº',   value: form.liquidacao_numero,          w: 1.2 },
+        { label: 'Data Liquidação', value: fmtData(form.data_liquidacao),   w: 1.3 },
+      ], pageH)
+    } },
+    compras_ordem: { cor: C.amber, desenhar: () => {
+      y = gridRow(doc, y, [
+        { label: 'Recebido em',     value: fmtData(form.compras_recebido_em), w: 1.5 },
+        { label: 'Responsável',     value: form.compras_responsavel,          w: 2   },
+        { label: 'Nº Ordem Compra', value: form.nro_empenho_solicitacao,      w: 1.5 },
+        { label: 'Local Entrega',   value: form.local_entrega,                w: 1.5 },
+      ], pageH)
+    } },
+    almox_recebimento: { cor: C.navy, desenhar: () => {
+      y = gridRow(doc, y, [
+        { label: 'Ordem Recebida?', value: simNao(form.receb_ordem_recebida), w: 1.3 },
+      ], pageH)
+      y = gridRow(doc, y, [
+        { label: 'Data Recebimento',      value: fmtData(form.receb_data),               w: 1.5 },
+        { label: 'Data NF',               value: fmtData(form.receb_nf_data),            w: 1.5 },
+        { label: 'Enviado NF p/ Compras', value: fmtData(form.receb_nf_enviado_compras), w: 1.5 },
+      ], pageH)
+      y = gridRow(doc, y, [
+        { label: 'Fiscal / Responsável', value: form.receb_responsavel, w: 3 },
+        { label: 'Cargo / Matrícula',    value: form.receb_cargo,       w: 2 },
+      ], pageH)
+      y = checkRow(doc, y, 'Conferência', [
+        { label: 'NF conferida',      value: form.receb_nf_conferida },
+        { label: 'Qtd. conferida',    value: form.receb_qtd_conferida },
+        { label: 'Especificações ok', value: form.receb_esp_conforme },
+      ], pageH)
+      if (form.receb_obs) y = campoObjeto(doc, y, form.receb_obs, pageH, 'Observações do Recebimento')
+    } },
+    compras_ateste: { cor: C.amber, desenhar: () => {
+      y = gridRow(doc, y, [
+        { label: 'Recebido em',              value: fmtData(form.compras3_recebido_em),   w: 1.5 },
+        { label: 'Responsável',              value: form.compras3_responsavel,            w: 2   },
+        { label: 'Data envio p/ liquidação', value: fmtData(form.compras3_local_entrega), w: 2   },
+      ], pageH)
+    } },
+    contab_liquidacao: { cor: C.purple, desenhar: () => {
+      y = gridRow(doc, y, [
+        { label: 'Recebido em',     value: fmtData(form.contabil_pc_recebido_em), w: 1.3 },
+        { label: 'Responsável',     value: form.contabil_pc_responsavel,          w: 2   },
+        { label: 'Auditor',         value: form.contabil_pc_auditor,              w: 1.7 },
+        { label: 'Está liquidado?', value: simNao(form.contabil_pc_liquidado),    w: 1.3 },
+      ], pageH)
+      y = gridRow(doc, y, [
+        { label: 'Liquidação Nº',   value: form.contabil_pc_liquidacao_numero,        w: 2 },
+        { label: 'Data Liquidação', value: fmtData(form.contabil_pc_data_liquidacao), w: 2 },
+      ], pageH)
+    } },
+    financas_pagamento: { cor: C.teal, desenhar: () => {
+      y = gridRow(doc, y, [
+        { label: 'Recebido em',               value: fmtData(form.financas2_recebido_em),       w: 1.5 },
+        { label: 'Responsável',               value: form.financas2_responsavel,                w: 2   },
+        { label: 'Enviado para Pagamento em', value: fmtData(form.financas2_enviado_pagamento), w: 2   },
+      ], pageH)
+    } },
+    tesouraria: { cor: C.green, desenhar: () => {
+      y = gridRow(doc, y, [
+        { label: 'Recebido em', value: fmtData(form.tesouraria_recebido_em), w: 1.5 },
+        { label: 'Responsável', value: form.tesouraria_responsavel,          w: 2   },
+      ], pageH)
+      y = gridRow(doc, y, [
+        { label: 'Banco (pagador)', value: form.banco_pagador, w: 2   },
+        { label: 'Ag.',             value: form.ag_pagador,    w: 1   },
+        { label: 'C/C',             value: form.cc_pagador,    w: 1.5 },
+      ], pageH)
+      y = gridRow(doc, y, [
+        { label: 'Banco (credor)', value: form.banco_fornecedor, w: 2   },
+        { label: 'Ag.',            value: form.ag_fornecedor,    w: 1   },
+        { label: 'C/C',            value: form.cc_fornecedor,    w: 1.5 },
+      ], pageH)
+      y = checkRow(doc, y, 'Certidões', tipoDid === 'variaveis' ? [
+        { label: 'Unificada',   value: form.cert_teso_cnd },
+        { label: 'FGTS',        value: form.cert_teso_fgts },
+        { label: 'Estadual',    value: form.cert_teso_estadual },
+        { label: 'Trabalhista', value: form.cert_teso_trabalhista },
+        { label: 'Municipal',   value: form.cert_teso_municipal },
+      ] : [
+        { label: 'Municipal',        value: form.cert_teso_municipal },
+        { label: 'Trabalhista',      value: form.cert_teso_trabalhista },
+        { label: 'FGTS',             value: form.cert_teso_fgts },
+        { label: 'Estadual',         value: form.cert_teso_estadual },
+        { label: 'Federal',          value: form.cert_teso_federal },
+        { label: 'Simples Nacional', value: form.cert_teso_simples_nac },
+      ], pageH)
+      y += 3
+      demonstrativo()
+      // Doc. Caixa sai na Contabilidade quando o fluxo tem "Empenho e Liquidação"
+      if (form.doc_caixa && !blocosDoFluxo.has('contab_empenho_liquidacao')) {
+        y = gridRow(doc, y, [{ label: 'Doc. Caixa', value: form.doc_caixa, w: 1 }], pageH)
+      }
+    } },
+    fechamento: { cor: C.purple, desenhar: () => {
+      y = gridRow(doc, y, [
+        { label: 'Processo Finalizado',  value: simNao(form.contab_fech_finalizado), w: 2 },
+        { label: 'Enviado para TCE/SIM', value: simNao(form.contab_fech_tce),        w: 2 },
+      ], pageH)
+    } },
+  }
+
+  // Etapa personalizada: campos conforme a configuração do município
+  const desenharPersonalizada = (etapa) => {
+    const dados = form.etapas_dados?.[etapa.id] || {}
+    const curtos = []
+    const soltarCurtos = () => {
+      for (let i = 0; i < curtos.length; i += 3) y = gridRow(doc, y, curtos.slice(i, i + 3), pageH)
+      curtos.length = 0
+    }
+    ;(etapa.campos || []).forEach((c) => {
+      const v = dados[c.campo]
+      if (c.personalizado === 'texto') {
+        soltarCurtos()
+        y = campoObjeto(doc, y, v, pageH, c.rotulo)
+      } else if (c.personalizado === 'checklist') {
+        soltarCurtos()
+        y = checkRow(doc, y, c.rotulo, (c.itens || []).map((item, i) => ({ label: item, value: v?.[i] === true })), pageH)
+      } else {
+        const valor = c.personalizado === 'data' ? fmtData(v) : c.personalizado === 'simnao' ? simNao(v) : v
+        curtos.push({ label: c.rotulo, value: valor, w: 2 })
+      }
+    })
+    soltarCurtos()
+  }
+
+  // Quem concluiu a etapa e o código da assinatura eletrônica
+  const assinaturaEtapa = (registro) => {
+    if (!registro || registro.status !== 'concluida' || registro.legado) return
+    if (y > pageH - 8) { doc.addPage(); applyTimbradoToPage(doc); y = mTop + 4 }
+    const quando = registro.concluida_em ? new Date(registro.concluida_em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : ''
+    const quem = [registro.nome, registro.cargo, registro.secretaria].filter(Boolean).join(' · ')
+    const ass = registro.assinatura ? ` · Assinado eletronicamente · código ${registro.assinatura.codigo_verificador} · CRC ${registro.assinatura.codigo_crc}` : ''
+    norm(doc, 5.8, C.muted)
+    const linhas = doc.splitTextToSize(`Concluída por ${quem}${quando ? ` em ${quando}` : ''}${ass}`, UW - 2)
+    doc.text(linhas, M + 1, y + 2.5)
+    y += 1.5 + linhas.length * 2.8
+  }
+
+  assinaturaEtapa(etapasFluxo[0]?.registro)
+  etapasFluxo.forEach((etapa, i) => {
+    if (i === 0) return // Seção I (Abertura) já desenhada acima
+    const numero = ROMANOS_PDF[i] || String(i + 1)
+    if (etapa.bloco === 'personalizada') {
+      y = divSecao(doc, y, numero, etapa.nome, C.teal, pageH)
+      desenharPersonalizada(etapa)
+    } else {
+      const b = BLOCOS_PDF[etapa.bloco]
+      if (!b) return
+      y = divSecao(doc, y, numero, etapa.nome, b.cor, pageH)
+      b.desenhar()
+    }
+    assinaturaEtapa(etapa.registro)
+    y += 1
+  })
 
   // ══════════════════════════════════════════════════════════════════════════
   //  RODAPÉ EM TODAS AS PÁGINAS

@@ -5,7 +5,7 @@ import { EtapaDidContext, ResponsavelEtapa } from '../EtapasDid'
 
 export default function DidVariaveisSecaoVII({ form, inp, chk, didId }) {
   // Editável só na etapa atual, para quem pode preenchê-la (fluxo por etapas)
-  const { editavel, resumo } = useContext(EtapaDidContext)
+  const { editavel, resumo, titulo } = useContext(EtapaDidContext)
   const locked = !editavel
 
   // Cargo vem do cadastro de quem atesta (pode completar com a matrícula)
@@ -17,7 +17,7 @@ export default function DidVariaveisSecaoVII({ form, inp, chk, didId }) {
   return (
     <SectionCard
       icon={ClipboardCheck}
-      title="Seção VII - Almoxarifado (Recebimento)"
+      title={titulo || 'Seção VII - Almoxarifado (Recebimento)'}
       color="bg-ink-500 text-white"
     >
       {/* Badge exclusivo */}
