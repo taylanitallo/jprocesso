@@ -187,7 +187,7 @@ export default function Layout() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-[1mm] py-4 overflow-y-auto space-y-6">
+        <nav className="flex-1 px-[1mm] py-4 overflow-y-auto space-y-4">
 
           {/* Menu principal */}
           <div className="space-y-0.5">
@@ -387,7 +387,7 @@ export default function Layout() {
 
         {/* Conteúdo */}
         <main className="flex-1 overflow-auto">
-          <div className="px-4 py-6 sm:px-6 lg:px-8 max-w-[1400px] mx-auto animate-fade-in">
+          <div className="px-3 py-4 sm:px-4 lg:px-6 max-w-[1600px] mx-auto animate-fade-in">
             <AvisoAssinatura />
             <Outlet />
           </div>

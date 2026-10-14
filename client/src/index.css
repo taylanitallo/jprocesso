@@ -366,28 +366,28 @@
 @layer components {
   /* ── Botões ──────────────────────────────────────────────────────────── */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 h-10 px-4 rounded-[10px]
+    @apply inline-flex items-center justify-center gap-2 h-9 px-3.5 rounded-[10px]
            text-sm font-semibold bg-brand-600 text-white hover:bg-brand-700
            active:scale-95 disabled:opacity-55 disabled:cursor-not-allowed
            shadow-xs hover:shadow-sm;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 h-10 px-4 rounded-[10px]
+    @apply inline-flex items-center justify-center gap-2 h-9 px-3.5 rounded-[10px]
            text-sm font-semibold bg-surface border border-ink-200 text-ink-700
            hover:bg-ink-50 active:scale-95
            disabled:opacity-55 disabled:cursor-not-allowed shadow-xs;
   }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 h-10 px-4 rounded-[10px]
+    @apply inline-flex items-center justify-center gap-2 h-9 px-3.5 rounded-[10px]
            text-sm font-semibold bg-danger-600 text-white hover:bg-danger-500
            active:scale-95 disabled:opacity-55 disabled:cursor-not-allowed
            shadow-xs hover:shadow-sm;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 h-10 px-4 rounded-[10px]
+    @apply inline-flex items-center justify-center gap-2 h-9 px-3.5 rounded-[10px]
            text-sm font-semibold text-ink-600 hover:bg-ink-100 hover:text-ink-900
            active:scale-95 disabled:opacity-55 disabled:cursor-not-allowed;
   }
@@ -408,7 +408,7 @@
   /* .input é a classe canônica. .input-field mantida por compatibilidade. */
   .input,
   .input-field {
-    @apply block w-full px-3 py-2.5 rounded-[10px] text-base sm:text-sm
+    @apply block w-full px-3 py-2 rounded-[10px] text-base sm:text-sm
            bg-surface border border-ink-200 text-ink-900 placeholder:text-ink-400
            outline-hidden focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20
            disabled:opacity-55 disabled:cursor-not-allowed read-only:bg-ink-50;
@@ -428,7 +428,7 @@
   }
 
   .section-header {
-    @apply flex items-center justify-between mb-5;
+    @apply flex items-center justify-between mb-3;
   }
 
   /* ── Badges ──────────────────────────────────────────────────────────── */

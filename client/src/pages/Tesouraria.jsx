@@ -74,7 +74,7 @@ export default function Tesouraria() {
   };
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
       <PageHeader
         icon={Landmark}
         title="Tesouraria"
@@ -374,7 +374,7 @@ function TabContas({ secretarias }) {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-ink-200 flex items-center justify-between sticky top-0 bg-surface z-10">
+            <div className="px-4 py-3 border-b border-ink-200 flex items-center justify-between sticky top-0 bg-surface z-10">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-success-50 dark:bg-success-900/30 flex items-center justify-center">
                   <Landmark className="w-4 h-4 text-success-600 dark:text-success-400" />
@@ -388,7 +388,7 @@ function TabContas({ secretarias }) {
               </button>
             </div>
 
-            <div className="p-6 space-y-5">
+            <div className="p-6 space-y-4">
               {/* Identificação */}
               <div>
                 <p className="text-xs font-semibold text-ink-500 uppercase tracking-wide mb-3">Identificação</p>
@@ -485,7 +485,7 @@ function TabContas({ secretarias }) {
               </div>
             </div>
 
-            <div className="px-6 py-4 border-t border-ink-200 flex justify-end gap-2 sticky bottom-0 bg-surface">
+            <div className="px-4 py-3 border-t border-ink-200 flex justify-end gap-2 sticky bottom-0 bg-surface">
               <button onClick={() => setShowModal(false)} className="btn-secondary text-sm px-4 py-2">Cancelar</button>
               <button onClick={salvar} disabled={saving} className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5 disabled:opacity-40">
                 <Save className="h-4 w-4" /> {saving ? 'Salvando...' : 'Salvar Conta'}
@@ -910,7 +910,7 @@ tfoot .val{font-size:15px;color:#15803d}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-lg">
-            <div className="px-6 py-4 border-b border-ink-200 flex items-center justify-between">
+            <div className="px-4 py-3 border-b border-ink-200 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-success-50 dark:bg-success-900/30 flex items-center justify-center">
                   <TrendingUp className="w-4 h-4 text-success-600 dark:text-success-400" />
@@ -969,7 +969,7 @@ tfoot .val{font-size:15px;color:#15803d}
                 />
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-ink-200 flex justify-end gap-2">
+            <div className="px-4 py-3 border-t border-ink-200 flex justify-end gap-2">
               <button onClick={() => setShowModal(false)} className="btn-secondary text-sm px-4 py-2">Cancelar</button>
               <button
                 onClick={salvar}
@@ -2203,7 +2203,7 @@ function TabRelatorios() {
 
       {/* Estado de carregamento inicial */}
       {loading && !resultado && (
-        <div className="bg-surface rounded-xl shadow-sm border border-ink-200 flex items-center justify-center py-16 text-ink-400 gap-2">
+        <div className="bg-surface rounded-xl shadow-sm border border-ink-200 flex items-center justify-center py-10 text-ink-400 gap-2">
           <BarChart2 className="h-5 w-5 animate-pulse" />
           <span className="text-sm">Carregando...</span>
         </div>

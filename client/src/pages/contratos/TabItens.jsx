@@ -52,7 +52,7 @@ function ItemModal({ modo, item, onSave, onClose }) {
       <div className="bg-ink-50 rounded-3xl shadow-2xl w-full flex flex-col overflow-hidden" style={{ maxWidth: '90vw', maxHeight: '90vh', width: '680px' }}>
 
         {/* ── Header Premium ── */}
-        <div className="bg-surface border-b border-ink-100 px-6 py-4 shrink-0">
+        <div className="bg-surface border-b border-ink-100 px-4 py-3 shrink-0">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
               <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center shadow-md">
@@ -216,7 +216,7 @@ function ItemModal({ modo, item, onSave, onClose }) {
               No campo descrição, informar a <strong>nomenclatura</strong> do item — não a especificação!
             </p>
           </div>
-          <div className="px-6 py-4 flex items-center justify-between">
+          <div className="px-4 py-3 flex items-center justify-between">
             <div className="text-xs text-ink-400">
               {item?.id && <span>ID: <span className="font-mono">{item.id}</span></span>}
             </div>
@@ -295,7 +295,7 @@ function RelatorioModal({ item, onClose }) {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {loading && (
             <div className="flex items-center gap-3 py-8 justify-center text-ink-400">
               <span className="w-5 h-5 border-2 border-ink-300 border-t-blue-500 rounded-full animate-spin" />
@@ -426,7 +426,7 @@ function RelatorioModal({ item, onClose }) {
           )}
         </div>
 
-        <div className="px-6 py-4 border-t border-ink-200 flex justify-between items-center shrink-0 gap-3">
+        <div className="px-4 py-3 border-t border-ink-200 flex justify-between items-center shrink-0 gap-3">
           <span className="text-xs text-ink-400">{totalContratos} contrato(s) · {totalOrdens} ordem(ns)</span>
           <div className="flex items-center gap-2">
             {dna && (
@@ -520,7 +520,7 @@ function ListagemModal({ item, onClose }) {
           )}
         </div>
 
-        <div className="px-6 py-4 border-t border-ink-200 flex justify-between items-center">
+        <div className="px-4 py-3 border-t border-ink-200 flex justify-between items-center">
           <span className="text-xs text-ink-400">{registros.length} registro(s)</span>
           <div className="flex gap-3">
             <button className="btn-secondary text-sm flex items-center gap-2">
@@ -699,7 +699,7 @@ function ImportarUrlModal({ urlConfigurada, onClose, onSucesso }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-md">
-        <div className="p-6 space-y-5">
+        <div className="p-6 space-y-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-info-100 dark:bg-info-900/30 rounded-full flex items-center justify-center shrink-0">
               <Download className="w-5 h-5 text-brand-600" />
@@ -892,7 +892,7 @@ function ExcluirSemVinculoModal({ onClose, onSucesso }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-md">
-        <div className="p-6 space-y-5">
+        <div className="p-6 space-y-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center shrink-0">
               <XOctagon className="w-5 h-5 text-orange-600" />
@@ -1218,7 +1218,7 @@ function TabItens() {
 
       {/* ── Tabela ── */}
       {carregando && (
-        <div className="card p-5 space-y-3">
+        <div className="card p-4 space-y-3">
           <div className="flex items-center justify-between text-sm">
             <span className="flex items-center gap-2 text-brand-600 dark:text-info-400 font-medium">
               <span className="w-4 h-4 border-2 border-info-400/40 border-t-blue-500 rounded-full animate-spin" />

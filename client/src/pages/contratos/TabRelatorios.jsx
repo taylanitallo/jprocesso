@@ -104,7 +104,7 @@ function ModalContratos({ titulo, lista, nomeCredor, diasAte, onClose }) {
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-[2.5%]">
       <div className="bg-surface rounded-2xl shadow-2xl flex flex-col" style={{ width: '95%', height: '95%' }}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-ink-200 bg-ink-900 rounded-t-2xl shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-ink-200 bg-ink-900 rounded-t-2xl shrink-0">
           <div className="flex items-center gap-3">
             <FileText className="w-5 h-5 text-info-400" />
             <h2 className="font-bold text-white text-base">{titulo}</h2>
@@ -486,7 +486,7 @@ function TabRelatorios() {
           <h3 className="text-sm font-semibold text-ink-800">Ordens de Compra / Serviço</h3>
           <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-ink-100 text-ink-500">{ordTotal} ordens</span>
         </div>
-        <div className="p-5 space-y-5">
+        <div className="p-5 space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <KpiCard icon={ClipboardList} label="Total Ordens"  value={String(ordTotal)}       color="from-ink-500 to-ink-600" />
             <KpiCard icon={ShoppingCart}  label="Ordens Compra" value={String(ordCompras)}      color="from-info-500 to-indigo-600" />

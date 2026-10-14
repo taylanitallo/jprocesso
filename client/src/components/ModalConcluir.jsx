@@ -35,7 +35,7 @@ export default function ModalConcluir({ processoId, onClose, onSuccess }) {
           <CheckCircle className="h-7 w-7 mr-2" />
           Concluir Processo
         </h3>
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="bg-success-50 dark:bg-success-900/20 border border-success-200 dark:border-success-700 rounded-lg p-4 mb-4">
             <p className="text-sm text-success-800 dark:text-success-300">
               <strong>Atenção:</strong> Após a conclusão, o processo não poderá mais ser tramitado.

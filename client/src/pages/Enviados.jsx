@@ -26,7 +26,7 @@ export default function Enviados() {
   const processos = data?.processos || []
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
       {/* Header */}
       <div>
         <h1 className="page-title flex items-center gap-2">📤 Processos Enviados</h1>

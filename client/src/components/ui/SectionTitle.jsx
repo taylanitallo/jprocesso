@@ -9,7 +9,7 @@
  */
 export default function SectionTitle({ icon: Icon, title, subtitle, action }) {
   return (
-    <div className="flex items-center justify-between gap-3 mb-4">
+    <div className="flex items-center justify-between gap-3 mb-3">
       <div className="flex items-center gap-2.5 min-w-0">
         {Icon && (
           <Icon

@@ -188,7 +188,7 @@ export default function Processos() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
 
       {/* ── Header ── */}
       <PageHeader

@@ -10,11 +10,11 @@
  */
 export default function PageHeader({ icon: Icon, eyebrow, title, subtitle, actions }) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
       {/* Lado esquerdo: ícone + textos */}
       <div className="flex items-center gap-4 min-w-0">
         {Icon && (
-          <div className="shrink-0 flex items-center justify-center w-11 h-11 rounded-2xl
+          <div className="shrink-0 flex items-center justify-center w-10 h-10 rounded-xl
                           bg-info-50 dark:bg-info-900/30
                           border border-info-100 dark:border-info-800/50
                           shadow-sm">

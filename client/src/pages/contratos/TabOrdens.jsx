@@ -827,7 +827,7 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
         style={{ maxWidth: '90vw', maxHeight: '92vh', width: '760px' }}>
 
         {/* Header */}
-        <div className="bg-surface border-b border-ink-100 px-6 py-4 shrink-0">
+        <div className="bg-surface border-b border-ink-100 px-4 py-3 shrink-0">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
               <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-md ${

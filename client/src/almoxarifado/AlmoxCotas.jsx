@@ -212,7 +212,7 @@ export default function AlmoxCotas() {
       {loading ? (
         <LoadingBar label="Carregando cotas..." />
       ) : cotas.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-ink-400">
+        <div className="flex flex-col items-center justify-center py-10 text-ink-400">
           <BarChart2 className="h-12 w-12 mb-3 opacity-30" />
           <p className="font-medium">Nenhuma cota definida</p>
           <p className="text-sm mt-1">Defina cotas mensais por setor e item para controlar o consumo.</p>

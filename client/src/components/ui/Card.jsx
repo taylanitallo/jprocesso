@@ -9,7 +9,7 @@ export function Card({ className, padded = true, children, ...props }) {
     <div
       className={cn(
         'rounded-[16px] border border-ink-200/70 bg-surface shadow-xs',
-        padded && 'p-5',
+        padded && 'p-4',
         className
       )}
       {...props}
@@ -22,7 +22,7 @@ export function Card({ className, padded = true, children, ...props }) {
 export function CardHeader({ title, subtitle, icon: Icon, actions, className, children, ...props }) {
   return (
     <div
-      className={cn('flex items-center justify-between gap-3 border-b border-ink-100 px-5 py-4', className)}
+      className={cn('flex items-center justify-between gap-3 border-b border-ink-100 px-4 py-3', className)}
       {...props}
     >
       {children || (
@@ -47,7 +47,7 @@ export function CardHeader({ title, subtitle, icon: Icon, actions, className, ch
 
 export function CardBody({ className, children, ...props }) {
   return (
-    <div className={cn('p-5', className)} {...props}>
+    <div className={cn('p-4', className)} {...props}>
       {children}
     </div>
   )

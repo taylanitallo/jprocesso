@@ -263,7 +263,7 @@ export default function FluxosProcesso() {
   const temErros = validacao.erros.length > 0
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div>
         <h3 className="text-base font-semibold text-ink-900 flex items-center gap-2"><Workflow className="h-4 w-4" aria-hidden="true" /> Fluxos de Processo</h3>
         <p className="text-sm text-ink-500 mt-1">

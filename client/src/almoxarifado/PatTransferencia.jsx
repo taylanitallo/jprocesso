@@ -64,7 +64,7 @@ export default function PatTransferencia({ bem, onSuccess, onCancel }) {
   if (!bem) return null
 
   return (
-    <form onSubmit={submit} className="space-y-5">
+    <form onSubmit={submit} className="space-y-4">
       {/* Bem selecionado */}
       <div className="bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800 rounded-xl p-4">
         <div className="flex items-center gap-3">

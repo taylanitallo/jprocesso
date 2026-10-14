@@ -126,7 +126,7 @@ export default function ModalDespacho({ processo, onClose, onSaved }) {
       <div className="bg-surface rounded-xl shadow-2xl w-full max-w-2xl my-4">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-ink-200">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-ink-200">
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-indigo-600" />
             <h2 className="text-lg font-bold text-ink-900">
@@ -340,7 +340,7 @@ export default function ModalDespacho({ processo, onClose, onSaved }) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-ink-200 bg-ink-50 rounded-b-xl">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-ink-200 bg-ink-50 rounded-b-xl">
           <button
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-ink-700 hover:bg-ink-200 rounded-lg transition-colors"

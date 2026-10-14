@@ -360,13 +360,17 @@ export default function Usuarios() {
     }
   };
 
+  // e-mail e CPF podem vir vazios (null): sem o || '' a busca derrubava a tela
+  const termoBusca = searchTerm.trim().toLowerCase();
+  const termoDigitos = termoBusca.replace(/\D/g, '');
   const filteredUsuarios = usuarios.filter(usuario => {
-    const matchSearch = usuario.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       usuario.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       usuario.cpf.includes(searchTerm);
+    const matchSearch = !termoBusca ||
+                       (usuario.nome || '').toLowerCase().includes(termoBusca) ||
+                       (usuario.email || '').toLowerCase().includes(termoBusca) ||
+                       (!!termoDigitos && String(usuario.cpf || '').replace(/\D/g, '').includes(termoDigitos));
     const matchTipo = filterTipo === 'todos' || usuario.tipo === filterTipo;
     return matchSearch && matchTipo;
-  }).sort((a, b) => a.nome.localeCompare(b.nome));
+  }).sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
 
   const totalPagesUsuarios = Math.max(1, Math.ceil(filteredUsuarios.length / PER_PAGE_USUARIOS));
   const usuariosPaginados = filteredUsuarios.slice((pageUsuarios - 1) * PER_PAGE_USUARIOS, pageUsuarios * PER_PAGE_USUARIOS);
@@ -379,7 +383,7 @@ export default function Usuarios() {
 
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Mensagem de Sucesso */}
       {successMessage && (
         <div className="p-4 bg-success-50 dark:bg-success-900/30 border border-success-200 dark:border-success-700 rounded-lg flex items-center gap-3">
@@ -398,7 +402,7 @@ export default function Usuarios() {
             <div className="relative">
               <button
                 onClick={() => setShowIoMenu(v => !v)}
-                className="btn-secondary flex items-center gap-2"
+                className="btn-secondary flex items-center gap-1.5 text-xs px-3 h-7"
               >
                 <FileSpreadsheet className="h-3.5 w-3.5" />
                 Planilha
@@ -482,7 +486,7 @@ export default function Usuarios() {
 
       {/* Lista de Usuários */}
       <div className="card overflow-hidden">
-        <div className="px-6 pt-5 pb-2">
+        <div className="px-4 pt-3 pb-1">
           <SectionTitle icon={Users} title="Lista de Usuários" subtitle={`${filteredUsuarios.length} usuário(s)`} />
         </div>
         <table className="min-w-full divide-y divide-ink-200">
@@ -498,7 +502,7 @@ export default function Usuarios() {
           <tbody className="bg-surface divide-y divide-ink-200">
             {usuariosPaginados.map((usuario) => (
               <tr key={usuario.id} className="hover:bg-ink-50 transition-colors">
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-4 py-3 whitespace-nowrap">
                   <div className="flex items-center">
                     <div className="shrink-0 h-10 w-10 bg-gradient-to-br from-info-400 to-indigo-600 rounded-full flex items-center justify-center">
                       <span className="text-white font-bold text-sm">
@@ -511,7 +515,7 @@ export default function Usuarios() {
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-4 py-3 whitespace-nowrap">
                   <span className={`
                     px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
                     ${usuario.tipo === 'admin' ? 'bg-danger-100 text-danger-800 dark:bg-danger-900/30 dark:text-danger-400' : ''}
@@ -523,11 +527,11 @@ export default function Usuarios() {
                     {usuario.tipo === 'operacional' ? 'Operacional' : ''}
                   </span>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-4 py-3">
                   <div className="text-sm font-medium text-ink-800">{usuario.secretaria?.sigla || '-'}</div>
                   <div className="text-sm text-ink-500">{usuario.setor?.nome || '-'}</div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-4 py-3 whitespace-nowrap">
                   <button
                     type="button"
                     onClick={() => handleToggleStatus(usuario)}
@@ -546,7 +550,7 @@ export default function Usuarios() {
                     )}
                   </button>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                   <button
                     onClick={() => handleEdit(usuario)}
                     className="text-brand-600 hover:text-info-900 mr-3"
@@ -584,12 +588,12 @@ export default function Usuarios() {
       {showModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-surface rounded-xl max-w-4xl w-full my-8 shadow-xl">
-            <div className="px-6 py-4 border-b border-ink-200 sticky top-0 bg-surface z-10">
+            <div className="px-4 py-3 border-b border-ink-200 sticky top-0 bg-surface z-10">
               <h2 className="text-xl font-semibold text-ink-900">Novo Usuário</h2>
               <p className="text-sm text-ink-500 mt-1">Preencha as informações do usuário</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[calc(90vh-120px)] overflow-y-auto">
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[calc(90vh-120px)] overflow-y-auto">
               {/* Dados Pessoais */}
               <div>
                 <SectionTitle icon={Users} title="Dados Pessoais" />
@@ -677,12 +681,12 @@ export default function Usuarios() {
       {showEditModal && selectedUser && editData && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-surface rounded-xl w-[95%] my-8 shadow-xl">
-            <div className="px-6 py-4 border-b border-ink-200 sticky top-0 bg-surface z-10">
+            <div className="px-4 py-3 border-b border-ink-200 sticky top-0 bg-surface z-10">
               <h2 className="text-xl font-semibold text-ink-900">Editar Usuário</h2>
               <p className="text-sm text-ink-500 mt-1">Atualize as informações e permissões</p>
             </div>
 
-            <form onSubmit={handleSubmitEdit} className="p-6 space-y-6 max-h-[calc(90vh-120px)] overflow-y-auto">
+            <form onSubmit={handleSubmitEdit} className="p-6 space-y-4 max-h-[calc(90vh-120px)] overflow-y-auto">
 
               {/* Dados Pessoais */}
               <div>
@@ -779,7 +783,7 @@ export default function Usuarios() {
       {showDeleteModal && deleteTarget && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-surface rounded-xl max-w-md w-full shadow-xl">
-            <div className="px-6 py-4 border-b border-ink-200">
+            <div className="px-4 py-3 border-b border-ink-200">
               <div className="flex items-center gap-3">
                 <div className="shrink-0 w-10 h-10 bg-danger-100 dark:bg-danger-900/30 rounded-full flex items-center justify-center">
                   <AlertTriangle className="h-6 w-6 text-danger-600 dark:text-danger-400" />
@@ -800,7 +804,7 @@ export default function Usuarios() {
               </p>
             </div>
 
-            <div className="px-6 py-4 bg-ink-50 border-t border-ink-200">
+            <div className="px-4 py-3 bg-ink-50 border-t border-ink-200">
               <ActionBar>
                 <button
                   onClick={() => {
@@ -826,7 +830,7 @@ export default function Usuarios() {
       {showImportModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-surface rounded-xl max-w-lg w-full shadow-xl">
-            <div className="px-6 py-4 border-b border-ink-200 flex items-center justify-between">
+            <div className="px-4 py-3 border-b border-ink-200 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-ink-900 flex items-center gap-2">
                 <Upload className="h-5 w-5 text-brand-600" />
                 Resultado da Importação

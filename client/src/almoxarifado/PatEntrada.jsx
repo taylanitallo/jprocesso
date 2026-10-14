@@ -123,7 +123,7 @@ export default function PatEntrada({ onSuccess, onCancel }) {
   )
 
   return (
-    <form onSubmit={submit} className="space-y-6">
+    <form onSubmit={submit} className="space-y-4">
       {/* Próximo tombamento */}
       <div className="bg-info-50 dark:bg-info-900/20 border border-info-200 dark:border-info-800 rounded-xl p-4">
         <div className="flex items-center gap-3">

@@ -533,7 +533,7 @@ export default function Arquivo() {
   }
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
       <PageHeader
         icon={Archive}
         title="Gerenciador de Arquivos"

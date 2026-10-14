@@ -399,7 +399,7 @@ export default function AlmoxInventario() {
       {loading ? (
         <LoadingBar label="Carregando inventários..." />
       ) : inventarios.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-ink-400">
+        <div className="flex flex-col items-center justify-center py-10 text-ink-400">
           <ClipboardList className="h-12 w-12 mb-3 opacity-30" />
           <p className="font-medium">Nenhum inventario encontrado</p>
           <p className="text-sm mt-1">Clique em "Novo Inventario" para iniciar a contagem periodica.</p>

@@ -84,7 +84,7 @@ function LicitacaoModal({ modo, licitacao, onSave, onClose }) {
       <div className="bg-ink-50 rounded-3xl shadow-2xl w-full flex flex-col overflow-hidden" style={{ maxWidth: '90vw', maxHeight: '90vh', width: '880px' }}>
 
         {/* ── Header ── */}
-        <div className="bg-surface border-b border-ink-100 px-6 py-4 shrink-0">
+        <div className="bg-surface border-b border-ink-100 px-4 py-3 shrink-0">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
               <div className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-md bg-gradient-to-br from-violet-500 to-indigo-600">
@@ -273,7 +273,7 @@ function LicitacaoModal({ modo, licitacao, onSave, onClose }) {
         </div>
 
         {/* ── Footer ── */}
-        <div className="bg-surface border-t border-ink-100 px-6 py-4 flex items-center justify-between shrink-0">
+        <div className="bg-surface border-t border-ink-100 px-4 py-3 flex items-center justify-between shrink-0">
           <div className="text-xs text-ink-400">
             {licitacao?.id && <span>ID: <span className="font-mono">{licitacao.id}</span></span>}
           </div>
@@ -362,7 +362,7 @@ function LicitacaoContratosModal({ licitacao, onClose }) {
 
         <div className="flex-1 overflow-y-auto overflow-x-auto">
           {vinculados.length === 0 ? (
-            <div className="text-center py-16 text-ink-400">
+            <div className="text-center py-10 text-ink-400">
               <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
               <p className="font-medium">Nenhum contrato vinculado</p>
               <p className="text-sm mt-1">Informe o nº desta licitação no cadastro do contrato para vinculá-lo.</p>

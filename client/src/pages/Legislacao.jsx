@@ -26,7 +26,7 @@ export default function Legislacao() {
   return (
     <LayoutPublico subdomain={subdomain}>
       <div className="relative z-10 flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-5">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-4">
 
           <CardPublico className="p-6 shadow-[0_0_40px_rgba(139,92,246,0.12)]">
             <h1 className={`text-lg font-bold ${p.txt1} mb-1`}>
