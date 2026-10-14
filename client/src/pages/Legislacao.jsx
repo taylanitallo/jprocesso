@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, Eye, Scale, ShieldCheck } from 'lucide-react'
 import api, { apiUrl } from '../services/api'
+import { Paginacao, usePaginacao } from '../components/ui'
 import LayoutPublico, { CardPublico, usePaletaPublica } from '../components/LayoutPublico'
 
 const fmtData = (d) => d ? String(d).slice(0, 10).split('-').reverse().join('/') : null
@@ -20,6 +21,7 @@ export default function Legislacao() {
   }, [subdomain])
 
   const lista = dados?.legislacoes || []
+  const pgLeis = usePaginacao('legislacao-publica', lista.length)
 
   return (
     <LayoutPublico subdomain={subdomain}>
@@ -62,7 +64,7 @@ export default function Legislacao() {
 
             {lista.length > 0 && (
               <ul className={`divide-y ${p.mc ? 'divide-ink-200' : 'divide-ink-200/50'}`}>
-                {lista.map(l => (
+                {pgLeis.fatia(lista).map(l => (
                   <li key={l.id} className="px-5 py-5">
                     <h2 className={`text-base font-bold ${p.txt1}`}>{l.titulo}</h2>
                     {(fmtData(l.data_publicacao) || l.regulamenta_assinatura) && (
@@ -86,6 +88,7 @@ export default function Legislacao() {
                 ))}
               </ul>
             )}
+            {lista.length > 0 && <Paginacao {...pgLeis} total={lista.length} rotulo="norma" />}
           </CardPublico>
 
           <Link

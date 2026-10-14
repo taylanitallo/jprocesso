@@ -7,6 +7,7 @@ import {
   CalendarDays, RotateCcw, Undo2, Lock,
 } from 'lucide-react'
 import api from '../../services/api'
+import { Paginacao, usePaginacao } from '../ui'
 import { ConfirmModal } from '../ui'
 
 const SEM_AUTOR = '__sem_autor__'
@@ -143,6 +144,8 @@ export default function ModalExcluidos({ entidade, onClose, onAlterado }) {
     ? `todos os ${c.total} excluído(s) de ${titulo}`
     : c.modo === 'filtrados' ? `${c.total} registro(s) do resultado do filtro` : `${c.total} registro(s) selecionado(s)`
 
+  const pgExcluidos = usePaginacao('lixeira', filtrados.length);
+
   return (
     <div className="fixed inset-0 z-[70] flex flex-col bg-ink-50 animate-fade-in" role="dialog" aria-modal="true" aria-label={`Excluídos — ${titulo}`}>
       {/* Cabeçalho */}
@@ -257,7 +260,7 @@ export default function ModalExcluidos({ entidade, onClose, onAlterado }) {
                     </td>
                   </tr>
                 )}
-                {filtrados.map(r => {
+                {pgExcluidos.fatia(filtrados).map(r => {
                   const sel = selecionados.has(r.id)
                   return (
                     <tr key={r.id} onClick={() => alternar(r.id)}
@@ -292,6 +295,7 @@ export default function ModalExcluidos({ entidade, onClose, onAlterado }) {
               </tbody>
             </table>
           )}
+          {filtrados.length > 0 && <Paginacao {...pgExcluidos} total={filtrados.length} rotulo="excluído" className="border-t border-ink-100" />}
         </div>
       </div>
 

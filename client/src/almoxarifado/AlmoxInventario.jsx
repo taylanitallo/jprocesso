@@ -4,6 +4,7 @@ import {
   CheckCircle2, AlertTriangle, X, Eye, Pencil, Trash2
 } from 'lucide-react'
 import api from '../services/api'
+import { Paginacao, usePaginacao } from '../components/ui'
 import BotaoExcluidos from '../components/lixeira/BotaoExcluidos'
 import LoadingBar from '../components/LoadingBar'
 import AlmoxModal from './AlmoxModal'
@@ -71,6 +72,8 @@ function InventarioDetalheModal({ inventario, onClose, onRefresh }) {
   const totalDiverg   = itens.filter(i => i.contado && parseFloat(i.diferenca) !== 0).length
   const podeConcluir  = inventario.status === 'EM_ANDAMENTO'
 
+  const pgItensInv = usePaginacao('almox-inventario-itens', itensFiltrados.length);
+
   return (
     <AlmoxModal title={`Inventario ${inventario.numero}`} onClose={onClose} wide>
       <div className="space-y-4">
@@ -112,7 +115,7 @@ function InventarioDetalheModal({ inventario, onClose, onRefresh }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-ink-100">
-                {itensFiltrados.map(linha => {
+                {pgItensInv.fatia(itensFiltrados).map(linha => {
                   const diverg = linha.contado && parseFloat(linha.diferenca) !== 0
                   return (
                     <tr key={linha.id} className={`${diverg ? 'bg-danger-50/50 dark:bg-danger-900/10' : ''} hover:bg-ink-50`}>
@@ -158,6 +161,7 @@ function InventarioDetalheModal({ inventario, onClose, onRefresh }) {
             </table>
           </div>
         )}
+        {itensFiltrados.length > 0 && <Paginacao {...pgItensInv} total={itensFiltrados.length} rotulo="item" rotuloPlural="itens" className="border-t border-ink-100" />}
 
         {/* Acoes */}
         <div className="flex justify-end gap-3 pt-2">
@@ -358,6 +362,8 @@ export default function AlmoxInventario() {
       setConfirmDelete(null)
     } finally { setDeleting(false) }
   }
+  const pgInventarios = usePaginacao('almox-inventarios', inventarios.length);
+
 
   return (
     <div>
@@ -409,7 +415,7 @@ export default function AlmoxInventario() {
               </tr>
             </thead>
             <tbody className="divide-y divide-ink-100">
-              {inventarios.map(inv => (
+              {pgInventarios.fatia(inventarios).map(inv => (
                 <tr key={inv.id} className="hover:bg-ink-50">
                   <td className="px-4 py-3 font-mono text-xs font-medium text-ink-800">{inv.numero}</td>
                   <td className="px-4 py-3 text-xs text-ink-500">
@@ -462,6 +468,7 @@ export default function AlmoxInventario() {
           </table>
         </div>
       )}
+      {inventarios.length > 0 && <Paginacao {...pgInventarios} total={inventarios.length} rotulo="inventário" className="border-t border-ink-100" />}
 
       {novoModal && (
         <NovoInventarioModal

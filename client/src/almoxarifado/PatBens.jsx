@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Search, Eye, DownloadCloud, RefreshCw, ChevronLeft, ChevronRight, Landmark, ArrowLeftRight, ClipboardList } from 'lucide-react'
 import api from '../services/api'
+import { Paginacao, usePorPagina } from '../components/ui'
 import LoadingBar from '../components/LoadingBar'
 import PageHeader from '../components/ui/PageHeader'
 import FilterBar from '../components/ui/FilterBar'
@@ -44,10 +45,12 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
   const [detalhe, setDetalhe]     = useState(null)
   const [detLoading, setDetL]     = useState(false)
 
+  const [porPagina, setPorPaginaBens] = usePorPagina('patrimonio-bens', 20)
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const params = new URLSearchParams({ page, limit: 25 })
+      const params = new URLSearchParams({ page, limit: porPagina })
       if (q)            params.append('q', q)
       if (statusFiltro) params.append('status', statusFiltro)
       if (grupofiltro)  params.append('grupo_id', grupofiltro)
@@ -57,7 +60,7 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
       setTotal(data.total)
       setPages(data.pages)
     } catch { } finally { setLoading(false) }
-  }, [page, q, statusFiltro, grupofiltro, secFiltro])
+  }, [page, q, statusFiltro, grupofiltro, secFiltro, porPagina])
 
   useEffect(() => { load() }, [load])
 
@@ -230,22 +233,8 @@ export default function PatBens({ onEntrada, onTransferir, onBaixar }) {
       </div>
 
       {/* Paginação */}
-      {pages > 1 && (
-        <div className="flex items-center justify-between text-sm text-ink-600">
-          <span>{total} bens encontrados</span>
-          <div className="flex items-center gap-2">
-            <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
-              className="p-1 rounded-sm hover:bg-ink-100 disabled:opacity-40">
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span>Página {page} de {pages}</span>
-            <button disabled={page === pages} onClick={() => setPage(p => p + 1)}
-              className="p-1 rounded-sm hover:bg-ink-100 disabled:opacity-40">
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      )}
+      <Paginacao total={total} pagina={page} setPagina={setPage} porPagina={porPagina}
+        setPorPagina={(n) => { setPorPaginaBens(n); setPage(1) }} rotulo="bem" rotuloPlural="bens" />
 
       {/* Modal detalhe */}
       {(detLoading || detalhe) && (

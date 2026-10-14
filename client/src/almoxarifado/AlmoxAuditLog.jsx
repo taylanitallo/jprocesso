@@ -6,6 +6,7 @@ import {
   Settings, Key, ClipboardList, Filter, X, Printer
 } from 'lucide-react'
 import api from '../services/api'
+import { Paginacao, usePorPagina } from '../components/ui'
 import { useAuth } from '../context/AuthContext'
 import LoadingBar from '../components/LoadingBar'
 
@@ -271,7 +272,7 @@ export default function AlmoxAuditLog() {
   const [total, setTotal]     = useState(0)
   const [loading, setLoading] = useState(false)
   const [page, setPage]       = useState(1)
-  const LIMIT = 40
+  const [LIMIT, setLimit] = usePorPagina('almox-auditoria', 30)
 
   const [filtTabela, setFiltTabela] = useState('')
   const [filtAcao, setFiltAcao]     = useState('')
@@ -299,7 +300,7 @@ export default function AlmoxAuditLog() {
     } finally {
       setLoading(false)
     }
-  }, [filtTabela, filtAcao, filtUser, filtDataDe, filtDataAte])
+  }, [filtTabela, filtAcao, filtUser, filtDataDe, filtDataAte, LIMIT])
 
   useEffect(() => {
     setPage(1)
@@ -527,35 +528,9 @@ export default function AlmoxAuditLog() {
           )}
 
           {/* Paginação */}
-          {totalPages > 1 && !loading && (
-            <div className="flex items-center justify-between pt-4 border-t border-ink-100 mt-2">
-              <p className="text-xs text-ink-500">
-                Pág. {page} de {totalPages} — {total} registros
-              </p>
-              <div className="flex gap-1">
-                <button disabled={page <= 1} onClick={() => handlePage(page - 1)}
-                  className="px-3 py-1 text-xs rounded-sm border border-ink-300 disabled:opacity-40 hover:bg-ink-100">
-                  ← Ant.
-                </button>
-                {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
-                  const p = totalPages <= 7 ? i + 1 : page <= 4 ? i + 1 : Math.min(page + i - 3, totalPages - 6 + i)
-                  if (p < 1 || p > totalPages) return null
-                  return (
-                    <button key={p} onClick={() => handlePage(p)}
-                      className={`px-3 py-1 text-xs rounded-sm border transition-colors ${
-                        p === page ? 'bg-indigo-600 text-white border-indigo-600'
-                                   : 'border-ink-300 hover:bg-ink-100 text-ink-700'
-                      }`}>
-                      {p}
-                    </button>
-                  )
-                })}
-                <button disabled={page >= totalPages} onClick={() => handlePage(page + 1)}
-                  className="px-3 py-1 text-xs rounded-sm border border-ink-300 disabled:opacity-40 hover:bg-ink-100">
-                  Próx. →
-                </button>
-              </div>
-            </div>
+          {!loading && (
+            <Paginacao total={total} pagina={page} setPagina={handlePage} porPagina={LIMIT} setPorPagina={setLimit}
+              className="border-t border-ink-100 mt-2" />
           )}
         </div>
 

@@ -8,6 +8,7 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import api from '../../services/api'
 import BotaoExcluidos from '../../components/lixeira/BotaoExcluidos'
+import { Paginacao, usePaginacao } from '../../components/ui'
 import LoadingBar from '../../components/LoadingBar'
 import { useAuth } from '../../context/AuthContext'
 import { salvarDocumentoGerado } from '../../utils/salvarDocumentoGerado'
@@ -1542,6 +1543,7 @@ function TabOrdens() {
   }, [])
 
   const ordemSel = ordens.find(o => o.id === selecionada)
+  const pgOrdens = usePaginacao('contratos-ordens', ordens.length)
 
   const salvar = async (dados) => {
     try {
@@ -1707,7 +1709,7 @@ function TabOrdens() {
                   Nenhuma ordem encontrada
                 </td></tr>
               )}
-              {!loading && ordens.map(o => {
+              {!loading && pgOrdens.fatia(ordens).map(o => {
                 const sel = o.id === selecionada
                 const saldoInfo = o.dataValues?.saldo_info || o.saldo_info
                 return (
@@ -1777,13 +1779,13 @@ function TabOrdens() {
           </table>
         </div>
         {/* Rodapé */}
-        <div className="border-t border-ink-200 px-4 py-2 text-[11px] text-ink-400">
-          {selecionada && ordemSel && (
-            <span className="text-brand-600 dark:text-info-400 font-medium">✓ {ordemSel.numero}</span>
-          )}
-          <span className="float-right">
-            {ordens.length} registro(s)
+        <div className="border-t border-ink-200 px-4 py-2 text-[11px] text-ink-400 flex flex-wrap items-center justify-between gap-2">
+          <span>
+            {selecionada && ordemSel && (
+              <span className="text-brand-600 dark:text-info-400 font-medium">✓ {ordemSel.numero}</span>
+            )}
           </span>
+          <Paginacao embutido {...pgOrdens} total={ordens.length} rotulo="ordem" rotuloPlural="ordens" />
         </div>
       </div>
 

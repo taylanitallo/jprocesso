@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from 'react-query'
 import api from '../services/api'
+import { Paginacao, usePaginacao } from '../components/ui'
 import NumeroProcesso from '../components/NumeroProcesso'
 import {
   Archive, Folder, FolderOpen, FileText, ExternalLink,
@@ -468,6 +469,7 @@ export default function Arquivo() {
 
   const processos      = data || []
   const docsGerados    = dataGerados || []
+  const pgDocs = usePaginacao('arquivo-documentos', docsGerados.length)
   const tree      = buildTree(processos)
   const anos      = Object.keys(tree).sort((a, b) => b - a)
   const totalDocs = processos.reduce((s, p) => s + (p.documentos?.length || 0), 0)
@@ -591,7 +593,7 @@ export default function Arquivo() {
             </div>
           ) : (
             <div className="divide-y divide-ink-100">
-              {docsGerados.map(doc => {
+              {pgDocs.fatia(docsGerados).map(doc => {
                 const meta = TIPO_LABEL[doc.tipo_origem] || TIPO_LABEL.gerado
                 const data = doc.created_at || doc.data_upload
                 return (
@@ -630,6 +632,7 @@ export default function Arquivo() {
                   </div>
                 )
               })}
+              <Paginacao {...pgDocs} total={docsGerados.length} rotulo="documento" />
             </div>
           )}
         </div>

@@ -4,7 +4,7 @@ import JSZip from 'jszip';
 import { useNavigate } from 'react-router-dom';
 import api, { apiUrl } from '../services/api';
 import PermissoesEditor from '../components/PermissoesEditor';
-import { ConfirmModal } from '../components/ui';
+import { ConfirmModal, Paginacao, usePorPagina } from '../components/ui';
 import {
   Plus, Building, Edit2, Trash2, Globe, MapPin, CheckCircle, XCircle,
   Database, Shield, BarChart3, LogOut, Upload, UserPlus, AlertTriangle,
@@ -477,7 +477,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
   const [logCategoria, setLogCategoria] = useState('');
   const [logBusca, setLogBusca]         = useState('');
   const [logPage, setLogPage]           = useState(1);
-  const LOG_LIMIT = 20;
+  const [LOG_LIMIT, setLogLimit] = usePorPagina('superadmin-logs', 20);
   const [clearLogsModal, setClearLogsModal] = useState({ open: false, modo: 'antigos', loading: false });
 
   const [relBusca,      setRelBusca]      = useState('');
@@ -546,7 +546,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
     { ...Q_OPTS, enabled: tab === 'usuarios', staleTime: 60000 }
   );
   const { data: logsData,    refetch: refetchLogs    } = useQuery(
-    ['sa-logs', tenant.id, logCategoria, logBusca, logPage],
+    ['sa-logs', tenant.id, logCategoria, logBusca, logPage, LOG_LIMIT],
     () => api.get(`/superadmin/tenants/${tenant.id}/logs`, {
       params: { categoria: logCategoria || undefined, busca: logBusca || undefined, page: logPage, limit: LOG_LIMIT }
     }).then(r => r.data),
@@ -1217,27 +1217,8 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                 </div>
 
                 {/* Paginação */}
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-between pt-2 border-t border-ink-200">
-                    <button
-                      onClick={() => setLogPage(p => Math.max(1, p - 1))}
-                      disabled={logPage <= 1}
-                      className="flex items-center gap-1 px-3 py-1.5 border border-ink-300 rounded-lg text-sm text-ink-700 hover:bg-ink-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      ← Anterior
-                    </button>
-                    <span className="text-sm text-ink-500">
-                      Página {logPage} de {totalPages}
-                    </span>
-                    <button
-                      onClick={() => setLogPage(p => Math.min(totalPages, p + 1))}
-                      disabled={logPage >= totalPages}
-                      className="flex items-center gap-1 px-3 py-1.5 border border-ink-300 rounded-lg text-sm text-ink-700 hover:bg-ink-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      Próxima →
-                    </button>
-                  </div>
-                )}
+                <Paginacao total={logTotal} pagina={logPage} setPagina={setLogPage} porPagina={LOG_LIMIT}
+                  setPorPagina={(n) => { setLogLimit(n); setLogPage(1); }} className="border-t border-ink-200" />
 
                 {/* Modal Apagar Logs */}
                 {clearLogsModal.open && (

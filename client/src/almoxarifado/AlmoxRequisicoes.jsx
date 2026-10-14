@@ -5,6 +5,7 @@ import {
   Send, ShieldCheck, Zap, ClipboardList, Eye, Printer, Lock
 } from 'lucide-react'
 import api from '../services/api'
+import { Paginacao, usePorPagina } from '../components/ui'
 import LoadingBar from '../components/LoadingBar'
 import { gerarRequisicaoAlmoxPDF } from '../utils/gerarDocumentoPDF'
 import AlmoxModal from './AlmoxModal'
@@ -765,7 +766,7 @@ export default function AlmoxRequisicoes() {
   const [secretarias,  setSecretarias] = useState([])
   const [saving,       setSaving]      = useState(false)
   const [erro,         setErro]        = useState('')
-  const PER_PAGE = 20
+  const [PER_PAGE, setPerPage] = usePorPagina('almox-requisicoes', 20)
 
   const load = useCallback(async (p = 1, st = '') => {
     setLoading(true)
@@ -776,7 +777,7 @@ export default function AlmoxRequisicoes() {
       setReqs(data.requisicoes)
       setTotal(data.total)
     } catch { } finally { setLoading(false) }
-  }, [])
+  }, [PER_PAGE])
 
   const loadAux = useCallback(async () => {
     try {
@@ -904,20 +905,8 @@ export default function AlmoxRequisicoes() {
           </table>
           </div>
 
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-ink-200">
-              <span className="text-sm text-ink-500">Total: {total}</span>
-              <div className="flex items-center gap-2">
-                <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-1 rounded-sm hover:bg-ink-100 disabled:opacity-40">
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <span className="text-sm">{page} / {totalPages}</span>
-                <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="p-1 rounded-sm hover:bg-ink-100 disabled:opacity-40">
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          )}
+          <Paginacao total={total} pagina={page} setPagina={setPage} porPagina={PER_PAGE}
+            setPorPagina={(n) => { setPerPage(n); setPage(1) }} rotulo="requisição" rotuloPlural="requisições" className="border-t border-ink-200" />
         </div>
       )}
 

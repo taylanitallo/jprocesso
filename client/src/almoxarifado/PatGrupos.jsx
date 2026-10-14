@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { RefreshCw, Plus, Pencil, Layers } from 'lucide-react'
 import api from '../services/api'
+import { Paginacao, usePaginacao } from '../components/ui'
 import LoadingBar from '../components/LoadingBar'
 import PageHeader from '../components/ui/PageHeader'
 import SectionTitle from '../components/ui/SectionTitle'
@@ -65,6 +66,8 @@ export default function PatGrupos() {
     } finally { setSaving(false) }
   }
 
+  const pgGrupos = usePaginacao('patrimonio-grupos', grupos.length);
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -111,7 +114,7 @@ export default function PatGrupos() {
               <tr><td colSpan="7" className="px-4 py-0">
                 <EmptyState icon={Layers} title="Nenhum grupo cadastrado" description="Crie grupos para classificar os bens permanentes." />
               </td></tr>
-            ) : grupos.map(g => (
+            ) : pgGrupos.fatia(grupos).map(g => (
               <tr key={g.id} className="hover:bg-ink-50">
                 <td className="px-4 py-3 font-mono font-semibold text-ink-700">{g.codigo}</td>
                 <td className="px-4 py-3">
@@ -141,6 +144,7 @@ export default function PatGrupos() {
           </tbody>
         </table>
         </div>
+        {grupos.length > 0 && <Paginacao {...pgGrupos} total={grupos.length} rotulo="grupo" className="border-t border-ink-100" />}
       </div>
 
       {/* Modal formulário */}

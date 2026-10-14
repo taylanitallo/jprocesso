@@ -10,7 +10,7 @@ import {
   User, MapPin, Building2, Layers, SlidersHorizontal,
   X, ChevronDown, ChevronUp,
 } from 'lucide-react'
-import { PageHeader, EmptyState } from '../components/ui'
+import { PageHeader, EmptyState, Paginacao as PaginacaoPadrao, usePaginacao, usePorPagina } from '../components/ui'
 import LoadingBar from '../components/LoadingBar'
 
 // ── Constantes de badge / cor ─────────────────────────────────────────────────
@@ -47,6 +47,7 @@ export default function Processos() {
 
   // ── Filtros Caixa de Entrada ─────────────────────────────────────────────
   const [page,           setPage]           = useState(1)
+  const [porPagina,      setPorPagina]      = usePorPagina('processos-caixa', 10)
   const [search,         setSearch]         = useState('')
   const [status,         setStatus]         = useState('')
   const [prioridade,     setPrioridade]     = useState('')
@@ -130,9 +131,9 @@ export default function Processos() {
 
   // ── Query principal: Caixa de Entrada ────────────────────────────────────
   const { data, isLoading } = useQuery(
-    ['processos', page, search, status, prioridade, tipo, secretariaId, setorId, usuarioId],
+    ['processos', page, porPagina, search, status, prioridade, tipo, secretariaId, setorId, usuarioId],
     async () => {
-      const params = new URLSearchParams({ page, limit: 10 })
+      const params = new URLSearchParams({ page, limit: porPagina })
       if (search)       params.append('search',       search)
       if (status)       params.append('status',       status)
       if (prioridade)   params.append('prioridade',   prioridade)
@@ -163,6 +164,7 @@ export default function Processos() {
     }
   )
   const processosEnv = dataEnviados?.processos || []
+  const pgEnv = usePaginacao('processos-enviados', processosEnv.length)
 
   // ── Limpar filtros ────────────────────────────────────────────────────────
   const limparFiltros = () => {
@@ -373,14 +375,8 @@ export default function Processos() {
                 ))}
               </div>
 
-              <Paginacao
-                page={parseInt(data.pagination.page)}
-                totalPages={data.pagination.totalPages}
-                total={data.pagination.total}
-                limit={data.pagination.limit}
-                onPrev={() => setPage(p => p - 1)}
-                onNext={() => setPage(p => p + 1)}
-              />
+              <PaginacaoPadrao embutido total={data.pagination.total} pagina={parseInt(data.pagination.page)} setPagina={setPage}
+                porPagina={porPagina} setPorPagina={(n) => { setPorPagina(n); setPage(1) }} rotulo="processo" />
             </>
           ) : (
             <EmptyState
@@ -535,7 +531,7 @@ export default function Processos() {
 
           {!loadEnv && processosEnv.length > 0 && (
             <div className="space-y-2">
-              {processosEnv.map((processo) => {
+              {pgEnv.fatia(processosEnv).map((processo) => {
                 const s         = STATUS_INFO[processo.status]   || STATUS_INFO.aberto
                 const p         = PRIO_INFO[processo.prioridade] || PRIO_INFO.normal
                 const dataEnvio = processo.dataEnvio || processo.created_at
@@ -606,6 +602,9 @@ export default function Processos() {
                 )
               })}
             </div>
+          )}
+          {!loadEnv && processosEnv.length > 0 && (
+            <PaginacaoPadrao embutido {...pgEnv} total={processosEnv.length} rotulo="processo" />
           )}
 
           {!loadEnv && processosEnv.length === 0 && (
@@ -730,37 +729,4 @@ function ProcessoCard({ processo, subdomain, onClickSecretaria, onClickSetor, on
   )
 }
 
-// ── Sub-componente: Paginação ─────────────────────────────────────────────────
-function Paginacao({ page, totalPages, total, limit, onPrev, onNext }) {
-  const inicio = total > 0 ? Math.min((page - 1) * limit + 1, total) : 0
-  const fim    = Math.min(page * limit, total)
 
-  return (
-    <div className="flex items-center justify-between py-1">
-      <p className="text-xs text-ink-400">
-        {total > 0 ? `${inicio}–${fim} de ${total} processos` : '0 processos'}
-      </p>
-      <div className="flex items-center gap-1.5">
-        <button
-          onClick={onPrev}
-          disabled={page === 1}
-          className="flex items-center gap-1 px-3 py-1.5 text-xs border border-ink-200 rounded-lg text-ink-600 hover:bg-ink-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-        >
-          <ChevronLeft className="h-3.5 w-3.5" /> Anterior
-        </button>
-
-        <span className="px-3 py-1.5 text-xs font-medium text-ink-600">
-          {page} / {totalPages || 1}
-        </span>
-
-        <button
-          onClick={onNext}
-          disabled={page >= (totalPages || 1)}
-          className="flex items-center gap-1 px-3 py-1.5 text-xs border border-ink-200 rounded-lg text-ink-600 hover:bg-ink-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-        >
-          Próxima <ChevronRight className="h-3.5 w-3.5" />
-        </button>
-      </div>
-    </div>
-  )
-}

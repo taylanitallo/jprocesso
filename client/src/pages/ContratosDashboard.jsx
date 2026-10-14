@@ -7,7 +7,7 @@ import {
   ChevronsLeft, ChevronsRight, Filter, ShoppingCart, Wrench, ClipboardList,
 } from 'lucide-react'
 import api from '../services/api'
-import { PageHeader } from '../components/ui'
+import { PageHeader, Paginacao as PaginacaoPadrao, usePorPagina } from '../components/ui'
 import LoadingBar from '../components/LoadingBar'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -204,10 +204,12 @@ export default function ContratosDashboard() {
 
   // Paginação — credores
   const [credoresPage,  setCredoresPage]  = useState(1)
+  const [porPagCred,    setPorPagCred]    = usePorPagina('contratos-painel-credores', 10)
   const [credoresBusca, setCredoresBusca] = useState('')
 
   // Paginação — maiores contratos
   const [contratosPage,   setContratosPage]   = useState(1)
+  const [porPagCtr,       setPorPagCtr]       = usePorPagina('contratos-painel-maiores', 10)
   const [contratosBusca,  setContratosBusca]  = useState('')
   const [contratosStatus, setContratosStatus] = useState('')
 
@@ -308,9 +310,9 @@ export default function ContratosDashboard() {
   }, [todosCredores, credoresBusca])
 
   const credoresPaginados = useMemo(() => {
-    const ini = (credoresPage - 1) * PER_PAGE
-    return credoresFiltrados.slice(ini, ini + PER_PAGE)
-  }, [credoresFiltrados, credoresPage])
+    const ini = (credoresPage - 1) * porPagCred
+    return credoresFiltrados.slice(ini, ini + porPagCred)
+  }, [credoresFiltrados, credoresPage, porPagCred])
 
   // ─── Top secretarias ──────────────────────────────────────────────────────
   const topSecretarias = useMemo(() => {
@@ -415,9 +417,9 @@ export default function ContratosDashboard() {
   }, [todosComValor, contratosStatus, contratosBusca, credores])
 
   const maioresPaginados = useMemo(() => {
-    const ini = (contratosPage - 1) * PER_PAGE
-    return maioresFiltrados.slice(ini, ini + PER_PAGE)
-  }, [maioresFiltrados, contratosPage])
+    const ini = (contratosPage - 1) * porPagCtr
+    return maioresFiltrados.slice(ini, ini + porPagCtr)
+  }, [maioresFiltrados, contratosPage, porPagCtr])
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
   const aplicarFiltros = () => { setFiltrosAtivos({ ...filtros }); setCredoresPage(1); setContratosPage(1) }
@@ -704,7 +706,7 @@ export default function ContratosDashboard() {
                       </thead>
                       <tbody className="divide-y divide-ink-100">
                         {credoresPaginados.map((c, i) => {
-                          const rank = (credoresPage - 1) * PER_PAGE + i + 1
+                          const rank = (credoresPage - 1) * porPagCred + i + 1
                           const pct = kpiValorTotal > 0 ? Math.round((c.valor / kpiValorTotal) * 100) : 0
                           return (
                             <tr key={c.label} className="hover:bg-ink-50 transition-colors group">
@@ -732,7 +734,8 @@ export default function ContratosDashboard() {
                       </tbody>
                     </table>
                   </div>
-                  <Paginacao total={credoresFiltrados.length} page={credoresPage} onChange={setCredoresPage} />
+                  <PaginacaoPadrao embutido className="mt-4 pt-3 border-t border-ink-200" total={credoresFiltrados.length} pagina={credoresPage} setPagina={setCredoresPage}
+                    porPagina={porPagCred} setPorPagina={(n) => { setPorPagCred(n); setCredoresPage(1) }} rotulo="credor" rotuloPlural="credores" />
                 </>
               )
             }
@@ -876,7 +879,7 @@ export default function ContratosDashboard() {
                       </thead>
                       <tbody className="divide-y divide-ink-100">
                         {maioresPaginados.map((c, i) => {
-                          const rank = (contratosPage - 1) * PER_PAGE + i + 1
+                          const rank = (contratosPage - 1) * porPagCtr + i + 1
                           const cor = STATUS_COR[c.status] || { badge: 'bg-ink-100 text-ink-600' }
                           const d = c.vigencia_fim ? diasAte(c.vigencia_fim) : null
                           const alerta = d !== null && d >= 0 && d <= 30
@@ -908,7 +911,8 @@ export default function ContratosDashboard() {
                       </tbody>
                     </table>
                   </div>
-                  <Paginacao total={maioresFiltrados.length} page={contratosPage} onChange={setContratosPage} />
+                  <PaginacaoPadrao embutido className="mt-4 pt-3 border-t border-ink-200" total={maioresFiltrados.length} pagina={contratosPage} setPagina={setContratosPage}
+                    porPagina={porPagCtr} setPorPagina={(n) => { setPorPagCtr(n); setContratosPage(1) }} rotulo="contrato" />
                 </>
               )
             }

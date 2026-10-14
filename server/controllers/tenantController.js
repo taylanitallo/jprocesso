@@ -338,6 +338,7 @@ async function migrarAgentes(schema, pool) {
       created_at    TIMESTAMP     NOT NULL DEFAULT NOW(),
       updated_at    TIMESTAMP     NOT NULL DEFAULT NOW()
     );
+    ALTER TABLE ${schema}.agentes ADD COLUMN IF NOT EXISTS nome_reduzido VARCHAR(120), ADD COLUMN IF NOT EXISTS nascimento DATE;
   `);
 }
 

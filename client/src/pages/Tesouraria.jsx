@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { hasPerm } from '../utils/permissions';
 import { conferirAbasDoModulo } from '../utils/permissoesSchema';
 import api from '../services/api';
+import { Paginacao, usePaginacao } from '../components/ui';
 import BotaoExcluidos from '../components/lixeira/BotaoExcluidos';
 import { ContaPicker, ContaLink, PeriodoRapido, BotaoLimpar, contaLabel } from '../components/tesouraria/ContaBancaria';
 import PageHeader from '../components/ui/PageHeader';
@@ -254,6 +255,8 @@ function TabContas({ secretarias }) {
   const temFiltroContas = !!(busca || filtroSec || situacao);
   const limparContas = () => { setBusca(''); setFiltroSec(''); setSituacao(''); };
 
+  const pgContas = usePaginacao('tes-contas', filtradas.length);
+
   return (
     <div className="space-y-3">
       <FilterBar>
@@ -319,7 +322,7 @@ function TabContas({ secretarias }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-ink-100">
-                {filtradas.map(c => (
+                {pgContas.fatia(filtradas).map(c => (
                   <tr key={c.id} className="hover:bg-ink-50">
                     <td className="px-4 py-2.5"><ContaLink conta={c} mostrar="nome" /></td>
                     <td className="px-4 py-2.5">
@@ -359,6 +362,7 @@ function TabContas({ secretarias }) {
               </tbody>
             </table>
           )}
+          {filtradas.length > 0 && <Paginacao {...pgContas} total={filtradas.length} rotulo="conta" className="border-t border-ink-100" />}
         </div>
       </div>
 
@@ -725,6 +729,8 @@ tfoot .val{font-size:15px;color:#15803d}
     setTimeout(() => w.print(), 500);
   };
 
+  const pgDias = usePaginacao('tes-receitas-dias', dates.length);
+
   return (
     <div className="space-y-3">
       {/* Filtros */}
@@ -815,7 +821,7 @@ tfoot .val{font-size:15px;color:#15803d}
                 </tr>
               </thead>
               <tbody>
-                {dates.map(date => {
+                {pgDias.fatia(dates).map(date => {
                   const items = grouped[date];
                   const dayTotal = items.reduce((s, r) => s + parseFloat(r.valor), 0);
                   return (
@@ -888,6 +894,7 @@ tfoot .val{font-size:15px;color:#15803d}
               </tfoot>
             </table>
           )}
+          {dates.length > 0 && <Paginacao {...pgDias} total={dates.length} rotulo="dia" className="border-t border-ink-100" />}
         </div>
       </div>
 
@@ -1053,6 +1060,8 @@ function OrdensDespesas() {
     ? (o.did.data_pagamento || o.did.tesouraria_recebido_em)
     : o.pagamento?.data_pagamento;
 
+  const pgOrdens = usePaginacao('tes-ordens', ordens.length);
+
   return (
     <div className="space-y-4">
       {/* Filtros */}
@@ -1169,7 +1178,7 @@ function OrdensDespesas() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-ink-100">
-                {ordens.map(o => (
+                {pgOrdens.fatia(ordens).map(o => (
                   <tr key={o.id} className="hover:bg-ink-50 group">
                     <td className="px-4 py-3">
                       <div className="font-mono text-xs text-ink-800">{o.numero}</div>
@@ -1216,6 +1225,7 @@ function OrdensDespesas() {
             </table>
           </div>
         )}
+        {ordens.length > 0 && <Paginacao {...pgOrdens} total={ordens.length} rotulo="ordem" rotuloPlural="ordens" className="border-t border-ink-100" />}
       </div>
     </div>
   );
@@ -1282,6 +1292,8 @@ function RetencoesARecolher() {
       setSalvando(false);
     }
   };
+
+  const pgRet = usePaginacao('tes-retencoes', visiveis.length);
 
   return (
     <div className="space-y-4">
@@ -1362,7 +1374,7 @@ function RetencoesARecolher() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-ink-100">
-                {visiveis.map(r => (
+                {pgRet.fatia(visiveis).map(r => (
                   <tr key={r.id} onClick={() => podeEditar && alternar(r.id)}
                     className={`text-xs ${podeEditar ? 'cursor-pointer' : ''} ${sel.has(r.id) ? 'bg-info-50 dark:bg-info-900/20' : 'hover:bg-ink-50'}`}>
                     {podeEditar && (
@@ -1393,6 +1405,7 @@ function RetencoesARecolher() {
             </table>
           </div>
         )}
+        {visiveis.length > 0 && <Paginacao {...pgRet} total={visiveis.length} rotulo="retenção" rotuloPlural="retenções" className="border-t border-ink-100" />}
       </div>
     </div>
   );
@@ -2039,6 +2052,9 @@ function TabRelatorios() {
     setTimeout(() => win.print(), 500);
   };
 
+  const pgExtrato = usePaginacao('tes-extrato', (resultado?.lancamentos?.length || 0));
+  const pgSaldo = usePaginacao('tes-saldo-contas', (resultado?.contas?.length || 0));
+
   return (
     <div className="space-y-4">
       {/* Seletor de tipo e filtros */}
@@ -2223,7 +2239,7 @@ function TabRelatorios() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-ink-100">
-                    {resultado.contas.map(c => (
+                    {pgSaldo.fatia(resultado.contas).map(c => (
                       <tr key={c.id} className="hover:bg-ink-50">
                         <td className="px-4 py-3 text-xs">
                           <ContaLink conta={c} mostrar="nome" />
@@ -2254,6 +2270,7 @@ function TabRelatorios() {
                   </tfoot>
                 </table>
               </div>
+              {(resultado?.contas?.length || 0) > 0 && <Paginacao {...pgSaldo} total={(resultado?.contas?.length || 0)} rotulo="conta" className="border-t border-ink-100" />}
               <p className="px-4 py-2 text-[11px] text-ink-500 border-t border-ink-100">
                 Resultado considera o período filtrado. Saldo atual, DIDs a pagar, a recolher e disponível são sempre a situação de hoje.
               </p>
@@ -2340,7 +2357,7 @@ function TabRelatorios() {
                           <td className={`px-4 py-2.5 text-right text-xs font-bold tabular-nums ${resultado.totais.saldo_anterior >= 0 ? 'text-success-700 dark:text-success-400' : 'text-danger-600 dark:text-danger-400'}`}>{fmtVal(resultado.totais.saldo_anterior)}</td>
                         </tr>
                       )}
-                      {resultado.lancamentos.map((l, i) => (
+                      {pgExtrato.fatia(resultado.lancamentos).map((l, i) => (
                         <tr key={i} className={l.tipo === 'R' ? 'bg-success-50/60 dark:bg-success-900/10' : 'hover:bg-ink-50'}>
                           <td className="px-4 py-2.5 text-xs text-ink-600 whitespace-nowrap">{fmtDate(l.data)}</td>
                           <td className="px-4 py-2.5 text-xs text-ink-800">
@@ -2368,6 +2385,7 @@ function TabRelatorios() {
                   </table>
                 </div>
               )}
+              {(resultado?.lancamentos?.length || 0) > 0 && <Paginacao {...pgExtrato} total={(resultado?.lancamentos?.length || 0)} rotulo="lançamento" className="border-t border-ink-100" />}
             </>
           )}
         </div>

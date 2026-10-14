@@ -3,12 +3,14 @@
 import { useEffect, useState } from 'react'
 import { Plus, Edit2, Trash2, Eye, Loader2, ShieldCheck, Scale, X, Check } from 'lucide-react'
 import api, { apiUrl } from '../../services/api'
+import { Paginacao, usePaginacao } from '../../components/ui'
 
 const VAZIO = { titulo: '', descricao: '', data_publicacao: '', regulamenta_assinatura: false, ordem: 0, ativo: true }
 const fmtData = (d) => d ? String(d).slice(0, 10).split('-').reverse().join('/') : '—'
 
 export default function AbaLegislacao({ tenant }) {
   const [lista, setLista] = useState(null)
+  const pgLeis = usePaginacao('superadmin-legislacao', lista?.length || 0)
   const [form, setForm] = useState(null)       // null | { ...campos, id? }
   const [arquivo, setArquivo] = useState(null)
   const [salvando, setSalvando] = useState(false)
@@ -122,7 +124,7 @@ export default function AbaLegislacao({ tenant }) {
         <p className="text-sm text-ink-500 text-center py-8">Nenhuma norma cadastrada para este município.</p>
       ) : (
         <ul className="divide-y divide-ink-100 border border-ink-200 rounded-xl">
-          {lista.map(l => (
+          {pgLeis.fatia(lista).map(l => (
             <li key={l.id} className="p-3 flex items-start gap-3">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-ink-800 dark:text-white">{l.titulo}</p>
@@ -146,6 +148,7 @@ export default function AbaLegislacao({ tenant }) {
           ))}
         </ul>
       )}
+      {lista?.length > 0 && <Paginacao {...pgLeis} total={lista.length} rotulo="norma" />}
     </div>
   )
 }

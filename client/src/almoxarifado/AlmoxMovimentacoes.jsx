@@ -4,6 +4,7 @@ import {
   ArrowDownCircle, ArrowUpCircle
 } from 'lucide-react'
 import api from '../services/api'
+import { Paginacao, usePorPagina } from '../components/ui'
 import LoadingBar from '../components/LoadingBar'
 import AlmoxModal from './AlmoxModal'
 import { fmt, fmtMoney, today } from './almoxConstants'
@@ -157,7 +158,7 @@ function MovimentacoesTab({ tipo }) {
   const [saving,     setSaving]    = useState(false)
   const [erro,       setErro]      = useState('')
   const [filtros,    setFiltros]   = useState({ data_inicio: '', data_fim: '', item_id: '' })
-  const PER_PAGE = 20
+  const [PER_PAGE, setPerPage] = usePorPagina('almox-movimentacoes', 20)
 
   const load = useCallback(async (p = 1) => {
     setLoading(true)
@@ -167,7 +168,7 @@ function MovimentacoesTab({ tipo }) {
       setMovs(data.movimentacoes)
       setTotal(data.total)
     } catch { } finally { setLoading(false) }
-  }, [tipo, filtros])
+  }, [tipo, filtros, PER_PAGE])
 
   const loadItens = useCallback(async () => {
     const { data } = await api.get('/almoxarifado/itens')
@@ -312,28 +313,8 @@ function MovimentacoesTab({ tipo }) {
           </table>
           </div>
 
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-ink-200">
-              <span className="text-sm text-ink-500">Total: {total} registros</span>
-              <div className="flex items-center gap-2">
-                <button
-                  disabled={page === 1}
-                  onClick={() => setPage(p => p - 1)}
-                  className="p-1 rounded-sm hover:bg-ink-100 disabled:opacity-40"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <span className="text-sm">{page} / {totalPages}</span>
-                <button
-                  disabled={page === totalPages}
-                  onClick={() => setPage(p => p + 1)}
-                  className="p-1 rounded-sm hover:bg-ink-100 disabled:opacity-40"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          )}
+          <Paginacao total={total} pagina={page} setPagina={setPage} porPagina={PER_PAGE}
+            setPorPagina={(n) => { setPerPage(n); setPage(1) }} className="border-t border-ink-200" />
         </div>
       )}
 
