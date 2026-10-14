@@ -904,6 +904,57 @@ export default function Secretarias() {
             <div className="px-4 py-2 border-b border-ink-200">
               <SectionTitle icon={Building2} title="Tabela de secretarias" />
             </div>
+            {/* Barra de ações (acima da tabela) */}
+            <div className="px-4 py-2.5 border-b border-ink-200 bg-ink-50 flex items-center justify-end flex-wrap gap-2">
+              <div className="mr-auto flex items-center gap-2 flex-wrap">
+                <BotaoExcluidos entidade="secretarias" rotulo="Secretarias excluídas" onAlterado={fetchSecretarias} />
+                <BotaoExcluidos entidade="setores" rotulo="Setores excluídos" onAlterado={fetchSecretarias} />
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => { setSelectedSecretaria(null); handleCreateSecretaria(); }}
+                  className="btn-primary flex items-center gap-1.5 text-sm px-3 py-1.5"
+                >
+                  <Plus className="h-4 w-4" /> Incluir
+                </button>
+                <button
+                  onClick={() => selectedSecretaria && handleEditSecretaria(selectedSecretaria)}
+                  disabled={!selectedSecretaria}
+                  className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Edit2 className="h-4 w-4" /> Alterar
+                </button>
+                <button
+                  onClick={() => selectedSecretaria && handleDeleteSecretaria(selectedSecretaria)}
+                  disabled={!selectedSecretaria}
+                  className="btn-danger flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Trash2 className="h-4 w-4" /> Excluir
+                </button>
+                <button
+                  onClick={() => { if (selectedSecretaria) { setSelectedSetorInPanel(null); setShowSetoresPanel(true); } }}
+                  disabled={!selectedSecretaria}
+                  className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Briefcase className="h-4 w-4" /> Setores
+                </button>
+                <button
+                  onClick={() => selectedSecretaria && openOrcamentoPanel()}
+                  disabled={!selectedSecretaria}
+                  className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Wallet className="h-4 w-4" /> Orçamento
+                </button>
+                <button
+                  onClick={() => selectedSecretaria && openDotacoesPanel()}
+                  disabled={!selectedSecretaria}
+                  className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Database className="h-4 w-4" /> Dotações
+                </button>
+              </div>
+            </div>
+
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-ink-100 border-b border-ink-200">
@@ -1005,57 +1056,6 @@ export default function Secretarias() {
               page={secPage}
               setPage={setSecPage}
             />
-
-            {/* Toolbar inferior */}
-            <div className="px-4 py-2.5 border-t border-ink-200 bg-ink-50 flex items-center justify-end flex-wrap gap-2">
-              <div className="mr-auto flex items-center gap-2 flex-wrap">
-                <BotaoExcluidos entidade="secretarias" rotulo="Secretarias excluídas" onAlterado={fetchSecretarias} />
-                <BotaoExcluidos entidade="setores" rotulo="Setores excluídos" onAlterado={fetchSecretarias} />
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  onClick={() => { setSelectedSecretaria(null); handleCreateSecretaria(); }}
-                  className="btn-primary flex items-center gap-1.5 text-sm px-3 py-1.5"
-                >
-                  <Plus className="h-4 w-4" /> Incluir
-                </button>
-                <button
-                  onClick={() => selectedSecretaria && handleEditSecretaria(selectedSecretaria)}
-                  disabled={!selectedSecretaria}
-                  className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Edit2 className="h-4 w-4" /> Alterar
-                </button>
-                <button
-                  onClick={() => selectedSecretaria && handleDeleteSecretaria(selectedSecretaria)}
-                  disabled={!selectedSecretaria}
-                  className="btn-danger flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Trash2 className="h-4 w-4" /> Excluir
-                </button>
-                <button
-                  onClick={() => { if (selectedSecretaria) { setSelectedSetorInPanel(null); setShowSetoresPanel(true); } }}
-                  disabled={!selectedSecretaria}
-                  className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Briefcase className="h-4 w-4" /> Setores
-                </button>
-                <button
-                  onClick={() => selectedSecretaria && openOrcamentoPanel()}
-                  disabled={!selectedSecretaria}
-                  className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Wallet className="h-4 w-4" /> Orçamento
-                </button>
-                <button
-                  onClick={() => selectedSecretaria && openDotacoesPanel()}
-                  disabled={!selectedSecretaria}
-                  className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Database className="h-4 w-4" /> Dotações
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}
@@ -1081,6 +1081,40 @@ export default function Secretarias() {
             <div className="px-4 py-2 border-b border-ink-200">
               <SectionTitle icon={UserCog} title="Tabela de agentes" />
             </div>
+            {/* Barra de ações (acima da tabela) */}
+            <div className="px-4 py-2.5 border-b border-ink-200 bg-ink-50 flex items-center justify-end flex-wrap gap-2">
+              <div className="mr-auto">
+                <BotaoExcluidos entidade="agentes" rotulo="Agentes excluídos" onAlterado={fetchSecretarias} />
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setSelectedAgente(null); openModalAgente(); }}
+                  className="btn-primary flex items-center gap-1.5 text-sm px-3 py-1.5"
+                >
+                  <Plus className="h-4 w-4" /> Incluir
+                </button>
+                <button
+                  onClick={() => selectedAgente && openModalAgente(selectedAgente)}
+                  disabled={!selectedAgente}
+                  className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Edit2 className="h-4 w-4" /> Alterar
+                </button>
+                <button
+                  onClick={() => {
+                    if (selectedAgente) {
+                      setDeleteAgenteTarget(selectedAgente);
+                      setShowDeleteAgenteModal(true);
+                    }
+                  }}
+                  disabled={!selectedAgente}
+                  className="btn-danger flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Trash2 className="h-4 w-4" /> Excluir
+                </button>
+              </div>
+            </div>
+
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-ink-100 border-b border-ink-200">
@@ -1178,40 +1212,6 @@ export default function Secretarias() {
               page={agPage}
               setPage={setAgPage}
             />
-
-            {/* Toolbar inferior */}
-            <div className="px-4 py-2.5 border-t border-ink-200 bg-ink-50 flex items-center justify-end flex-wrap gap-2">
-              <div className="mr-auto">
-                <BotaoExcluidos entidade="agentes" rotulo="Agentes excluídos" onAlterado={fetchSecretarias} />
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => { setSelectedAgente(null); openModalAgente(); }}
-                  className="btn-primary flex items-center gap-1.5 text-sm px-3 py-1.5"
-                >
-                  <Plus className="h-4 w-4" /> Incluir
-                </button>
-                <button
-                  onClick={() => selectedAgente && openModalAgente(selectedAgente)}
-                  disabled={!selectedAgente}
-                  className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Edit2 className="h-4 w-4" /> Alterar
-                </button>
-                <button
-                  onClick={() => {
-                    if (selectedAgente) {
-                      setDeleteAgenteTarget(selectedAgente);
-                      setShowDeleteAgenteModal(true);
-                    }
-                  }}
-                  disabled={!selectedAgente}
-                  className="btn-danger flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Trash2 className="h-4 w-4" /> Excluir
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}
@@ -1279,6 +1279,32 @@ export default function Secretarias() {
             <div className="px-4 py-2 border-b border-ink-200">
               <SectionTitle icon={UserCheck} title="Tabela de Responsável" />
             </div>
+            {/* Barra de ações (acima da tabela) */}
+            <div className="px-4 py-2.5 border-b border-ink-200 bg-ink-50 flex items-center justify-end">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setSelectedResp(null); openModalResp(); }}
+                  className="btn-primary flex items-center gap-1.5 text-sm px-3 py-1.5"
+                >
+                  <Plus className="h-4 w-4" /> Incluir
+                </button>
+                <button
+                  onClick={() => selectedResp && openModalResp(selectedResp)}
+                  disabled={!selectedResp}
+                  className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Edit2 className="h-4 w-4" /> Alterar
+                </button>
+                <button
+                  onClick={() => selectedResp && setConfirmarExcluirResp(selectedResp)}
+                  disabled={!selectedResp}
+                  className="btn-danger flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Trash2 className="h-4 w-4" /> Excluir
+                </button>
+              </div>
+            </div>
+
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-ink-100 border-b border-ink-200">
@@ -1391,32 +1417,6 @@ export default function Secretarias() {
               page={respPage}
               setPage={setRespPage}
             />
-
-            {/* Toolbar inferior */}
-            <div className="px-4 py-2.5 border-t border-ink-200 bg-ink-50 flex items-center justify-end">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => { setSelectedResp(null); openModalResp(); }}
-                  className="btn-primary flex items-center gap-1.5 text-sm px-3 py-1.5"
-                >
-                  <Plus className="h-4 w-4" /> Incluir
-                </button>
-                <button
-                  onClick={() => selectedResp && openModalResp(selectedResp)}
-                  disabled={!selectedResp}
-                  className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Edit2 className="h-4 w-4" /> Alterar
-                </button>
-                <button
-                  onClick={() => selectedResp && setConfirmarExcluirResp(selectedResp)}
-                  disabled={!selectedResp}
-                  className="btn-danger flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Trash2 className="h-4 w-4" /> Excluir
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}
@@ -1963,6 +1963,35 @@ export default function Secretarias() {
             </div>
 
             {/* Tabela */}
+            {/* Barra de ações (acima da tabela) */}
+            <div className="px-4 py-2.5 border-b border-ink-200 bg-ink-50 flex items-center justify-between shrink-0">
+              <span className="text-xs text-ink-500">
+                {(selectedSecretaria.setores || []).length} setor(es)
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleCreateSetor(selectedSecretaria.id)}
+                  className="btn-primary flex items-center gap-1.5 text-sm px-3 py-1.5"
+                >
+                  <Plus className="h-4 w-4" /> Incluir
+                </button>
+                <button
+                  onClick={() => selectedSetorInPanel && handleEditSetor(selectedSetorInPanel, selectedSecretaria.id)}
+                  disabled={!selectedSetorInPanel}
+                  className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Edit2 className="h-4 w-4" /> Alterar
+                </button>
+                <button
+                  onClick={() => selectedSetorInPanel && handleDeleteSetor(selectedSetorInPanel, selectedSecretaria)}
+                  disabled={!selectedSetorInPanel}
+                  className="btn-danger flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Trash2 className="h-4 w-4" /> Excluir
+                </button>
+              </div>
+            </div>
+
             <div className="overflow-y-auto flex-1">
               <table className="w-full text-sm">
                 <thead className="bg-ink-100 border-b border-ink-200">
@@ -2004,35 +2033,6 @@ export default function Secretarias() {
                   )}
                 </tbody>
               </table>
-            </div>
-
-            {/* Toolbar inferior */}
-            <div className="px-4 py-2.5 border-t border-ink-200 bg-ink-50 flex items-center justify-between shrink-0">
-              <span className="text-xs text-ink-500">
-                {(selectedSecretaria.setores || []).length} setor(es)
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleCreateSetor(selectedSecretaria.id)}
-                  className="btn-primary flex items-center gap-1.5 text-sm px-3 py-1.5"
-                >
-                  <Plus className="h-4 w-4" /> Incluir
-                </button>
-                <button
-                  onClick={() => selectedSetorInPanel && handleEditSetor(selectedSetorInPanel, selectedSecretaria.id)}
-                  disabled={!selectedSetorInPanel}
-                  className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Edit2 className="h-4 w-4" /> Alterar
-                </button>
-                <button
-                  onClick={() => selectedSetorInPanel && handleDeleteSetor(selectedSetorInPanel, selectedSecretaria)}
-                  disabled={!selectedSetorInPanel}
-                  className="btn-danger flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Trash2 className="h-4 w-4" /> Excluir
-                </button>
-              </div>
             </div>
           </div>
         </div>

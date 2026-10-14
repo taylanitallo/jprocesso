@@ -1166,6 +1166,55 @@ function TabItens() {
         </div>
       </div>
 
+      {/* ── Barra de Ações ── */}
+      <div className="flex flex-wrap items-center gap-2 pb-2">
+        <button onClick={() => setModal('novo')}
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
+          <Plus className="w-4 h-4" /> Incluir
+        </button>
+        <button onClick={abrirEditar} disabled={!podeAgir}
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+          <Edit3 className="w-4 h-4" /> Alterar
+        </button>
+        <button onClick={abrirExcluir} disabled={!podeAgir}
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-danger-600 hover:bg-danger-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+          <Trash2 className="w-4 h-4" /> Excluir
+        </button>
+        <button onClick={abrirVisualizar} disabled={!podeAgir}
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-ink-600 hover:bg-ink-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+          <Eye className="w-4 h-4" /> Visualizar
+        </button>
+        <BotaoExcluidos entidade="itens" onAlterado={recarregarItens} />
+
+        {isAdmin && (
+          <>
+            <button onClick={() => setModal('importar-url')}
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
+              <Download className="w-4 h-4" /> Importar Itens
+            </button>
+            <button onClick={() => setModal('excluir-inativos')}
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-danger-700 hover:bg-danger-800 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
+              <XOctagon className="w-4 h-4" /> Excluir Inativos
+            </button>
+            <button onClick={() => setModal('excluir-sem-vinculo')}
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
+              <XOctagon className="w-4 h-4" /> Excluir Sem Vínculo
+            </button>
+          </>
+        )}
+
+        <div className="flex-1" />
+
+        <button onClick={abrirRelatorio} disabled={!podeAgir}
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+          <BarChart2 className="w-4 h-4" /> Relatório do item
+        </button>
+        <button onClick={abrirListagem} disabled={!podeAgir}
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+          <List className="w-4 h-4" /> Listagem
+        </button>
+      </div>
+
       {/* ── Tabela ── */}
       {carregando && (
         <div className="card p-5 space-y-3">
@@ -1324,55 +1373,6 @@ function TabItens() {
           </div>
         </div>
       )}
-
-      {/* ── Barra de Ações ── */}
-      <div className="flex flex-wrap items-center gap-2 pb-2">
-        <button onClick={() => setModal('novo')}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
-          <Plus className="w-4 h-4" /> Incluir
-        </button>
-        <button onClick={abrirEditar} disabled={!podeAgir}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-          <Edit3 className="w-4 h-4" /> Alterar
-        </button>
-        <button onClick={abrirExcluir} disabled={!podeAgir}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-danger-600 hover:bg-danger-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-          <Trash2 className="w-4 h-4" /> Excluir
-        </button>
-        <button onClick={abrirVisualizar} disabled={!podeAgir}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-ink-600 hover:bg-ink-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-          <Eye className="w-4 h-4" /> Visualizar
-        </button>
-        <BotaoExcluidos entidade="itens" onAlterado={recarregarItens} />
-
-        {isAdmin && (
-          <>
-            <button onClick={() => setModal('importar-url')}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
-              <Download className="w-4 h-4" /> Importar Itens
-            </button>
-            <button onClick={() => setModal('excluir-inativos')}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-danger-700 hover:bg-danger-800 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
-              <XOctagon className="w-4 h-4" /> Excluir Inativos
-            </button>
-            <button onClick={() => setModal('excluir-sem-vinculo')}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
-              <XOctagon className="w-4 h-4" /> Excluir Sem Vínculo
-            </button>
-          </>
-        )}
-
-        <div className="flex-1" />
-
-        <button onClick={abrirRelatorio} disabled={!podeAgir}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-          <BarChart2 className="w-4 h-4" /> Relatório do item
-        </button>
-        <button onClick={abrirListagem} disabled={!podeAgir}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-          <List className="w-4 h-4" /> Listagem
-        </button>
-      </div>
 
       {/* ── Modais ── */}
       {modal === 'novo' && (
