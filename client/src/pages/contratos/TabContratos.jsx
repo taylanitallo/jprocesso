@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import api from '../../services/api'
 import BotaoExcluidos from '../../components/lixeira/BotaoExcluidos'
+import { Paginacao, usePorPagina } from '../../components/ui'
 import { retanguloEmCss } from '../../utils/escalaTela'
 import {
   MODALIDADES, TIPOS_OBJETO,
@@ -1353,7 +1354,7 @@ function TabContratos() {
   const [modal, setModal]                   = useState(null)
   const [ordenar, setOrdenar]               = useState({ col: 'numero_contrato', asc: true })
   const [paginaCtr, setPaginaCtr]           = useState(1)
-  const PER_PAGE_CTR = 15
+  const [PER_PAGE_CTR, setPorPaginaCtr] = usePorPagina('contratos', 15)
 
   const setF = (k, v) => setFiltros(p => ({ ...p, [k]: v }))
   const pesquisar  = () => { setFiltrosAtivos({ ...filtros }); setPaginaCtr(1) }
@@ -1601,41 +1602,8 @@ function TabContratos() {
       </div>
 
       {/* ── Paginação ── */}
-      {totalPagsCtr > 1 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 mt-1">
-          <p className="text-xs text-ink-500">
-            Mostrando{' '}
-            <span className="font-semibold text-ink-700">
-              {(paginaCtr - 1) * PER_PAGE_CTR + 1}–{Math.min(paginaCtr * PER_PAGE_CTR, contratosFiltrados.length)}
-            </span>{' '}de{' '}
-            <span className="font-semibold text-ink-700">{contratosFiltrados.length}</span>{' '}contratos
-          </p>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setPaginaCtr(p => Math.max(1, p - 1))} disabled={paginaCtr === 1}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-ink-200 text-ink-600 hover:bg-ink-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-              ← Anterior
-            </button>
-            {(() => {
-              const pages = []
-              for (let i = 1; i <= totalPagsCtr; i++) {
-                if (i === 1 || i === totalPagsCtr || (i >= paginaCtr - 1 && i <= paginaCtr + 1)) pages.push(i)
-                else if (pages[pages.length - 1] !== '...') pages.push('...')
-              }
-              return pages.map((p, idx) => p === '...'
-                ? <span key={`dots-${idx}`} className="px-1.5 text-xs text-ink-400">…</span>
-                : <button key={p} onClick={() => setPaginaCtr(p)}
-                    className={`min-w-[32px] px-2 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                      paginaCtr === p ? 'bg-brand-600 border-brand-600 text-white shadow-sm' : 'border-ink-200 text-ink-600 hover:bg-ink-100'
-                    }`}>{p}</button>
-              )
-            })()}
-            <button onClick={() => setPaginaCtr(p => Math.min(totalPagsCtr, p + 1))} disabled={paginaCtr === totalPagsCtr}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-ink-200 text-ink-600 hover:bg-ink-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-              Próximo →
-            </button>
-          </div>
-        </div>
-      )}
+      <Paginacao total={contratosFiltrados.length} pagina={paginaCtr} setPagina={setPaginaCtr}
+        porPagina={PER_PAGE_CTR} setPorPagina={(n) => { setPorPaginaCtr(n); setPaginaCtr(1) }} rotulo="contrato" />
 
       {/* ── Modais ── */}
       {modal === 'novo' && (

@@ -89,7 +89,7 @@ export default function Patrimonio() {
           />
         )
       case 'inventario':
-        return <PatInventario userRole={userRole} />
+        return <PatInventario userRole={user?.tipo} />
       case 'grupos':
         return <PatGrupos />
       default:

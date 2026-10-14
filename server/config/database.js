@@ -1023,6 +1023,8 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
     run(`ALTER TABLE tes_despesas         ADD COLUMN IF NOT EXISTS deleted_at  TIMESTAMPTZ`),
     run(`ALTER TABLE contas_bancarias     ADD COLUMN IF NOT EXISTS deleted_at  TIMESTAMPTZ`),
     run(`ALTER TABLE agentes              ADD COLUMN IF NOT EXISTS excluido_em TIMESTAMPTZ`),
+    // Cadastro de agentes: nome reduzido e nascimento (o formulário já pedia, não eram gravados)
+    run(`ALTER TABLE agentes ADD COLUMN IF NOT EXISTS nome_reduzido VARCHAR(120), ADD COLUMN IF NOT EXISTS nascimento DATE`),
     run(`ALTER TABLE almoxarifado_itens   ADD COLUMN IF NOT EXISTS excluido_em TIMESTAMPTZ`),
     run(`ALTER TABLE almox_cotas          ADD COLUMN IF NOT EXISTS excluido_em TIMESTAMPTZ`),
   ]);

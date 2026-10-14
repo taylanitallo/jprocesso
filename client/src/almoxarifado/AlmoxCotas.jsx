@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Plus, Trash2, RefreshCw, BarChart2 } from 'lucide-react'
 import api from '../services/api'
+import { Paginacao, usePaginacao } from '../components/ui'
 import BotaoExcluidos from '../components/lixeira/BotaoExcluidos'
 import LoadingBar from '../components/LoadingBar'
 import AlmoxModal from './AlmoxModal'
@@ -171,6 +172,8 @@ export default function AlmoxCotas() {
     } catch { }
   }
 
+  const pgCotas = usePaginacao('almox-cotas', cotas.length);
+
   return (
     <div>
       {/* Header */}
@@ -225,7 +228,7 @@ export default function AlmoxCotas() {
               </tr>
             </thead>
             <tbody className="divide-y divide-ink-100">
-              {cotas.map(c => {
+              {pgCotas.fatia(cotas).map(c => {
                 const consumida = parseFloat(c.quantidade_consumida || 0)
                 const cota      = parseFloat(c.quantidade_cota)
                 const saldo     = cota - consumida
@@ -268,6 +271,7 @@ export default function AlmoxCotas() {
           </table>
         </div>
       )}
+      {cotas.length > 0 && <Paginacao {...pgCotas} total={cotas.length} rotulo="cota" className="border-t border-ink-100" />}
 
       {novoModal && (
         <NovaCotaModal

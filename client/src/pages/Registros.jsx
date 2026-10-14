@@ -3,6 +3,7 @@ import { Search, Filter, X, RefreshCw, Download, ChevronLeft, ChevronRight, Cloc
 import api from '../services/api'
 import PageHeader from '../components/ui/PageHeader'
 import LoadingBar from '../components/LoadingBar'
+import { Paginacao, usePorPagina } from '../components/ui'
 
 // Mapa de cores e ícones por módulo
 const moduloConfig = {
@@ -85,7 +86,7 @@ export default function Registros() {
   })
   const [filtrosAbertos, setFiltrosAbertos] = useState(false)
 
-  const limitesPorPagina = 50
+  const [limitesPorPagina, setLimitesPorPagina] = usePorPagina('registros', 50)
 
   // Carrega dados auxiliares para os filtros
   useEffect(() => {
@@ -129,9 +130,9 @@ export default function Registros() {
     } finally {
       setIsLoading(false)
     }
-  }, [filtros])
+  }, [filtros, limitesPorPagina])
 
-  useEffect(() => { buscarLogs(1) }, []) // eslint-disable-line
+  useEffect(() => { buscarLogs(1) }, [limitesPorPagina]) // eslint-disable-line
 
   const handleFiltrar = (e) => {
     e.preventDefault()
@@ -487,50 +488,8 @@ export default function Registros() {
             </div>
 
             {/* Paginação */}
-            {pages > 1 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-ink-100">
-                <p className="text-sm text-ink-500">
-                  Página {page} de {pages} &nbsp;·&nbsp; {total.toLocaleString('pt-BR')} registros
-                </p>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => buscarLogs(page - 1)}
-                    disabled={page <= 1}
-                    className="p-1 rounded-sm hover:bg-ink-100 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <ChevronLeft className="h-5 w-5" />
-                  </button>
-                  {Array.from({ length: Math.min(pages, 7) }, (_, i) => {
-                    let pg = i + 1
-                    if (pages > 7) {
-                      if (page <= 4) pg = i + 1
-                      else if (page >= pages - 3) pg = pages - 6 + i
-                      else pg = page - 3 + i
-                    }
-                    return (
-                      <button
-                        key={pg}
-                        onClick={() => buscarLogs(pg)}
-                        className={`w-8 h-8 rounded-sm text-sm font-medium transition-colors ${
-                          pg === page
-                            ? 'bg-teal-600 text-white'
-                            : 'hover:bg-ink-100 text-ink-600'
-                        }`}
-                      >
-                        {pg}
-                      </button>
-                    )
-                  })}
-                  <button
-                    onClick={() => buscarLogs(page + 1)}
-                    disabled={page >= pages}
-                    className="p-1 rounded-sm hover:bg-ink-100 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <ChevronRight className="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
-            )}
+            <Paginacao total={total} pagina={page} setPagina={buscarLogs} porPagina={limitesPorPagina}
+              setPorPagina={setLimitesPorPagina} className="border-t border-ink-100" />
           </>
         )}
       </div>

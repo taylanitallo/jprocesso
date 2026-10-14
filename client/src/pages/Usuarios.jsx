@@ -10,6 +10,7 @@ import EmptyState from '../components/ui/EmptyState';
 import FilterBar from '../components/ui/FilterBar';
 import ActionBar from '../components/ui/ActionBar';
 import BotaoExcluidos from '../components/lixeira/BotaoExcluidos';
+import { Paginacao, usePorPagina } from '../components/ui';
 import {
   Smartphone,
   Users,
@@ -53,7 +54,7 @@ export default function Usuarios() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState('todos');
   const [pageUsuarios, setPageUsuarios] = useState(1);
-  const PER_PAGE_USUARIOS = 20;
+  const [PER_PAGE_USUARIOS, setPorPaginaUsuarios] = usePorPagina('usuarios', 20);
   const [showPassword, setShowPassword] = useState(false);
   const [showEditPassword, setShowEditPassword] = useState(false);
   const [editData, setEditData] = useState(null);
@@ -574,36 +575,9 @@ export default function Usuarios() {
         {filteredUsuarios.length === 0 && (
           <EmptyState icon={Users} title="Nenhum usuário encontrado" description="Tente ajustar os filtros de busca" />
         )}
-        {totalPagesUsuarios > 1 && (
-          <div className="px-6 py-3 border-t border-ink-200 flex items-center justify-between bg-ink-50">
-            <span className="text-xs text-ink-500">
-              Página {pageUsuarios} de {totalPagesUsuarios} · {filteredUsuarios.length} usuário(s)
-            </span>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setPageUsuarios(1)}
-                disabled={pageUsuarios === 1}
-                className="px-2 py-1 text-xs rounded-sm border border-ink-300 disabled:opacity-40 hover:bg-ink-100 transition-colors"
-              >«</button>
-              <button
-                onClick={() => setPageUsuarios(p => Math.max(1, p - 1))}
-                disabled={pageUsuarios === 1}
-                className="px-2 py-1 text-xs rounded-sm border border-ink-300 disabled:opacity-40 hover:bg-ink-100 transition-colors"
-              >‹</button>
-              <span className="px-3 py-1 text-xs font-semibold bg-brand-600 text-white rounded-sm">{pageUsuarios}</span>
-              <button
-                onClick={() => setPageUsuarios(p => Math.min(totalPagesUsuarios, p + 1))}
-                disabled={pageUsuarios === totalPagesUsuarios}
-                className="px-2 py-1 text-xs rounded-sm border border-ink-300 disabled:opacity-40 hover:bg-ink-100 transition-colors"
-              >›</button>
-              <button
-                onClick={() => setPageUsuarios(totalPagesUsuarios)}
-                disabled={pageUsuarios === totalPagesUsuarios}
-                className="px-2 py-1 text-xs rounded-sm border border-ink-300 disabled:opacity-40 hover:bg-ink-100 transition-colors"
-              >»</button>
-            </div>
-          </div>
-        )}
+        <Paginacao total={filteredUsuarios.length} pagina={pageUsuarios} setPagina={setPageUsuarios}
+          porPagina={PER_PAGE_USUARIOS} setPorPagina={(n) => { setPorPaginaUsuarios(n); setPageUsuarios(1); }}
+          rotulo="usuário" className="border-t border-ink-200 bg-ink-50 px-6" />
       </div>
 
       {/* Modal Criar Usuário */}

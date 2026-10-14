@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import api from '../../services/api'
 import BotaoExcluidos from '../../components/lixeira/BotaoExcluidos'
+import { Paginacao, usePorPagina } from '../../components/ui'
 import { useAuth } from '../../context/AuthContext'
 import { gerarDnaItemPDF } from '../../utils/gerarDocumentoPDF'
 import {
@@ -974,7 +975,7 @@ function TabItens() {
   const [modal, setModal]               = useState(null) // 'novo'|'editar'|'visualizar'|'excluir'|'relatorio'|'listagem'|'importar-url'|'excluir-inativos'
   const [ordenar, setOrdenar]           = useState({ col: 'descricao', asc: true })
   const [pagina, setPagina]             = useState(1)
-  const PER_PAGE_ITEM = 20
+  const [PER_PAGE_ITEM, setPorPaginaItem] = usePorPagina('contratos-itens', 20)
   const cargaTimerRef = useRef(null)
 
   const recarregarItens = () => {
@@ -1321,58 +1322,8 @@ function TabItens() {
       </div>
 
       {/* ── Paginação ── */}
-      {totalPagsItem > 1 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 mt-1">
-          <p className="text-xs text-ink-500">
-            Mostrando{' '}
-            <span className="font-semibold text-ink-700">
-              {(pagina - 1) * PER_PAGE_ITEM + 1}–{Math.min(pagina * PER_PAGE_ITEM, itensFiltrados.length)}
-            </span>{' '}
-            de{' '}
-            <span className="font-semibold text-ink-700">
-              {itensFiltrados.length}
-            </span>{' '}
-            itens
-          </p>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setPagina(p => Math.max(1, p - 1))}
-              disabled={pagina === 1}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-ink-200 text-ink-600 hover:bg-ink-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >← Anterior</button>
-            {(() => {
-              const pages = []
-              for (let i = 1; i <= totalPagsItem; i++) {
-                if (i === 1 || i === totalPagsItem || (i >= pagina - 1 && i <= pagina + 1)) {
-                  pages.push(i)
-                } else if (pages[pages.length - 1] !== '...') {
-                  pages.push('...')
-                }
-              }
-              return pages.map((p, idx) =>
-                p === '...' ? (
-                  <span key={`dots-${idx}`} className="px-1.5 text-xs text-ink-400">…</span>
-                ) : (
-                  <button
-                    key={p}
-                    onClick={() => setPagina(p)}
-                    className={`min-w-[32px] px-2 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                      pagina === p
-                        ? 'bg-brand-600 border-brand-600 text-white shadow-sm'
-                        : 'border-ink-200 text-ink-600 hover:bg-ink-100'
-                    }`}
-                  >{p}</button>
-                )
-              )
-            })()}
-            <button
-              onClick={() => setPagina(p => Math.min(totalPagsItem, p + 1))}
-              disabled={pagina === totalPagsItem}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-ink-200 text-ink-600 hover:bg-ink-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >Próximo →</button>
-          </div>
-        </div>
-      )}
+      <Paginacao total={itensFiltrados.length} pagina={pagina} setPagina={setPagina}
+        porPagina={PER_PAGE_ITEM} setPorPagina={(n) => { setPorPaginaItem(n); setPagina(1) }} rotulo="item" rotuloPlural="itens" />
 
       {/* ── Modais ── */}
       {modal === 'novo' && (

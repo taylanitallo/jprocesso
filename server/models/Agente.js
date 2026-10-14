@@ -5,6 +5,8 @@ module.exports = (sequelize) => {
   return sequelize.define('Agente', {
     id:            { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
     nome:          { type: DataTypes.STRING(500), allowNull: false },
+    nome_reduzido: { type: DataTypes.STRING(120) },
+    nascimento:    { type: DataTypes.DATEONLY },
     cargo:         { type: DataTypes.STRING(300) },
     matricula:     { type: DataTypes.STRING(50) },
     cpf:           { type: DataTypes.STRING(14) },

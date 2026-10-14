@@ -17,6 +17,7 @@ import {
 } from 'recharts'
 import { PageHeader, SectionTitle, ActionBar } from '../components/ui'
 import LoadingBar from '../components/LoadingBar'
+import { Paginacao, usePorPagina } from '../components/ui'
 import { gerarPainelPDF } from './financeiro/gerarPainelPDF'
 import { gerarDidPDF } from './did/gerarDidPDF'
 import { useAuth } from '../context/AuthContext'
@@ -735,10 +736,11 @@ export default function Financeiro() {
   const [relDidsBusca, setRelDidsBusca] = useState('')
   const [relDidsSort, setRelDidsSort] = useState('data')
   const [relDidsSortDir, setRelDidsSortDir] = useState('desc')
-  const REL_DIDS_PER_PAGE = 10
+  const [REL_DIDS_PER_PAGE, setRelDidsPorPagina] = usePorPagina('financeiro-relatorio', 10)
 
   const anos = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i)
-  const LIMIT = 15
+  const [LIMIT, setLimitProcs] = usePorPagina('financeiro-processos', 15)
+  const [porPagPainelDids, setPorPagPainelDids] = usePorPagina('financeiro-painel-dids', 20)
 
   // ── Auth
   const { tenant } = useAuth()
@@ -790,7 +792,7 @@ export default function Financeiro() {
   const loadPainelDids = useCallback(async () => {
     setPainelDidsLoading(true)
     try {
-      const p = new URLSearchParams({ page: painelDidsPage, limit: 20, ano: painelAno })
+      const p = new URLSearchParams({ page: painelDidsPage, limit: porPagPainelDids, ano: painelAno })
       if (painelFiltros.data_inicio)         p.set('data_inicio',  painelFiltros.data_inicio)
       if (painelFiltros.data_fim)            p.set('data_fim',     painelFiltros.data_fim)
       if (painelFiltros.status.length)      p.set('status_pago',  painelFiltros.status.join(','))
@@ -804,7 +806,7 @@ export default function Financeiro() {
       setPainelDidsTotal(data.total || 0)
     } catch { /* silenciar */ }
     setPainelDidsLoading(false)
-  }, [painelAno, painelFiltros, painelDidsPage])
+  }, [painelAno, painelFiltros, painelDidsPage, porPagPainelDids])
 
   useEffect(() => { if (tab === 'painel') loadPainelDids() }, [tab, loadPainelDids])
 
@@ -821,7 +823,7 @@ export default function Financeiro() {
       setProcsTotal(data.total || 0)
     } catch { /* silenciar */ }
     setProcsLoading(false)
-  }, [procsPage, procsFiltros])
+  }, [procsPage, procsFiltros, LIMIT])
 
   useEffect(() => { if (tab === 'processos') loadProcs() }, [tab, loadProcs])
 
@@ -1301,24 +1303,8 @@ export default function Financeiro() {
                     </table>
                   </div>
                 )}
-                {painelDidsTotal > 20 && (
-                  <div className="flex items-center justify-between px-5 py-3 border-t border-ink-100">
-                    <span className="text-xs text-ink-500">{painelDidsTotal} registros</span>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        className="px-3 py-1.5 text-xs rounded-lg border border-ink-200 bg-surface text-ink-600 hover:bg-ink-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                        disabled={painelDidsPage === 1} onClick={() => setPainelDidsPage(p => p - 1)}
-                      >← Anterior</button>
-                      <span className="px-3 py-1.5 text-xs text-ink-500">
-                        {painelDidsPage} / {Math.ceil(painelDidsTotal / 20)}
-                      </span>
-                      <button
-                        className="px-3 py-1.5 text-xs rounded-lg border border-ink-200 bg-surface text-ink-600 hover:bg-ink-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                        disabled={painelDidsPage * 20 >= painelDidsTotal} onClick={() => setPainelDidsPage(p => p + 1)}
-                      >Próxima →</button>
-                    </div>
-                  </div>
-                )}
+                <Paginacao total={painelDidsTotal} pagina={painelDidsPage} setPagina={setPainelDidsPage} porPagina={porPagPainelDids}
+                  setPorPagina={(n) => { setPorPagPainelDids(n); setPainelDidsPage(1) }} className="border-t border-ink-100 px-5" />
               </div>
 
               {/* ── Distribuição por Tipo + Status de Pagamento ───────── */}
@@ -1748,22 +1734,8 @@ export default function Financeiro() {
                 </table>
               )}
             </div>
-            {procsTotal > LIMIT && (
-              <div className="flex items-center justify-between px-5 py-3 border-t border-ink-100">
-                <span className="text-xs text-ink-500">{procsTotal} processos</span>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    className="px-3 py-1.5 text-xs rounded-lg border border-ink-200 bg-surface text-ink-600 hover:bg-ink-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    disabled={procsPage === 1} onClick={() => setProcsPage(p => p - 1)}
-                  >← Anterior</button>
-                  <span className="px-3 py-1.5 text-xs text-ink-500">Pág. {procsPage}</span>
-                  <button
-                    className="px-3 py-1.5 text-xs rounded-lg border border-ink-200 bg-surface text-ink-600 hover:bg-ink-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    disabled={procsPage * LIMIT >= procsTotal} onClick={() => setProcsPage(p => p + 1)}
-                  >Próxima →</button>
-                </div>
-              </div>
-            )}
+            <Paginacao total={procsTotal} pagina={procsPage} setPagina={setProcsPage} porPagina={LIMIT}
+              setPorPagina={(n) => { setLimitProcs(n); setProcsPage(1) }} rotulo="processo" className="border-t border-ink-100 px-5" />
           </div>
         </div>
       )}
@@ -2378,43 +2350,8 @@ export default function Financeiro() {
                     </div>
 
                     {/* Paginação */}
-                    {relDidsPageCount > 1 && (
-                      <div className="flex items-center justify-between px-5 py-3 border-t border-ink-100">
-                        <span className="text-xs text-ink-500">
-                          {(relDidsPage - 1) * REL_DIDS_PER_PAGE + 1}–{Math.min(relDidsPage * REL_DIDS_PER_PAGE, relDidsOrdenados.length)} de {relDidsOrdenados.length}
-                        </span>
-                        <div className="flex items-center gap-1">
-                          <button
-                            className="px-3 py-1.5 text-xs rounded-lg border border-ink-200 bg-surface text-ink-600 hover:bg-ink-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                            disabled={relDidsPage === 1}
-                            onClick={() => setRelDidsPage(p => p - 1)}
-                          >← Anterior</button>
-                          {Array.from({ length: Math.min(relDidsPageCount, 7) }, (_, i) => {
-                            let pg
-                            if (relDidsPageCount <= 7) pg = i + 1
-                            else if (relDidsPage <= 4) pg = i + 1
-                            else if (relDidsPage >= relDidsPageCount - 3) pg = relDidsPageCount - 6 + i
-                            else pg = relDidsPage - 3 + i
-                            return (
-                              <button
-                                key={pg}
-                                onClick={() => setRelDidsPage(pg)}
-                                className={`w-8 py-1.5 text-xs rounded-lg border transition-colors ${
-                                  pg === relDidsPage
-                                    ? 'bg-info-500 border-brand-500 text-white font-semibold'
-                                    : 'border-ink-200 bg-surface text-ink-600 hover:bg-ink-50'
-                                }`}
-                              >{pg}</button>
-                            )
-                          })}
-                          <button
-                            className="px-3 py-1.5 text-xs rounded-lg border border-ink-200 bg-surface text-ink-600 hover:bg-ink-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                            disabled={relDidsPage === relDidsPageCount}
-                            onClick={() => setRelDidsPage(p => p + 1)}
-                          >Próxima →</button>
-                        </div>
-                      </div>
-                    )}
+                    <Paginacao total={relDidsOrdenados.length} pagina={relDidsPage} setPagina={setRelDidsPage} porPagina={REL_DIDS_PER_PAGE}
+                      setPorPagina={(n) => { setRelDidsPorPagina(n); setRelDidsPage(1) }} rotulo="DID" className="border-t border-ink-100 px-5" />
                   </>
                 )}
               </div>

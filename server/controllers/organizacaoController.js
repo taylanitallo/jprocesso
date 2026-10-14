@@ -327,70 +327,79 @@ const updateEntidade = async (req, res) => {
 };
 
 // â”€â”€ Listar agentes (gestores) ativos do tenant â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Campos do cadastro de agente (o que o formulário edita)
+const CAMPOS_AGENTE = ['nome', 'nome_reduzido', 'cpf', 'nascimento', 'telefone', 'email', 'matricula', 'cargo', 'secretaria_id', 'ativo'];
+const valorAgente = (campo, v) => {
+  if (campo === 'ativo') return v !== false;
+  if (v === undefined || v === null) return null;
+  const t = String(v).trim();
+  return t === '' ? null : t;
+};
+const COLUNAS_AGENTE = `a.id, a.nome, a.nome_reduzido, a.cpf, to_char(a.nascimento, 'YYYY-MM-DD') AS nascimento,
+       a.telefone, a.email, a.matricula, a.cargo, a.secretaria_id, a.ativo`;
+
 const listAgentes = async (req, res) => {
   try {
     const schema = req.tenant.schema
     const [rows] = await req.tenantDb.query(
-      `SELECT a.id, a.nome, a.cargo, a.matricula, a.cpf, a.email, a.telefone, a.ativo,
-              s.nome AS secretaria_nome, s.sigla AS secretaria_sigla
+      `SELECT ${COLUNAS_AGENTE}, s.nome AS secretaria_nome, s.sigla AS secretaria_sigla
        FROM "${schema}".agentes a
        LEFT JOIN "${schema}".secretarias s ON s.id = a.secretaria_id
-       WHERE a.ativo = true
+       WHERE a.ativo = true AND a.excluido_em IS NULL
        ORDER BY a.nome`
     )
     res.json({ agentes: rows })
   } catch (error) {
-    // tabela ainda nÃ£o existe ou erro nÃ£o-crÃ­tico
+    // tabela ainda não existe ou erro não-crítico
     res.json({ agentes: [] })
   }
 }
 
-// â”€â”€ Criar agente â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const buscarAgente = async (req, id) => {
+  const [rows] = await req.tenantDb.query(
+    `SELECT ${COLUNAS_AGENTE} FROM "${req.tenant.schema}".agentes a WHERE a.id = :id LIMIT 1`,
+    { replacements: { id } }
+  );
+  return rows[0] || null;
+};
+
+// ── Criar agente ─────────────────────────────────────────────────────────────
 const createAgente = async (req, res) => {
   try {
     const schema = req.tenant.schema;
-    const { nome, cargo, matricula, cpf, email, telefone, secretaria_id } = req.body;
-    if (!nome) return res.status(400).json({ error: 'Nome obrigatÃ³rio' });
+    const dados = Object.fromEntries(CAMPOS_AGENTE.filter(c => c !== 'ativo').map(c => [c, valorAgente(c, req.body[c])]));
+    if (!dados.nome) return res.status(400).json({ error: 'Nome obrigatório' });
+    const cols = Object.keys(dados);
     const [rows] = await req.tenantDb.query(
-      `INSERT INTO "${schema}".agentes
-        (nome, cargo, matricula, cpf, email, telefone, secretaria_id, ativo, created_at, updated_at)
-       VALUES (:nome,:cargo,:matricula,:cpf,:email,:telefone,:secretaria_id,true,NOW(),NOW())
-       RETURNING id, nome, cargo, matricula, cpf, email, telefone, ativo, secretaria_id`,
-      {
-        replacements: { nome, cargo: cargo||null, matricula: matricula||null, cpf: cpf||null,
-          email: email||null, telefone: telefone||null, secretaria_id: secretaria_id||null },
-        type: req.tenantDb.QueryTypes.INSERT
-      }
+      `INSERT INTO "${schema}".agentes (${cols.join(', ')}, ativo, created_at, updated_at)
+       VALUES (${cols.map(c => `:${c}`).join(', ')}, true, NOW(), NOW())
+       RETURNING id`,
+      { replacements: dados }
     );
-    res.status(201).json({ agente: Array.isArray(rows) ? rows[0] : rows });
+    res.status(201).json({ agente: await buscarAgente(req, rows[0].id) });
   } catch (err) {
     console.error('createAgente:', err);
     res.status(500).json({ error: 'Erro ao criar agente' });
   }
 };
 
-// â”€â”€ Atualizar agente â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Atualizar agente ─────────────────────────────────────────────────────────
+// Só altera os campos enviados: um campo fora do formulário (ex.: secretaria)
+// não é apagado ao salvar.
 const updateAgente = async (req, res) => {
   try {
     const schema = req.tenant.schema;
     const { id } = req.params;
-    const { nome, cargo, matricula, cpf, email, telefone, secretaria_id, ativo } = req.body;
+    const enviados = CAMPOS_AGENTE.filter(c => c in (req.body || {}));
+    if (enviados.includes('nome') && !valorAgente('nome', req.body.nome)) return res.status(400).json({ error: 'Nome obrigatório' });
+    if (!enviados.length) return res.json({ agente: await buscarAgente(req, id) });
     await req.tenantDb.query(
-      `UPDATE "${schema}".agentes
-       SET nome=:nome, cargo=:cargo, matricula=:matricula, cpf=:cpf, email=:email,
-           telefone=:telefone, secretaria_id=:secretaria_id, ativo=:ativo, updated_at=NOW()
-       WHERE id=:id`,
-      {
-        replacements: { id, nome, cargo: cargo||null, matricula: matricula||null, cpf: cpf||null,
-          email: email||null, telefone: telefone||null, secretaria_id: secretaria_id||null,
-          ativo: ativo !== undefined ? ativo : true },
-        type: req.tenantDb.QueryTypes.UPDATE
-      }
+      `UPDATE "${schema}".agentes SET ${enviados.map(c => `${c} = :${c}`).join(', ')}, updated_at = NOW() WHERE id = :id`,
+      { replacements: { id, ...Object.fromEntries(enviados.map(c => [c, valorAgente(c, req.body[c])])) } }
     );
-    const [rows] = await req.tenantDb.query(
-      `SELECT * FROM "${schema}".agentes WHERE id=:id LIMIT 1`, { replacements: { id }, type: req.tenantDb.QueryTypes.SELECT }
-    );
-    res.json({ agente: rows[0] });
+    const agente = await buscarAgente(req, id);
+    if (!agente) return res.status(404).json({ error: 'Agente não encontrado' });
+    res.json({ agente });
   } catch (err) {
     console.error('updateAgente:', err);
     res.status(500).json({ error: 'Erro ao atualizar agente' });

@@ -5,6 +5,7 @@ import {
   MapPin, Building2, Search, ClipboardList
 } from 'lucide-react'
 import api from '../services/api'
+import { Paginacao, usePorPagina } from '../components/ui'
 import LoadingBar from '../components/LoadingBar'
 import AlmoxModal from './AlmoxModal'
 import { fmt, fmtMoney, today } from './almoxConstants'
@@ -573,7 +574,7 @@ export default function AlmoxLotes() {
   const [erro,     setErro]     = useState('')
   const [filtroItem, setFiltroItem] = useState('')
   const [filtroAtivo, setFiltroAtivo] = useState('true')
-  const PER_PAGE = 30
+  const [PER_PAGE, setPerPage] = usePorPagina('almox-entradas', 30)
 
   const load = useCallback(async (p = 1) => {
     setLoading(true)
@@ -585,7 +586,7 @@ export default function AlmoxLotes() {
       setLotes(data.lotes)
       setTotal(data.total)
     } catch { } finally { setLoading(false) }
-  }, [filtroItem, filtroAtivo])
+  }, [filtroItem, filtroAtivo, PER_PAGE])
 
   useEffect(() => {
     api.get('/almoxarifado/itens').then(r => setItens(r.data)).catch(() => {})
@@ -742,20 +743,8 @@ export default function AlmoxLotes() {
           </table>
           </div>
 
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-ink-200">
-              <span className="text-sm text-ink-500">Total: {total} lotes</span>
-              <div className="flex items-center gap-2">
-                <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-1 rounded-sm hover:bg-ink-100 disabled:opacity-40">
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <span className="text-sm">{page} / {totalPages}</span>
-                <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="p-1 rounded-sm hover:bg-ink-100 disabled:opacity-40">
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          )}
+          <Paginacao total={total} pagina={page} setPagina={setPage} porPagina={PER_PAGE}
+            setPorPagina={(n) => { setPerPage(n); setPage(1) }} rotulo="lote" className="border-t border-ink-200" />
         </div>
       )}
 

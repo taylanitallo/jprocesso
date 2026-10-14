@@ -11,6 +11,7 @@ import FilterBar from '../components/ui/FilterBar';
 import ConfirmModal from '../components/ui/ConfirmModal';
 import LoadingBar from '../components/LoadingBar';
 import BotaoExcluidos from '../components/lixeira/BotaoExcluidos';
+import { Paginacao, usePorPagina } from '../components/ui';
 
 const Usuarios = lazy(() => import('./Usuarios'));
 import {
@@ -110,47 +111,11 @@ function ModalShell({ open, onClose, icon: Icon, iconBg = 'from-info-500 to-info
   )
 }
 
-const PAGE_SIZE = 10;
-
-function PaginationBar({ total, page, setPage }) {
-  if (total === 0) return null;
-  const totalPages = Math.ceil(total / PAGE_SIZE);
-  const start = (page - 1) * PAGE_SIZE + 1;
-  const end = Math.min(page * PAGE_SIZE, total);
-
-  const getPages = () => {
-    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
-    if (page <= 4) return [1, 2, 3, 4, 5, '...', totalPages];
-    if (page >= totalPages - 3) return [1, '...', totalPages-4, totalPages-3, totalPages-2, totalPages-1, totalPages];
-    return [1, '...', page-1, page, page+1, '...', totalPages];
-  };
-
+function PaginationBar({ total, page, setPage, porPagina, setPorPagina }) {
   return (
-    <div className="flex items-center justify-between px-4 py-2 border-t border-ink-100 bg-surface text-xs">
-      <span className="text-ink-500">
-        Mostrando {start}–{end} de {total} registro{total !== 1 ? 's' : ''}
-      </span>
-      {totalPages > 1 && (
-        <div className="flex items-center gap-1">
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-            className="px-2 py-0.5 rounded-sm border border-ink-200 disabled:opacity-40 hover:bg-ink-50 text-ink-600">
-            Anterior
-          </button>
-          {getPages().map((pg, i) =>
-            pg === '...'
-              ? <span key={`dots-${i}`} className="px-1.5 text-ink-400">...</span>
-              : <button key={pg} onClick={() => setPage(pg)}
-                  className={`w-7 h-6 rounded-sm border text-xs font-medium transition-colors ${pg === page ? 'bg-brand-600 text-white border-brand-600' : 'border-ink-200 hover:bg-ink-50 text-ink-600'}`}>
-                  {pg}
-                </button>
-          )}
-          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}
-            className="px-2 py-0.5 rounded-sm border border-ink-200 disabled:opacity-40 hover:bg-ink-50 text-ink-600">
-            Próximo
-          </button>
-        </div>
-      )}
-    </div>
+    <Paginacao total={total} pagina={page} setPagina={setPage} porPagina={porPagina}
+      setPorPagina={(n) => { setPorPagina(n); setPage(1); }}
+      className="border-t border-ink-100 bg-surface" />
   );
 }
 
@@ -232,6 +197,9 @@ export default function Secretarias() {
 
   // Paginação
   const [secPage, setSecPage]   = useState(1)
+  const [secPorPagina, setSecPorPagina]   = usePorPagina('org-secretarias')
+  const [agPorPagina, setAgPorPagina]     = usePorPagina('org-agentes')
+  const [respPorPagina, setRespPorPagina] = usePorPagina('org-responsaveis')
   const [agPage, setAgPage]     = useState(1)
   const [respPage, setRespPage] = useState(1)
 
@@ -981,7 +949,7 @@ export default function Secretarias() {
                       }
                       return true;
                     });
-                    const pageItems = filtradas.slice((secPage - 1) * PAGE_SIZE, secPage * PAGE_SIZE);
+                    const pageItems = filtradas.slice((secPage - 1) * secPorPagina, secPage * secPorPagina);
 
                     if (filtradas.length === 0) {
                       return (
@@ -1055,6 +1023,8 @@ export default function Secretarias() {
               }).length}
               page={secPage}
               setPage={setSecPage}
+              porPagina={secPorPagina}
+              setPorPagina={setSecPorPagina}
             />
           </div>
         </div>
@@ -1121,9 +1091,7 @@ export default function Secretarias() {
                   <tr>
                     <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-8"></th>
                     <th className="text-left px-4 py-2.5 font-semibold text-ink-600">Nome</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-32">CPF</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600">Cargo Atual</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600">Secretaria</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-40">CPF</th>
                     <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-28">Status</th>
                   </tr>
                 </thead>
@@ -1134,10 +1102,10 @@ export default function Secretarias() {
                       || a.nome.toLowerCase().includes(agenteSearch.toLowerCase())
                       || (a.cpf||'').replace(/\D/g,'').includes(agenteSearch.replace(/\D/g,''))
                     );
-                    const pageAg = filteredAg.slice((agPage - 1) * PAGE_SIZE, agPage * PAGE_SIZE);
+                    const pageAg = filteredAg.slice((agPage - 1) * agPorPagina, agPage * agPorPagina);
                     if (filteredAg.length === 0) return (
                       <tr>
-                        <td colSpan={6}>
+                        <td colSpan={4}>
                           <EmptyState
                             icon={UserCog}
                             title={agentes.length === 0 ? 'Nenhum agente cadastrado' : 'Nenhum resultado para o filtro'}
@@ -1177,14 +1145,6 @@ export default function Secretarias() {
                               }) || assigns.sort((a, b) => new Date(b.data_inicio||0) - new Date(a.data_inicio||0))[0];
                               const st = assigns.length === 0 ? null : getStatusVigencia(curr?.data_inicio, curr?.data_fim);
                               return (<>
-                                <td className={`px-4 py-2.5 text-xs ${isSelected ? 'text-info-100' : 'text-ink-600'}`}>
-                                  {curr?.cargo || <span className="text-ink-400">—</span>}
-                                </td>
-                                <td className="px-4 py-2.5 text-xs">
-                                  {curr?._secSigla
-                                    ? <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono font-semibold ${isSelected ? 'bg-info-500/40 text-info-100' : 'bg-info-100 text-brand-700 dark:bg-info-900/30 dark:text-info-300'}`}>{curr._secSigla}</span>
-                                    : <span className="text-ink-400">—</span>}
-                                </td>
                                 <td className="px-4 py-2.5">
                                   {st === null
                                     ? <span className="text-ink-400 text-xs">Sem vínculo</span>
@@ -1211,6 +1171,8 @@ export default function Secretarias() {
               ).length}
               page={agPage}
               setPage={setAgPage}
+              porPagina={agPorPagina}
+              setPorPagina={setAgPorPagina}
             />
           </div>
         </div>
@@ -1335,7 +1297,7 @@ export default function Secretarias() {
                       return true;
                     });
 
-                    const pageResp = filtrados.slice((respPage - 1) * PAGE_SIZE, respPage * PAGE_SIZE);
+                    const pageResp = filtrados.slice((respPage - 1) * respPorPagina, respPage * respPorPagina);
 
                     if (filtrados.length === 0) {
                       return (
@@ -1416,6 +1378,8 @@ export default function Secretarias() {
               }).length}
               page={respPage}
               setPage={setRespPage}
+              porPagina={respPorPagina}
+              setPorPagina={setRespPorPagina}
             />
           </div>
         </div>

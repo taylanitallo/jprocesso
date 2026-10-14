@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { RefreshCw, Plus, ClipboardList, CheckCircle, AlertCircle, XCircle } from 'lucide-react'
 import api from '../services/api'
+import { Paginacao, usePaginacao } from '../components/ui'
 import LoadingBar from '../components/LoadingBar'
 import PageHeader from '../components/ui/PageHeader'
 import SectionTitle from '../components/ui/SectionTitle'
@@ -102,6 +103,8 @@ export default function PatInventario({ userRole }) {
 
   const podeEditar = userRole === 'admin' || userRole === 'gestor'
 
+  const pgInventarios = usePaginacao('patrimonio-inventarios', inventarios.length);
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -179,7 +182,7 @@ export default function PatInventario({ userRole }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-ink-100">
-              {inventarios.map(inv => {
+              {pgInventarios.fatia(inventarios).map(inv => {
                 const si = statusInfo[inv.status] || { label: inv.status, color: 'bg-ink-100 text-ink-700' }
                 return (
                   <tr key={inv.id} className="hover:bg-ink-50">
@@ -211,6 +214,7 @@ export default function PatInventario({ userRole }) {
             </tbody>
           </table>
         )}
+        {inventarios.length > 0 && <Paginacao {...pgInventarios} total={inventarios.length} rotulo="inventário" className="border-t border-ink-100" />}
       </div>
 
       {/* Detalhe do inventário */}

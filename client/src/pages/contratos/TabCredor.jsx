@@ -7,6 +7,7 @@ import {
 import api from '../../services/api'
 import { ESTADOS_BR, SectionCard, PremiumInput, PremiumSelect, ViewField, PortalDropdown } from './ContratosShared'
 import BotaoExcluidos from '../../components/lixeira/BotaoExcluidos'
+import { Paginacao, usePorPagina } from '../../components/ui'
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  MODAL: FORMULÁRIO DE CREDOR (Incluir / Alterar / Visualizar)
@@ -518,7 +519,7 @@ function TabCredor() {
   const [modal, setModal]                 = useState(null) // 'novo'|'editar'|'visualizar'|'excluir'
   const [ordenar, setOrdenar]             = useState({ col: 'razao_social', asc: true })
   const [pagina, setPagina]               = useState(1)
-  const PER_PAGE_CREDOR = 15
+  const [PER_PAGE_CREDOR, setPorPaginaCredor] = usePorPagina('contratos-credores', 15)
 
   const setF = (k, v) => setFiltros(p => ({ ...p, [k]: v }))
   const pesquisar = () => { setFiltrosAtivos({ ...filtros }); setPagina(1) }
@@ -770,27 +771,8 @@ function TabCredor() {
               ? <span className="text-brand-600 dark:text-info-400 font-medium flex items-center gap-1"><Check className="w-3 h-3" /> {credorSelecionado.razao_social}</span>
               : <span className="text-ink-400">Clique para selecionar · Duplo clique para visualizar</span>}
           </span>
-          <div className="flex items-center gap-4">
-            {totalPags > 1 && (
-              <div className="flex items-center gap-1">
-                <button onClick={() => setPagina(1)} disabled={pagina === 1} className="w-7 h-7 flex items-center justify-center rounded-lg border border-ink-200 text-ink-500 hover:bg-ink-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><ChevronsLeft className="w-3.5 h-3.5" /></button>
-                <button onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={pagina === 1} className="w-7 h-7 flex items-center justify-center rounded-lg border border-ink-200 text-ink-500 hover:bg-ink-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><ChevronLeft className="w-3.5 h-3.5" /></button>
-                {Array.from({ length: totalPags }, (_, i) => i + 1)
-                  .filter(p => p >= Math.max(1, pagina - 2) && p <= Math.min(totalPags, pagina + 2))
-                  .map(p => (
-                    <button key={p} onClick={() => setPagina(p)} className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold border transition-colors ${
-                      p === pagina ? 'bg-brand-600 text-white border-brand-600' : 'border-ink-200 text-ink-600 hover:bg-ink-100'
-                    }`}>{p}</button>
-                  ))}
-                <button onClick={() => setPagina(p => Math.min(totalPags, p + 1))} disabled={pagina === totalPags} className="w-7 h-7 flex items-center justify-center rounded-lg border border-ink-200 text-ink-500 hover:bg-ink-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><ChevronRight className="w-3.5 h-3.5" /></button>
-                <button onClick={() => setPagina(totalPags)} disabled={pagina === totalPags} className="w-7 h-7 flex items-center justify-center rounded-lg border border-ink-200 text-ink-500 hover:bg-ink-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><ChevronsRight className="w-3.5 h-3.5" /></button>
-              </div>
-            )}
-            <span className="text-xs text-ink-500">
-              Foram encontrados <strong>{credoresFiltrados.length}</strong> registro(s)
-              {totalPags > 1 && <> · pág. <strong>{pagina}</strong>/{totalPags}</>}
-            </span>
-          </div>
+          <Paginacao embutido total={credoresFiltrados.length} pagina={pagina} setPagina={setPagina}
+            porPagina={PER_PAGE_CREDOR} setPorPagina={(n) => { setPorPaginaCredor(n); setPagina(1) }} rotulo="credor" rotuloPlural="credores" />
         </div>
       </div>
 

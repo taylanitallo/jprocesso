@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Search, Edit2, RefreshCw, Package, MapPin, AlertTriangle, Building2, Trash2 } from 'lucide-react'
 import api from '../services/api'
+import { Paginacao, usePorPagina } from '../components/ui'
 import BotaoExcluidos from '../components/lixeira/BotaoExcluidos'
 import { useAuth } from '../context/AuthContext'
 import LoadingBar from '../components/LoadingBar'
@@ -214,7 +215,7 @@ export default function AlmoxItens() {
   const [saving,      setSaving]      = useState(false)
   const [erro,        setErro]        = useState('')
   const [paginaAtual, setPaginaAtual] = useState(1)
-  const itensPorPagina = 15
+  const [itensPorPagina, setItensPorPagina] = usePorPagina('almox-estoque', 15)
 
   const temFiltro = fCodigo || fDescricao || fSecretaria || fTipo
 
@@ -500,61 +501,9 @@ export default function AlmoxItens() {
       )}
 
       {/* Paginação */}
-      {totalPaginas > 1 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
-          <p className="text-xs text-ink-500">
-            Mostrando{' '}
-            <span className="font-semibold text-ink-700">
-              {inicio + 1}–{Math.min(inicio + itensPorPagina, itensFiltrados.length)}
-            </span>{' '}
-            de{' '}
-            <span className="font-semibold text-ink-700">{itensFiltrados.length}</span> itens
-          </p>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setPaginaAtual(p => Math.max(1, p - 1))}
-              disabled={paginaAtual === 1}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-ink-200 text-ink-600 hover:bg-ink-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              ← Anterior
-            </button>
-            {(() => {
-              const pages = []
-              for (let i = 1; i <= totalPaginas; i++) {
-                if (i === 1 || i === totalPaginas || (i >= paginaAtual - 1 && i <= paginaAtual + 1)) {
-                  pages.push(i)
-                } else if (pages[pages.length - 1] !== '...') {
-                  pages.push('...')
-                }
-              }
-              return pages.map((p, idx) =>
-                p === '...' ? (
-                  <span key={`dots-${idx}`} className="px-1.5 text-xs text-ink-400">…</span>
-                ) : (
-                  <button
-                    key={p}
-                    onClick={() => setPaginaAtual(p)}
-                    className={`min-w-[32px] px-2 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                      paginaAtual === p
-                        ? 'bg-brand-600 border-brand-600 text-white shadow-sm'
-                        : 'border-ink-200 text-ink-600 hover:bg-ink-100'
-                    }`}
-                  >
-                    {p}
-                  </button>
-                )
-              )
-            })()}
-            <button
-              onClick={() => setPaginaAtual(p => Math.min(totalPaginas, p + 1))}
-              disabled={paginaAtual === totalPaginas}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-medium border border-ink-200 text-ink-600 hover:bg-ink-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              Próximo →
-            </button>
-          </div>
-        </div>
-      )}
+      <Paginacao total={itensFiltrados.length} pagina={paginaAtual} setPagina={setPaginaAtual}
+        porPagina={itensPorPagina} setPorPagina={(n) => { setItensPorPagina(n); setPaginaAtual(1) }}
+        rotulo="item" rotuloPlural="itens" className="mt-4" />
 
       {editando !== null && (
         <ItemModal
