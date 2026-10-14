@@ -436,7 +436,7 @@ export default function ContratosDashboard() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
       <PageHeader
         icon={BarChart3}
         title="Dashboard — Contratos"
@@ -923,7 +923,7 @@ export default function ContratosDashboard() {
             {ordensKpi.total === 0
               ? <p className="text-sm text-ink-400 text-center py-6">Nenhuma ordem emitida</p>
               : (
-                <div className="space-y-5">
+                <div className="space-y-4">
                   {/* KPIs de ordens */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                     {[

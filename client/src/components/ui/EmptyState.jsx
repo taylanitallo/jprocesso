@@ -9,9 +9,9 @@
  */
 export default function EmptyState({ icon: Icon, title, description, action }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-4 py-16 px-6 text-center">
+    <div className="flex flex-col items-center justify-center gap-3 py-10 px-6 text-center">
       {Icon && (
-        <div className="flex items-center justify-center w-14 h-14 rounded-2xl
+        <div className="flex items-center justify-center w-12 h-12 rounded-xl
                         bg-ink-100
                         border border-ink-200">
           <Icon

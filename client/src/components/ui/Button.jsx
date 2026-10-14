@@ -13,9 +13,9 @@ const VARIANTES = {
 
 const TAMANHOS = {
   sm:   'h-8 px-3 rounded-[8px] text-[13px] gap-1.5',
-  md:   'h-10 px-4 rounded-[10px] text-sm gap-2',
-  lg:   'h-12 px-5 rounded-[12px] text-sm gap-2',
-  icon: 'h-10 w-10 rounded-[10px] p-0 gap-0',
+  md:   'h-9 px-3.5 rounded-[10px] text-sm gap-2',
+  lg:   'h-11 px-5 rounded-[12px] text-sm gap-2',
+  icon: 'h-9 w-9 rounded-[10px] p-0 gap-0',
 }
 
 /**

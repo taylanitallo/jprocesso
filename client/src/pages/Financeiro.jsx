@@ -990,7 +990,7 @@ export default function Financeiro() {
 
   // ─── RENDER ──────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
       <PageHeader
         icon={DollarSign}
         title="Financeiro"
@@ -1062,7 +1062,7 @@ export default function Financeiro() {
 
       {/* ═══ TAB: PAINEL ═══════════════════════════════════════════════════════ */}
       {tab === 'painel' && (
-        <div className="space-y-6">
+        <div className="space-y-4">
 
           {/* ── Painel de filtros ────────────────────────────────────────── */}
           {mostrarFiltros && <div className="card p-4 space-y-4">
@@ -1311,7 +1311,7 @@ export default function Financeiro() {
               {painel.dids && totalDIDs > 0 && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {/* Distribuição por Tipo */}
-                  <div className="card p-5">
+                  <div className="card p-4">
                     <SectionTitle icon={BarChart3} title="Distribuição por Tipo" />
                     <div className="space-y-4">
                       <div className="h-10 rounded-xl overflow-hidden flex shadow-inner">
@@ -1348,7 +1348,7 @@ export default function Financeiro() {
                   </div>
 
                   {/* Status de Pagamento */}
-                  <div className="card p-5">
+                  <div className="card p-4">
                     <SectionTitle icon={CheckCircle2} title="Status de Pagamento" />
                     <div className="space-y-4">
                       <div className="h-10 rounded-xl overflow-hidden flex shadow-inner">
@@ -1390,7 +1390,7 @@ export default function Financeiro() {
 
               {/* ── Evolução mensal (linha) ──────────────────────────── */}
               {painelLinhaData.length > 1 && (
-                <div className="card p-5">
+                <div className="card p-4">
                   <SectionTitle icon={TrendingUp} title="Evolução Mensal das Despesas" />
                   <p className="text-xs text-ink-400 mt-0.5 mb-4">Valor bruto por mês — pago vs pendente</p>
                   <ResponsiveContainer width="100%" height={260}>
@@ -1423,7 +1423,7 @@ export default function Financeiro() {
               )}
 
               {/* Gráfico por mês — DIDs */}
-              <div className="card p-5">
+              <div className="card p-4">
                 <SectionTitle icon={Calendar} title={`DIDs por Mês — ${painelAno}`} />
                 {mesesData.every(v => v === 0) ? (
                   <p className="text-sm text-ink-400 text-center py-8">Nenhum DID com data registrada neste período</p>
@@ -1451,7 +1451,7 @@ export default function Financeiro() {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Por Secretaria */}
-                <div className="card p-5">
+                <div className="card p-4">
                   <SectionTitle icon={Building2} title="Por Secretaria" />
                   {(!painel.dids?.porSecretaria || painel.dids.porSecretaria.length === 0) && (
                     <p className="text-sm text-ink-400 text-center py-4">Sem dados</p>
@@ -1478,7 +1478,7 @@ export default function Financeiro() {
                 </div>
 
                 {/* DIDs Pendentes */}
-                <div className="card p-5">
+                <div className="card p-4">
                   <SectionTitle icon={Clock3} title="DIDs Pendentes" />
                   {(!painel.dids?.pendentes || painel.dids.pendentes.length === 0) ? (
                     <p className="text-sm text-ink-400 text-center py-4">✅ Nenhum DID pendente de pagamento</p>
@@ -1509,7 +1509,7 @@ export default function Financeiro() {
               </div>
 
               {/* Top Credores */}
-              <div className="card p-5">
+              <div className="card p-4">
                 <SectionTitle icon={TrendingUp} title="Top Credores" />
                 {(!painel.dids?.porCredor || painel.dids.porCredor.length === 0) ? (
                   <p className="text-sm text-ink-400 text-center py-4">Nenhum credor registrado</p>
@@ -1550,7 +1550,7 @@ export default function Financeiro() {
               </div>
               {/* ── Top 5 Credores — Gráfico ─────────────────────────── */}
               {painel.dids?.porCredor && painel.dids.porCredor.length > 0 && (
-                <div className="card p-5">
+                <div className="card p-4">
                   <SectionTitle icon={BarChart3} title="Top Credores — Visão Gráfica" />
                   <div className="space-y-3">
                     {painel.dids.porCredor.slice(0, 5).map((c, i) => {
@@ -1742,7 +1742,7 @@ export default function Financeiro() {
 
       {/* ═══ TAB: RELATÓRIO ════════════════════════════════════════════════════ */}
       {tab === 'relatorio' && (
-        <div className="space-y-5">
+        <div className="space-y-4">
 
           {/* ── Sub-header ──────────────────────────────────────────────────── */}
           <div className="flex items-start justify-between flex-wrap gap-3">
@@ -1860,7 +1860,7 @@ export default function Financeiro() {
               </div>
 
               {/* ── Resumo Executivo ──────────────────────────────────────────── */}
-              <div className="card p-5 border-l-4 border-brand-500">
+              <div className="card p-4 border-l-4 border-brand-500">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-8 h-8 rounded-lg bg-info-100 dark:bg-info-900/30 flex items-center justify-center">
                     <FileText className="w-4 h-4 text-brand-600 dark:text-info-400" />
@@ -1883,7 +1883,7 @@ export default function Financeiro() {
 
               {/* ── Alertas ──────────────────────────────────────────────────── */}
               {(relInad > 0 || relatorio.porCredor?.length > 0 || relatorio.porSecretaria?.length > 0) && (
-                <div className="card p-5">
+                <div className="card p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
                       <AlertTriangle className="w-4 h-4 text-orange-600 dark:text-orange-400" />
@@ -1935,7 +1935,7 @@ export default function Financeiro() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
                 {/* Donut: Status de pagamento */}
-                <div className="card p-5">
+                <div className="card p-4">
                   <SectionTitle icon={CheckCircle2} title="Status de Pagamento" />
                   {relQtdTotal > 0 ? (() => {
                     const donutData = [
@@ -1987,7 +1987,7 @@ export default function Financeiro() {
                 </div>
 
                 {/* Donut: Distribuição por Tipo */}
-                <div className="card p-5">
+                <div className="card p-4">
                   <SectionTitle icon={Tag} title="Distribuição por Tipo" />
                   {relatorio.porTipo?.length > 0 ? (() => {
                     const TIPO_COLORS = ['#3b82f6', '#a855f7', '#6366f1', '#0ea5e9']
@@ -2040,7 +2040,7 @@ export default function Financeiro() {
                 const linhaData = buildLinhaData(relatorio.porMes)
                 if (linhaData.length < 2) return null
                 return (
-                  <div className="card p-5">
+                  <div className="card p-4">
                     <SectionTitle icon={TrendingUp} title="Evolução Mensal das Despesas" />
                     <p className="text-xs text-ink-400 mt-0.5 mb-4">Valor bruto por mês — pago vs pendente (conforme filtros selecionados)</p>
                     <ResponsiveContainer width="100%" height={260}>
@@ -2074,7 +2074,7 @@ export default function Financeiro() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
                 {/* Bar horizontal: Secretarias */}
-                <div className="card p-5">
+                <div className="card p-4">
                   <SectionTitle icon={Building2} title="Ranking por Secretaria" />
                   {relatorio.porSecretaria?.length > 0 ? (() => {
                     const data = relatorio.porSecretaria.map(s => ({
@@ -2101,7 +2101,7 @@ export default function Financeiro() {
                 </div>
 
                 {/* Bar horizontal: Credores */}
-                <div className="card p-5">
+                <div className="card p-4">
                   <SectionTitle icon={TrendingUp} title="Ranking por Credor" />
                   {relatorio.porCredor?.length > 0 ? (() => {
                     const data = relatorio.porCredor.map(c => ({
@@ -2130,7 +2130,7 @@ export default function Financeiro() {
 
               {/* ── Gráfico — Fonte de Recurso ───────────────────────────────── */}
               {relatorio.porFonte?.length > 0 && (
-                <div className="card p-5">
+                <div className="card p-4">
                   <SectionTitle icon={Landmark} title="Distribuição por Fonte de Recurso" />
                   {(() => {
                     const FONTE_COLORS = ['#0ea5e9','#22c55e','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#84cc16','#f97316']

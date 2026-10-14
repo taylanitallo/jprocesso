@@ -373,7 +373,7 @@ export default function DetalhesProcesso() {
     const envio = processo.envio
     const devolvido = envio?.tipo_acao === 'devolucao'
     return (
-      <div className="space-y-5 animate-fade-in">
+      <div className="space-y-4 animate-fade-in">
         <PageHeader
           icon={Inbox}
           eyebrow="Processo aguardando recebimento"
@@ -387,7 +387,7 @@ export default function DetalhesProcesso() {
           }
         />
 
-        <div className="card p-6 max-w-3xl">
+        <div className="card p-4 max-w-3xl">
           <div className="flex items-start gap-3 mb-5">
             <div className="shrink-0 w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
               <Inbox className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
@@ -466,7 +466,7 @@ export default function DetalhesProcesso() {
 
   /* ── render ──────────────────────────────────────────────────────────── */
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
 
       {/* ── Mensagem de sucesso ── */}
       {successMessage && (
@@ -528,10 +528,10 @@ export default function DetalhesProcesso() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
         {/* ── Coluna principal (2/3) ── */}
-        <div className="lg:col-span-2 space-y-5">
+        <div className="lg:col-span-2 space-y-4">
 
           {/* Card: Informações do Processo */}
-          <div className="card p-6">
+          <div className="card p-4">
             <SectionTitle icon={FileText} title="Informações do Processo" />
 
             {/* Assunto em destaque */}
@@ -595,7 +595,7 @@ export default function DetalhesProcesso() {
           </div>
 
           {/* Card: Documentos */}
-          <div className="card p-6">
+          <div className="card p-4">
             <SectionTitle
               icon={Paperclip}
               title={
@@ -731,7 +731,7 @@ export default function DetalhesProcesso() {
           </div>
 
           {/* Card: Linha do Tempo */}
-          <div className="card p-6">
+          <div className="card p-4">
             <SectionTitle icon={Clock} title="Linha do Tempo" />
 
             {(!processo.tramitacoes || processo.tramitacoes.length === 0) ? (
@@ -850,7 +850,7 @@ export default function DetalhesProcesso() {
         </div>
 
         {/* ── Sidebar (1/3) ── */}
-        <div className="space-y-5">
+        <div className="space-y-4">
 
           {/* Dados do Protocolo */}
           {processo.tipo_processo === 'Protocolo' && processo.protocolo_doc && (
@@ -1094,7 +1094,7 @@ export default function DetalhesProcesso() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-md border border-ink-200">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-ink-100">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-ink-100">
               <div className="flex items-center gap-2">
                 <Paperclip className="h-5 w-5 text-info-500" />
                 <h3 className="font-semibold text-ink-900">Anexar Documento</h3>

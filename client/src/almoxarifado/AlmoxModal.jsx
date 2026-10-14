@@ -10,7 +10,7 @@ export default function AlmoxModal({ title, onClose, children, wide, fullscreen 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
       <div className={`bg-surface rounded-xl shadow-xl flex flex-col ${sizeClass}`}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-ink-200 shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-ink-200 shrink-0">
           <h2 className="text-lg font-semibold text-ink-900 dark:text-white">{title}</h2>
           <button
             onClick={onClose}

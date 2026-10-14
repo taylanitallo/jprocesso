@@ -10,15 +10,15 @@
 export default function FilterBar({ children, actions }) {
   return (
     <div className="
-      flex flex-col gap-3 sm:flex-row sm:items-end sm:flex-wrap
-      p-4
+      flex flex-col gap-2.5 sm:flex-row sm:items-end sm:flex-wrap
+      px-4 py-3
       bg-surface
-      rounded-2xl border border-ink-200
+      rounded-xl border border-ink-200
       shadow-sm
-      mb-5
+      mb-3
     ">
       {/* Filtros */}
-      <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-end sm:flex-wrap min-w-0">
+      <div className="flex flex-1 flex-col gap-2.5 sm:flex-row sm:items-end sm:flex-wrap min-w-0">
         {children}
       </div>
 

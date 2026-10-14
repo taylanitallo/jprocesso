@@ -42,7 +42,7 @@ export default function PatDashboard() {
   const { kpis, porGrupo, ultimosTombamentos, transferencias30dias } = dados
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
         icon={Landmark}
         eyebrow="Patrimônio"

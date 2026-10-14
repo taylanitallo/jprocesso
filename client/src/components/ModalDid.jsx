@@ -302,7 +302,7 @@ export default function ModalDid({ processo, onClose }) {
                 </p>
               </div>
 
-              <form onSubmit={handleCriarDid} className="space-y-6">
+              <form onSubmit={handleCriarDid} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
                     <label className="block text-sm font-semibold text-ink-700 mb-1">
@@ -388,7 +388,7 @@ export default function ModalDid({ processo, onClose }) {
 
           {/* ── DID EXISTENTE ── */}
           {!loading && !criandoDid && did?.did && (
-            <div className="space-y-6">
+            <div className="space-y-4">
 
               {/* Info do DID */}
               <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-200 dark:border-indigo-700 p-5">

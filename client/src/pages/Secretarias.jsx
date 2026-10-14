@@ -74,7 +74,7 @@ function ModalShell({ open, onClose, icon: Icon, iconBg = 'from-info-500 to-info
         style={{ maxWidth: '90vw', maxHeight: '90vh', width }}
       >
         {/* Header */}
-        <div className="bg-surface border-b border-ink-100 px-6 py-4 shrink-0">
+        <div className="bg-surface border-b border-ink-100 px-4 py-3 shrink-0">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
               <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${iconBg} flex items-center justify-center shadow-md`}>
@@ -102,7 +102,7 @@ function ModalShell({ open, onClose, icon: Icon, iconBg = 'from-info-500 to-info
 
         {/* Footer */}
         {footer && (
-          <div className="bg-surface border-t border-ink-100 px-6 py-4 shrink-0 flex items-center justify-end gap-3">
+          <div className="bg-surface border-t border-ink-100 px-4 py-3 shrink-0 flex items-center justify-end gap-3">
             {footer}
           </div>
         )}
@@ -801,7 +801,7 @@ export default function Secretarias() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-5 animate-fade-in">
+    <div className="max-w-7xl mx-auto space-y-4 animate-fade-in">
       {/* Mensagem de Sucesso */}
       {successMessage && (
         <div className="p-4 bg-success-50 dark:bg-success-900/30 border border-success-200 dark:border-success-700 rounded-lg flex items-center gap-3">
@@ -941,7 +941,7 @@ export default function Secretarias() {
                 <tbody className="divide-y divide-ink-100">
                   {(() => {
                     const filtradas = secretarias.filter(sec => {
-                      if (secFiltroDescricao && !sec.nome.toLowerCase().includes(secFiltroDescricao.toLowerCase())) return false;
+                      if (secFiltroDescricao && !(sec.nome || "").toLowerCase().includes(secFiltroDescricao.toLowerCase())) return false;
                       if (secFiltroSigla && !(sec.sigla||'').toLowerCase().includes(secFiltroSigla.toLowerCase())) return false;
                       if (secFiltroVigor) {
                         const vigor = new Date(secFiltroVigor + 'T12:00:00');
@@ -1013,7 +1013,7 @@ export default function Secretarias() {
             {/* Paginação */}
             <PaginationBar
               total={secretarias.filter(sec => {
-                if (secFiltroDescricao && !sec.nome.toLowerCase().includes(secFiltroDescricao.toLowerCase())) return false;
+                if (secFiltroDescricao && !(sec.nome || "").toLowerCase().includes(secFiltroDescricao.toLowerCase())) return false;
                 if (secFiltroSigla && !(sec.sigla||'').toLowerCase().includes(secFiltroSigla.toLowerCase())) return false;
                 if (secFiltroVigor) {
                   const vigor = new Date(secFiltroVigor + 'T12:00:00');
@@ -1299,8 +1299,8 @@ export default function Secretarias() {
                         if (ini && ini > vigor) return false;
                         if (fim && fim < vigor)  return false;
                       }
-                      if (respFiltroNome  && !r.nome.toLowerCase().includes(respFiltroNome.toLowerCase())) return false;
-                      if (respFiltroSec   && !r._secNome.toLowerCase().includes(respFiltroSec.toLowerCase()) && !(r._secSigla||'').toLowerCase().includes(respFiltroSec.toLowerCase())) return false;
+                      if (respFiltroNome  && !(r.nome || "").toLowerCase().includes(respFiltroNome.toLowerCase())) return false;
+                      if (respFiltroSec   && !(r._secNome || "").toLowerCase().includes(respFiltroSec.toLowerCase()) && !(r._secSigla||'').toLowerCase().includes(respFiltroSec.toLowerCase())) return false;
                       if (respFiltroCargo && !(r.cargo||'').toLowerCase().includes(respFiltroCargo.toLowerCase())) return false;
                       if (respFiltroStatus && getStatusVigencia(r.data_inicio, r.data_fim) !== respFiltroStatus) return false;
                       return true;
@@ -1379,8 +1379,8 @@ export default function Secretarias() {
                   if (ini && ini > vigor) return false;
                   if (fim && fim < vigor)  return false;
                 }
-                if (respFiltroNome  && !r.nome.toLowerCase().includes(respFiltroNome.toLowerCase())) return false;
-                if (respFiltroSec   && !r._secNome.toLowerCase().includes(respFiltroSec.toLowerCase()) && !(r._secSigla||'').toLowerCase().includes(respFiltroSec.toLowerCase())) return false;
+                if (respFiltroNome  && !(r.nome || "").toLowerCase().includes(respFiltroNome.toLowerCase())) return false;
+                if (respFiltroSec   && !(r._secNome || "").toLowerCase().includes(respFiltroSec.toLowerCase()) && !(r._secSigla||'').toLowerCase().includes(respFiltroSec.toLowerCase())) return false;
                 if (respFiltroCargo && !(r.cargo||'').toLowerCase().includes(respFiltroCargo.toLowerCase())) return false;
                 if (respFiltroStatus && getStatusVigencia(r.data_inicio, r.data_fim) !== respFiltroStatus) return false;
                 return true;
@@ -1873,7 +1873,7 @@ export default function Secretarias() {
       {showDeleteModal && deleteTarget && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-surface rounded-xl max-w-md w-full shadow-xl">
-            <div className="px-6 py-4 border-b border-ink-200">
+            <div className="px-4 py-3 border-b border-ink-200">
               <div className="flex items-center gap-3">
                 <div className="shrink-0 w-10 h-10 bg-danger-100 dark:bg-danger-900/30 rounded-full flex items-center justify-center">
                   <AlertTriangle className="h-6 w-6 text-danger-600 dark:text-danger-400" />
@@ -1906,7 +1906,7 @@ export default function Secretarias() {
               </p>
             </div>
 
-            <div className="px-6 py-4 bg-ink-50 border-t border-ink-200 flex justify-end space-x-3">
+            <div className="px-4 py-3 bg-ink-50 border-t border-ink-200 flex justify-end space-x-3">
               <button onClick={() => { setShowDeleteModal(false); setDeleteTarget(null); }} className="btn-secondary">Cancelar</button>
               <button onClick={confirmDelete} className="btn-danger flex items-center gap-2">
                 <Trash2 className="h-4 w-4" />
@@ -1922,7 +1922,7 @@ export default function Secretarias() {
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-surface rounded-xl max-w-2xl w-full shadow-xl flex flex-col max-h-[80vh]">
             {/* Header */}
-            <div className="px-6 py-4 border-b border-ink-200 flex items-center justify-between shrink-0">
+            <div className="px-4 py-3 border-b border-ink-200 flex items-center justify-between shrink-0">
               <div>
                 <h2 className="text-lg font-semibold text-ink-900">
                   Setores — {selectedSecretaria.nome}
@@ -2078,7 +2078,7 @@ export default function Secretarias() {
       {showDeleteAgenteModal && deleteAgenteTarget && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-surface rounded-xl max-w-md w-full shadow-xl">
-            <div className="px-6 py-4 border-b border-ink-200 flex items-center gap-3">
+            <div className="px-4 py-3 border-b border-ink-200 flex items-center gap-3">
               <div className="w-10 h-10 bg-danger-100 dark:bg-danger-900/30 rounded-full flex items-center justify-center shrink-0">
                 <AlertTriangle className="h-5 w-5 text-danger-600" />
               </div>
@@ -2089,7 +2089,7 @@ export default function Secretarias() {
                 Excluir o agente <strong>{deleteAgenteTarget.nome}</strong>? Ele vai para os Agentes excluídos, de onde pode ser restaurado.
               </p>
             </div>
-            <div className="px-6 py-4 bg-ink-50 border-t border-ink-200 flex justify-end gap-3">
+            <div className="px-4 py-3 bg-ink-50 border-t border-ink-200 flex justify-end gap-3">
               <button onClick={() => { setShowDeleteAgenteModal(false); setDeleteAgenteTarget(null); }}
                 className="btn-secondary">Cancelar</button>
               <button onClick={confirmDeleteAgente} className="btn-danger flex items-center gap-2">
@@ -2191,7 +2191,7 @@ export default function Secretarias() {
       {showOrcamentoPanel && selectedSecretaria && (
         <div className="fixed inset-0 z-[9990] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-ink-50 rounded-3xl shadow-2xl w-full flex flex-col overflow-hidden" style={{ maxWidth: '90vw', maxHeight: '90vh', width: 520 }}>
-            <div className="bg-surface border-b border-ink-100 px-6 py-4 shrink-0">
+            <div className="bg-surface border-b border-ink-100 px-4 py-3 shrink-0">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-4">
                   <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-success-500 to-emerald-600 flex items-center justify-center shadow-md">
@@ -2256,7 +2256,7 @@ export default function Secretarias() {
                 </SectionCard>
               </div>
             </div>
-            <div className="bg-surface border-t border-ink-100 px-6 py-4 shrink-0 flex items-center justify-end gap-3">
+            <div className="bg-surface border-t border-ink-100 px-4 py-3 shrink-0 flex items-center justify-end gap-3">
               {!orcamentoEditing ? (
                 <>
                   <button onClick={() => setShowOrcamentoPanel(false)} className="btn-secondary px-5 py-2 text-sm">Fechar</button>
@@ -2282,7 +2282,7 @@ export default function Secretarias() {
       {showDotacoesPanel && selectedSecretaria && (
         <div className="fixed inset-0 z-[9990] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-ink-50 rounded-3xl shadow-2xl w-full flex flex-col overflow-hidden" style={{ maxWidth: '90vw', maxHeight: '90vh', width: 820 }}>
-            <div className="bg-surface border-b border-ink-100 px-6 py-4 shrink-0">
+            <div className="bg-surface border-b border-ink-100 px-4 py-3 shrink-0">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-4">
                   <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-md">
@@ -2399,7 +2399,7 @@ export default function Secretarias() {
                 )}
               </div>
             </div>
-            <div className="bg-surface border-t border-ink-100 px-6 py-4 shrink-0 flex items-center justify-between">
+            <div className="bg-surface border-t border-ink-100 px-4 py-3 shrink-0 flex items-center justify-between">
               <span className="text-xs text-ink-500">{dotacoesList.length} dotação(ões)</span>
               <div className="flex items-center gap-2">
                 <button onClick={() => { setEditingDotacao(null); setFormDotacao({ codigo:'', descricao:'', elemento_despesa:'', fonte_recurso:'', valor_previsto:'' }); setShowFormDotacao(true); setSelectedDotacao(null); }} className="btn-primary flex items-center gap-1.5 text-sm px-3 py-1.5">

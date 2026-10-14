@@ -4,7 +4,7 @@ import { cn } from '../../utils/cn'
 
 export function Label({ htmlFor, required, className, children }) {
   return (
-    <label htmlFor={htmlFor} className={cn('mb-1.5 block text-[13px] font-semibold text-ink-700', className)}>
+    <label htmlFor={htmlFor} className={cn('mb-1 block text-[13px] font-semibold text-ink-700', className)}>
       {children}
       {required && <span className="ml-0.5 text-danger-600">*</span>}
     </label>
@@ -12,7 +12,7 @@ export function Label({ htmlFor, required, className, children }) {
 }
 
 const BASE = [
-  'block w-full rounded-[10px] border bg-surface px-3 py-2.5',
+  'block w-full rounded-[10px] border bg-surface px-3 py-2',
   // 16px no celular evita o zoom automático do iOS ao focar o campo
   'text-base sm:text-sm text-ink-900 placeholder:text-ink-400',
   'outline-hidden disabled:opacity-55 disabled:cursor-not-allowed read-only:bg-ink-50',

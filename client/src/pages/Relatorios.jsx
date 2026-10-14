@@ -539,7 +539,7 @@ export default function Relatorios() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
       {/* Cabeçalho */}
       <PageHeader
         icon={BarChart3}
@@ -548,7 +548,7 @@ export default function Relatorios() {
       />
 
       {/* Filtros */}
-      <div className="card p-6">
+      <div className="card p-4">
         <SectionTitle icon={ClipboardList} title="Gerar Relatório" />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div>
@@ -626,7 +626,7 @@ export default function Relatorios() {
 
       {/* Cards de Estatísticas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="card p-6 hover:shadow-md transition-shadow animate-bounce-in">
+        <div className="card p-4 hover:shadow-md transition-shadow animate-bounce-in">
           <div className="flex items-center mb-4">
             <div className="bg-info-100 dark:bg-info-900/30 p-3 rounded-lg">
               <FileText className="h-6 w-6 text-brand-600" />
@@ -636,7 +636,7 @@ export default function Relatorios() {
           <p className="text-3xl font-bold text-ink-900 dark:text-white">{estatisticas.totalProcessos}</p>
         </div>
 
-        <div className="card p-6 hover:shadow-md transition-shadow animate-bounce-in" style={{animationDelay: '75ms'}}>
+        <div className="card p-4 hover:shadow-md transition-shadow animate-bounce-in" style={{animationDelay: '75ms'}}>
           <div className="flex items-center mb-4">
             <div className="bg-success-100 dark:bg-success-900/30 p-3 rounded-lg">
               <CheckCircle className="h-6 w-6 text-success-600" />
@@ -646,7 +646,7 @@ export default function Relatorios() {
           <p className="text-3xl font-bold text-ink-900 dark:text-white">{estatisticas.processosConcluidos}</p>
         </div>
 
-        <div className="card p-6 hover:shadow-md transition-shadow animate-bounce-in" style={{animationDelay: '150ms'}}>
+        <div className="card p-4 hover:shadow-md transition-shadow animate-bounce-in" style={{animationDelay: '150ms'}}>
           <div className="flex items-center mb-4">
             <div className="bg-warning-100 dark:bg-warning-900/30 p-3 rounded-lg">
               <TrendingUp className="h-6 w-6 text-warning-600" />
@@ -656,7 +656,7 @@ export default function Relatorios() {
           <p className="text-3xl font-bold text-ink-900 dark:text-white">{estatisticas.processosAbertos + estatisticas.processosEmAnalise}</p>
         </div>
 
-        <div className="card p-6 hover:shadow-md transition-shadow animate-bounce-in" style={{animationDelay: '225ms'}}>
+        <div className="card p-4 hover:shadow-md transition-shadow animate-bounce-in" style={{animationDelay: '225ms'}}>
           <div className="flex items-center mb-4">
             <div className="bg-danger-100 dark:bg-danger-900/30 p-3 rounded-lg">
               <Clock className="h-6 w-6 text-danger-600" />
@@ -668,7 +668,7 @@ export default function Relatorios() {
       </div>
 
       {/* Processos por Setor */}
-      <div className="card p-6">
+      <div className="card p-4">
         <SectionTitle icon={Building2} title="Processos por Setor" />
         {estatisticas.processosPorSecretaria.length > 0 ? (
           <div className="space-y-4">
@@ -703,7 +703,7 @@ export default function Relatorios() {
       </div>
 
       {/* Tempo Médio */}
-      <div className="card p-6">
+      <div className="card p-4">
         <SectionTitle icon={Clock} title="Tempo Médio de Conclusão" />
         <div className="flex items-center space-x-4">
           <div className="bg-info-100 dark:bg-info-900/30 p-4 rounded-xl">

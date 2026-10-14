@@ -423,7 +423,7 @@ export default function AlmoxAuditLog() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
 
       {/* Cabeçalho */}
       <div className="flex items-center justify-between flex-wrap gap-3">

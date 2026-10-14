@@ -178,7 +178,7 @@ export default function Registros() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-5 animate-fade-in">
+    <div className="max-w-7xl mx-auto space-y-4 animate-fade-in">
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
@@ -270,7 +270,7 @@ export default function Registros() {
 
       {/* Painel de Filtros */}
       {filtrosAbertos && (
-        <div className="card p-5">
+        <div className="card p-4">
           <form onSubmit={handleFiltrar} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
 

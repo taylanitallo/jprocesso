@@ -254,7 +254,7 @@ export default function ModalExcluidos({ entidade, onClose, onAlterado }) {
               <tbody className="divide-y divide-ink-200">
                 {filtrados.length === 0 && (
                   <tr>
-                    <td colSpan={colunas.length + 3} className="text-center py-16 text-ink-400">
+                    <td colSpan={colunas.length + 3} className="text-center py-10 text-ink-400">
                       <Archive className="w-10 h-10 mx-auto mb-2 opacity-30" />
                       {registros.length === 0 ? 'Nenhum registro excluído nesta tela.' : 'Nenhum excluído corresponde aos filtros.'}
                     </td>

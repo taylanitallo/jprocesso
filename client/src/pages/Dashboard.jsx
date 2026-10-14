@@ -156,7 +156,7 @@ export default function Dashboard() {
   ]
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <PageHeader
@@ -284,7 +284,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* ── Col 1-2 ─────────────────────────────────────────────────── */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4">
 
           {/* Gráfico de status */}
           <div className="card overflow-hidden">
@@ -351,7 +351,7 @@ export default function Dashboard() {
         </div>
 
         {/* ── Col 3 — Alertas + Urgentes + Ações ──────────────────────── */}
-        <div className="space-y-6">
+        <div className="space-y-4">
 
           {/* Alertas executivos */}
           <div className="card overflow-hidden">
@@ -445,7 +445,7 @@ export default function Dashboard() {
           <div className="p-5">
             <div className="relative">
               <div className="absolute left-4 top-2 bottom-2 w-px bg-ink-100" />
-              <div className="space-y-5">
+              <div className="space-y-4">
                 {minhaCaixaLista.slice(0, 5).map((p) => (
                   <div key={p.id} className="flex gap-4 pl-10 relative">
                     <div className="absolute left-[11px] top-1.5 w-2.5 h-2.5 rounded-full border-2 border-white bg-info-500 shadow-sm" />

@@ -60,7 +60,7 @@ export default function PatBaixa({ bem, onSuccess, onCancel }) {
 
   return (
     <>
-    <form onSubmit={submit} className="space-y-5">
+    <form onSubmit={submit} className="space-y-4">
       {/* Identificação */}
       <div className="bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-800 rounded-xl p-4">
         <div className="flex items-center gap-3">

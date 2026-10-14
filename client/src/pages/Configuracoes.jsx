@@ -325,7 +325,7 @@ export default function Configuracoes() {
   ];
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
       <PageHeader
         icon={Settings}
         title="Configurações"
@@ -706,7 +706,7 @@ export default function Configuracoes() {
 
           {/* Aba Tema */}
           {activeTab === 'tema' && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               <SectionTitle title="Aparência do Sistema" />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
                 <button

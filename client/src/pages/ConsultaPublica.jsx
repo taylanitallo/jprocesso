@@ -363,7 +363,7 @@ export default function ConsultaPublica() {
 
           {/* Conteúdo rolável */}
           <div className="flex-1 overflow-y-auto">
-            <div className="print-area max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-5 pb-10">
+            <div className="print-area max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-4 pb-10">
 
               {/* ── CARD DADOS DO PROCESSO ── */}
               <div
@@ -382,7 +382,7 @@ export default function ConsultaPublica() {
                   </span>
                 </div>
 
-                <div className="px-5 py-5 space-y-5">
+                <div className="px-5 py-5 space-y-4">
                   {/* NUP + assunto */}
                   <div>
                     <h2 className={`print-value text-xl font-bold ${txt1} tracking-tight leading-tight`}>

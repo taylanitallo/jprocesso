@@ -329,7 +329,7 @@ function ModalNovo({ onClose, onSuccess }) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Dados da prefeitura */}
           <div>
             <h3 className="text-sm font-semibold text-ink-700 mb-3 flex items-center gap-2">
@@ -857,7 +857,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
       <div className="bg-surface sm:rounded-2xl w-full h-full flex flex-col shadow-2xl overflow-hidden">
 
         {/* Modal header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-ink-200 shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-ink-200 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-info-500 to-info-700 flex items-center justify-center">
               <Building className="h-5 w-5 text-white" />
@@ -1875,7 +1875,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
 
           {/* ── Restore ─────────────────────────────────────────────────────── */}
           {tab === 'restore' && (
-            <div className="space-y-5">
+            <div className="space-y-4">
               {/* Aviso */}
               <div className="bg-warning-50 dark:bg-warning-900/20 border-2 border-warning-300 dark:border-warning-700 rounded-xl p-4">
                 <div className="flex items-start gap-3">
@@ -2022,7 +2022,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
           {tab === 'legislacao' && <AbaLegislacao tenant={tenant} />}
 
           {tab === 'configurar' && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {/* Logos */}
               <div>
                 <h3 className="font-semibold text-ink-800 dark:text-white mb-4 flex items-center gap-2">
@@ -2373,7 +2373,7 @@ export default function AdminTenants() {
     <div className="min-h-screen bg-ink-50">
       {/* Header */}
       <header className="bg-surface border-b border-ink-200 shadow-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-gradient-to-br from-info-500 to-info-700 p-2.5 rounded-xl shadow-sm">
               <Globe className="h-6 w-6 text-white" />
@@ -2394,7 +2394,7 @@ export default function AdminTenants() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+      <div className="max-w-7xl mx-auto px-6 py-8 space-y-4">
 
         {/* Stats row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -2435,7 +2435,7 @@ export default function AdminTenants() {
             Carregando...
           </div>
         ) : tenantsError ? (
-          <div className="text-center py-16">
+          <div className="text-center py-10">
             <p className="font-medium text-danger-600">Não foi possível carregar as prefeituras.</p>
             <p className="text-sm text-ink-500 mt-1">{tenantsError.response?.data?.error || tenantsError.message}</p>
             <button onClick={() => refetch()} className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-ink-200 text-sm text-ink-600 hover:bg-ink-50">
@@ -2443,7 +2443,7 @@ export default function AdminTenants() {
             </button>
           </div>
         ) : tenants.length === 0 ? (
-          <div className="text-center py-16 text-ink-400">
+          <div className="text-center py-10 text-ink-400">
             <Building className="h-16 w-16 mx-auto mb-4 opacity-30" />
             <p className="font-medium">Nenhuma prefeitura cadastrada</p>
             <p className="text-sm mt-1">Clique em "Nova Prefeitura" para começar</p>
@@ -2509,7 +2509,7 @@ export default function AdminTenants() {
                   : 'Os dados serão preservados, mas o município ficará inacessível.'}
               </p>
             </div>
-            <div className="px-6 py-4 bg-ink-50 border-t border-ink-200 flex justify-end gap-3">
+            <div className="px-4 py-3 bg-ink-50 border-t border-ink-200 flex justify-end gap-3">
               <button onClick={() => setDeleteTarget(null)}
                 className="px-4 py-2 border border-ink-300 rounded-xl text-sm text-ink-700 hover:bg-ink-50">
                 Cancelar

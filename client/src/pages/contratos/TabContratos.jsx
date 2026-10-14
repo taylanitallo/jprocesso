@@ -129,7 +129,7 @@ function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
         {/* Lista */}
         <div className="flex-1 overflow-y-auto overflow-x-auto">
           {filtrados.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-ink-400">
+            <div className="flex flex-col items-center justify-center py-10 text-ink-400">
               <PackageOpen className="w-12 h-12 mb-3 opacity-30" />
               <p className="font-medium text-sm">{busca || catFiltro || unidFiltro ? 'Nenhum item encontrado para os filtros aplicados.' : 'Nenhum item cadastrado no sistema.'}</p>
               {(busca || catFiltro || unidFiltro) && (
@@ -678,7 +678,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
         style={{ width: '1000px', maxWidth: '96vw', maxHeight: '92vh' }}>
 
         {/* ── Header ───────────────────────────────────────────────────── */}
-        <div className="bg-surface border-b border-ink-200 px-6 py-4 flex items-center gap-4 shrink-0">
+        <div className="bg-surface border-b border-ink-200 px-4 py-3 flex items-center gap-4 shrink-0">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-info-600 flex items-center justify-center shadow-lg shrink-0">
             <FileText className="w-6 h-6 text-white" />
           </div>
@@ -720,7 +720,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
         {/* ── Corpo ────────────────────────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto">
           <div className="p-6">
-            <div className="space-y-5">
+            <div className="space-y-4">
 
               {/* SectionCard — Identificação */}
               <SectionCard icon={FileText} title="Identificação" subtitle="Tipo, número e data de assinatura">

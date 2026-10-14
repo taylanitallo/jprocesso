@@ -9,7 +9,7 @@ class TabErrorBoundary extends Component {
   static getDerivedStateFromError(e) { return { error: e } }
   render() {
     if (this.state.error) return (
-      <div className="flex flex-col items-center justify-center py-16 gap-3">
+      <div className="flex flex-col items-center justify-center py-10 gap-3">
         <AlertTriangle className="h-10 w-10 text-danger-400" />
         <p className="font-semibold text-danger-600 dark:text-danger-400">Erro ao carregar esta aba</p>
         <pre className="text-xs text-ink-500 bg-ink-100 rounded-sm p-3 max-w-2xl overflow-auto whitespace-pre-wrap">{String(this.state.error)}</pre>
@@ -66,7 +66,7 @@ export default function Almoxarifado() {
   }
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
       <PageHeader
         icon={Package}
         title="Almoxarifado"

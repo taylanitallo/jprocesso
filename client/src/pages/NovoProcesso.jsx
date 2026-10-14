@@ -131,7 +131,7 @@ export default function NovoProcesso() {
 
   if (!tipoSelecionado) {
     return (
-      <div className="space-y-6 animate-fade-in">
+      <div className="space-y-4 animate-fade-in">
         <PageHeader
           icon={FilePlus2}
           title="Novo Processo"
@@ -150,7 +150,7 @@ export default function NovoProcesso() {
               <button
                 key={tipo.value}
                 onClick={() => setTipoSelecionado(tipo.value)}
-                className={`group card p-6 text-left border-2 border-transparent ${tipo.borda} transition-all cursor-pointer`}
+                className={`group card p-4 text-left border-2 border-transparent ${tipo.borda} transition-all cursor-pointer`}
               >
                 <div className={`inline-flex p-3 rounded-xl mb-4 ${tipo.iconBg} transition-colors`}>
                   <Icon className={`h-8 w-8 ${tipo.cor}`} />
@@ -172,7 +172,7 @@ export default function NovoProcesso() {
   const TipoIcon = tipoInfo?.icon || FileText
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
       <PageHeader
         icon={FilePlus2}
         title="Novo Processo"
@@ -191,7 +191,7 @@ export default function NovoProcesso() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="card p-6 space-y-5">
+      <form onSubmit={handleSubmit(onSubmit)} className="card p-4 space-y-4">
         <SectionTitle icon={TipoIcon} title={`Detalhes do ${tipoSelecionado}`} />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div className="md:col-span-2">
