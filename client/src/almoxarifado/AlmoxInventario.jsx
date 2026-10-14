@@ -4,6 +4,7 @@ import {
   CheckCircle2, AlertTriangle, X, Eye, Pencil, Trash2
 } from 'lucide-react'
 import api from '../services/api'
+import BotaoExcluidos from '../components/lixeira/BotaoExcluidos'
 import LoadingBar from '../components/LoadingBar'
 import AlmoxModal from './AlmoxModal'
 import ConfirmModal from '../components/ui/ConfirmModal'
@@ -377,12 +378,15 @@ export default function AlmoxInventario() {
             <RefreshCw className="h-4 w-4" />
           </button>
         </div>
+        <div className="flex items-center gap-2">
+        <BotaoExcluidos entidade="almox_inventarios" rotulo="Inventários excluídos" onAlterado={load} />
         <button
           onClick={() => { setNovoModal(true); setErro('') }}
           className="flex items-center gap-2 px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors"
         >
           <Plus className="h-4 w-4" /> Novo Inventario
         </button>
+        </div>
       </div>
 
       {/* Tabela */}

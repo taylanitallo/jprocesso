@@ -471,17 +471,23 @@ async function getAylaBIContext(req, moduleName) {
   // Financeiro
   if (mod.includes('financ') || mod.includes('dashboard')) {
     try {
-      const { FinanceiroLancamento } = req.models;
-      if (FinanceiroLancamento) {
-        const ano = new Date().getFullYear();
-        const base = { data_lancamento: { [Op.between]: [`${ano}-01-01`, `${ano}-12-31`] } };
-        const [totalLanc, somaPago, somaPend] = await Promise.all([
-          FinanceiroLancamento.count({ where: base }),
-          FinanceiroLancamento.sum('valor', { where: { ...base, status: 'pago' } }),
-          FinanceiroLancamento.sum('valor', { where: { ...base, status: 'pendente' } }),
-        ]);
-        biCtx.financeiro = { ano, totalLancamentos: totalLanc, somaPago: somaPago || 0, somaPendente: somaPend || 0 };
-      }
+      // Mesma fonte do saldo/extrato da Tesouraria (caixaService)
+      const caixa = require('./caixaService');
+      const ano = new Date().getFullYear();
+      const [movsAno, situacao] = await Promise.all([
+        caixa.movimentos(req.models, { de: `${ano}-01-01`, ate: `${ano}-12-31` }),
+        caixa.situacaoContas(req.models),
+      ]);
+      const somaSit = (k) => [...situacao.values()].reduce((s, c) => s + c[k], 0);
+      biCtx.financeiro = {
+        ano,
+        receitasNoAno: movsAno.filter(m => m.tipo === 'R').reduce((s, m) => s + m.valor, 0),
+        pagoNoAno: movsAno.filter(m => m.tipo === 'D').reduce((s, m) => s + m.valor, 0),
+        saldoContas: somaSit('saldo'),
+        comprometidoDidsAPagar: somaSit('comprometido'),
+        retencoesARecolher: somaSit('a_recolher'),
+        disponivel: somaSit('disponivel'),
+      };
     } catch (_) { /* falha silenciosa */ }
   }
 

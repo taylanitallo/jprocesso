@@ -7,6 +7,7 @@ import {
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import api from '../../services/api'
+import BotaoExcluidos from '../../components/lixeira/BotaoExcluidos'
 import LoadingBar from '../../components/LoadingBar'
 import { useAuth } from '../../context/AuthContext'
 import { salvarDocumentoGerado } from '../../utils/salvarDocumentoGerado'
@@ -1484,15 +1485,15 @@ function ConfirmModal({ numero, onConfirm, onClose }) {
   )
 }
 
-// ── Modal Confirmar Exclusão Definitiva (somente admin, ordem já cancelada) ────
+// ── Modal Confirmar Exclusão (somente admin, ordem já cancelada) ────────────────
 function ConfirmExcluirModal({ numero, onConfirm, onClose }) {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
       <div className="bg-surface rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center">
         <Trash2 className="w-12 h-12 text-danger-500 mx-auto mb-3" />
-        <h3 className="text-base font-bold text-ink-900 dark:text-white mb-1">Excluir Ordem Definitivamente?</h3>
+        <h3 className="text-base font-bold text-ink-900 dark:text-white mb-1">Excluir Ordem?</h3>
         <p className="text-sm text-ink-500 mb-5">
-          A ordem <strong>{numero}</strong> será removida da listagem permanentemente. Esta ação não pode ser desfeita.
+          A ordem <strong>{numero}</strong> sai da listagem e vai para os Excluídos, onde fica registrado quem excluiu e quando.
         </p>
         <div className="flex gap-3 justify-center">
           <button onClick={onClose} className="px-4 py-2 rounded-lg border border-ink-300 text-sm text-ink-600 hover:bg-ink-50">
@@ -1768,7 +1769,7 @@ function TabOrdens() {
         {isAdmin && (
           <button onClick={() => ordemSel && ordemSel.status === 'CANCELADA' && setModal('excluir')}
             disabled={!selecionada || ordemSel?.status !== 'CANCELADA'}
-            title="Excluir definitivamente (somente ordens já canceladas)"
+            title="Excluir (somente ordens já canceladas)"
             className="flex items-center gap-1.5 px-4 py-2 text-xs rounded-xl bg-danger-800 hover:bg-danger-900 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-sm transition-colors">
             <Trash2 className="w-3.5 h-3.5" /> Excluir
           </button>
@@ -1783,6 +1784,7 @@ function TabOrdens() {
           className="flex items-center gap-1.5 px-4 py-2 text-xs rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-sm transition-colors">
           <Printer className="w-3.5 h-3.5" /> Gerar PDF
         </button>
+        <BotaoExcluidos entidade="ordens" compacto onAlterado={carregar} />
       </div>
 
       {/* Modais */}

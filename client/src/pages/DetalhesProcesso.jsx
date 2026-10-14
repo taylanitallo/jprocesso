@@ -353,6 +353,91 @@ export default function DetalhesProcesso() {
     return <LoadingBar label="Carregando processo..." />
   }
 
+  const formatDate = (d) => d
+    ? new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+    : null
+
+  const formatTime = (d) => d
+    ? new Date(d).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    : null
+
+  // Tramitado/devolvido e ainda não recebido: conteúdo só após "Receber processo"
+  if (processo.aguardando_recebimento) {
+    const envio = processo.envio
+    const devolvido = envio?.tipo_acao === 'devolucao'
+    return (
+      <div className="space-y-5 animate-fade-in">
+        <PageHeader
+          icon={Inbox}
+          eyebrow="Processo aguardando recebimento"
+          title={<NumeroProcesso numero={processo.numero} linkConsulta={urlConsulta} />}
+          subtitle={processo.assunto}
+          actions={
+            <button onClick={() => navigate(-1)} className="btn-ghost gap-1.5" title="Voltar">
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Voltar</span>
+            </button>
+          }
+        />
+
+        <div className="card p-6 max-w-3xl">
+          <div className="flex items-start gap-3 mb-5">
+            <div className="shrink-0 w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
+              <Inbox className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <p className="font-semibold text-ink-900">
+                {devolvido ? 'Este processo foi devolvido ao seu setor.' : 'Este processo foi tramitado para o seu setor.'}
+              </p>
+              <p className="text-sm text-ink-600 mt-0.5">
+                Os documentos, o histórico e as ações ficam disponíveis depois que o processo for recebido.
+                O recebimento é assinado eletronicamente e fica registrado no histórico.
+              </p>
+            </div>
+          </div>
+
+          {envio && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 mb-5">
+              <InfoField icon={User} label={devolvido ? 'Devolvido por' : 'Enviado por'}
+                value={envio.origemUsuario?.nome} sub={envio.origemSetor?.nome} />
+              <InfoField icon={Calendar} label="Data do envio"
+                value={formatDate(envio.data_hora)} sub={formatTime(envio.data_hora)} />
+              <InfoField icon={MapPin} label="Destino"
+                value={envio.destinoSetor?.nome || processo.setorAtual?.nome}
+                sub={processo.usuarioAtual?.nome ? `Para: ${processo.usuarioAtual.nome}` : 'Para: qualquer servidor do setor'} />
+            </div>
+          )}
+
+          {(envio?.despacho || envio?.justificativa_devolucao) && (
+            <blockquote className="text-sm text-ink-700 bg-ink-50 border-l-2 border-ink-300 rounded-r-lg px-3 py-2 mb-5 leading-relaxed italic">
+              {envio.justificativa_devolucao
+                ? <><span className="not-italic font-semibold text-danger-700 dark:text-danger-300">Justificativa: </span>{envio.justificativa_devolucao}</>
+                : envio.despacho}
+            </blockquote>
+          )}
+
+          {processo.pode_receber ? (
+            <button
+              onClick={handleReceber}
+              disabled={recebendo}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold
+                         bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm hover:shadow-md
+                         active:scale-95 disabled:opacity-60"
+            >
+              <Inbox className="h-4 w-4" />
+              {recebendo ? 'Recebendo...' : 'Receber processo'}
+            </button>
+          ) : (
+            <p className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              Aguardando recebimento por {processo.usuarioAtual?.nome || 'servidor do setor de destino'}.
+            </p>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   /* ── helpers locais ──────────────────────────────────────────────────── */
   const statusCls = {
     aberto:     'status-aberto',
@@ -371,14 +456,6 @@ export default function DetalhesProcesso() {
   }
 
   const nivelAcessoLabels = { publico: 'Público', restrito: 'Restrito', sigiloso: 'Sigiloso' }
-
-  const formatDate = (d) => d
-    ? new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
-    : null
-
-  const formatTime = (d) => d
-    ? new Date(d).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-    : null
 
   /* ── render ──────────────────────────────────────────────────────────── */
   return (
@@ -1134,17 +1211,19 @@ export default function DetalhesProcesso() {
               </div>
               <div>
                 <h3 className="font-semibold text-ink-900">Excluir Processo</h3>
-                <p className="text-xs text-ink-500">Esta ação não pode ser desfeita.</p>
+                <p className="text-xs text-ink-500">O processo vai para os Excluídos.</p>
               </div>
             </div>
             <p className="text-sm text-ink-700 mb-2">
-              Você está prestes a excluir permanentemente o processo:
+              Você está prestes a excluir o processo:
             </p>
             <p className="font-mono font-bold text-danger-600 dark:text-danger-400 bg-danger-50 dark:bg-danger-900/20 rounded-lg px-3 py-2 mb-4 text-sm">
               {processo.numero}
             </p>
             <p className="text-xs text-ink-500 mb-6">
-              Tramitações, documentos e DID vinculados serão removidos permanentemente.
+              Tramitações, documentos e DID vão junto e podem ser restaurados pela tela Excluídos.
+              Se o DID já tiver gerado saídas de estoque ou atendido uma ordem de compra, isso é
+              desfeito agora e o processo não poderá mais ser restaurado.
             </p>
             <div className="flex gap-3 justify-end">
               <button
@@ -1170,7 +1249,7 @@ export default function DetalhesProcesso() {
       {confirmarExcluirDoc && (
         <ConfirmModal
           title="Excluir este documento?"
-          message="O documento será removido permanentemente do processo."
+          message="O documento sai do processo e vai para os Excluídos, de onde pode ser restaurado."
           confirmLabel="Excluir"
           onConfirm={() => handleDeleteDocumento(confirmarExcluirDoc)}
           onClose={() => setConfirmarExcluirDoc(null)}

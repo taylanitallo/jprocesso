@@ -1,4 +1,5 @@
-import { useQuery } from 'react-query'
+import { useQuery, useQueryClient } from 'react-query'
+import BotaoExcluidos from '../components/lixeira/BotaoExcluidos'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useState, useCallback } from 'react'
 import api from '../services/api'
@@ -66,6 +67,7 @@ export default function Processos() {
   const [mostrarFiltrosEnv, setMostrarFiltrosEnv] = useState(false)
 
   const reset = useCallback(() => setPage(1), [])
+  const queryClient = useQueryClient()
 
   // ── Helpers de filtro (chips clicáveis no card) ──────────────────────────
   const filtrarPorSecretaria = useCallback((id) => {
@@ -192,10 +194,13 @@ export default function Processos() {
         title="Processos"
         subtitle="Gerencie os processos do seu setor"
         actions={
-          <Link to={`/${subdomain}/processos/novo`} className="btn-primary">
-            <Plus className="h-4 w-4" />
-            Novo Processo
-          </Link>
+          <div className="flex items-center gap-2">
+            <BotaoExcluidos entidade="processos" onAlterado={() => queryClient.invalidateQueries('processos')} />
+            <Link to={`/${subdomain}/processos/novo`} className="btn-primary">
+              <Plus className="h-4 w-4" />
+              Novo Processo
+            </Link>
+          </div>
         }
       />
 

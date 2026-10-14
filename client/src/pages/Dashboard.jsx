@@ -114,12 +114,8 @@ export default function Dashboard() {
   const itensCriticos = almoxData?.itensCriticos       || []
   const reqPendentes  = almoxData?.requisicoesPendentes ?? null
 
-  const valorPagoTeso = finData?.tesouraria?.valorPago != null ? parseFloat(finData.tesouraria.valorPago) : null
-  const valorPagoLanc = finData?.totais?.valorPago    != null ? parseFloat(finData.totais.valorPago)    : null
-  // Prioriza Tesouraria se houver dados; combina ambos quando existem os dois
-  const valorPago = (valorPagoTeso != null || valorPagoLanc != null)
-    ? (valorPagoTeso || 0) + (valorPagoLanc || 0)
-    : null
+  // Saída real das contas no ano (líquido dos DIDs + retenções recolhidas) — mesma fonte do extrato
+  const valorPago = finData?.tesouraria?.valorPago != null ? parseFloat(finData.tesouraria.valorPago) : null
 
   // ── Alertas executivos ────────────────────────────────────────────────────
   const alertas = [

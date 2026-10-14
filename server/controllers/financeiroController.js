@@ -1,13 +1,12 @@
 const { Op, fn, col, literal } = require('sequelize');
-const { registrarLog } = require('../middleware/activityLogger');
+const caixa = require('../services/caixaService');
 
 const initializedSchemas = new Set();
 
 async function ensureTables(req) {
   const schema = req.tenant.schema;
   if (initializedSchemas.has(schema)) return;
-  const { FinanceiroLancamento, TesDespesa } = req.models;
-  await FinanceiroLancamento.sync({ force: false });
+  const { TesDespesa } = req.models;
   if (TesDespesa) await TesDespesa.sync({ force: false });
   initializedSchemas.add(schema);
 }
@@ -67,7 +66,7 @@ function situacaoDidWhereList(situacoesRaw) {
 const getDashboard = async (req, res) => {
   try {
     await ensureTables(req);
-    const { FinanceiroLancamento, Processo, User, Did, TesDespesa } = req.models;
+    const { Processo, Did } = req.models;
     const {
       ano = new Date().getFullYear(),
       // novos filtros DID — valores podem vir como string separada por vírgula ou array
@@ -135,33 +134,10 @@ const getDashboard = async (req, res) => {
       didFiltro.tipo_did = { [Op.in]: tipoList };
     }
 
-    // ── Filtro base para FinanceiroLancamento (mantido) ───────────────────
-    const whereBase = {};
-    whereBase.data_lancamento = { [Op.between]: [`${ano}-01-01`, `${ano}-12-31`] };
     // Restringe ao usuário não-admin a apenas sua secretaria
     if (req.user.tipo !== 'admin' && req.user.secretariaId) {
-      whereBase.secretaria_id = req.user.secretariaId;
       if (req.user.secretariaNome) didFiltro.secretaria_sec1 = req.user.secretariaNome;
     }
-
-    // Totais gerais (lançamentos)
-    const totalLancamentos = await FinanceiroLancamento.count({ where: whereBase });
-
-    const somaTotal = await FinanceiroLancamento.sum('valor', {
-      where: { ...whereBase, status: { [Op.not]: 'cancelado' } }
-    }) || 0;
-
-    const somaPago = await FinanceiroLancamento.sum('valor', {
-      where: { ...whereBase, status: 'pago' }
-    }) || 0;
-
-    const somaPendente = await FinanceiroLancamento.sum('valor', {
-      where: { ...whereBase, status: 'pendente' }
-    }) || 0;
-
-    const somaVencido = await FinanceiroLancamento.sum('valor', {
-      where: { ...whereBase, status: 'vencido' }
-    }) || 0;
 
     // Contagem de processos DID vinculados no período
     const totalProcessosDid = await Processo.count({
@@ -262,45 +238,16 @@ const getDashboard = async (req, res) => {
       })
     ]);
 
-    // Lançamentos (mantidos para compatibilidade — exibidos se houver dados)
-    const [porCategoria, porMes, ultimosLancamentos] = await Promise.all([
-      FinanceiroLancamento.findAll({
-        attributes: ['categoria', [fn('SUM', col('valor')), 'total'], [fn('COUNT', col('id')), 'qtd']],
-        where: { ...whereBase, status: { [Op.not]: 'cancelado' } },
-        group: ['categoria'], order: [[literal('total'), 'DESC']]
-      }),
-      FinanceiroLancamento.findAll({
-        attributes: [[fn('DATE_TRUNC', 'month', col('data_lancamento')), 'mes'], [fn('SUM', col('valor')), 'total'], [fn('COUNT', col('id')), 'qtd']],
-        where: { data_lancamento: { [Op.between]: [`${ano}-01-01`, `${ano}-12-31`] }, status: { [Op.not]: 'cancelado' } },
-        group: [fn('DATE_TRUNC', 'month', col('data_lancamento'))],
-        order: [[fn('DATE_TRUNC', 'month', col('data_lancamento')), 'ASC']]
-      }),
-      FinanceiroLancamento.findAll({
-        include: [{ model: Processo, as: 'processo', attributes: ['numero', 'assunto'] }],
-        order: [['data_lancamento', 'DESC'], ['created_at', 'DESC']], limit: 8
-      })
-    ]);
-    const vencimentosProximos = [];
-
-    // ── Totais da Tesouraria (ordens pagas via TesDespesa) ────────────────
-    let tesoValorPago = 0;
-    let tesoQuantidade = 0;
-    if (TesDespesa) {
-      const whereTesoAno = { data_pagamento: { [Op.between]: [`${ano}-01-01`, `${ano}-12-31`] } };
-      [tesoValorPago, tesoQuantidade] = await Promise.all([
-        TesDespesa.sum('valor_liquido', { where: whereTesoAno }).then(v => parseFloat(v || 0)),
-        TesDespesa.count({ where: whereTesoAno }),
-      ]);
-    }
+    // ── Pago no ano (saída real das contas: líquido dos DIDs + retenções recolhidas
+    //    + pagamentos antigos da Tesouraria) — mesma fonte do extrato (caixaService)
+    const saidasAno = (await caixa.movimentos(req.models, { de: `${ano}-01-01`, ate: `${ano}-12-31` }))
+      .filter(m => m.tipo === 'D');
+    const tesoValorPago = saidasAno.reduce((s, m) => s + m.valor, 0);
+    const tesoQuantidade = saidasAno.filter(m => m.origem !== 'retencoes').length;
 
     res.json({
       totais: {
-        lancamentos: totalLancamentos,
         processoDid: totalProcessosDid,
-        valorTotal: parseFloat(somaTotal).toFixed(2),
-        valorPago: parseFloat(somaPago).toFixed(2),
-        valorPendente: parseFloat(somaPendente).toFixed(2),
-        valorVencido: parseFloat(somaVencido).toFixed(2)
       },
       tesouraria: {
         valorPago: tesoValorPago.toFixed(2),
@@ -324,10 +271,6 @@ const getDashboard = async (req, res) => {
         pendentes: didsPendentes,
         porCredor: porCredorDid
       },
-      vencimentosProximos,
-      porCategoria,
-      porMes,
-      ultimosLancamentos
     });
   } catch (error) {
     console.error('Erro getDashboard financeiro:', error);
@@ -380,174 +323,11 @@ const getDashboardOptions = async (req, res) => {
 };
 
 // ============================================================
-// LANÇAMENTOS
-// ============================================================
-const listLancamentos = async (req, res) => {
-  try {
-    await ensureTables(req);
-    const { FinanceiroLancamento, Processo, User } = req.models;
-    const {
-      status, tipo, categoria, secretaria_id, processo_id,
-      data_inicio, data_fim, busca,
-      page = 1, limit = 20
-    } = req.query;
-
-    const where = {};
-    if (status) where.status = status;
-    if (tipo) where.tipo = tipo;
-    if (categoria) where.categoria = categoria;
-    if (secretaria_id) where.secretaria_id = secretaria_id;
-    // Restringe ao usuário não-admin a apenas sua secretaria
-    if (req.user.tipo !== 'admin' && req.user.secretariaId) {
-      where.secretaria_id = req.user.secretariaId;
-    }
-    if (processo_id) where.processo_id = processo_id;
-    if (data_inicio || data_fim) {
-      where.data_lancamento = {};
-      if (data_inicio) where.data_lancamento[Op.gte] = data_inicio;
-      if (data_fim) where.data_lancamento[Op.lte] = data_fim;
-    }
-    if (busca) {
-      where[Op.or] = [
-        { descricao: { [Op.iLike]: `%${busca}%` } },
-        { empenho: { [Op.iLike]: `%${busca}%` } },
-        { dotacao: { [Op.iLike]: `%${busca}%` } }
-      ];
-    }
-
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-    const { count, rows } = await FinanceiroLancamento.findAndCountAll({
-      where,
-      include: [
-        { model: Processo, as: 'processo', attributes: ['numero', 'assunto', 'status'] },
-        { model: User, as: 'usuario', attributes: ['nome'] }
-      ],
-      order: [['data_lancamento', 'DESC'], ['created_at', 'DESC']],
-      limit: parseInt(limit),
-      offset,
-      subQuery: false
-    });
-
-    res.json({ total: count, pagina: parseInt(page), lancamentos: rows });
-  } catch (error) {
-    console.error('Erro listLancamentos:', error);
-    res.status(500).json({ error: 'Erro ao listar lançamentos' });
-  }
-};
-
-const createLancamento = async (req, res) => {
-  try {
-    await ensureTables(req);
-    const { FinanceiroLancamento, Processo } = req.models;
-    const {
-      processo_id, tipo, categoria, descricao,
-      valor, data_lancamento, secretaria_id,
-      dotacao, empenho, observacoes
-    } = req.body;
-
-    if (!descricao || !valor || !data_lancamento) {
-      return res.status(400).json({ error: 'Descrição, valor e data são obrigatórios' });
-    }
-
-    // Validar que o processo vinculado é do tipo DID
-    if (processo_id) {
-      const proc = await Processo.findByPk(processo_id);
-      if (!proc) return res.status(404).json({ error: 'Processo não encontrado' });
-    }
-
-    const lancamento = await FinanceiroLancamento.create({
-      processo_id: processo_id || null,
-      tipo: tipo || null,
-      categoria: categoria || null,
-      descricao,
-      valor: parseFloat(valor),
-      data_lancamento,
-      secretaria_id: secretaria_id || null,
-      dotacao: dotacao || null,
-      empenho: empenho || null,
-      status: 'pendente',
-      usuario_id: req.user?.id || null,
-      observacoes: observacoes || null
-    });
-
-    res.status(201).json(lancamento);
-    await registrarLog(req, {
-      acao: 'criar_lancamento',
-      modulo: 'financeiro',
-      descricao: `Lançamento criado: ${descricao} — R$ ${valor}`,
-      referencia_id: lancamento.id
-    });
-  } catch (error) {
-    console.error('Erro createLancamento:', error);
-    res.status(500).json({ error: 'Erro ao criar lançamento' });
-  }
-};
-
-const updateLancamento = async (req, res) => {
-  try {
-    await ensureTables(req);
-    const { FinanceiroLancamento } = req.models;
-    const lancamento = await FinanceiroLancamento.findByPk(req.params.id);
-    if (!lancamento) return res.status(404).json({ error: 'Lançamento não encontrado' });
-
-    const campos = [
-      'tipo', 'categoria', 'descricao', 'valor', 'data_lancamento',
-      'secretaria_id', 'dotacao', 'empenho', 'status', 'observacoes'
-    ];
-    const updates = {};
-    campos.forEach(c => { if (req.body[c] !== undefined) updates[c] = req.body[c]; });
-    if (updates.valor) updates.valor = parseFloat(updates.valor);
-
-    await lancamento.update(updates);
-    res.json(lancamento);
-  } catch (error) {
-    console.error('Erro updateLancamento:', error);
-    res.status(500).json({ error: 'Erro ao atualizar lançamento' });
-  }
-};
-
-const deleteLancamento = async (req, res) => {
-  try {
-    await ensureTables(req);
-    const { FinanceiroLancamento } = req.models;
-    const lancamento = await FinanceiroLancamento.findByPk(req.params.id);
-    if (!lancamento) return res.status(404).json({ error: 'Lançamento não encontrado' });
-    await lancamento.destroy();
-    await registrarLog(req, {
-      acao: 'excluir_lancamento',
-      modulo: 'financeiro',
-      descricao: `Lançamento excluído: ${lancamento.descricao}`,
-      referencia_id: lancamento.id
-    });
-    res.json({ message: 'Lançamento excluído' });
-  } catch (error) {
-    console.error('Erro deleteLancamento:', error);
-    res.status(500).json({ error: 'Erro ao excluir lançamento' });
-  }
-};
-
-// Quitar (pagar) um lançamento
-const pagarLancamento = async (req, res) => {
-  try {
-    await ensureTables(req);
-    const { FinanceiroLancamento } = req.models;
-    const lancamento = await FinanceiroLancamento.findByPk(req.params.id);
-    if (!lancamento) return res.status(404).json({ error: 'Lançamento não encontrado' });
-    if (lancamento.status === 'pago') return res.status(400).json({ error: 'Lançamento já quitado' });
-
-    await lancamento.update({ status: 'pago' });
-    res.json(lancamento);
-  } catch (error) {
-    res.status(500).json({ error: 'Erro ao quitar lançamento' });
-  }
-};
-
-// ============================================================
 // PROCESSOS DID
 // ============================================================
 const getProcessosDid = async (req, res) => {
   try {
-    const { Processo, Setor, User, FinanceiroLancamento, Did } = req.models;
+    const { Processo, Setor, User, Did } = req.models;
     await ensureTables(req);
     const {
       status, setor_id, data_inicio, data_fim, busca,
@@ -615,7 +395,6 @@ const getProcessosDid = async (req, res) => {
       include: [
         { model: Setor, as: 'setorAtual', attributes: ['nome'] },
         { model: User, as: 'criadoPor', attributes: ['nome'] },
-        { model: FinanceiroLancamento, as: 'lancamentos', attributes: ['id', 'valor', 'status'] },
         {
           model: Did, as: 'did',
           required: true,  // só processos que têm DID preenchido
@@ -625,7 +404,8 @@ const getProcessosDid = async (req, res) => {
           attributes: ['id', 'numero_did', 'tipo_did', 'credor_sec1', 'secretaria_sec1',
                        'valor_bruto', 'pago', 'data_did', 'empenho_numero', 'mes_referencia',
                        'contabil_empenhado', 'contabil_liquidado', 'contabil_pc_liquidado',
-                       'liquidacao_numero', 'contabil_pc_liquidacao_numero']
+                       'liquidacao_numero', 'contabil_pc_liquidacao_numero',
+                       'data_pagamento', 'tesouraria_recebido_em', ...caixa.DESCONTOS]
         }
       ],
       order: [['data_abertura', 'DESC']],
@@ -633,6 +413,13 @@ const getProcessosDid = async (req, res) => {
       offset
     });
 
+    // Líquido e data em que saiu da conta (mesma regra do extrato)
+    for (const p of rows) {
+      if (!p.did) continue;
+      const d = p.did.toJSON();
+      p.did.dataValues.valor_liquido = caixa.liquidoDoDid(d);
+      p.did.dataValues.data_pagamento_efetiva = d.pago === 'sim' ? caixa.dataPagamentoDoDid(d) : null;
+    }
     res.json({ total: count, pagina: parseInt(page), processos: rows });
   } catch (error) {
     console.error('Erro getProcessosDid:', error);
@@ -770,7 +557,6 @@ const getRelatorio = async (req, res) => {
 module.exports = {
   getDashboard,
   getDashboardOptions,
-  listLancamentos, createLancamento, updateLancamento, deleteLancamento, pagarLancamento,
   getProcessosDid,
   getRelatorio
 };

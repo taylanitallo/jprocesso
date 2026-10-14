@@ -7,6 +7,7 @@ const Tenant = require('../models/Tenant');
 const { getTenantConnection, masterDb } = require('../config/database');
 const initTenantModels = require('../models');
 const { registrarLog } = require('../middleware/activityLogger');
+const { excluir } = require('../services/lixeiraService');
 
 // ── Refresh Tokens — persistidos em PostgreSQL (por schema) ──────────────────
 // Tenant users  → tabela refresh_tokens no schema do tenant
@@ -488,7 +489,7 @@ const listUsers = async (req, res) => {
   try {
     const { User, Secretaria, Setor } = req.models;
 
-    const where = {};
+    const where = { excluido_em: null }; // excluídos ficam na tela Excluídos
     if (req.user.tipo !== 'admin' && req.user.secretariaId) {
       where.secretariaId = req.user.secretariaId;
     }
@@ -576,11 +577,16 @@ const deleteUser = async (req, res) => {
     const { User } = req.models;
 
     const user = await User.findByPk(id);
-    if (!user) {
+    if (!user || user.excluido_em) {
       return res.status(404).json({ error: 'Usuário não encontrado' });
     }
+    if (user.id === req.user.id) {
+      return res.status(400).json({ error: 'Você não pode excluir o próprio usuário.' });
+    }
 
-    await user.destroy();
+    // Vai para os Excluídos: perde o acesso (ativo=false), mas o nome segue no
+    // histórico dos processos que movimentou
+    await excluir(req, 'usuarios', user);
 
     res.json({ message: 'Usuário excluído com sucesso' });
   } catch (error) {
@@ -646,8 +652,13 @@ const refreshToken = async (req, res) => {
           const tenantDbForRefresh = await getTenantConnection(tenantForRefresh.schema);
           const modelsForRefresh   = initTenantModels(tenantDbForRefresh);
           const freshUser = await modelsForRefresh.User?.findByPk(decoded.id, {
-            attributes: ['nome', 'tipo', 'email', 'secretariaId', 'setorId']
+            attributes: ['nome', 'tipo', 'email', 'secretariaId', 'setorId', 'ativo', 'excluido_em']
           });
+          // Usuário desativado ou excluído perde a sessão na próxima renovação
+          if (freshUser && (freshUser.ativo === false || freshUser.excluido_em)) {
+            await _revokeRefreshToken(tenantDbForRefresh, false, decoded.jti).catch(() => {});
+            return res.status(401).json({ error: 'Usuário sem acesso ao sistema' });
+          }
           if (freshUser) {
             freshPayload.nome        = freshUser.nome || cleanPayload.nome;
             freshPayload.tipo        = freshUser.tipo;

@@ -196,6 +196,41 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
       );
     `),
 
+    // 0j. Lixeira — quem excluiu e quando. O registro em si continua na tabela de
+    // origem (status EXCLUÍDO); só o administrador apaga de vez, pela tela Excluídos
+    run(`
+      CREATE TABLE IF NOT EXISTS registros_excluidos (
+        id                SERIAL        PRIMARY KEY,
+        entidade          VARCHAR(50)   NOT NULL,
+        registro_id       VARCHAR(100)  NOT NULL,
+        descricao         TEXT,
+        status_anterior   VARCHAR(30),
+        excluido_por_id   UUID,
+        excluido_por_nome VARCHAR(255),
+        excluido_em       TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS registros_excluidos_uq ON registros_excluidos (entidade, registro_id);
+      -- Exclusão que desfez efeitos em outros módulos (ex.: estoque do DID) não volta atrás
+      ALTER TABLE registros_excluidos
+        ADD COLUMN IF NOT EXISTS restauravel     BOOLEAN NOT NULL DEFAULT true,
+        ADD COLUMN IF NOT EXISTS motivo_bloqueio TEXT;
+    `),
+
+    // 0k. Lixeira no restante do sistema
+    //   deleted_at  → tabelas que antes apagavam de verdade (Sequelize paranoid: some
+    //                 sozinho das consultas feitas pelos modelos)
+    //   excluido_em → cadastros referenciados no histórico (usuário, secretaria, setor…):
+    //                 continuam aparecendo onde já foram usados, só saem das listagens
+    run(`
+      ALTER TABLE processos             ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+      ALTER TABLE tramitacoes           ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+      ALTER TABLE anexos                ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+      ALTER TABLE usuarios              ADD COLUMN IF NOT EXISTS excluido_em TIMESTAMPTZ;
+      ALTER TABLE secretarias           ADD COLUMN IF NOT EXISTS excluido_em TIMESTAMPTZ;
+      ALTER TABLE setores               ADD COLUMN IF NOT EXISTS excluido_em TIMESTAMPTZ;
+      CREATE INDEX IF NOT EXISTS processos_deleted_at_idx ON processos (deleted_at);
+    `),
+
     // 0h. Contratos — Licitações (processos licitatórios / contratações diretas)
     run(`
       CREATE TABLE IF NOT EXISTS licitacoes (
@@ -788,6 +823,28 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
       ADD COLUMN IF NOT EXISTS conta_pagamento_id UUID
   `);
 
+  // DID — caixa: data real do pagamento e recolhimento das retenções.
+  // O pagamento debita o LÍQUIDO; as retenções (INSS, ISS, IRRF…) ficam "a recolher"
+  // até a Tesouraria registrar o recolhimento. Backfill só na criação da coluna:
+  // DIDs que já estavam pagos tinham o BRUTO debitado na data em que a Tesouraria
+  // recebeu — marcar as retenções como recolhidas nessa data mantém o saldo histórico.
+  await run(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = 'dids' AND column_name = 'retencoes_recolhidas_em'
+      ) THEN
+        ALTER TABLE dids ADD COLUMN IF NOT EXISTS data_pagamento DATE;
+        ALTER TABLE dids ADD COLUMN retencoes_recolhidas_em DATE;
+        UPDATE dids
+           SET data_pagamento          = COALESCE(data_pagamento, tesouraria_recebido_em),
+               retencoes_recolhidas_em = COALESCE(data_pagamento, tesouraria_recebido_em)
+         WHERE pago = 'sim';
+      END IF;
+    END $$;
+  `);
+
   // DID — numero_did como VARCHAR(30) (schemas antigos usavam INTEGER;
   // o modelo grava strings tipo "SEMAD-001"). Idempotente: varchar→varchar é no-op.
   await run(`
@@ -932,6 +989,19 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
     )
   `);
   await run(`CREATE INDEX IF NOT EXISTS idx_tes_grupos_contas_usuario ON tes_grupos_contas(usuario_id)`);
+
+  // ── Lixeira (continuação do bloco 0k — tabelas criadas acima ou sob demanda) ──
+  // Tabela ainda inexistente falha em silêncio; o sync do modelo a cria já com a coluna.
+  await Promise.allSettled([
+    run(`ALTER TABLE dids                 ADD COLUMN IF NOT EXISTS deleted_at  TIMESTAMPTZ`),
+    run(`ALTER TABLE almox_inventarios    ADD COLUMN IF NOT EXISTS deleted_at  TIMESTAMPTZ`),
+    run(`ALTER TABLE tes_receitas         ADD COLUMN IF NOT EXISTS deleted_at  TIMESTAMPTZ`),
+    run(`ALTER TABLE tes_despesas         ADD COLUMN IF NOT EXISTS deleted_at  TIMESTAMPTZ`),
+    run(`ALTER TABLE contas_bancarias     ADD COLUMN IF NOT EXISTS deleted_at  TIMESTAMPTZ`),
+    run(`ALTER TABLE agentes              ADD COLUMN IF NOT EXISTS excluido_em TIMESTAMPTZ`),
+    run(`ALTER TABLE almoxarifado_itens   ADD COLUMN IF NOT EXISTS excluido_em TIMESTAMPTZ`),
+    run(`ALTER TABLE almox_cotas          ADD COLUMN IF NOT EXISTS excluido_em TIMESTAMPTZ`),
+  ]);
 };
 
 const getTenantConnection = async (tenantSchema) => {

@@ -5,6 +5,7 @@ import {
   CheckCircle2, ShoppingBag, Download, XOctagon
 } from 'lucide-react'
 import api from '../../services/api'
+import BotaoExcluidos from '../../components/lixeira/BotaoExcluidos'
 import { useAuth } from '../../context/AuthContext'
 import { gerarDnaItemPDF } from '../../utils/gerarDocumentoPDF'
 import {
@@ -1342,6 +1343,7 @@ function TabItens() {
           className="flex items-center gap-1.5 px-4 py-1.5 bg-ink-600 hover:bg-ink-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
           <Eye className="w-4 h-4" /> Visualizar
         </button>
+        <BotaoExcluidos entidade="itens" onAlterado={recarregarItens} />
 
         {isAdmin && (
           <>

@@ -44,6 +44,8 @@ const defineUserModel = (sequelize) => {
       field: 'tipo',
       comment: 'Admin: acesso total; Gestor: relatórios + gestão; Operacional: tramitação'
     },
+    // Lixeira: preenchido ao excluir (o registro segue visível onde já foi usado)
+    excluido_em: { type: DataTypes.DATE, allowNull: true },
     ativo: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,

@@ -4,7 +4,6 @@ const { authenticate, tenantMiddleware, requireTenant } = require('../middleware
 const {
   getDashboard,
   getDashboardOptions,
-  listLancamentos, createLancamento, updateLancamento, deleteLancamento, pagarLancamento,
   getProcessosDid,
   getRelatorio
 } = require('../controllers/financeiroController');
@@ -14,13 +13,6 @@ const mid = [tenantMiddleware, requireTenant, authenticate];
 // Painel
 router.get('/dashboard', mid, getDashboard);
 router.get('/dashboard/options', mid, getDashboardOptions);
-
-// Lançamentos
-router.get('/lancamentos', mid, listLancamentos);
-router.post('/lancamentos', mid, createLancamento);
-router.put('/lancamentos/:id', mid, updateLancamento);
-router.delete('/lancamentos/:id', mid, deleteLancamento);
-router.put('/lancamentos/:id/pagar', mid, pagarLancamento);
 
 // Processos DID
 router.get('/processos-did', mid, getProcessosDid);

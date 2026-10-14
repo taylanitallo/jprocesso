@@ -10,6 +10,7 @@ import EmptyState from '../components/ui/EmptyState';
 import FilterBar from '../components/ui/FilterBar';
 import ConfirmModal from '../components/ui/ConfirmModal';
 import LoadingBar from '../components/LoadingBar';
+import BotaoExcluidos from '../components/lixeira/BotaoExcluidos';
 
 const Usuarios = lazy(() => import('./Usuarios'));
 import {
@@ -1007,6 +1008,10 @@ export default function Secretarias() {
 
             {/* Toolbar inferior */}
             <div className="px-4 py-2.5 border-t border-ink-200 bg-ink-50 flex items-center justify-end flex-wrap gap-2">
+              <div className="mr-auto flex items-center gap-2 flex-wrap">
+                <BotaoExcluidos entidade="secretarias" rotulo="Secretarias excluídas" onAlterado={fetchSecretarias} />
+                <BotaoExcluidos entidade="setores" rotulo="Setores excluídos" onAlterado={fetchSecretarias} />
+              </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={() => { setSelectedSecretaria(null); handleCreateSecretaria(); }}
@@ -1175,7 +1180,10 @@ export default function Secretarias() {
             />
 
             {/* Toolbar inferior */}
-            <div className="px-4 py-2.5 border-t border-ink-200 bg-ink-50 flex items-center justify-end">
+            <div className="px-4 py-2.5 border-t border-ink-200 bg-ink-50 flex items-center justify-end flex-wrap gap-2">
+              <div className="mr-auto">
+                <BotaoExcluidos entidade="agentes" rotulo="Agentes excluídos" onAlterado={fetchSecretarias} />
+              </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => { setSelectedAgente(null); openModalAgente(); }}
@@ -1910,7 +1918,7 @@ export default function Secretarias() {
                     Tem certeza que deseja excluir a secretaria <strong>{deleteTarget.data.nome}</strong>?
                     {deleteTarget.data.setores?.length > 0 && (
                       <span className="block mt-2 text-danger-600 text-sm">
-                        ⚠️ Todos os {deleteTarget.data.setores.length} setores vinculados também serão excluídos.
+                        Os {deleteTarget.data.setores.length} setores vinculados deixam de aparecer junto com ela.
                       </span>
                     )}
                   </>
@@ -1921,7 +1929,7 @@ export default function Secretarias() {
                 )}
               </p>
               <p className="text-sm text-ink-600">
-                Esta ação não pode ser desfeita.
+                Vai para os Excluídos, de onde pode ser restaurado.
               </p>
             </div>
 
@@ -2105,7 +2113,7 @@ export default function Secretarias() {
             </div>
             <div className="p-6">
               <p className="text-ink-700">
-                Excluir o agente <strong>{deleteAgenteTarget.nome}</strong>? Esta ação não pode ser desfeita.
+                Excluir o agente <strong>{deleteAgenteTarget.nome}</strong>? Ele vai para os Agentes excluídos, de onde pode ser restaurado.
               </p>
             </div>
             <div className="px-6 py-4 bg-ink-50 border-t border-ink-200 flex justify-end gap-3">

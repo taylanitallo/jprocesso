@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Link, useParams, useLocation } from 'react-router-dom'
-import { Search, AlertCircle, ArrowLeft, Share2, Printer, ChevronLeft, SlidersHorizontal, X, LogIn, Building, FileSearch, Clock, Sun, Moon } from 'lucide-react'
+import { Search, AlertCircle, ArrowLeft, Share2, Printer, ChevronLeft, SlidersHorizontal, X, Building, FileSearch, Clock } from 'lucide-react'
 import api from '../services/api'
 import { useTheme } from '../context/ThemeContext'
+import LayoutPublico from '../components/LayoutPublico'
 
 export default function ConsultaPublica() {
   const { subdomain, numero: numeroNaUrl } = useParams()
@@ -13,7 +14,7 @@ export default function ConsultaPublica() {
   const [showSugestoes, setShowSugestoes] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [searched, setSearched] = useState(false)
-  const { isDark, toggleTheme } = useTheme()
+  const { isDark } = useTheme()
 
   // Filtros avançados
   const [showFiltros, setShowFiltros] = useState(false)
@@ -218,13 +219,9 @@ export default function ConsultaPublica() {
   const bgDev      = mc ? 'bg-orange-50 border-orange-200'         : 'border-orange-500/25'
   const txtDevT    = mc ? 'text-orange-600'             : 'text-orange-400'
   const txtDevB    = mc ? 'text-orange-800'             : 'text-orange-200'
-  const hdrBg      = mc ? 'rgba(255,255,255,0.96)'      : 'rgba(5,8,22,0.9)'
   const tbrBg      = mc ? 'rgba(248,250,252,0.96)'      : 'rgba(6,10,26,0.9)'
-  const ftrBg      = mc ? 'rgba(248,250,252,0.95)'      : 'rgba(6,10,26,0.9)'
   const bdPg       = mc ? 'border-ink-200/80'         : 'border-white/[0.08]'
-  const overlayClass = mc ? 'bg-surface/80'               : 'bg-[#050816]/75'
   const searchInputBg = mc ? 'bg-surface border-ink-300 text-ink-900' : 'bg-surface/95 border-white/20 text-ink-900'
-  const txtNav     = mc ? 'text-ink-600 hover:text-ink-900' : 'text-white/55 hover:text-white/90'
   const bgSugest   = mc ? 'rgba(255,255,255,0.97)'      : 'rgba(8,12,30,0.88)'
   const bdSugest   = mc ? 'border-ink-200'            : 'border-ink-200/60'
   const txtMeta    = mc ? 'text-ink-400'              : 'text-ink-400'
@@ -240,6 +237,7 @@ export default function ConsultaPublica() {
       indeferimento: { label: 'Indeferido',  cls: 'bg-danger-500/20 text-danger-300 border-danger-500/30' },
       conclusao:     { label: 'Concluído',   cls: 'bg-violet-500/20 text-violet-300 border-violet-500/30' },
       devolucao:     { label: 'Devolvido',   cls: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
+      recebimento:   { label: 'Recebimento', cls: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
       arquivamento:  { label: 'Arquivado',   cls: 'bg-ink-500/20 text-ink-400 border-ink-500/30' },
     }
     const light = {
@@ -251,6 +249,7 @@ export default function ConsultaPublica() {
       indeferimento: { label: 'Indeferido',  cls: 'bg-danger-100 text-danger-700 border-danger-300' },
       conclusao:     { label: 'Concluído',   cls: 'bg-violet-100 text-violet-700 border-violet-300' },
       devolucao:     { label: 'Devolvido',   cls: 'bg-orange-100 text-orange-700 border-orange-300' },
+      recebimento:   { label: 'Recebimento', cls: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
       arquivamento:  { label: 'Arquivado',   cls: 'bg-ink-100 text-ink-600 border-ink-300' },
     }
     const map = mc ? light : dark
@@ -263,7 +262,8 @@ export default function ConsultaPublica() {
     tramite:       'bg-violet-400 shadow-fuchsia-400/50',
     tramitacao:    'bg-violet-400 shadow-fuchsia-400/50',
     devolucao:     'bg-orange-400 shadow-orange-400/50',
-    conclusao:     'bg-violet-400 shadow-violet-400/50',
+    recebimento:   'bg-emerald-400 shadow-emerald-400/50',
+    conclusao:    'bg-violet-400 shadow-violet-400/50',
     deferimento:   'bg-emerald-400 shadow-emerald-400/50',
     indeferimento: 'bg-danger-400 shadow-danger-400/50',
     arquivamento:  'bg-ink-400 shadow-slate-400/50',
@@ -304,80 +304,7 @@ export default function ConsultaPublica() {
   }
 
   return (
-    <div
-      className="relative h-screen flex flex-col overflow-hidden"
-      style={{
-        backgroundImage: "url('/background.png')",
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-      }}
-    >
-      {/* Overlay adaptável ao tema */}
-      <div className={`absolute inset-0 ${overlayClass} pointer-events-none transition-colors duration-300`} />
-
-      {/* ── HEADER ── */}
-      <header
-        className={`no-print relative z-20 shrink-0 backdrop-blur-xl border-b ${bdPg} transition-colors duration-300`}
-        style={{ background: hdrBg }}
-      >
-        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-          <Link to={`/${subdomain}/login`}>
-            <img
-              src={mc ? '/logo_dark.png' : '/logo_jprocesso.png'}
-              alt="jProcesso"
-              className="h-8 w-auto object-contain"
-            />
-          </Link>
-
-          <nav className={`hidden md:flex items-center gap-7 text-[11px] font-semibold tracking-widest uppercase`}>
-            <Link to={`/${subdomain}/login`} className={`${txtNav} transition-colors`}>Início</Link>
-            <a href="#" className={`${txtNav} transition-colors`}>Perguntas Frequentes</a>
-            <Link to={`/${subdomain}/verificar`} className={`${txtNav} transition-colors`}>Verificar documento</Link>
-            <Link to={`/${subdomain}/legislacao`} className={`${txtNav} transition-colors`}>Legislações</Link>
-            <Link
-              to={`/${subdomain}/login`}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600/20 border border-violet-500/30 text-violet-700 dark:text-violet-300 hover:bg-violet-600/30 transition-all text-[11px]"
-            >
-              <LogIn className="h-3.5 w-3.5" />
-              Acesso Restrito
-            </Link>
-
-            {/* Toggle modo claro/escuro */}
-            <button
-              onClick={toggleTheme}
-              title={mc ? 'Mudar para modo escuro' : 'Mudar para modo claro'}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-semibold transition-all ${
-                mc
-                  ? 'bg-ink-100 border-ink-300 text-ink-600 hover:bg-ink-200'
-                  : 'bg-surface/8 border-white/20 text-white/60 hover:bg-surface/15 hover:text-white/90'
-              }`}
-            >
-              {mc ? <Moon className="h-3.5 w-3.5" /> : <Sun className="h-3.5 w-3.5" />}
-              {mc ? 'Escuro' : 'Claro'}
-            </button>
-          </nav>
-
-          {/* Mobile: botões */}
-          <div className="md:hidden flex items-center gap-2">
-            <button
-              onClick={toggleTheme}
-              className={`p-2 rounded-lg border transition-all ${
-                mc ? 'bg-ink-100 border-ink-300 text-ink-600' : 'bg-surface/8 border-white/20 text-white/60'
-              }`}
-            >
-              {mc ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-            </button>
-            <Link
-              to={`/${subdomain}/login`}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600/20 border border-violet-500/30 text-violet-700 dark:text-violet-300 text-xs font-semibold"
-            >
-              <LogIn className="h-3.5 w-3.5" />
-              Login
-            </Link>
-          </div>
-        </div>
-      </header>
+    <LayoutPublico subdomain={subdomain}>
 
       {/* ── CONTEÚDO ── */}
       {searched && processo && !isLoading ? (
@@ -578,16 +505,19 @@ export default function ConsultaPublica() {
                                 {badgeSituacao(tramitacao.tipo_acao)}
                               </div>
 
-                              {/* Permanência */}
+                              {/* Permanência — a etapa mais antiga não tem anterior: é o início do processo */}
                               <p className={`text-[11px] ${txt3} flex items-center gap-1 mb-2`}>
                                 <Clock className="h-3 w-3" />
-                                Permanência:{' '}
-                                {index === 0
-                                  ? calcularPermanencia(tramitacao.data_hora || tramitacao.created_at, null)
-                                  : calcularPermanencia(
-                                      arr[index + 1]?.data_hora || arr[index + 1]?.created_at,
-                                      tramitacao.data_hora || tramitacao.created_at
-                                    )
+                                {index === arr.length - 1 && index > 0
+                                  ? 'Início do processo'
+                                  : <>Permanência:{' '}
+                                    {index === 0
+                                      ? calcularPermanencia(tramitacao.data_hora || tramitacao.created_at, null)
+                                      : calcularPermanencia(
+                                          arr[index + 1]?.data_hora || arr[index + 1]?.created_at,
+                                          tramitacao.data_hora || tramitacao.created_at
+                                        )
+                                    }</>
                                 }
                               </p>
 
@@ -855,22 +785,6 @@ export default function ConsultaPublica() {
         </div>
       )}
 
-      {/* ── FOOTER ── */}
-      <footer
-        className={`no-print relative z-20 shrink-0 backdrop-blur-xl border-t ${bdPg} transition-colors duration-300`}
-        style={{ background: ftrBg }}
-      >
-        <div className="max-w-7xl mx-auto px-6 py-2.5 flex items-center justify-center">
-          <p className={`text-[11px] font-medium tracking-[0.16em] ${mc ? 'text-ink-400' : 'text-ink-500'} uppercase`}>
-            © 2026{' '}
-            <a href="https://jeossistemas.com" target="_blank" rel="noopener noreferrer" className="hover:text-violet-500 transition-colors">
-              JEOS SISTEMAS E ASSESSORIA LTDA
-            </a>
-            <span className="mx-2 text-violet-500/50">•</span>
-            V{__APP_VERSION__}
-          </p>
-        </div>
-      </footer>
-    </div>
+    </LayoutPublico>
   )
 }

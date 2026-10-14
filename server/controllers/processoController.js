@@ -3,6 +3,8 @@ const crypto = require('crypto');
 const { Op, Sequelize } = require('sequelize');
 const { registrarLog } = require('../middleware/activityLogger');
 const { getScopeSetorInclude, getScopeSecretariaInclude } = require('../utils/scopeFilter');
+const { situacaoRecebimento } = require('../utils/recebimento');
+const { registrarExclusao } = require('../services/lixeiraService');
 const { masterDb } = require('../config/database');
 const assinaturaService = require('../services/assinaturaService');
 const { AssinaturaError } = assinaturaService;
@@ -87,6 +89,7 @@ const createProcesso = async (req, res) => {
     const ultimoProcesso = await Processo.findOne({
       where: { ano },
       order: [['sequencial', 'DESC']],
+      paranoid: false, // número de processo excluído não é reaproveitado
       transaction
     });
 
@@ -276,6 +279,10 @@ const tramitarProcesso = async (req, res) => {
       await transaction.rollback();
       return res.status(400).json({ error: 'Não é possível tramitar um processo concluído ou arquivado' });
     }
+    if ((await situacaoRecebimento(req, processo)).bloqueado) {
+      await transaction.rollback();
+      return res.status(403).json({ error: 'Receba o processo antes de tramitá-lo.' });
+    }
 
     // Buscar usuário e validar a assinatura eletrônica (senha + código do app)
     const user = await User.findByPk(req.user.id, { transaction });
@@ -431,9 +438,13 @@ const devolverProcesso = async (req, res) => {
       if (req.user.tipo !== 'admin' && req.user.tipo !== 'gestor') {
         await transaction.rollback();
         return res.status(403).json({ 
-          error: 'Somente o usuário responsável atual pode devolver este processo.' 
+          error: 'Somente o usuário responsável atual pode devolver este processo.'
         });
       }
+    }
+    if ((await situacaoRecebimento(req, processo)).bloqueado) {
+      await transaction.rollback();
+      return res.status(403).json({ error: 'Receba o processo antes de devolvê-lo.' });
     }
 
     const ultimaTramitacao = await Tramitacao.findOne({
@@ -528,9 +539,13 @@ const concluirProcesso = async (req, res) => {
       if (req.user.tipo !== 'admin' && req.user.tipo !== 'gestor') {
         await transaction.rollback();
         return res.status(403).json({ 
-          error: 'Somente o usuário responsável atual pode concluir este processo.' 
+          error: 'Somente o usuário responsável atual pode concluir este processo.'
         });
       }
+    }
+    if ((await situacaoRecebimento(req, processo)).bloqueado) {
+      await transaction.rollback();
+      return res.status(403).json({ error: 'Receba o processo antes de concluí-lo.' });
     }
 
     const user = await User.findByPk(req.user.id, { transaction });
@@ -901,6 +916,30 @@ const getProcessoById = async (req, res) => {
 
     if (!processo) {
       return res.status(404).json({ error: 'Processo não encontrado' });
+    }
+
+    // Ainda não recebido pelo destino: só o necessário para identificar o
+    // processo e quem enviou — conteúdo, documentos e histórico após receber
+    const recebimento = await situacaoRecebimento(req, processo);
+    if (recebimento.bloqueado) {
+      const p = processo.toJSON();
+      const envio = p.tramitacoes.find(t => t.id === recebimento.ultima.id);
+      return res.json({
+        processo: {
+          id: p.id, numero: p.numero, assunto: p.assunto, tipo_processo: p.tipo_processo,
+          status: p.status, prioridade: p.prioridade, data_abertura: p.data_abertura, created_at: p.created_at,
+          setor_atual_id: p.setor_atual_id, usuario_atual_id: p.usuario_atual_id,
+          setorAtual: p.setorAtual, usuarioAtual: p.usuarioAtual ? { id: p.usuarioAtual.id, nome: p.usuarioAtual.nome } : null,
+          aguardando_recebimento: true,
+          pode_receber: recebimento.podeReceber,
+          envio: envio ? {
+            tipo_acao: envio.tipo_acao, data_hora: envio.data_hora,
+            despacho: envio.despacho, justificativa_devolucao: envio.justificativa_devolucao,
+            origemUsuario: envio.origemUsuario, origemSetor: envio.origemSetor,
+            destinoUsuario: envio.destinoUsuario, destinoSetor: envio.destinoSetor,
+          } : null,
+        },
+      });
     }
 
     // Tarja de assinatura eletrônica de cada ato (tramitações antigas não têm)
@@ -1283,7 +1322,11 @@ const deleteProcesso = async (req, res) => {
       return res.status(404).json({ error: 'Processo não encontrado' });
     }
 
-    // Remove DID vinculado (se existir) — antes, desfaz tudo que ele gerou no
+    // O que a exclusão desfez em outros módulos — se houver, ela não pode ser
+    // restaurada (não há como refazer com segurança as saídas e a ordem)
+    const desfeitos = [];
+
+    // Exclui o DID vinculado (se existir) — antes, desfaz tudo que ele gerou no
     // almoxarifado e libera a Ordem de Compra vinculada.
     if (Did) {
       const did = await Did.findOne({ where: { processo_id: id }, transaction });
@@ -1307,6 +1350,7 @@ const deleteProcesso = async (req, res) => {
             }
             await mov.destroy({ transaction });
           }
+          if (movs.length) desfeitos.push('as saídas de material do almoxarifado foram estornadas');
         }
 
         // 2) Se a Ordem de Compra vinculada não estiver em uso por outro DID,
@@ -1317,10 +1361,11 @@ const deleteProcesso = async (req, res) => {
             transaction
           });
           if (outroVinculo === 0) {
-            await ContratoOrdem.update(
+            const [liberadas] = await ContratoOrdem.update(
               { status: 'EMITIDA' },
               { where: { id: did.ordem_compra_id, status: 'ATENDIDA' }, transaction }
             );
+            if (liberadas) desfeitos.push('a ordem de compra vinculada voltou a ficar disponível');
 
             if (AlmoxLote && AlmoxarifadoItem) {
               const lotes = await AlmoxLote.findAll({
@@ -1337,29 +1382,35 @@ const deleteProcesso = async (req, res) => {
                 }
                 await lote.update({ quantidade_atual: 0, ativo: false }, { transaction });
               }
+              if (lotes.length) desfeitos.push('os lotes recebidos pela ordem foram zerados no estoque');
             }
           }
         }
       }
 
-      await Did.destroy({ where: { processo_id: id }, transaction });
     }
 
-    // Remove tramitações
-    if (Tramitacao) {
-      await Tramitacao.destroy({ where: { processo_id: id }, transaction });
+    // Nada é apagado: processo, DID, tramitações e documentos vão juntos para os
+    // Excluídos com o mesmo deleted_at — é por ele que a restauração os traz de volta
+    const agora = new Date();
+    await registrarExclusao(req, 'processos', processo, {
+      transaction,
+      restauravel: desfeitos.length === 0,
+      motivoBloqueio: `Ao excluir, ${desfeitos.join('; ')}. Por isso o processo não pode ser restaurado.`,
+    });
+    for (const Model of [Did, Tramitacao, Documento].filter(Boolean)) {
+      await Model.update({ deleted_at: agora }, { where: { processo_id: id }, transaction });
     }
-
-    // Remove documentos
-    if (Documento) {
-      await Documento.destroy({ where: { processo_id: id }, transaction });
-    }
-
-    // Remove o processo
-    await processo.destroy({ transaction });
+    await Processo.update({ deleted_at: agora }, { where: { id }, transaction });
 
     await transaction.commit();
-    console.log(`[deleteProcesso] Processo ${processo.numero} excluído por uid=${req.user.id}`);
+    await registrarLog(req, {
+      acao: 'excluir_processo',
+      modulo: 'processos',
+      descricao: `Processo ${processo.numero} excluído`,
+      referencia_id: processo.id,
+      referencia_numero: processo.numero,
+    });
     res.json({ success: true, numero: processo.numero });
   } catch (error) {
     await transaction.rollback();

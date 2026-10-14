@@ -47,7 +47,7 @@ const getByProcesso = async (req, res) => {
 
     // Retroativamente atribui numero_did para registros antigos com o campo nulo
     if (!did.numero_did) {
-      const pos = await Did.count({ where: { createdAt: { [Op.lt]: did.createdAt } } });
+      const pos = await Did.count({ where: { createdAt: { [Op.lt]: did.createdAt } }, paranoid: false });
       const numero = String(pos + 1);
       await did.update({ numero_did: numero });
       did.dataValues.numero_did = numero;
@@ -73,7 +73,7 @@ const DATE_FIELDS = [
   'data_did', 'ci_recebido_em', 'compras_recebido_em', 'data_compras',
   'data_empenho', 'data_liquidacao', 'contabil_recebido_em',
   'financas_recebido_em', 'financas2_recebido_em', 'financas2_enviado_pagamento',
-  'tesouraria_recebido_em', 'receb_data', 'receb_nf_data', 'receb_nf_enviado_compras',
+  'tesouraria_recebido_em', 'data_pagamento', 'receb_data', 'receb_nf_data', 'receb_nf_enviado_compras',
   // Compras 2 (Solicitação Empenho — Contas Variáveis)
   'compras2_recebido_em', 'compras2_data',
   // Compras 3 (Ateste NF — Contas Variáveis)
@@ -84,6 +84,8 @@ const DATE_FIELDS = [
 
 const sanitizeBody = (body) => {
   const cleaned = { ...body };
+  // Recolhimento das retenções é da Tesouraria (retencoesController), não do formulário
+  delete cleaned.retencoes_recolhidas_em;
   for (const field of NUMERIC_FIELDS) {
     if (cleaned[field] === '' || cleaned[field] === undefined) {
       cleaned[field] = null;
@@ -98,6 +100,10 @@ const sanitizeBody = (body) => {
     if (!cleaned[field] || cleaned[field] === '' || cleaned[field] === 'Invalid date') {
       cleaned[field] = null;
     }
+  }
+  // Pago sem data: o débito precisa de uma data para entrar no extrato da conta
+  if (cleaned.pago === 'sim' && !cleaned.data_pagamento) {
+    cleaned.data_pagamento = cleaned.tesouraria_recebido_em || new Date().toISOString().slice(0, 10);
   }
   return cleaned;
 };
@@ -315,7 +321,8 @@ async function resolverProximoNumeroDid(req, { secretariaId, secretariaNomeOuSig
   }
 
   const where = nomeFiltro ? { secretaria_sec1: nomeFiltro } : {};
-  const count = await Did.count({ where });
+  // Conta também os excluídos: número de DID não é reaproveitado
+  const count = await Did.count({ where, paranoid: false });
   const proximo = count + 1;
   const formatado = sigla ? `${sigla}-${String(proximo).padStart(3, '0')}` : String(proximo);
   return { proximo, sigla, formatado };

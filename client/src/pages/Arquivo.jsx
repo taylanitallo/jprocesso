@@ -9,6 +9,7 @@ import {
 import { PageHeader, ConfirmModal } from '../components/ui'
 import { useAuth } from '../context/AuthContext'
 import LoadingBar from '../components/LoadingBar'
+import BotaoExcluidos from '../components/lixeira/BotaoExcluidos'
 
 const TIPO_LABEL = {
   did:        { label: 'DID',           cor: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300' },
@@ -535,6 +536,10 @@ export default function Arquivo() {
         icon={Archive}
         title="Gerenciador de Arquivos"
         subtitle={`${processos.length} processos concluídos · ${totalDocs} documentos · ${docsGerados.length} gerados`}
+        actions={
+          <BotaoExcluidos entidade="documentos" rotulo="Documentos excluídos"
+            onAlterado={() => { queryClient.invalidateQueries('arquivo-processos'); queryClient.invalidateQueries('documentos-gerados') }} />
+        }
       />
 
       {/* Toast */}
@@ -633,7 +638,7 @@ export default function Arquivo() {
       {confirmarExcluirDoc && (
         <ConfirmModal
           title="Excluir documento gerado?"
-          message={`"${confirmarExcluirDoc.nome_arquivo}" será removido permanentemente do arquivo.`}
+          message={`"${confirmarExcluirDoc.nome_arquivo}" sai do arquivo e vai para os Documentos excluídos, de onde pode ser restaurado.`}
           confirmLabel="Excluir"
           onConfirm={() => handleDeleteDoc(confirmarExcluirDoc)}
           onClose={() => setConfirmarExcluirDoc(null)}
