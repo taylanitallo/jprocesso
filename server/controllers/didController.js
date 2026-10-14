@@ -1,6 +1,11 @@
 const { Op } = require('sequelize');
 const path = require('path');
 const storage = require('../services/storageService');
+const etapasSvc = require('../services/didEtapasService');
+const { registrarLog } = require('../middleware/activityLogger');
+const { AssinaturaError } = require('../services/assinaturaService');
+// Mesma assinatura eletrônica dos atos de tramitação
+const { validarAssinante, assinarTramitacao, responderErroAssinatura } = require('./processoController');
 
 const migratedSchemas = new Set();
 async function ensureDidColumns(req) {
@@ -86,18 +91,15 @@ const sanitizeBody = (body) => {
   const cleaned = { ...body };
   // Recolhimento das retenções é da Tesouraria (retencoesController), não do formulário
   delete cleaned.retencoes_recolhidas_em;
-  for (const field of NUMERIC_FIELDS) {
-    if (cleaned[field] === '' || cleaned[field] === undefined) {
-      cleaned[field] = null;
-    }
-  }
-  for (const field of ENUM_FIELDS) {
-    if (cleaned[field] === '' || cleaned[field] === undefined) {
+  // Só normaliza o que veio no corpo: campo ausente fica como está no banco
+  // (salvamentos por etapa mandam apenas os campos da etapa)
+  for (const field of [...NUMERIC_FIELDS, ...ENUM_FIELDS]) {
+    if (field in cleaned && (cleaned[field] === '' || cleaned[field] === undefined)) {
       cleaned[field] = null;
     }
   }
   for (const field of DATE_FIELDS) {
-    if (!cleaned[field] || cleaned[field] === '' || cleaned[field] === 'Invalid date') {
+    if (field in cleaned && (!cleaned[field] || cleaned[field] === 'Invalid date')) {
       cleaned[field] = null;
     }
   }
@@ -113,9 +115,24 @@ const createOrUpdate = async (req, res) => {
     await ensureDidColumns(req);
     const { processoId } = req.params;
     const { Did, Processo, Setor, Secretaria } = req.models;
-    const body = sanitizeBody(req.body);
+    let body = sanitizeBody(req.body);
 
     let did = await Did.findOne({ where: { processo_id: processoId } });
+
+    // Fluxo por etapas: só quem pode a etapa atual salva, e só os campos dela
+    const processo = await Processo.findByPk(processoId);
+    const { tipo, etapas } = did ? etapasSvc.estadoEtapas(did) : { tipo: body.tipo_did === 'variaveis' ? 'variaveis' : 'fixas', etapas: {} };
+    const atual = etapasSvc.etapaAtualDe(tipo, etapas);
+    if (!atual) return res.status(409).json({ error: 'Todas as etapas deste DID estão concluídas.' });
+    const permissao = await etapasSvc.podePreencher(req, {
+      processo, tipo, etapaAtual: atual,
+      setores: await etapasSvc.setoresPorEtapa(req, tipo),
+      usuario: await etapasSvc.usuarioCompleto(req),
+    });
+    if (!permissao.pode) return res.status(403).json({ error: permissao.motivo, codigo: permissao.codigo });
+    const itensDid = body.itens_did;
+    body = etapasSvc.filtrarCampos(tipo, atual, body);
+    if (atual.numero === 1 && itensDid) body.itens_did = itensDid;
 
     if (!did) {
       // Usa o numero_did fornecido (gerado no início do processo) ou calcula
@@ -129,7 +146,8 @@ const createOrUpdate = async (req, res) => {
         ...body,
         processo_id: processoId,
         numero_did: numeroDid,
-        criado_por_id: req.user.id
+        criado_por_id: req.user.id,
+        etapas: {}, // DID novo já nasce no fluxo por etapas
       });
     } else {
       await did.update(body);
@@ -161,7 +179,75 @@ const createOrUpdate = async (req, res) => {
   }
 };
 
-module.exports = { getByProcesso, createOrUpdate, getProximoNumero, getEstoque, getAlmEstoque, uploadCertidao, downloadCertidaoUrl, deleteCertidao };
+// ─── Etapas do DID ────────────────────────────────────────────────────────────
+const responderEtapaErro = (res, err, msg) => {
+  if (err instanceof etapasSvc.EtapaErro) {
+    return res.status(err.status).json({ error: err.message, codigo: err.codigo, faltando: err.faltando });
+  }
+  if (err instanceof AssinaturaError) return responderErroAssinatura(res, err);
+  console.error(msg, err);
+  res.status(500).json({ error: msg });
+};
+
+// Linha de etapas: status, etapa atual, se o usuário pode preenchê-la e por quê
+const getEtapas = async (req, res) => {
+  try {
+    const { Did, Processo } = req.models;
+    const processo = req.params.processoId === 'novo' ? null : await Processo.findByPk(req.params.processoId);
+    const did = processo ? await Did.findOne({ where: { processo_id: processo.id } }) : null;
+    const base = did || { tipo_did: req.query.tipo === 'variaveis' ? 'variaveis' : 'fixas', etapas: {} };
+    res.json(await etapasSvc.resumo(req, base, processo));
+  } catch (err) {
+    responderEtapaErro(res, err, 'Erro ao carregar as etapas do DID');
+  }
+};
+
+// Assinatura do ato: valida senha + código do app e assina a tramitação
+const assinadorEtapa = (req) => ({
+  validar: (transaction, usuario) => validarAssinante(req, usuario, transaction),
+  assinar: (transaction, processo, tramitacao, usuario) => assinarTramitacao(req, transaction, processo, tramitacao, usuario),
+});
+
+const concluirEtapa = async (req, res) => {
+  try {
+    const numero = parseInt(req.params.numero, 10);
+    const { did, etapa, proxima, assinatura } = await etapasSvc.concluir(req, {
+      processoId: req.params.processoId, numero, body: sanitizeBody(req.body), ...assinadorEtapa(req),
+    });
+    await registrarLog(req, {
+      acao: 'did_concluir_etapa',
+      modulo: 'processos',
+      descricao: `DID ${did.numero_did} — ${etapa.titulo} concluída e assinada`,
+      referencia_id: req.params.processoId,
+    });
+    res.json({ ok: true, etapa: etapa.titulo, proxima: proxima?.titulo || null, assinatura });
+  } catch (err) {
+    responderEtapaErro(res, err, 'Erro ao concluir a etapa');
+  }
+};
+
+const devolverEtapa = async (req, res) => {
+  try {
+    const numero = parseInt(req.params.numero, 10);
+    const { anterior, assinatura } = await etapasSvc.devolver(req, {
+      processoId: req.params.processoId, numero, justificativa: req.body?.justificativa, ...assinadorEtapa(req),
+    });
+    await registrarLog(req, {
+      acao: 'did_devolver_etapa',
+      modulo: 'processos',
+      descricao: `DID devolvido para a ${anterior.titulo}`,
+      referencia_id: req.params.processoId,
+    });
+    res.json({ ok: true, anterior: anterior.titulo, assinatura });
+  } catch (err) {
+    responderEtapaErro(res, err, 'Erro ao devolver a etapa');
+  }
+};
+
+module.exports = {
+  getByProcesso, createOrUpdate, getProximoNumero, getEstoque, getAlmEstoque, uploadCertidao, downloadCertidaoUrl, deleteCertidao,
+  getEtapas, concluirEtapa, devolverEtapa,
+};
 
 // ─── Sincronização automática DID → Almoxarifado ────────────────────────────
 // Ao salvar um DID com itens, registra SAÍDA no almoxarifado para cada item

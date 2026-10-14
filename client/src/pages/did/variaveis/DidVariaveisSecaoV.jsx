@@ -1,6 +1,7 @@
 import { Calculator } from 'lucide-react'
-import { useState, useEffect } from 'react'
-import { Field, Input, UserSelect, SectionCard, SecaoBotoes, alertarPendencias } from '../didShared'
+import { useContext } from 'react'
+import { Field, Input, UserSelect, SectionCard } from '../didShared'
+import { EtapaDidContext, ResponsavelEtapa, RecebidoEmEtapa } from '../EtapasDid'
 
 function SimNao({ value, onChange, disabled }) {
   return (
@@ -13,37 +14,22 @@ function SimNao({ value, onChange, disabled }) {
   )
 }
 
-export default function DidVariaveisSecaoV({ form, inp, saving, didId, onSave, onLimpar }) {
-  const [locked, setLocked] = useState(false)
-  useEffect(() => { if (didId) setLocked(true) }, [didId])
+export default function DidVariaveisSecaoV({ form, inp, didId }) {
+  // Editável só na etapa atual, para quem pode preenchê-la (fluxo por etapas)
+  const { editavel } = useContext(EtapaDidContext)
+  const locked = !editavel
 
   const empenhado = form.contabil_empenhado === 'sim'
   const camposEmpenhoDisabled = locked || !empenhado
-
-  const salvar = async () => {
-    const completo = alertarPendencias([
-      { ok: !!form.contabil_recebido_em, label: 'Recebido em' },
-      { ok: !!form.contabil_responsavel, label: 'Responsável' },
-      { ok: !!form.contabil_empenhado, label: 'Está empenhado?' },
-      { ok: !empenhado || !!form.empenho_numero, label: 'Empenho Nº' },
-      { ok: !empenhado || !!form.tipo_empenho, label: 'Tipo de Empenho' },
-      { ok: !empenhado || !!form.data_empenho, label: 'Data do Empenho' },
-    ], 'Seção V')
-    if (!completo) return
-    const ok = await onSave?.()
-    if (ok !== false) setLocked(true)
-  }
-
-  const limpar = () => { setLocked(false); onLimpar?.() }
 
   return (
     <SectionCard icon={Calculator} title="Seção V - Contabilidade (Empenho)"
       color="bg-purple-700 text-white dark:bg-purple-900">
       <Field label="Recebido em" half>
-        <Input type="date" value={form.contabil_recebido_em} onChange={inp('contabil_recebido_em')} disabled={locked} />
+        <RecebidoEmEtapa valor={form.contabil_recebido_em} />
       </Field>
       <Field label="Responsável" half>
-        <UserSelect value={form.contabil_responsavel} onChange={inp('contabil_responsavel')} disabled={locked} secretaria="contabil" />
+        <ResponsavelEtapa valor={form.contabil_responsavel} />
       </Field>
       <Field label="Auditor">
         <UserSelect value={form.contabil_auditor} onChange={inp('contabil_auditor')} disabled={locked} secretaria="contabil" />
@@ -66,7 +52,6 @@ export default function DidVariaveisSecaoV({ form, inp, saving, didId, onSave, o
       <Field label="Data do Empenho" half>
         <Input type="date" value={form.data_empenho} onChange={inp('data_empenho')} disabled={camposEmpenhoDisabled} />
       </Field>
-      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção V" onLimpar={limpar} />
     </SectionCard>
   )
 }

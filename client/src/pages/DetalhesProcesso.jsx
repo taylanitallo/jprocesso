@@ -30,6 +30,7 @@ const TIPO_CONFIG = {
   devolucao:   { label: 'Devolução',   icon: ArrowLeftCircle, dot: 'bg-danger-500',     badge: 'bg-danger-100    dark:bg-danger-900/40    text-danger-700    dark:text-danger-300'     },
   conclusao:   { label: 'Conclusão',   icon: CheckCircle,     dot: 'bg-success-500',   badge: 'bg-success-100  dark:bg-success-900/40  text-success-700  dark:text-success-300'   },
   recebimento: { label: 'Recebimento', icon: Inbox,           dot: 'bg-emerald-500', badge: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' },
+  did_etapa:   { label: 'Etapa do DID', icon: ClipboardList,  dot: 'bg-purple-500',  badge: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300' },
 }
 
 const MAX_UPLOAD_BYTES = 20 * 1024 * 1024 // 20 MB
@@ -84,6 +85,12 @@ export default function DetalhesProcesso() {
     const { data } = await api.get(`/processos/${id}`)
     return data.processo
   })
+
+  // Etapa atual do DID (quem deve preencher) — só para processos de DID já recebidos
+  const { data: etapasDid } = useQuery(['did-etapas', id, processo?.tramitacoes?.length], async () => {
+    const { data } = await api.get(`/did/processo/${id}/etapas`)
+    return data
+  }, { enabled: processo?.tipo_processo === 'Did' && !processo?.aguardando_recebimento, retry: false })
 
   const despachoDocAtual = localDespachoDoc ?? processo?.despacho_doc
   useEffect(() => {
@@ -964,6 +971,22 @@ export default function DetalhesProcesso() {
                   {isResponsavel ? 'Abrir DID' : 'Visualizar DID'}
                 </button>
               )}
+              {processo.tipo_processo === 'Did' && etapasDid && (() => {
+                const atual = etapasDid.etapas.find(e => e.numero === etapasDid.atual)
+                return (
+                  <p className="text-xs text-ink-600 leading-snug px-1" aria-live="polite">
+                    {atual ? (
+                      <>
+                        <span className="font-semibold text-ink-800">Etapa atual: {atual.titulo}</span>
+                        <span className="block text-ink-500">
+                          Preenchida por {atual.setores.map(s => s.todos ? s.nome : (s.sigla || s.nome)).join(', ')}
+                          {etapasDid.pode ? ' · você pode preencher' : ''}
+                        </span>
+                      </>
+                    ) : <span className="font-semibold text-success-700 dark:text-success-400">DID com todas as etapas concluídas</span>}
+                  </p>
+                )
+              })()}
 
               {/* PDF por tipo */}
               {processo.tipo_processo === 'Despacho' && (

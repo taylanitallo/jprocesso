@@ -76,12 +76,22 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
         ON usuarios (email) WHERE tipo <> 'jeos';
     `),
 
-    // 0g. Tramitações — CHECK de tipo_acao precisa aceitar 'recebimento'
-    // (schemas antigos foram criados sem esse valor e quebram o "Receber processo")
+    // 0g. Tramitações — CHECK de tipo_acao precisa aceitar 'recebimento' e 'did_etapa'
+    // (schemas antigos foram criados sem esses valores e quebram o "Receber processo"
+    // e a conclusão assinada das etapas do DID). Schemas com ENUM nativo ganham o valor.
     run(`
       ALTER TABLE tramitacoes DROP CONSTRAINT IF EXISTS tramitacoes_tipo_acao_check;
       ALTER TABLE tramitacoes ADD CONSTRAINT tramitacoes_tipo_acao_check
-        CHECK (tipo_acao IN ('abertura', 'tramite', 'devolucao', 'conclusao', 'arquivamento', 'recebimento'));
+        CHECK (tipo_acao IN ('abertura', 'tramite', 'devolucao', 'conclusao', 'arquivamento', 'recebimento', 'did_etapa'));
+    `),
+    run(`
+      DO $$ BEGIN
+        IF EXISTS (SELECT 1 FROM pg_type t JOIN pg_namespace n ON t.typnamespace = n.oid
+                   WHERE n.nspname = current_schema() AND t.typname = 'enum_tramitacoes_tipo_acao') THEN
+          ALTER TYPE enum_tramitacoes_tipo_acao ADD VALUE IF NOT EXISTS 'recebimento';
+          ALTER TYPE enum_tramitacoes_tipo_acao ADD VALUE IF NOT EXISTS 'did_etapa';
+        END IF;
+      END $$;
     `),
 
     // 0a. Processos — colunas opcionais adicionadas após criação inicial
@@ -821,6 +831,18 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
   await run(`
     ALTER TABLE dids
       ADD COLUMN IF NOT EXISTS conta_pagamento_id UUID
+  `);
+
+  // DID — fluxo por etapas: quem concluiu cada etapa, quando e a assinatura.
+  // Sem DEFAULT de propósito: DIDs que já existiam ficam NULL (= anteriores ao fluxo,
+  // a etapa atual é deduzida dos campos preenchidos); DIDs novos nascem com '{}'.
+  // Certidões Federal e Simples da Tesouraria (Contas Fixas) apareciam na tela mas
+  // não tinham coluna — nunca eram gravadas.
+  await run(`
+    ALTER TABLE dids
+      ADD COLUMN IF NOT EXISTS etapas                JSONB,
+      ADD COLUMN IF NOT EXISTS cert_teso_federal     BOOLEAN DEFAULT false,
+      ADD COLUMN IF NOT EXISTS cert_teso_simples_nac BOOLEAN DEFAULT false
   `);
 
   // DID — caixa: data real do pagamento e recolhimento das retenções.

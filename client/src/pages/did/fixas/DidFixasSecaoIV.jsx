@@ -1,6 +1,7 @@
 import { Calculator } from 'lucide-react'
-import { useState, useEffect } from 'react'
-import { Field, Input, UserSelect, SectionCard, SecaoBotoes, alertarPendencias } from '../didShared'
+import { useContext } from 'react'
+import { Field, Input, UserSelect, SectionCard } from '../didShared'
+import { EtapaDidContext, ResponsavelEtapa, RecebidoEmEtapa } from '../EtapasDid'
 
 function SimNao({ value, onChange, disabled }) {
   return (
@@ -13,43 +14,24 @@ function SimNao({ value, onChange, disabled }) {
   )
 }
 
-export default function DidFixasSecaoIV({ form, inp, saving, didId, onSave, onLimpar }) {
-  const [locked, setLocked] = useState(false)
-  useEffect(() => { if (didId) setLocked(true) }, [didId])
-
-  const limpar = () => { setLocked(false); onLimpar?.() }
+export default function DidFixasSecaoIV({ form, inp, didId }) {
+  // Editável só na etapa atual, para quem pode preenchê-la (fluxo por etapas)
+  const { editavel } = useContext(EtapaDidContext)
+  const locked = !editavel
 
   const empenhado = form.contabil_empenhado === 'sim'
   const liquidado = form.contabil_liquidado === 'sim'
   const camposEmpenhoDisabled = locked || !empenhado
   const camposLiquidacaoDisabled = locked || !liquidado
 
-  const salvar = async () => {
-    const completo = alertarPendencias([
-      { ok: !!form.contabil_recebido_em, label: 'Recebido em' },
-      { ok: !!form.contabil_responsavel, label: 'Responsável' },
-      { ok: !!form.contabil_empenhado, label: 'Está empenhado?' },
-      { ok: !empenhado || !!form.empenho_numero, label: 'Empenho Nº' },
-      { ok: !empenhado || !!form.tipo_empenho, label: 'Tipo de Empenho' },
-      { ok: !empenhado || !!form.data_empenho, label: 'Data do Empenho' },
-      { ok: !!form.contabil_liquidado, label: 'Está liquidado?' },
-      { ok: !liquidado || !!form.liquidacao_numero, label: 'Liquidação Nº' },
-      { ok: !liquidado || !!form.data_liquidacao, label: 'Data da Liquidação' },
-      { ok: !liquidado || !!form.doc_caixa, label: 'Doc. Caixa' },
-    ], 'Seção IV')
-    if (!completo) return
-    const ok = await onSave?.()
-    if (ok !== false) setLocked(true)
-  }
-
   return (
     <SectionCard icon={Calculator} title="Seção IV - Contabilidade"
       color="bg-purple-700 text-white dark:bg-purple-900">
       <Field label="Recebido em" half>
-        <Input type="date" value={form.contabil_recebido_em} onChange={inp('contabil_recebido_em')} disabled={locked} />
+        <RecebidoEmEtapa valor={form.contabil_recebido_em} />
       </Field>
       <Field label="Responsável" half>
-        <UserSelect value={form.contabil_responsavel} onChange={inp('contabil_responsavel')} disabled={locked} secretaria="contabil" />
+        <ResponsavelEtapa valor={form.contabil_responsavel} />
       </Field>
       <Field label="Auditor">
         <UserSelect value={form.contabil_auditor} onChange={inp('contabil_auditor')} disabled={locked} secretaria="contabil" />
@@ -84,7 +66,6 @@ export default function DidFixasSecaoIV({ form, inp, saving, didId, onSave, onLi
       <Field label="Doc. Caixa" half>
         <Input value={form.doc_caixa} onChange={inp('doc_caixa')} disabled={camposLiquidacaoDisabled} />
       </Field>
-      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção IV" onLimpar={limpar} />
     </SectionCard>
   )
 }

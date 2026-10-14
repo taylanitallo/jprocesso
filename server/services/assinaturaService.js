@@ -252,6 +252,7 @@ const TIPOS_ATO = {
   conclusao: 'Conclusão',
   arquivamento: 'Arquivamento',
   recebimento: 'Recebimento',
+  did_etapa: 'Conclusão de etapa do DID',
 };
 
 /**

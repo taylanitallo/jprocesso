@@ -1207,6 +1207,11 @@ const updateTenantConfiguracoes = async (req, res) => {
     // subdomain enviado livremente no header (validação JWT↔tenant já ocorreu)
     const tenant = req.tenant;
 
+    // Quem preenche cada etapa do DID é decisão do administrador (gestor não altera)
+    if ('did_etapas' in (req.body || {}) && !['admin', 'jeos'].includes(req.user?.tipo)) {
+      return res.status(403).json({ error: 'Só administradores alteram o fluxo do DID.' });
+    }
+
     const novoConf = { ...(tenant.configuracoes || {}), ...req.body };
     await tenant.update({ configuracoes: novoConf });
 

@@ -97,6 +97,12 @@ const defineDidModel = (sequelize) => {
     // ── Seção VI — Tesouraria ─────────────────────────────────────────────
     pago: { type: DataTypes.STRING(10), comment: 'sim | nao — status de pagamento da despesa' },
     tesouraria_recebido_em: { type: DataTypes.DATEONLY },
+    cert_teso_federal: { type: DataTypes.BOOLEAN, defaultValue: false },
+    cert_teso_simples_nac: { type: DataTypes.BOOLEAN, defaultValue: false },
+    // Fluxo por etapas (server/config/didEtapas.js): { "2": { status, usuario_id, nome,
+    // cargo, secretaria, setor, setor_id, concluida_em, tramitacao_id, assinatura, devolucao } }
+    // NULL = DID anterior ao fluxo (etapa deduzida dos campos); novos nascem com {}
+    etapas: { type: DataTypes.JSONB, defaultValue: {} },
     // Caixa: o pagamento debita o líquido nesta data (antiga: tesouraria_recebido_em)
     data_pagamento: { type: DataTypes.DATEONLY },
     // Retenções (INSS, ISS, IRRF…) debitadas da conta só quando recolhidas — gravado

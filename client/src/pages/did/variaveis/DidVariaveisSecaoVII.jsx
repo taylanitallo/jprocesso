@@ -1,25 +1,18 @@
 import { ClipboardCheck } from 'lucide-react'
-import { useState, useEffect } from 'react'
-import { Field, Input, Textarea, Checkbox, SectionCard, SecaoBotoes, alertarPendencias } from '../didShared'
+import { useContext, useEffect } from 'react'
+import { Field, Input, Textarea, Checkbox, SectionCard } from '../didShared'
+import { EtapaDidContext, ResponsavelEtapa } from '../EtapasDid'
 
-export default function DidVariaveisSecaoVII({ form, inp, chk, saving, didId, onSave, onLimpar }) {
-  const [locked, setLocked] = useState(false)
-  useEffect(() => { if (didId) setLocked(true) }, [didId])
+export default function DidVariaveisSecaoVII({ form, inp, chk, didId }) {
+  // Editável só na etapa atual, para quem pode preenchê-la (fluxo por etapas)
+  const { editavel, resumo } = useContext(EtapaDidContext)
+  const locked = !editavel
 
-  const salvar = async () => {
-    const completo = alertarPendencias([
-      { ok: !!form.receb_ordem_recebida, label: 'A ordem foi recebida? (Sim/Não)' },
-      { ok: !!form.receb_data, label: 'Data de Recebimento' },
-      { ok: !!form.receb_nf_data, label: 'Data da Nota Fiscal' },
-      { ok: !!form.receb_responsavel, label: 'Fiscal do Contrato / Responsável' },
-      { ok: !!form.receb_cargo, label: 'Cargo / Matrícula' },
-    ], 'Seção VII')
-    if (!completo) return
-    const ok = await onSave?.()
-    if (ok !== false) setLocked(true)
-  }
-
-  const limpar = () => { setLocked(false); onLimpar?.() }
+  // Cargo vem do cadastro de quem atesta (pode completar com a matrícula)
+  useEffect(() => {
+    const cargo = resumo?.usuario?.cargo
+    if (editavel && cargo && !form.receb_cargo) inp('receb_cargo')({ target: { value: cargo } })
+  }, [editavel, resumo?.usuario?.cargo]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <SectionCard
@@ -98,12 +91,7 @@ export default function DidVariaveisSecaoVII({ form, inp, chk, saving, didId, on
 
       {/* Fiscal | Cargo */}
       <Field label="Fiscal do Contrato / Responsável" half>
-        <Input
-          value={form.receb_responsavel}
-          onChange={inp('receb_responsavel')}
-          placeholder="Nome do servidor..."
-          disabled={locked}
-        />
+        <ResponsavelEtapa valor={form.receb_responsavel} />
       </Field>
       <Field label="Cargo / Matrícula" half>
         <Input
@@ -161,15 +149,6 @@ export default function DidVariaveisSecaoVII({ form, inp, chk, saving, didId, on
           disabled={locked}
         />
       </Field>
-
-      <SecaoBotoes
-        locked={locked}
-        onAlterar={() => setLocked(false)}
-        onSalvar={salvar}
-        saving={saving}
-        label="Salvar Atestado"
-        onLimpar={limpar}
-      />
     </SectionCard>
   )
 }
