@@ -9,10 +9,17 @@
  * documentos oficiais (ofícios, determinações, portarias, decretos),
  * lançamentos financeiros e logs de atividade.
  *
+ * Datas: os dados são escritos no calendário de fev–jul/2026 e deslocados para
+ * terminar no dia em que o seed roda (seed_demo/datas.js).
+ * Fase 2 (seed_demo/fase2.js), pelos serviços do próprio sistema: fluxos do DID
+ * do município, assinaturas eletrônicas, aplicativo autenticador dos usuários,
+ * anexos em PDF, lixeira, grupos de contas, licitações e vigências de contratos.
+ *
  * Uso:
  *   node server/scripts/seed_demo_modelo.js           → só roda com o tenant vazio
  *   node server/scripts/seed_demo_modelo.js --reset   → apaga os dados de demo e repopula
  *
+ * Mantidos no --reset: a SEMAD, o Protocolo Geral e os usuários administradores.
  * Senha de todos os usuários criados: 123456
  */
 require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') });
@@ -26,6 +33,8 @@ const org = require('./seed_demo/org');
 const compras = require('./seed_demo/compras');
 const almoxPat = require('./seed_demo/almox_pat');
 const processos = require('./seed_demo/processos');
+const datas = require('./seed_demo/datas');
+const fase2 = require('./seed_demo/fase2');
 
 const SCHEMA = 'tenant_modelo';
 const RESET = process.argv.includes('--reset');
@@ -50,10 +59,31 @@ const main = async () => {
     console.log('Coluna dids.numero_did migrada para VARCHAR(30).');
   }
 
-  // ── CHECK de tipo_acao precisa aceitar 'recebimento' (como no modelo) ─────
-  await q(`ALTER TABLE "${SCHEMA}".tramitacoes DROP CONSTRAINT IF EXISTS tramitacoes_tipo_acao_check`);
-  await q(`ALTER TABLE "${SCHEMA}".tramitacoes ADD CONSTRAINT tramitacoes_tipo_acao_check
-    CHECK (tipo_acao IN ('abertura','tramite','devolucao','conclusao','arquivamento','recebimento'))`);
+  // A estrutura (colunas, CHECKs) vem das migrações do servidor: o tenant precisa
+  // já ter sido acessado depois do último deploy
+  const faltando = (await q(`SELECT unnest(ARRAY['assinaturas_eletronicas','registros_excluidos','usuario_totp','tes_grupos_contas']) AS t
+    EXCEPT SELECT table_name FROM information_schema.tables WHERE table_schema=$1`, [SCHEMA])).rows.map(r => r.t);
+  const colDid = (await q(`SELECT 1 FROM information_schema.columns WHERE table_schema=$1 AND table_name='dids' AND column_name='etapas_dados'`, [SCHEMA])).rowCount;
+  if (faltando.length || !colDid) {
+    console.error(`ABORTADO: o tenant está sem migrações (${[...faltando, colDid ? null : 'dids.etapas_dados'].filter(Boolean).join(', ')}). Acesse o município no sistema e rode de novo.`);
+    process.exit(1);
+  }
+
+  // ── Registros mantidos: SEMAD, Protocolo Geral e administradores ──────────
+  const admins = (await q(`SELECT id, nome FROM "${SCHEMA}".usuarios WHERE tipo IN ('admin','jeos') ORDER BY (tipo='admin') DESC, created_at`)).rows;
+  if (!admins.length) { console.error('ABORTADO: nenhum usuário administrador no tenant.'); process.exit(1); }
+  let semadId = (await q(`SELECT id FROM "${SCHEMA}".secretarias WHERE sigla='SEMAD' LIMIT 1`)).rows[0]?.id;
+  if (!semadId) {
+    semadId = util.uuid();
+    await q(`INSERT INTO "${SCHEMA}".secretarias (id, nome, sigla, ativo, created_at, updated_at) VALUES ($1,'Secretaria de Administração','SEMAD',true,NOW(),NOW())`, [semadId]);
+  }
+  let protoId = (await q(`SELECT id FROM "${SCHEMA}".setores WHERE sigla='PROTO' LIMIT 1`)).rows[0]?.id;
+  if (!protoId) {
+    protoId = util.uuid();
+    await q(`INSERT INTO "${SCHEMA}".setores (id, secretaria_id, nome, sigla, ativo, created_at, updated_at) VALUES ($1,$2,'Protocolo Geral','PROTO',true,NOW(),NOW())`, [protoId, semadId]);
+  }
+  org.setIds({ SEMAD_ID: semadId, PROTO_ID: protoId, ADMIN_ID: admins[0].id, ADMIN_NOME: admins[0].nome });
+  const idsAdmins = admins.map(a => a.id);
 
   // ── Reset opcional / trava de segurança ───────────────────────────────────
   const nProc = await count('processos');
@@ -64,7 +94,11 @@ const main = async () => {
   }
   if (RESET) {
     console.log('Limpando dados existentes (--reset)...');
+    // Arquivos dos anexos no storage
+    const arquivos = (await q(`SELECT url_arquivo FROM "${SCHEMA}".anexos WHERE url_arquivo IS NOT NULL`)).rows.map(r => r.url_arquivo);
+    await fase2.apagarArquivos(arquivos);
     const wipe = [
+      'assinaturas_eletronicas', 'registros_excluidos', 'tes_grupos_contas', 'licitacoes',
       'logs', 'financeiro_lancamentos', 'dids', 'tramitacoes', 'anexos', 'processos',
       'tes_despesas', 'tes_receitas', 'contas_bancarias',
       'almox_inventario_itens', 'almox_inventarios', 'almox_cotas',
@@ -75,9 +109,16 @@ const main = async () => {
       'agentes', 'responsaveis',
     ];
     for (const t of wipe) await q(`DELETE FROM "${SCHEMA}"."${t}"`);
-    await q(`DELETE FROM "${SCHEMA}".usuarios WHERE id NOT IN ($1,$2)`, [org.ADMIN_ID, 'a5be7991-043e-4c36-ad2e-62f6060e960f']);
-    await q(`DELETE FROM "${SCHEMA}".setores WHERE id <> $1`, [org.PROTO_ID]);
-    await q(`DELETE FROM "${SCHEMA}".secretarias WHERE id <> $1`, [org.SEMAD_ID]);
+    // Administradores ficam no Protocolo (os demais setores são recriados)
+    await q(`UPDATE "${SCHEMA}".usuarios SET setor_id=$1, secretaria_id=$2 WHERE id = ANY($3::uuid[])`, [protoId, semadId, idsAdmins]);
+    await q(`DELETE FROM "${SCHEMA}".usuario_totp WHERE usuario_id <> ALL($1::uuid[])`, [idsAdmins]);
+    await q(`DELETE FROM "${SCHEMA}".refresh_tokens WHERE user_id <> ALL($1::uuid[])`, [idsAdmins]).catch(() => {});
+    await q(`DELETE FROM "${SCHEMA}".usuarios WHERE id <> ALL($1::uuid[])`, [idsAdmins]);
+    await q(`DELETE FROM "${SCHEMA}".setores WHERE id <> $1`, [protoId]);
+    await q(`DELETE FROM "${SCHEMA}".secretarias WHERE id <> $1`, [semadId]);
+    // O backup do seed_demo_tensao.js era da massa apagada: não serve mais para desfazer
+    const backupTensao = require('path').resolve(__dirname, 'seed_demo_tensao.backup.json');
+    if (require('fs').existsSync(backupTensao)) require('fs').unlinkSync(backupTensao);
     console.log('Limpeza concluída.');
   }
 
@@ -94,6 +135,16 @@ const main = async () => {
   compras.build(ctx);
   almoxPat.build(ctx);
   processos.build(ctx);
+
+  // ── Linha do tempo: o registro mais recente cai pouco antes de agora ──────
+  // Âncora: a última movimentação de processo (o que aparece em "hoje"/"esta semana");
+  // registros agendados de outros módulos podem ficar alguns dias à frente
+  const chavesLinhas = Object.keys(ctx).filter(k => k.endsWith('Rows'));
+  const maisRecente = datas.maisRecente(ctx.tramRows);
+  const desloc = datas.criarDeslocador(datas.diasAteHoje(maisRecente), new Date());
+  for (const k of chavesLinhas) ctx[k] = desloc.valor(ctx[k]);
+  ctx.deslocamento = desloc;
+  console.log(`Datas deslocadas em ${desloc.dias} dias (${desloc.meses} meses nos textos).`);
 
   // ── Grava tudo numa transação ─────────────────────────────────────────────
   console.log('Inserindo no banco...');
@@ -120,10 +171,10 @@ const main = async () => {
         { id: 1, codigo: '02.01.00.4.122.0002.2.004', descricao: 'Manutenção das atividades da SEMAD', elemento_despesa: '3.3.90.30', fonte_recurso: '1500 – Recursos Próprios', valor_previsto: 2400000 },
         { id: 2, codigo: '02.01.00.4.122.0002.2.005', descricao: 'Serviços de terceiros – SEMAD', elemento_despesa: '3.3.90.39', fonte_recurso: '1500 – Recursos Próprios', valor_previsto: 1800000 },
       ]),
-      org.SEMAD_ID,
+      semadId,
     ]);
     await q(`UPDATE "${SCHEMA}".usuarios SET cargo='Administrador do Sistema', nome_reduzido='Admin',
-      portaria_nomeacao='Portaria nº 001/2025', ultimo_acesso=NOW() WHERE id=$1`, [org.ADMIN_ID]);
+      portaria_nomeacao='Portaria nº 001/2025', ultimo_acesso=NOW() WHERE id=$1`, [admins[0].id]);
 
     // Organização
     await ins('secretarias', ctx.secCols, ctx.secRows);
@@ -218,6 +269,10 @@ const main = async () => {
     throw err;
   }
 
+  // ── Fase 2: pelos serviços do sistema (assinaturas, lixeira, anexos…) ─────
+  console.log('\nFase 2...');
+  const resumoFase2 = await fase2.executar({ schema: SCHEMA, ctx });
+
   // ── Resumo ────────────────────────────────────────────────────────────────
   console.log('\n════════ RESUMO DO SEED ════════');
   const tabelas = ['secretarias', 'setores', 'usuarios', 'responsaveis', 'agentes', 'credores', 'contratos_itens',
@@ -226,11 +281,13 @@ const main = async () => {
     'almoxarifado_movimentacoes', 'almoxarifado_requisicoes', 'almoxarifado_requisicao_itens', 'almox_cotas',
     'almox_inventarios', 'almox_inventario_itens', 'pat_grupos', 'pat_bens', 'pat_responsabilidades',
     'pat_movimentacoes', 'pat_baixas', 'pat_inventarios', 'pat_inventario_itens', 'processos', 'tramitacoes',
-    'dids', 'financeiro_lancamentos', 'logs'];
+    'dids', 'financeiro_lancamentos', 'logs', 'assinaturas_eletronicas', 'anexos', 'registros_excluidos',
+    'licitacoes', 'tes_grupos_contas', 'usuario_totp'];
   for (const t of tabelas) console.log(`  ${t.padEnd(32)} ${await count(t)}`);
-  console.log('\nLogin demo: admin@modelo.com (admin) e usuários @modelo.ce.gov.br — senha: 123456');
+  console.log('\nLogin demo: usuários @modelo.ce.gov.br (e-mail ou CPF) — senha: 123456');
+  fase2.imprimirResumo(resumoFase2);
   await client.end();
   console.log('Seed concluído com sucesso.');
 };
 
-main().catch((err) => { console.error('ERRO NO SEED:', err); process.exit(1); });
+main().then(() => process.exit(0)).catch((err) => { console.error('ERRO NO SEED:', err); process.exit(1); });

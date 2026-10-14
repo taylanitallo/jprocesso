@@ -195,6 +195,14 @@ const ativarTotp = async (db, usuarioId, codigo) => {
   );
 };
 
+/** Grava um autenticador já ativo com o segredo dado (cargas de dados de demonstração) */
+const definirTotp = (db, usuarioId, segredoBase32) => db.query(
+  `INSERT INTO usuario_totp (usuario_id, segredo_cifrado, ativo, ultimo_passo, ativado_em, updated_at)
+   VALUES (:id, :seg, true, NULL, NOW(), NOW())
+   ON CONFLICT (usuario_id) DO UPDATE SET segredo_cifrado = :seg, ativo = true, ultimo_passo = NULL, ativado_em = NOW(), updated_at = NOW()`,
+  { replacements: { id: usuarioId, seg: cifrar(segredoBase32) } }
+);
+
 const removerTotp = (db, usuarioId) =>
   db.query(`DELETE FROM usuario_totp WHERE usuario_id = :id`, { replacements: { id: usuarioId } });
 
@@ -258,8 +266,9 @@ const TIPOS_ATO = {
 /**
  * Assina eletronicamente um ato de tramitação (dentro da transação do ato).
  * Pré-requisito: validarCredenciais() já executado para o signatário.
+ * assinadoEm: só para cargas de dados (seed de demonstração); o padrão é agora.
  */
-const assinarAto = async ({ db, transaction, masterDb, tenant, processo, tramitacao, signatario, req, fundamentoMunicipal }) => {
+const assinarAto = async ({ db, transaction, masterDb, tenant, processo, tramitacao, signatario, req, fundamentoMunicipal, assinadoEm: quando }) => {
   await registrarChavePublica(masterDb);
   const { privateKey, kid } = obterChave();
 
@@ -271,7 +280,7 @@ const assinarAto = async ({ db, transaction, masterDb, tenant, processo, tramita
   );
   const hash_anterior = anterior[0]?.hash_conteudo || null;
 
-  const assinadoEm = new Date();
+  const assinadoEm = quando ? new Date(quando) : new Date();
   const conteudo = {
     versao: 1,
     municipio: { subdominio: tenant?.subdominio || null, nome: tenant?.nome_municipio || null },
@@ -424,7 +433,7 @@ module.exports = {
   TIPOS_ATO,
   // TOTP
   hotp, verificarTotp, base32Encode, base32Decode, uriOtpAuth,
-  statusTotp, iniciarCadastroTotp, ativarTotp, removerTotp,
+  statusTotp, iniciarCadastroTotp, ativarTotp, removerTotp, definirTotp,
   // assinatura
   validarCredenciais, assinarAto, verificar, listarPorProcesso,
   obterChave, registrarChavePublica, canonico,

@@ -3,11 +3,11 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { readFileSync } from 'fs'
 
-const now = new Date()
-const ano = now.getFullYear()
-const mes = String(now.getMonth() + 1).padStart(2, '0')
-const dia = String(now.getDate()).padStart(2, '0')
-const hora = String(now.getHours()).padStart(2, '0')
+// Versão = data/hora do build no horário de Brasília (a Vercel compila em UTC)
+const partes = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23',
+}).formatToParts(new Date()).map(p => [p.type, p.value]))
+const { year: ano, month: mes, day: dia, hour: hora } = partes
 const buildVersion = `${ano}.${mes}.${dia}.${hora}`
 
 export default defineConfig({

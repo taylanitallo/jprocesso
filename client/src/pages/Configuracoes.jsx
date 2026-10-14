@@ -8,6 +8,12 @@ import PageHeader from '../components/ui/PageHeader';
 import SectionTitle from '../components/ui/SectionTitle';
 import FluxosProcesso from './configuracoes/FluxosProcesso';
 
+// Versão do build (vite.config.mjs): ano.mês.dia.hora → "14/10/2026 às 07h"
+const dataDaVersao = (v) => {
+  const [ano, mes, dia, hora] = String(v).split('.');
+  return dia ? `${dia}/${mes}/${ano} às ${hora}h` : '—';
+};
+
 const ToggleSwitch = ({ checked, onChange }) => (
   <label className="relative inline-flex items-center cursor-pointer">
     <input type="checkbox" checked={checked} onChange={onChange} className="sr-only peer" />
@@ -331,8 +337,8 @@ export default function Configuracoes() {
         {[
           { label: 'Tenant', value: tenant?.subdominio || tenant?.nome || '—', icon: Building2, color: 'blue' },
           { label: 'Ambiente', value: import.meta.env.MODE === 'production' ? 'Produção' : 'Desenvolvimento', icon: Settings, color: import.meta.env.MODE === 'production' ? 'green' : 'amber' },
-          { label: 'Versão', value: '1.0.0', icon: Key, color: 'purple' },
-          { label: 'Última atualização', value: tenant?.updated_at ? new Date(tenant.updated_at).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR'), icon: RefreshCw, color: 'slate' },
+          { label: 'Versão', value: __APP_VERSION__, icon: Key, color: 'purple' },
+          { label: 'Última atualização', value: dataDaVersao(__APP_VERSION__), icon: RefreshCw, color: 'slate' },
         ].map(({ label, value, icon: Icon, color }) => {
           const colorMap = {
             blue:   'bg-info-50 dark:bg-info-900/20 text-brand-600 dark:text-info-400 border-info-200 dark:border-info-800',

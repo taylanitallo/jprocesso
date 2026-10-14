@@ -1,11 +1,7 @@
 // Processos com trilha de tramitação realista, DIDs (fixas/variáveis),
 // documentos de despacho (ofícios, determinações etc.), financeiro e logs
 const { uuid, sha, ri, pick, money, rand, mk, addH, addD, fmtTs, fmtD, comercial, cpf, soDigitos } = require('./util');
-
-const ROTA_FIXAS = ['CI', 'COMPRAS', 'CONTAB', 'GSEFIN', 'TESOUR'];
-const ROTA_VARIAVEIS = ['CI', 'COMPRAS', 'CONTAB', 'ALMOX', 'COMPRAS', 'CONTAB', 'GSEFIN', 'TESOUR'];
-const HOPS_FIXAS = { 0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 5 };
-const HOPS_VAR = { 0: 0, 1: 1, 2: 2, 3: 3, 4: 6, 5: 8, 6: 8 };
+const fluxos = require('./fluxos');
 
 const TXT_TRAMITE = {
   CI:      ['Encaminho o presente para análise e manifestação do Controle Interno, nos termos do fluxo de execução da despesa.',
@@ -35,44 +31,58 @@ const TXT_CONCLUSAO = [
 ];
 const txtTramite = (destKey) => pick(TXT_TRAMITE[destKey] || TXT_TRAMITE.default);
 
-// ── Especificações de DIDs Contas Fixas ─────────────────────────────────────
-// [key, criadorKey, credorKey, contratoN, objetoCurto, mesRef, valor, stage, final, [mes,dia], prioridade]
+// ── DIDs por etapas (Configurações › Fluxos de Processo) ────────────────────
+// concl = etapas concluídas (a Abertura conta). Situação final:
+//   concluido / arquivado → todas as etapas concluídas
+//   andamento             → o processo está no setor da próxima etapa
+//                           (naoRecebido: tramitado, aguardando o setor receber)
+//   devolvido             → a etapa seguinte devolveu à última concluída
+//   aberto                → só a Abertura, ainda não tramitado
+// Fixas v2 = fluxo com "Assessoria Jurídica — Parecer" (DIDs mais recentes).
+
+// [key, criadorKey, credorKey, contratoN, objetoCurto, mesRef, valor, concl, final, [mes,dia], prioridade, opts]
 const DIDS_FIXAS = [
-  ['did_energia_jun', 'secadm',    'enel',      1,  'Pagamento da fatura de energia elétrica dos prédios públicos', 'Junho/2026',  41235.77, 5, 'concluido',  [6, 3],  'alta'],
-  ['did_energia_mai', 'secadm',    'enel',      1,  'Pagamento da fatura de energia elétrica dos prédios públicos', 'Maio/2026',   39984.12, 6, 'arquivado',  [5, 4],  'alta'],
-  ['did_energia_jul', 'secadm',    'enel',      1,  'Pagamento da fatura de energia elétrica dos prédios públicos', 'Julho/2026',  42710.45, 1, 'em_analise', [7, 6],  'alta'],
-  ['did_agua_jun',    'secadm',    'cagece',    2,  'Pagamento da fatura de água e esgoto dos prédios públicos',    'Junho/2026',  9260.33,  5, 'concluido',  [6, 4],  'normal'],
-  ['did_agua_jul',    'secadm',    'cagece',    2,  'Pagamento da fatura de água e esgoto dos prédios públicos',    'Julho/2026',  9430.10,  0, 'aberto',     [7, 8],  'normal'],
-  ['did_internet_jun','secadm',    'brisanet',  3,  'Pagamento do link dedicado de internet 200Mbps',               'Junho/2026',  3200.00,  4, 'em_analise', [6, 8],  'normal'],
-  ['did_telefonia_mai','secadm',   'claro',     4,  'Pagamento da telefonia móvel corporativa – 60 linhas',         'Maio/2026',   2950.00,  5, 'concluido',  [5, 6],  'normal'],
-  ['did_limpeza_jun', 'secadm',    'jmr',       16, 'Medição dos serviços de limpeza e conservação predial',        'Junho/2026',  38700.00, 3, 'em_analise', [6, 5],  'normal'],
-  ['did_limpeza_mai', 'secadm',    'jmr',       16, 'Medição dos serviços de limpeza e conservação predial',        'Maio/2026',   38700.00, 5, 'concluido',  [5, 5],  'normal'],
-  ['did_locacao_jun', 'secsau',    'valecuru',  14, 'Locação de veículos das equipes da Saúde – 5 veículos',        'Junho/2026',  21000.00, 4, 'pendente',   [6, 9],  'normal'],
-  ['did_transp_mai',  'seceduc',   'santaclara',15, 'Medição do transporte escolar – rotas I a VIII',               'Maio/2026',   34800.00, 5, 'concluido',  [5, 7],  'alta'],
-  ['did_transp_jun',  'seceduc',   'santaclara',15, 'Medição do transporte escolar – rotas I a VIII',               'Junho/2026',  34800.00, 2, 'em_analise', [6, 10], 'alta'],
-  ['did_aluguel_jun', 'secsocial', 'ednardo',   27, 'Pagamento do aluguel do imóvel do CRAS',                       'Junho/2026',  2800.00,  5, 'concluido',  [6, 2],  'normal'],
-  ['did_aluguel_jul', 'secsocial', 'ednardo',   27, 'Pagamento do aluguel do imóvel do CRAS',                       'Julho/2026',  2800.00,  1, 'em_analise', [7, 7],  'normal'],
-  ['did_contab_jun',  'secfin',    'contabil',  25, 'Pagamento da assessoria contábil pública',                     'Junho/2026',  14800.00, 3, 'em_analise', [6, 11], 'normal'],
-  ['did_software_jun','secadm',    'jeos',      26, 'Licenciamento mensal do software de gestão de processos',      'Junho/2026',  6900.00,  3, 'em_analise', [6, 12], 'normal'],
-  ['did_labvida_mai', 'secsau',    'labvida',   24, 'Pagamento de exames laboratoriais complementares ao SUS',      'Maio/2026',   18500.00, 5, 'concluido',  [5, 11], 'normal'],
-  ['did_oxigenio_jun','secsau',    'oxigenio',  30, 'Recarga de oxigênio medicinal do Hospital Municipal',          'Junho/2026',  11550.00, 1, 'devolvido',  [6, 15], 'urgente'],
+  ['did_energia_jun', 'secadm',    'enel',      1,  'Pagamento da fatura de energia elétrica dos prédios públicos', 'Junho/2026',  41235.77, 7, 'concluido', [6, 3],  'alta'],
+  ['did_energia_mai', 'secadm',    'enel',      1,  'Pagamento da fatura de energia elétrica dos prédios públicos', 'Maio/2026',   39984.12, 7, 'arquivado', [5, 4],  'alta'],
+  ['did_energia_jul', 'secadm',    'enel',      1,  'Pagamento da fatura de energia elétrica dos prédios públicos', 'Julho/2026',  42710.45, 4, 'andamento', [7, 6],  'alta',    { v2: true }],
+  ['did_agua_jun',    'secadm',    'cagece',    2,  'Pagamento da fatura de água e esgoto dos prédios públicos',    'Junho/2026',  9260.33,  7, 'concluido', [6, 4],  'normal'],
+  ['did_agua_jul',    'secadm',    'cagece',    2,  'Pagamento da fatura de água e esgoto dos prédios públicos',    'Julho/2026',  9430.10,  1, 'andamento', [7, 8],  'normal',  { v2: true, naoRecebido: true }],
+  ['did_internet_jun','secadm',    'brisanet',  3,  'Pagamento do link dedicado de internet 200Mbps',               'Junho/2026',  3200.00,  5, 'andamento', [6, 8],  'normal'],
+  ['did_telefonia_mai','secadm',   'claro',     4,  'Pagamento da telefonia móvel corporativa – 60 linhas',         'Maio/2026',   2950.00,  7, 'concluido', [5, 6],  'normal'],
+  ['did_limpeza_jun', 'secadm',    'jmr',       16, 'Medição dos serviços de limpeza e conservação predial',        'Junho/2026',  38700.00, 3, 'andamento', [6, 5],  'normal'],
+  ['did_limpeza_mai', 'secadm',    'jmr',       16, 'Medição dos serviços de limpeza e conservação predial',        'Maio/2026',   38700.00, 7, 'concluido', [5, 5],  'normal'],
+  ['did_locacao_jun', 'secsau',    'valecuru',  14, 'Locação de veículos das equipes da Saúde – 5 veículos',        'Junho/2026',  21000.00, 4, 'andamento', [6, 9],  'normal',  { naoRecebido: true }],
+  ['did_transp_mai',  'seceduc',   'santaclara',15, 'Medição do transporte escolar – rotas I a VIII',               'Maio/2026',   34800.00, 7, 'concluido', [5, 7],  'alta'],
+  ['did_transp_jun',  'seceduc',   'santaclara',15, 'Medição do transporte escolar – rotas I a VIII',               'Junho/2026',  34800.00, 2, 'andamento', [6, 10], 'alta'],
+  ['did_aluguel_jun', 'secsocial', 'ednardo',   27, 'Pagamento do aluguel do imóvel do CRAS',                       'Junho/2026',  2800.00,  7, 'concluido', [6, 2],  'normal'],
+  ['did_aluguel_jul', 'secsocial', 'ednardo',   27, 'Pagamento do aluguel do imóvel do CRAS',                       'Julho/2026',  2800.00,  2, 'andamento', [7, 7],  'normal',  { v2: true }],
+  ['did_contab_jun',  'secfin',    'contabil',  25, 'Pagamento da assessoria contábil pública',                     'Junho/2026',  14800.00, 3, 'andamento', [6, 11], 'normal'],
+  ['did_software_jun','secadm',    'jeos',      26, 'Licenciamento mensal do software de gestão de processos',      'Junho/2026',  6900.00,  6, 'andamento', [6, 12], 'normal'],
+  ['did_labvida_mai', 'secsau',    'labvida',   24, 'Pagamento de exames laboratoriais complementares ao SUS',      'Maio/2026',   18500.00, 7, 'concluido', [5, 11], 'normal'],
+  ['did_oxigenio_jun','secsau',    'oxigenio',  30, 'Recarga de oxigênio medicinal do Hospital Municipal',          'Junho/2026',  11550.00, 1, 'devolvido', [6, 15], 'urgente'],
 ];
 
-// ── DIDs Contas Variáveis: [key, criadorKey, ordemKey, stage, final, [m,d], prioridade]
+// ── DIDs Contas Variáveis: [key, criadorKey, ordemKey, concl, final, [m,d], prioridade, opts]
 const DIDS_VARIAVEIS = [
-  ['did_comb_jul',   'secadm',   'oc_comb_jul',       2, 'em_analise', [7, 3],  'alta'],
-  ['did_comb_jun',   'secsau',   'oc_comb_jun_sesau', 5, 'concluido',  [6, 1],  'alta'],
-  ['did_medic_jun',  'secsau',   'oc_medic_jun',      4, 'em_analise', [6, 5],  'urgente'],
-  ['did_hosp_mai',   'secsau',   'oc_hosp_mai',       5, 'concluido',  [5, 4],  'alta'],
-  ['did_merenda_jun','seceduc',  'oc_merenda_jun',    5, 'concluido',  [6, 2],  'alta'],
-  ['did_exped_jul',  'secadm',   'oc_exped_jul',      3, 'em_analise', [7, 6],  'normal'],
-  ['did_info_jun',   'secadm',   'oc_info_jun',       4, 'pendente',   [6, 9],  'normal'],
-  ['did_eletr_jun',  'secinfra', 'oc_eletr_jun',      2, 'em_analise', [6, 12], 'normal'],
-  ['did_constr_mai', 'secinfra', 'oc_constr_mai',     5, 'concluido',  [5, 8],  'normal'],
-  ['did_pneus_abr',  'secadm',   'oc_pneus_abr',      6, 'arquivado',  [4, 16], 'normal'],
-  ['did_cart_mai',   'seceduc',  'oc_cart_mai',       4, 'em_analise', [5, 15], 'normal'],
-  ['did_graf_jun',   'seccult',  'oc_graf_jun',       0, 'aberto',     [6, 17], 'baixa'],
+  ['did_comb_jul',   'secadm',   'oc_comb_jul',       3,  'andamento', [7, 3],  'alta'],
+  ['did_comb_jun',   'secsau',   'oc_comb_jun_sesau', 12, 'concluido', [6, 1],  'alta'],
+  ['did_medic_jun',  'secsau',   'oc_medic_jun',      7,  'andamento', [6, 5],  'urgente'],
+  ['did_hosp_mai',   'secsau',   'oc_hosp_mai',       12, 'concluido', [5, 4],  'alta'],
+  ['did_merenda_jun','seceduc',  'oc_merenda_jun',    12, 'concluido', [6, 2],  'alta'],
+  ['did_exped_jul',  'secadm',   'oc_exped_jul',      6,  'andamento', [7, 6],  'normal'],
+  ['did_info_jun',   'secadm',   'oc_info_jun',       9,  'andamento', [6, 9],  'normal',  { naoRecebido: true }],
+  ['did_eletr_jun',  'secinfra', 'oc_eletr_jun',      4,  'devolvido', [6, 12], 'normal'],
+  ['did_constr_mai', 'secinfra', 'oc_constr_mai',     12, 'concluido', [5, 8],  'normal'],
+  ['did_pneus_abr',  'secadm',   'oc_pneus_abr',      12, 'arquivado', [4, 16], 'normal'],
+  ['did_cart_mai',   'seceduc',  'oc_cart_mai',       10, 'andamento', [5, 15], 'normal'],
+  ['did_graf_jun',   'seccult',  'oc_graf_jun',       1,  'aberto',    [6, 17], 'baixa'],
 ];
+
+// Justificativas das devoluções (a etapa seguinte devolve à anterior)
+const DEVOLUCOES = {
+  did_oxigenio_jun: 'Certidão de regularidade do FGTS do credor vencida em 31/05/2026. Juntar certidão válida e reenviar ao Controle Interno.',
+  did_eletr_jun: 'O número da solicitação de empenho não confere com a ordem de compra vinculada. Corrigir e reenviar à Contabilidade.',
+};
 
 // ── Processos tipo Despacho (documentos oficiais) ────────────────────────────
 const DESPACHOS = [
@@ -91,15 +101,15 @@ const DESPACHOS = [
   ['proc_det1', 'prefeito', ['PATRIM', 'CI'], 2, 'concluido', [4, 6],
    'Determinação Institucional nº 007/2026 – Inventário anual de bens móveis',
    { tipo_despacho: 'determinacao_institucional', numero: '007/2026', para: 'Todos os Secretários Municipais',
-     texto: 'O PREFEITO MUNICIPAL DE MODELO, no uso de suas atribuições legais,\n\nDETERMINA:\n\nArt. 1º Fica instaurado o inventário anual de bens móveis do exercício de 2026, a ser realizado pela Comissão de Patrimônio no período de 06/04/2026 a 30/11/2026.\n\nArt. 2º Os titulares das secretarias deverão disponibilizar acesso às dependências e designar servidor de apoio à comissão.\n\nArt. 3º Divergências apuradas deverão ser comunicadas ao Controle Interno no prazo de 5 dias úteis.\n\nCumpra-se.' }],
+     texto: 'O PREFEITO MUNICIPAL DE MODELO, no uso de suas atribuições legais,\n\nDETERMINA:\n\nArt. 1º Fica instaurado o inventário anual de bens móveis do exercício de 2026, a ser realizado pela Comissão de Patrimônio no período de 06/04/2026 a 30/09/2026.\n\nArt. 2º Os titulares das secretarias deverão disponibilizar acesso às dependências e designar servidor de apoio à comissão.\n\nArt. 3º Divergências apuradas deverão ser comunicadas ao Controle Interno no prazo de 5 dias úteis.\n\nCumpra-se.' }],
   ['proc_det2', 'controle', ['CONTAB'], 1, 'em_analise', [7, 2],
    'Determinação nº 008/2026 – Regularização de certidões nos processos de despesa',
    { tipo_despacho: 'determinacao_institucional', numero: '008/2026', para: 'Setor de Contabilidade e Setor de Compras',
      texto: 'A CONTROLADORIA GERAL DO MUNICÍPIO, no exercício de suas competências,\n\nDETERMINA que, a partir desta data, nenhum Documento de Instrução de Despesa (DID) seja empenhado sem a juntada das certidões de regularidade federal, estadual, municipal, trabalhista e do FGTS do credor, todas dentro do prazo de validade.\n\nOs processos em tramitação em desacordo deverão ser devolvidos à origem para regularização.' }],
   ['proc_comunic1', 'secadm', ['GAB'], 1, 'arquivado', [6, 18],
-   'Comunicado nº 015/2026 – Expediente nos festejos juninos',
+   'Comunicado nº 015/2026 – Expediente no Dia do Servidor Público',
    { tipo_despacho: 'comunicado', numero: '015/2026', para: 'Todos os servidores municipais',
-     texto: 'A Secretaria de Administração COMUNICA que, nos dias 23 e 24 de junho de 2026, o expediente nas repartições públicas municipais será facultativo, em razão dos festejos juninos, ressalvados os serviços essenciais de saúde e limpeza urbana, que funcionarão em regime de escala.\n\nO expediente normal será retomado em 25 de junho de 2026.' }],
+     texto: 'A Secretaria de Administração COMUNICA que, em 25 de julho de 2026, em comemoração ao Dia do Servidor Público, o expediente nas repartições públicas municipais será facultativo, ressalvados os serviços essenciais de saúde e limpeza urbana, que funcionarão em regime de escala.\n\nO expediente normal será retomado no dia útil seguinte.' }],
   ['proc_comunic2', 'rh', ['GSEMAD'], 1, 'concluido', [6, 22],
    'Comunicado nº 016/2026 – Recadastramento funcional obrigatório',
    { tipo_despacho: 'comunicado', numero: '016/2026', para: 'Todos os servidores efetivos',
@@ -110,10 +120,10 @@ const DESPACHOS = [
      ementa: 'Designa servidores para atuar como fiscais dos contratos administrativos que indica e dá outras providências.',
      texto: 'O PREFEITO MUNICIPAL DE MODELO, no uso das atribuições que lhe confere a Lei Orgânica do Município,\n\nRESOLVE:\n\nArt. 1º Designar os servidores abaixo relacionados para exercer a fiscalização dos contratos administrativos vigentes:\nI – Gilberto Nunes Paranhos – contratos da Secretaria de Administração;\nII – Elisângela Moura Tabosa – contratos da Secretaria de Saúde;\nIII – Ademar Cruz Landim – contratos da Secretaria de Educação;\nIV – Wagner Peixoto Sales – contratos da Secretaria de Infraestrutura.\n\nArt. 2º Esta Portaria entra em vigor na data de sua publicação.' }],
   ['proc_decreto', 'prefeito', ['ARQ'], 1, 'concluido', [6, 16],
-   'Decreto nº 022/2026 – Ponto facultativo de Corpus Christi',
+   'Decreto nº 022/2026 – Horário especial de expediente',
    { tipo_despacho: 'decreto', numero: '022/2026',
-     ementa: 'Declara ponto facultativo nas repartições públicas municipais o dia 05 de junho de 2026 e dá outras providências.',
-     texto: 'O PREFEITO MUNICIPAL DE MODELO, no uso de suas atribuições legais,\n\nDECRETA:\n\nArt. 1º Fica declarado ponto facultativo nas repartições públicas municipais o dia 05 de junho de 2026, sexta-feira subsequente ao feriado de Corpus Christi.\n\nArt. 2º Os serviços essenciais de saúde, coleta de lixo e vigilância funcionarão em regime de plantão.\n\nArt. 3º Este Decreto entra em vigor na data de sua publicação.' }],
+     ementa: 'Estabelece horário especial de expediente nas repartições públicas municipais e dá outras providências.',
+     texto: 'O PREFEITO MUNICIPAL DE MODELO, no uso de suas atribuições legais,\n\nDECRETA:\n\nArt. 1º A partir de 01 de julho de 2026, o expediente nas repartições públicas municipais será das 7h às 13h, de segunda a sexta-feira, para contenção de despesas com energia elétrica.\n\nArt. 2º Os serviços essenciais de saúde, coleta de lixo e vigilância funcionarão em regime de plantão.\n\nArt. 3º Este Decreto entra em vigor na data de sua publicação.' }],
   ['proc_encam', 'procurador', ['GSEMAD'], 1, 'em_analise', [7, 10],
    'Encaminhamento do Parecer Jurídico nº 044/2026 – Aditivo contratual',
    { tipo_despacho: 'encaminhamento', referencia: 'Parecer Jurídico nº 044/2026 – Contrato nº 016/2026 (JMR Serviços)', para: 'Secretário de Administração',
@@ -154,7 +164,7 @@ const GERAIS = [
   ['pger9',  'protocolo', ['PEDAG'],          'Transferência de matrícula – E.M. José de Alencar',                'Auricélia Barros Feitosa',          'arquivado',  [3, 10], 'normal'],
   ['pger10', 'atbasica',  ['REGTFD'],         'Agendamento TFD – tratamento oncológico em Fortaleza',             'José Wilson Taveira Lima',          'concluido',  [6, 26], 'urgente'],
   ['pger11', 'protocolo', ['FAMB'],           'Autorização para castração – mutirão de animais comunitários',     'ONG Patas do Sertão',               'devolvido',  [6, 20], 'normal'],
-  ['pger12', 'seccult',   ['GAB', 'GSEFIN'],  'Apoio financeiro – Festival de Quadrilhas Juninas 2026',           'Comissão dos Festejos Juninos',     'em_analise', [7, 7],  'normal'],
+  ['pger12', 'seccult',   ['GAB', 'GSEFIN'],  'Apoio financeiro – Festival de Cultura Popular 2026',              'Comissão Organizadora do Festival',     'em_analise', [7, 7],  'normal'],
   ['pger13', 'secagri',   ['APROD'],          'Distribuição de sementes – Programa Hora de Plantar 2026',         'Sindicato dos Trabalhadores Rurais','arquivado',  [4, 14], 'normal'],
   ['pger14', 'protocolo', ['GAB'],            'Cessão do Ginásio Poliesportivo – Copa Regional de Futsal',        'Liga Desportiva de Modelo',         'em_analise', [7, 11], 'normal'],
 ];
@@ -210,31 +220,189 @@ const simula = (ctx, spec) => {
   return { procId, criador, origSetor, t0, tFim: t, trs, hopInfo, status, dataConclusao, setorAtual, usuarioAtualId: usuarioAtual.id };
 };
 
+/**
+ * DID percorrendo o fluxo por etapas, como no sistema: cada etapa é tramitada ao
+ * setor dela, recebida e concluída (tramitação "did_etapa", assinada na fase 2).
+ * registros = dids.etapas ({ [etapaId]: { status, nome, cargo, …, tramitacao_id } })
+ */
+const simulaDid = (ctx, spec, etapas, numeroDid) => {
+  const criador = ctx.u[spec.criadorKey];
+  const origSetor = ctx.set[criador.setorKey];
+  let t = comercial(mk(2026, spec.open[0], spec.open[1], ri(8, 15)));
+  const t0 = t;
+  const trs = [];
+  const procId = uuid();
+  const push = (tipo, extra) => {
+    const tr = Object.assign({
+      id: uuid(), processo_id: procId, tipo_acao: tipo, data_hora: t,
+      assinatura: sha(procId + tipo + t.toISOString() + rand()),
+      ip: '45.170.' + ri(16, 31) + '.' + ri(2, 250),
+    }, extra);
+    trs.push(tr);
+    return tr;
+  };
+  const registros = {};
+  const info = {}; // etapaId → { user, recebido, concluido }
+
+  push('abertura', { origem_usuario: criador, origem_setor: origSetor.id, despacho: `Processo aberto por ${criador.nome}` });
+
+  const concluir = (e, user, setor) => {
+    t = comercial(addH(t, ri(1, 6)));
+    const tr = push('did_etapa', {
+      origem_usuario: user, origem_setor: setor.id, destino_setor: setor.id,
+      despacho: `DID ${numeroDid} — ${e.titulo} concluída por ${user.nome}${user.cargo ? ` (${user.cargo})` : ''}`,
+    });
+    registros[e.id] = {
+      status: 'concluida', usuario_id: user.id, nome: user.nome, cargo: user.cargo || null,
+      setor_id: setor.id, setor: setor.nome, secretaria: ctx.sec[setor.secKey].sigla,
+      concluida_em: t.toISOString(), tramitacao_id: tr.id, assinatura: null,
+    };
+    info[e.id].concluido = t;
+  };
+  const tramitarPara = (e, deUser, deSetorId, receber = true) => {
+    const dest = ctx.set[e.setKey];
+    t = comercial(addH(t, ri(5, 50)));
+    push('tramite', { origem_usuario: deUser, origem_setor: deSetorId, destino_setor: dest.id, despacho: txtTramite(e.setKey) });
+    if (!receber) return { dest, recebedor: null };
+    const recebedor = (ctx.userBySetor[e.setKey] || [ctx.u.admin])[0];
+    t = comercial(addH(t, ri(1, 8)));
+    push('recebimento', { origem_usuario: recebedor, origem_setor: dest.id, destino_setor: dest.id, destino_usuario: recebedor.id, despacho: `Processo recebido por ${recebedor.nome}` });
+    info[e.id] = { user: recebedor, recebido: t };
+    return { dest, recebedor };
+  };
+
+  // Abertura: quem abriu conclui a Seção I
+  info[etapas[0].id] = { user: criador, recebido: t };
+  concluir(etapas[0], criador, origSetor);
+  let curUser = criador, curSetorId = origSetor.id;
+  for (let i = 1; i < spec.concl; i++) {
+    const { dest, recebedor } = tramitarPara(etapas[i], curUser, curSetorId);
+    concluir(etapas[i], recebedor, dest);
+    curUser = recebedor; curSetorId = dest.id;
+  }
+
+  let status, setorAtual = curSetorId, usuarioAtual = curUser.id, dataConclusao = null;
+  const proxima = etapas[spec.concl];
+  if (spec.final === 'devolvido') {
+    // A etapa seguinte recebe, confere e devolve à anterior (justificativa assinada)
+    const anterior = etapas[spec.concl - 1];
+    const { dest, recebedor } = tramitarPara(proxima, curUser, curSetorId);
+    delete info[proxima.id];
+    t = comercial(addH(t, ri(2, 20)));
+    const regAnt = registros[anterior.id];
+    const justificativa = DEVOLUCOES[spec.key] || 'Documentação incompleta. Regularizar e reenviar.';
+    const tr = push('devolucao', {
+      origem_usuario: recebedor, origem_setor: dest.id, destino_setor: regAnt.setor_id, destino_usuario: regAnt.usuario_id,
+      despacho: `DID ${numeroDid} — ${proxima.titulo} devolveu para a ${anterior.titulo}`, justificativa,
+    });
+    registros[anterior.id] = {
+      ...regAnt, status: 'devolvida',
+      devolucao: { por: recebedor.nome, por_id: recebedor.id, etapa: proxima.titulo, justificativa, em: t.toISOString(), tramitacao_id: tr.id },
+    };
+    status = 'devolvido'; setorAtual = regAnt.setor_id; usuarioAtual = regAnt.usuario_id;
+  } else if (spec.final === 'aberto') {
+    status = 'aberto';
+  } else if (proxima) {
+    const { dest, recebedor } = tramitarPara(proxima, curUser, curSetorId, !spec.naoRecebido);
+    setorAtual = dest.id;
+    usuarioAtual = recebedor ? recebedor.id : null;
+    status = 'em_analise';
+  } else {
+    t = comercial(addH(t, ri(4, 48)));
+    push('conclusao', { origem_usuario: curUser, origem_setor: curSetorId, despacho: 'Todas as etapas do DID concluídas e assinadas. Pagamento efetuado e processo concluído.' });
+    dataConclusao = t;
+    status = 'concluido';
+    if (spec.final === 'arquivado') {
+      t = comercial(addH(t, ri(24, 120)));
+      push('arquivamento', { origem_usuario: curUser, origem_setor: curSetorId, despacho: 'Processo arquivado após conclusão das providências.' });
+      status = 'arquivado';
+    }
+  }
+
+  return { procId, criador, origSetor, t0, tFim: t, trs, hopInfo: [], status, dataConclusao, setorAtual, usuarioAtualId: usuarioAtual, registros, info };
+};
+
+// Campos preenchidos por cada bloco ao ser concluído
+const preencherBloco = (ctx, bloco, did, d, i, seqs) => {
+  const credor = ctx.credor[d.credorKey];
+  const ctr = ctx.contrato[d.ctrN];
+  const dataRec = i.recebido ? fmtD(i.recebido) : null;
+  const dataFim = fmtD(i.concluido);
+  const nome = i.user.nome;
+  switch (bloco) {
+    case 'controle_interno':
+      return { ci_recebido_em: dataRec, ci_responsavel: nome,
+        despacho_ci: 'Despesa regular, com cobertura contratual e dotação orçamentária indicada. Prossiga-se.',
+        dotacao_numero: `02.${String(ri(1, 12)).padStart(2, '0')}.00 3.3.90.${ri(30, 39)}`, fonte_recurso_numero: '1500' };
+    case 'financas_autorizacao':
+      return { financas_recebido_em: dataRec, financas_responsavel: nome };
+    case 'compras_solicitacao':
+      return { compras2_recebido_em: dataRec, compras2_responsavel: nome, compras2_ja_licitado: true, compras2_nro_licitacao: ctr.licit,
+        compras2_realizar_cotacao: false, compras2_modalidade: ctr.modalidade, compras2_data: dataFim, compras2_responsavel_compras: nome,
+        compras2_nro_empenho_solicitacao: `SE-${String(seqs.se++).padStart(3, '0')}/2026` };
+    case 'contab_empenho':
+      return { contabil_recebido_em: dataRec, contabil_responsavel: nome, credor: credor.razao, cnpj_cpf_credor: credor.doc,
+        contabil_auditor: 'Solange Meireles Pontes', contabil_empenhado: 'sim',
+        empenho_numero: `NE-${String(seqs.ne).padStart(4, '0')}/2026`, tipo_empenho: 'Ordinário', data_empenho: dataFim };
+    case 'contab_empenho_liquidacao':
+      return { contabil_recebido_em: dataRec, contabil_responsavel: nome, credor: credor.razao, cnpj_cpf_credor: credor.doc,
+        nf_numero: String(ri(100000, 999999)), nf_valor: d.valor,
+        cert_cnd_federal: true, cert_fgts: true, cert_tst: true, cert_municipal: true, cert_estadual: true,
+        contabil_auditor: 'Solange Meireles Pontes', contabil_empenhado: 'sim',
+        empenho_numero: `NE-${String(seqs.ne).padStart(4, '0')}/2026`, tipo_empenho: 'Ordinário', data_empenho: dataFim,
+        contabil_liquidado: 'sim', liquidacao_numero: `LIQ-${String(seqs.liq++).padStart(4, '0')}/2026`, data_liquidacao: dataFim,
+        doc_caixa: `DC-${seqs.dc++}` };
+    case 'compras_ordem':
+      return { compras_recebido_em: dataRec, compras_responsavel: nome, ja_licitado: true, nro_licitacao: ctr.licit, realizar_cotacao: false,
+        modalidade: ctr.modalidade, data_compras: dataFim, responsavel_compras: nome,
+        nro_empenho_solicitacao: d.ordemKey ? ctx.ordem[d.ordemKey].numero : `OC-${seqs.se++}/2026`,
+        local_entrega: 'Almoxarifado Central – Rua Cel. Diogo Gomes, 55' };
+    case 'almox_recebimento':
+      return { receb_ordem_recebida: 'sim', receb_data: dataFim, receb_nf_data: dataRec, receb_responsavel: nome, receb_cargo: 'Almoxarife – mat. 1187',
+        receb_nf_conferida: true, receb_qtd_conferida: true, receb_esp_conforme: true,
+        receb_obs: 'Materiais recebidos e conferidos sem divergências.', receb_nf_enviado_compras: dataFim,
+        nf_numero: String(ri(100000, 999999)), nf_valor: d.valor };
+    case 'compras_ateste':
+      return { compras3_recebido_em: dataRec, compras3_responsavel: nome, compras3_local_entrega: dataFim };
+    case 'contab_liquidacao':
+      return { contabil_pc_recebido_em: dataRec, contabil_pc_responsavel: nome, contabil_pc_auditor: 'Solange Meireles Pontes',
+        contabil_pc_empenho_numero: did.empenho_numero || null, contabil_pc_tipo_empenho: 'Ordinário', contabil_pc_data_empenho: did.data_empenho || null,
+        contabil_pc_liquidado: 'sim', contabil_pc_liquidacao_numero: `LIQ-${String(seqs.liq++).padStart(4, '0')}/2026`,
+        contabil_pc_data_liquidacao: dataFim, contabil_pc_doc_caixa: `DC-${seqs.dc}` };
+    case 'financas_pagamento':
+      return { financas2_recebido_em: dataRec, financas2_responsavel: nome, financas2_enviado_pagamento: dataFim };
+    case 'tesouraria':
+      return { ...tesourariaFill(ctx, credor, d.valor, dataRec, seqs.dc++), tesouraria_responsavel: nome, data_pagamento: dataFim,
+        desconto_inss: 0, desconto_outros: 0, cert_teso_federal: true, cert_teso_simples_nac: rand() < 0.4 };
+    case 'fechamento':
+      return { contab_fech_finalizado: 'sim', contab_fech_tce: 'sim' };
+    default:
+      return {};
+  }
+};
+
 // ── Monta tudo ───────────────────────────────────────────────────────────────
 const build = (ctx) => {
   const specs = [];
 
-  for (const [key, criadorKey, credorKey, ctrN, objeto, mesRef, valor, stage, final, open, prioridade] of DIDS_FIXAS) {
+  for (const [key, criadorKey, credorKey, ctrN, objeto, mesRef, valor, concl, final, open, prioridade, opts = {}] of DIDS_FIXAS) {
     specs.push({
-      key, tipoProcesso: 'Did', criadorKey, open, final, prioridade,
-      route: ROTA_FIXAS, hops: HOPS_FIXAS[stage],
+      key, tipoProcesso: 'Did', criadorKey, open, final, prioridade, concl, naoRecebido: !!opts.naoRecebido,
       assunto: `${objeto} – ${mesRef}`,
       descricao: `Documento de Instrução de Despesa (contas fixas) referente a ${objeto.toLowerCase()}, competência ${mesRef}, credor ${ctx.credor[credorKey].razao}, no valor de R$ ${valor.toFixed(2).replace('.', ',')}. Contrato nº ${ctx.contrato[ctrN].numero}.`,
       interessado: [ctx.credor[credorKey].razao, soDigitos(ctx.credor[credorKey].doc).slice(0, 14)],
-      justificativa: final === 'devolvido' ? 'Certidão de regularidade do FGTS do credor vencida em 31/05/2026. Juntar certidão válida e reenviar ao Controle Interno.' : null,
-      did: { tipo: 'fixas', credorKey, ctrN, objeto, mesRef, valor, stage },
+      did: { key, tipo: 'fixas', versao: opts.v2 ? 2 : 1, credorKey, ctrN, objeto, mesRef, valor },
     });
   }
-  for (const [key, criadorKey, ordemKey, stage, final, open, prioridade] of DIDS_VARIAVEIS) {
+  for (const [key, criadorKey, ordemKey, concl, final, open, prioridade, opts = {}] of DIDS_VARIAVEIS) {
     const ordem = ctx.ordem[ordemKey];
     const ctr = ctx.contrato[ordem.contratoN];
     specs.push({
-      key, tipoProcesso: 'Did', criadorKey, open, final, prioridade,
-      route: ROTA_VARIAVEIS, hops: HOPS_VAR[stage],
+      key, tipoProcesso: 'Did', criadorKey, open, final, prioridade, concl, naoRecebido: !!opts.naoRecebido,
       assunto: ordem.objeto,
       descricao: `Documento de Instrução de Despesa (contas variáveis) vinculado à ${ordem.numero} do Contrato nº ${ctr.numero} – ${ctx.credor[ordem.credorKey].razao}. Valor: R$ ${ordem.total.toFixed(2).replace('.', ',')}.`,
       interessado: [ctx.credor[ordem.credorKey].razao, soDigitos(ctx.credor[ordem.credorKey].doc).slice(0, 14)],
-      did: { tipo: 'variaveis', credorKey: ordem.credorKey, ctrN: ordem.contratoN, ordemKey, objeto: ordem.objeto, valor: ordem.total, stage },
+      did: { key, tipo: 'variaveis', versao: 1, credorKey: ordem.credorKey, ctrN: ordem.contratoN, ordemKey, objeto: ordem.objeto, valor: ordem.total },
     });
   }
   for (const [key, criadorKey, route, hops, final, open, assunto, doc] of DESPACHOS) {
@@ -285,7 +453,14 @@ const build = (ctx) => {
   };
 
   for (const spec of specs) {
-    const sim = simula(ctx, spec);
+    let etapasDid = null, numeroDid = null;
+    if (spec.did) {
+      const secCriador = ctx.sec[ctx.u[spec.criadorKey].secKey];
+      didSeqPorSec[secCriador.nome] = (didSeqPorSec[secCriador.nome] || 0) + 1;
+      numeroDid = `${secCriador.sigla}-${String(didSeqPorSec[secCriador.nome]).padStart(3, '0')}`;
+      etapasDid = fluxos.etapasDe(spec.did.tipo, spec.did.versao);
+    }
+    const sim = spec.did ? simulaDid(ctx, spec, etapasDid, numeroDid) : simula(ctx, spec);
     seq += 1;
     const sigla = ctx.sec[sim.criador.secKey].sigla;
     const numero = `Proc.2026.${String(seq).padStart(7, '0')} - ${sigla}`;
@@ -319,21 +494,19 @@ const build = (ctx) => {
     for (const tr of sim.trs) {
       if (tr.tipo_acao === 'tramite') logPush(tr.origem_usuario, 'tramitar_processo', 'processos', `Processo ${numero} tramitado`, sim.procId, numero, tr.data_hora);
       if (tr.tipo_acao === 'conclusao') logPush(tr.origem_usuario, 'concluir_processo', 'processos', `Processo ${numero} concluído`, sim.procId, numero, tr.data_hora);
+      if (tr.tipo_acao === 'did_etapa') logPush(tr.origem_usuario, 'concluir_etapa_did', 'did', tr.despacho, sim.procId, numero, tr.data_hora);
       if (tr.tipo_acao === 'devolucao') logPush(tr.origem_usuario, 'devolver_processo', 'processos', `Processo ${numero} devolvido ao setor de origem`, sim.procId, numero, tr.data_hora);
     }
 
-    // ── DID ──
+    // ── DID (fluxo por etapas) ──
     if (spec.did) {
       const d = spec.did;
       const credor = ctx.credor[d.credorKey];
       const ctr = ctx.contrato[d.ctrN];
       const secNome = ctx.sec[sim.criador.secKey].nome;
-      didSeqPorSec[secNome] = (didSeqPorSec[secNome] || 0) + 1;
-      const numeroDid = `${sigla}-${String(didSeqPorSec[secNome]).padStart(3, '0')}`;
-      const hop = (i) => sim.hopInfo[i] || null;
-      const fmtHopD = (i) => hop(i) ? fmtD(hop(i).recebido) : null;
-      const devolvido = spec.final === 'devolvido';
-      const pago = d.stage >= 5;
+      const concluidas = etapasDid.filter(e => sim.registros[e.id]?.status === 'concluida');
+      const tudoConcluido = concluidas.length === etapasDid.length;
+      const pago = sim.registros.tesouraria?.status === 'concluida';
 
       const did = {
         id: uuid(), processo_id: sim.procId, numero_did: numeroDid, tipo_did: d.tipo,
@@ -344,90 +517,45 @@ const build = (ctx) => {
         credor_sec1: credor.razao, cnpj_cpf_credor_sec1: credor.doc,
         nro_licitacao_sec1: ctr.licit, tipo_licitacao_sec1: ctr.modalidade,
         mes_referencia: d.mesRef || null, nf_sec1: d.tipo === 'fixas' ? String(ri(100000, 999999)) : null,
-        cert_sec1_municipal: true, cert_sec1_trabalhista: true, cert_sec1_fgts: !devolvido,
+        cert_sec1_municipal: true, cert_sec1_trabalhista: true, cert_sec1_fgts: spec.final !== 'devolvido',
         cert_sec1_estadual: true, cert_sec1_federal: true, cert_sec1_simples_nac: rand() < 0.4,
         valor_did: d.valor,
         itens_did: JSON.stringify(d.ordemKey
           ? ctx.ordem[d.ordemKey].itens.slice(0, 3).map((it, i) => ({ _id: i, descricao: it.descricao, quantidade: String(it.qtd), valor_unitario: String(it.vu), valor_total: String(it.vt) }))
           : [{ _id: 0, descricao: d.objeto, quantidade: '1', valor_unitario: String(d.valor), valor_total: String(d.valor) }]),
-        status: d.stage >= 6 ? 'finalizado' : 'rascunho', criado_por_id: sim.criador.id,
+        ...(d.ordemKey ? { ordem_compra_id: ctx.ordem[d.ordemKey].id, ordem_ref: ctx.ordem[d.ordemKey].numero } : {}),
+        status: tudoConcluido ? 'finalizado' : 'rascunho', criado_por_id: sim.criador.id,
         created_at: fmtTs(sim.t0), updated_at: fmtTs(sim.tFim),
       };
-      if (d.stage >= 1) Object.assign(did, {
-        ci_recebido_em: fmtHopD(0), ci_responsavel: ctx.u.controle.nome,
-        despacho_ci: devolvido ? 'Constatada certidão de FGTS vencida. Devolva-se à origem para regularização.'
-          : 'Despesa regular, com cobertura contratual e dotação indicada. Prossiga-se ao setor de compras.',
-        dotacao_numero: `02.${String(ri(1, 12)).padStart(2, '0')}.00 3.3.90.${ri(30, 39)}`, fonte_recurso_numero: '1500',
-      });
-      const preencheCompras = (prefixo, hopIdx) => {
-        const o = {};
-        o[prefixo + 'recebido_em'] = fmtHopD(hopIdx);
-        o[prefixo + 'responsavel'] = ctx.u.compras.nome;
-        o[prefixo + 'ja_licitado'] = true;
-        o[prefixo + 'nro_licitacao'] = ctr.licit;
-        o[prefixo + 'realizar_cotacao'] = false;
-        o[prefixo + 'modalidade'] = ctr.modalidade;
-        o[prefixo + 'data'] = fmtHopD(hopIdx);
-        o[prefixo + 'responsavel_compras'] = ctx.u.compras.nome;
-        o[prefixo + 'nro_empenho_solicitacao'] = `SE-${String(seSeq++).padStart(3, '0')}/2026`;
-        o[prefixo + 'local_entrega'] = 'Almoxarifado Central – Rua Cel. Diogo Gomes, 55';
-        return o;
-      };
-      if (d.tipo === 'fixas') {
-        if (d.stage >= 2) Object.assign(did, {
-          compras_recebido_em: fmtHopD(1), compras_responsavel: ctx.u.compras.nome, ja_licitado: true,
-          nro_licitacao: ctr.licit, realizar_cotacao: false, modalidade: ctr.modalidade, data_compras: fmtHopD(1),
-          responsavel_compras: ctx.u.compras.nome, nro_empenho_solicitacao: `SE-${String(seSeq++).padStart(3, '0')}/2026`,
-          local_entrega: 'Sede da Prefeitura Municipal',
-        });
-        if (d.stage >= 3) Object.assign(did, {
-          contabil_recebido_em: fmtHopD(2), contabil_responsavel: ctx.u.contadora.nome,
-          credor: credor.razao, cnpj_cpf_credor: credor.doc, nf_numero: String(ri(100000, 999999)), nf_valor: d.valor,
-          cert_cnd_federal: true, cert_fgts: true, cert_tst: true, cert_municipal: true, cert_estadual: true,
-          contabil_auditor: 'Solange Meireles Pontes', contabil_empenhado: 'sim',
-          empenho_numero: `NE-${String(neSeq).padStart(4, '0')}/2026`, tipo_empenho: 'Ordinário', data_empenho: fmtHopD(2),
-        });
-        if (d.stage >= 4) Object.assign(did, {
-          contabil_liquidado: 'sim', liquidacao_numero: `LIQ-${String(liqSeq++).padStart(4, '0')}/2026`, data_liquidacao: fmtHopD(2),
-          financas_recebido_em: fmtHopD(3), financas_responsavel: ctx.u.secfin.nome,
-        });
-        if (pago) Object.assign(did, tesourariaFill(ctx, credor, d.valor, fmtHopD(4), docCaixaSeq++));
-      } else {
-        const ordem = ctx.ordem[d.ordemKey];
-        if (d.stage >= 2) Object.assign(did, preencheCompras('compras2_', 1), { ordem_compra_id: ordem.id, ordem_ref: ordem.numero });
-        if (d.stage >= 3) Object.assign(did, {
-          contabil_recebido_em: fmtHopD(2), contabil_responsavel: ctx.u.contadora.nome,
-          credor: credor.razao, cnpj_cpf_credor: credor.doc,
-          contabil_auditor: 'Solange Meireles Pontes', contabil_empenhado: 'sim',
-          empenho_numero: `NE-${String(neSeq).padStart(4, '0')}/2026`, tipo_empenho: 'Ordinário', data_empenho: fmtHopD(2),
-        });
-        if (d.stage >= 4) Object.assign(did,
-          {
-            receb_ordem_recebida: 'sim', receb_data: fmtHopD(3), receb_nf_data: fmtHopD(3),
-            receb_responsavel: ctx.u.almoxarife.nome, receb_cargo: 'Almoxarife',
-            receb_nf_conferida: true, receb_qtd_conferida: true, receb_esp_conforme: true,
-            receb_obs: 'Materiais recebidos e conferidos sem divergências.', receb_nf_enviado_compras: fmtHopD(4),
-            nf_numero: String(ri(100000, 999999)), nf_valor: d.valor,
-          },
-          preencheCompras('compras3_', 4),
-          { compras3_local_entrega: fmtHopD(4) }, // no banco esta coluna é DATE
-          {
-            contabil_pc_recebido_em: fmtHopD(5), contabil_pc_responsavel: ctx.u.contadora.nome,
-            contabil_pc_auditor: 'Solange Meireles Pontes',
-            contabil_pc_empenho_numero: `NE-${String(neSeq).padStart(4, '0')}/2026`, contabil_pc_tipo_empenho: 'Ordinário',
-            contabil_pc_data_empenho: fmtHopD(2), contabil_pc_liquidado: 'sim',
-            contabil_pc_liquidacao_numero: `LIQ-${String(liqSeq++).padStart(4, '0')}/2026`, contabil_pc_data_liquidacao: fmtHopD(5),
-            contabil_pc_doc_caixa: `DC-${docCaixaSeq}`,
-          });
-        if (pago) Object.assign(did, {
-          financas2_recebido_em: fmtHopD(6), financas2_responsavel: ctx.u.secfin.nome, financas2_enviado_pagamento: fmtHopD(6),
-        }, tesourariaFill(ctx, credor, d.valor, fmtHopD(7), docCaixaSeq++));
+
+      // Campos de cada etapa concluída (ou devolvida: os dados continuam lá)
+      const seqs = { se: seSeq, ne: neSeq, liq: liqSeq, dc: docCaixaSeq };
+      const etapasDados = {};
+      for (const e of etapasDid) {
+        const reg = sim.registros[e.id];
+        if (!reg || e.bloco === 'abertura') continue;
+        if (e.bloco === 'personalizada') {
+          etapasDados[e.id] = {
+            c_parecer: `Analisados os autos, verifica-se a regularidade formal da despesa: contrato vigente (Contrato nº ${ctr.numero}), certidões de regularidade dentro da validade e nota fiscal devidamente atestada. Opina-se pelo prosseguimento do feito.`,
+            c_regular: 'sim',
+            c_docs: { 0: true, 1: true, 2: true },
+            c_numero: `PJ ${String(ri(40, 90)).padStart(3, '0')}/2026`,
+          };
+          continue;
+        }
+        Object.assign(did, preencherBloco(ctx, e.bloco, did, d, sim.info[e.id], seqs));
       }
-      if (d.stage >= 6) Object.assign(did, { contab_fech_finalizado: 'sim', contab_fech_tce: 'sim' });
+      seSeq = seqs.se; liqSeq = seqs.liq; docCaixaSeq = seqs.dc;
+
+      did.fluxo = JSON.stringify(fluxos.fotoDoFluxo(ctx, d.tipo, d.versao));
+      did.etapas = JSON.stringify(sim.registros);
+      did.etapas_dados = JSON.stringify(etapasDados);
       ctx.didRows.push(did);
+      ctx.didsPorChave = ctx.didsPorChave || {};
+      ctx.didsPorChave[spec.key] = { id: did.id, processoId: sim.procId, numero: numeroDid };
 
       // lançamento financeiro do empenho
-      if (d.stage >= 3) {
+      if (did.empenho_numero) {
         const dataEmp = did.data_empenho || fmtD(sim.tFim);
         ctx.finRows.push([uuid(), 'despesa', d.tipo === 'fixas' ? 'DID – Contas Fixas' : 'DID – Contas Variáveis',
           `${did.objeto} (${credor.razao})`, d.valor, dataEmp, ctx.sec[sim.criador.secKey].id, sim.procId,

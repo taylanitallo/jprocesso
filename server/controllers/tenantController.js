@@ -524,7 +524,7 @@ async function migrarSchemaUsuarios(schema, pool) {
     -- Garantir que a coluna tipo_acao aceita os valores corretos usados pelo código
     ALTER TABLE IF EXISTS ${schema}.tramitacoes
       ADD CONSTRAINT tramitacoes_tipo_acao_check
-      CHECK (tipo_acao IN ('abertura','tramite','devolucao','conclusao','arquivamento'))
+      CHECK (tipo_acao IN ('abertura','tramite','devolucao','conclusao','arquivamento','recebimento','did_etapa'))
       NOT VALID;
   `);
 
@@ -989,7 +989,7 @@ async function criarEstruturaIsolada(schema, tenant, usuarioAdmin) {
         destino_setor_id UUID REFERENCES ${schema}.setores(id),
         destino_usuario_id UUID REFERENCES ${schema}.usuarios(id),
         tipo_acao VARCHAR(30) NOT NULL
-          CHECK (tipo_acao IN ('abertura', 'tramite', 'devolucao', 'conclusao', 'arquivamento')),
+          CHECK (tipo_acao IN ('abertura', 'tramite', 'devolucao', 'conclusao', 'arquivamento', 'recebimento', 'did_etapa')),
         despacho TEXT,
         observacao TEXT,
         justificativa_devolucao TEXT,

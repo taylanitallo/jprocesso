@@ -144,7 +144,7 @@ const ORDENS_DEF = [
   ['os_frota_mai',    22, 'SERVICO', '2026-05-13', 'ATENDIDA', 0.15, 'Revisão da ambulância FIA-2E45 e troca de óleo', 'Manutenção corretiva da frota da Saúde'],
   ['os_frota_jul',    22, 'SERVICO', '2026-07-09', 'EMITIDA',  0.1,  'Revisão do caminhão caçamba QRA-8C31', 'Manutenção preventiva 20.000km'],
   ['os_consult_jun',  25, 'SERVICO', '2026-06-01', 'ATENDIDA', 1/12, 'Assessoria contábil – competência junho/2026', 'Execução mensal contratual'],
-  ['os_som_jun',      29, 'SERVICO', '2026-06-20', 'ATENDIDA', 0.13, 'Sonorização do São João da Praça – 2 diárias', 'Festejos juninos oficiais do Município'],
+  ['os_som_jun',      29, 'SERVICO', '2026-06-20', 'ATENDIDA', 0.13, 'Sonorização do Festival da Praça – 2 diárias', 'Festival cultural oficial do Município'],
   ['os_tvescolar_jun',15, 'SERVICO', '2026-06-01', 'ATENDIDA', 1/12, 'Transporte escolar – medição junho/2026', 'Medição mensal das rotas I a VIII'],
   ['oc_luva_mar',     7,  'COMPRA',  '2026-03-18', 'CANCELADA',0.1,  'Luvas de procedimento – pedido complementar', 'Cancelada: quantitativo revisto pela CAF'],
   ['os_coffee_abr',   28, 'SERVICO', '2026-04-22', 'CANCELADA',0.05, 'Coffee break – Conferência de Saúde', 'Cancelada: evento adiado pelo Conselho'],
