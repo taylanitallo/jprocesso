@@ -400,9 +400,9 @@ export default function Usuarios() {
                 onClick={() => setShowIoMenu(v => !v)}
                 className="btn-secondary flex items-center gap-2"
               >
-                <FileSpreadsheet className="h-4 w-4" />
+                <FileSpreadsheet className="h-3.5 w-3.5" />
                 Planilha
-                <ChevronDown className="h-4 w-4" />
+                <ChevronDown className="h-3.5 w-3.5" />
               </button>
               {showIoMenu && (
                 <>
@@ -451,8 +451,8 @@ export default function Usuarios() {
               onChange={handleImportFile}
             />
             <BotaoExcluidos entidade="usuarios" rotulo="Usuários excluídos" onAlterado={fetchUsuarios} />
-            <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2">
-              <UserPlus className="h-5 w-5" />
+            <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1 h-7">
+              <UserPlus className="h-3.5 w-3.5" />
               Novo Usuário
             </button>
         </div>}

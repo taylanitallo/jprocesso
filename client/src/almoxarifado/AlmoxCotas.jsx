@@ -183,27 +183,27 @@ export default function AlmoxCotas() {
             type="month"
             value={filtroMes}
             onChange={e => setFiltroMes(e.target.value)}
-            className="border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900"
+            className="border border-ink-300 rounded-lg px-3 py-1 text-xs bg-surface text-ink-900"
           />
           <select
             value={filtroSetor}
             onChange={e => setFiltroSetor(e.target.value)}
-            className="border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900"
+            className="border border-ink-300 rounded-lg px-3 py-1 text-xs bg-surface text-ink-900"
           >
             <option value="">Todos os setores</option>
             {(Array.isArray(setores) ? setores : []).map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
           </select>
           <button onClick={load} className="p-2 text-ink-400 hover:text-ink-600 rounded-lg hover:bg-ink-100">
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className="h-3.5 w-3.5" />
           </button>
         </div>
         <div className="flex items-center gap-2">
         <BotaoExcluidos entidade="almox_cotas" rotulo="Cotas excluídas" onAlterado={load} />
         <button
           onClick={() => { setNovoModal(true); setErro('') }}
-          className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors"
+          className="flex items-center gap-2 h-7 px-3 bg-teal-600 text-white rounded-lg text-xs font-medium hover:bg-teal-700 transition-colors"
         >
-          <Plus className="h-4 w-4" /> Nova Cota
+          <Plus className="h-3.5 w-3.5" /> Nova Cota
         </button>
         </div>
       </div>

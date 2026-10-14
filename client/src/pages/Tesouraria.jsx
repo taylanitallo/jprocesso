@@ -286,17 +286,21 @@ function TabContas({ secretarias }) {
         </div>
       </FilterBar>
 
+      {/* Barra de ações (fora do card, acima da tabela) */}
+      <div className="flex items-center justify-end flex-wrap gap-2">
+        <div className="mr-auto">
+          <BotaoExcluidos entidade="contas_bancarias" rotulo="Contas excluídas" onAlterado={load} />
+        </div>
+        <button onClick={openNew} className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1 h-7">
+          <Plus className="h-3.5 w-3.5" /> Nova Conta
+        </button>
+      </div>
+
       <div className="card overflow-hidden">
         <div className="px-4 py-3 border-b border-ink-200 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <SectionTitle icon={Landmark} title="Contas Bancárias Cadastradas" />
             {!loading && <span className="text-xs text-ink-500">{filtradas.length} de {contas.length}</span>}
-          </div>
-          <div className="flex items-center gap-2">
-            <BotaoExcluidos entidade="contas_bancarias" rotulo="Contas excluídas" onAlterado={load} />
-            <button onClick={openNew} className="btn-primary flex items-center gap-1.5 text-sm px-3 py-1.5">
-              <Plus className="h-4 w-4" /> Nova Conta
-            </button>
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -773,6 +777,23 @@ tfoot .val{font-size:15px;color:#15803d}
         </div>
       </FilterBar>
 
+      {/* Barra de ações (fora do card, acima da tabela) */}
+      <div className="flex items-center justify-end flex-wrap gap-2">
+        <div className="mr-auto">
+          <BotaoExcluidos entidade="receitas" rotulo="Receitas excluídas" onAlterado={() => load()} />
+        </div>
+        <button
+          onClick={printExtrato}
+          disabled={receitas.length === 0}
+          className="btn-secondary text-xs px-3 py-1 flex items-center gap-1.5 disabled:opacity-40 h-7"
+        >
+          <Printer className="h-3.5 w-3.5" /> Imprimir / PDF
+        </button>
+        <button onClick={openNew} className="btn-primary text-xs px-3 py-1 flex items-center gap-1.5 h-7">
+          <Plus className="h-3.5 w-3.5" /> Novo Lançamento
+        </button>
+      </div>
+
       {/* Extrato */}
       <div className="card overflow-hidden">
         <div className="px-4 py-3 border-b border-ink-200 flex items-center justify-between flex-wrap gap-2">
@@ -785,19 +806,6 @@ tfoot .val{font-size:15px;color:#15803d}
                 <span className="font-semibold text-success-600 dark:text-success-400">{fmt(total)}</span>
               </span>
             )}
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={printExtrato}
-              disabled={receitas.length === 0}
-              className="btn-secondary text-sm px-3 py-1.5 flex items-center gap-1.5 disabled:opacity-40"
-            >
-              <Printer className="h-4 w-4" /> Imprimir / PDF
-            </button>
-            <BotaoExcluidos entidade="receitas" rotulo="Receitas excluídas" onAlterado={() => load()} />
-            <button onClick={openNew} className="btn-primary text-sm px-3 py-1.5 flex items-center gap-1.5">
-              <Plus className="h-4 w-4" /> Novo Lançamento
-            </button>
           </div>
         </div>
 
@@ -1116,8 +1124,8 @@ function OrdensDespesas() {
           <div className="flex gap-2 flex-wrap">
             <BotaoExcluidos entidade="pagamentos" rotulo="Pagamentos estornados" onAlterado={() => load()} />
             <BotaoLimpar onClick={limparOrdens} ativo={temFiltroOrdens} />
-            <button onClick={() => load()} className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5">
-              <Search className="h-4 w-4" aria-hidden="true" /> Filtrar
+            <button onClick={() => load()} className="btn-primary text-xs px-3 py-1 flex items-center gap-1.5 h-7">
+              <Search className="h-3.5 w-3.5" aria-hidden="true" /> Filtrar
             </button>
           </div>
         </div>
