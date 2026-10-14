@@ -515,11 +515,15 @@ const build = (ctx) => {
         fonte_recurso: { SESAU: 'FMS', SEDUC: 'FUNDEB/PNAE', SEMAS: 'FMAS' }[sim.criador.secKey] || 'PRÓPRIO',
         detalhes_em_anexo: false, contrato_ref: `Contrato nº ${ctr.numero}`,
         credor_sec1: credor.razao, cnpj_cpf_credor_sec1: credor.doc,
+        // Dados bancários do credor informados na Abertura (a Tesouraria só confere)
+        banco_fornecedor: pick(['Banco do Brasil', 'Caixa Econômica', 'Bradesco', 'Itaú']),
+        ag_fornecedor: String(ri(100, 4999)), cc_fornecedor: `${ri(1000, 99999)}-${ri(0, 9)}`,
         nro_licitacao_sec1: ctr.licit, tipo_licitacao_sec1: ctr.modalidade,
         mes_referencia: d.mesRef || null, nf_sec1: d.tipo === 'fixas' ? String(ri(100000, 999999)) : null,
         cert_sec1_municipal: true, cert_sec1_trabalhista: true, cert_sec1_fgts: spec.final !== 'devolvido',
         cert_sec1_estadual: true, cert_sec1_federal: true, cert_sec1_simples_nac: rand() < 0.4,
-        valor_did: d.valor,
+        // A tela do DID preenche o valor bruto pelos itens desde a Abertura
+        valor_did: d.valor, valor_bruto: d.valor,
         itens_did: JSON.stringify(d.ordemKey
           ? ctx.ordem[d.ordemKey].itens.slice(0, 3).map((it, i) => ({ _id: i, descricao: it.descricao, quantidade: String(it.qtd), valor_unitario: String(it.vu), valor_total: String(it.vt) }))
           : [{ _id: 0, descricao: d.objeto, quantidade: '1', valor_unitario: String(d.valor), valor_total: String(d.valor) }]),

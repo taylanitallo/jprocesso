@@ -169,10 +169,10 @@ async function executar({ schema, ctx }) {
   }
   resumo.assinaturas = nAss;
 
-  // ── 3. Aplicativo autenticador (todos os usuários, exceto administradores) ─
+  // ── 3. Aplicativo autenticador (usuários do município, inclusive o administrador) ─
   let nTotp = 0;
   for (const u of usuarios) {
-    if (['admin', 'jeos'].includes(u.tipo)) continue;
+    if (u.tipo === 'jeos') continue; // contas da JEOS são pessoais
     await assinatura.definirTotp(tenantDb, u.id, SEGREDO_TOTP);
     nTotp += 1;
   }
@@ -411,7 +411,27 @@ async function executar({ schema, ctx }) {
   });
   resumo.lixeira = excluidos;
 
+  resumo.semFuturo = await semEventosNoFuturo(tenantDb);
   return resumo;
+}
+
+// Fatos já ocorridos (receita lançada, requisição feita, movimentação de estoque)
+// nunca ficam depois de hoje; vigências, validades e previsões continuam no futuro
+const EVENTOS = [
+  ['tes_receitas', 'data'],
+  ['almoxarifado_requisicoes', 'data_solicitacao'],
+  ['almoxarifado_movimentacoes', 'data_movimentacao'],
+];
+async function semEventosNoFuturo(tenantDb) {
+  let n = 0;
+  for (const [tabela, coluna] of EVENTOS) {
+    const [, r] = await tenantDb.query(
+      `UPDATE "${tabela}" SET "${coluna}" = "${coluna}" - (date_trunc('day', "${coluna}") - date_trunc('day', now()))
+         - make_interval(days => (abs(hashtext(id::text)) % 5) + 1)
+       WHERE "${coluna}" > now()`);
+    n += r?.rowCount || 0;
+  }
+  return n;
 }
 
 function imprimirResumo(r) {
@@ -429,4 +449,4 @@ function imprimirResumo(r) {
   console.log(`    ${r.totp?.uri}`);
 }
 
-module.exports = { executar, imprimirResumo, apagarArquivos, SEGREDO_TOTP };
+module.exports = { executar, imprimirResumo, apagarArquivos, semEventosNoFuturo, SEGREDO_TOTP };

@@ -213,8 +213,12 @@ const getEtapas = async (req, res) => {
 };
 
 // Assinatura do ato: valida senha + código do app e assina a tramitação
+// (o usuário das etapas vem sem a senha: busca só ela para conferir a assinatura)
 const assinadorEtapa = (req) => ({
-  validar: (transaction, usuario) => validarAssinante(req, usuario, transaction),
+  validar: async (transaction, usuario) => {
+    const comSenha = await req.models.User.findByPk(usuario.id, { attributes: ['id', 'senha'], transaction });
+    return validarAssinante(req, comSenha, transaction);
+  },
   assinar: (transaction, processo, tramitacao, usuario) => assinarTramitacao(req, transaction, processo, tramitacao, usuario),
 });
 
