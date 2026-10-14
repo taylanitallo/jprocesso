@@ -3,9 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { useTheme } from '../context/ThemeContext';
-import { Save, Upload, X, ImageIcon, Download, FileDown, FileUp, Database, Key, RefreshCw, CheckCircle, AlertCircle, Settings, Building2, Bell, Palette, ArrowLeftRight, Sun, Moon } from 'lucide-react';
+import { Save, Upload, X, ImageIcon, Download, FileDown, FileUp, Database, Key, RefreshCw, CheckCircle, AlertCircle, Settings, Building2, Bell, Palette, ArrowLeftRight, Sun, Moon, Workflow } from 'lucide-react';
 import PageHeader from '../components/ui/PageHeader';
 import SectionTitle from '../components/ui/SectionTitle';
+import FluxosProcesso from './configuracoes/FluxosProcesso';
 
 const ToggleSwitch = ({ checked, onChange }) => (
   <label className="relative inline-flex items-center cursor-pointer">
@@ -74,7 +75,9 @@ export default function Configuracoes() {
   const { isDark, toggleTheme } = useTheme();
   const { subdomain, tab: tabParam } = useParams();
   const navigate = useNavigate();
-  const VALID_TABS_CONF = ['gerais', 'notificacoes', 'tema', 'importexport'];
+  // Fluxo do DID: quem preenche cada etapa — só administradores
+  const ehAdmin = user?.tipo === 'admin' || user?.tipo === 'jeos';
+  const VALID_TABS_CONF = ['gerais', 'notificacoes', 'tema', 'importexport', ...(ehAdmin ? ['fluxos'] : [])];
   const activeTab = VALID_TABS_CONF.includes(tabParam) ? tabParam : 'gerais';
   const setActiveTab = (key) => navigate(`/${subdomain}/configuracoes/${key}`);
   const [loading, setLoading] = useState(false);
@@ -215,6 +218,7 @@ export default function Configuracoes() {
     { id: 'notificacoes', icon: Bell,            label: 'Notificações' },
     { id: 'tema',         icon: Palette,         label: 'Tema' },
     { id: 'importexport', icon: ArrowLeftRight,  label: 'Import / Export' },
+    ...(ehAdmin ? [{ id: 'fluxos', icon: Workflow, label: 'Fluxos de Processo' }] : []),
   ];
 
   // ── estados Importações/Exportações
@@ -723,6 +727,8 @@ export default function Configuracoes() {
           )}
 
           {/* ─── Aba Importações / Exportações ─── */}
+          {activeTab === 'fluxos' && ehAdmin && <FluxosProcesso />}
+
           {activeTab === 'importexport' && (
             <div className="space-y-8">
 

@@ -1,30 +1,18 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { ArrowLeft, Save, Loader2, CheckCircle, AlertCircle, FileCheck, FileDown, Eye } from 'lucide-react'
+import { ArrowLeft, Loader2, CheckCircle, AlertCircle, FileCheck, FileDown, Eye } from 'lucide-react'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import { useAssinatura } from '../components/assinatura/AssinaturaProvider'
 import { EMPTY, DidReadOnlyContext, ConfirmModal } from './did/didShared'
+import {
+  EtapaDidContext, useEtapasDid, LinhaEtapas, EtapaRegistro, EtapaAguardando, EtapaAcoes,
+} from './did/EtapasDid'
 import { gerarDidPDF } from './did/gerarDidPDF'
 import DidFixasSecaoI from './did/fixas/DidFixasSecaoI'
-import DidFixasSecaoII from './did/fixas/DidFixasSecaoII'
-import DidFixasSecaoIII from './did/fixas/DidFixasSecaoIII'
-import DidFixasSecaoIV from './did/fixas/DidFixasSecaoIV'
-import DidFixasSecaoV from './did/fixas/DidFixasSecaoV'
-import DidFixasSecaoVI from './did/fixas/DidFixasSecaoVI'
-import DidFixasSecaoVII from './did/fixas/DidFixasSecaoVII'
 import DidVariaveisSecaoI from './did/variaveis/DidVariaveisSecaoI'
-import DidVariaveisSecaoII from './did/variaveis/DidVariaveisSecaoII'
-import DidVariaveisSecaoIII from './did/variaveis/DidVariaveisSecaoIII'
-import DidVariaveisSecaoIV from './did/variaveis/DidVariaveisSecaoIV'
-import DidVariaveisSecaoV from './did/variaveis/DidVariaveisSecaoV'
-import DidVariaveisSecaoVI from './did/variaveis/DidVariaveisSecaoVI'
-import DidVariaveisSecaoVII from './did/variaveis/DidVariaveisSecaoVII'
-import DidVariaveisSecaoVIII from './did/variaveis/DidVariaveisSecaoVIII'
-import DidVariaveisSecaoIX from './did/variaveis/DidVariaveisSecaoIX'
-import DidVariaveisSecaoX from './did/variaveis/DidVariaveisSecaoX'
-import DidVariaveisSecaoXI from './did/variaveis/DidVariaveisSecaoXI'
-import DidVariaveisSecaoXII from './did/variaveis/DidVariaveisSecaoXII'
+import { telaDoBloco } from './did/blocos'
+import EtapaPersonalizada from './did/EtapaPersonalizada'
 
 
 
@@ -242,25 +230,24 @@ export default function FormularioDid() {
   const handleGerarPDF = async () => {
     setGerandoPDF(true)
     try {
-      await gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, processoId })
+      await gerarDidPDF({ form, itensDid, vliq, tenant, tipoDid, processoId, etapas: etapas?.etapas })
     } finally {
       setGerandoPDF(false)
     }
   }
   const [loading, setLoading]   = useState(true)
   const [saving, setSaving]     = useState(false)
-  const [savingDid, setSavingDid] = useState(false)
-  const [editando, setEditando] = useState(processoId === 'novo')
   const [msg, setMsg]           = useState(null) // { ok, text }
   const [processo, setProcesso] = useState(null)
   const [tipoDid, setTipoDid]   = useState('fixas')
   const [itensDid, setItensDid] = useState([{ _id: 1, descricao: '', quantidade: '', valor_unitario: '', valor_total: '' }])
 
-  const TOTAL_SECOES = { fixas: 7, variaveis: 12 }
-  // maxSecaoVisivel: quantas seções são exibidas (desbloqueio progressivo)
-  // Novo DID → começa em 1 (Seção I visível, tipo sempre tem default)
-  // DID existente → definido em loadDid (todas as seções)
-  const [maxSecaoVisivel, setMaxSecaoVisivel] = useState(1)
+  // Fluxo por etapas: o servidor diz a etapa atual e se este usuário pode preenchê-la
+  // (setor da etapa + processo recebido no setor). Etapas futuras ficam escondidas.
+  const { resumo: etapas, recarregar: recarregarEtapas } = useEtapasDid(processoId, tipoDid)
+  const etapaDe = (n) => etapas?.etapas?.[n - 1] || null
+  // Editável: etapa atual + servidor confirmou que este usuário pode (setor e recebimento)
+  const editavelEtapa = (n) => !readOnly && !!etapas?.pode && etapas.atual === n
   const [alterandoTipo, setAlterandoTipo] = useState(false)
   const [confirmarTrocarTipo, setConfirmarTrocarTipo] = useState(false)
 
@@ -378,38 +365,8 @@ export default function FormularioDid() {
     }
   }, [user])
 
-  // Calcula quantas seções devem estar visíveis baseado nos dados já salvos no banco.
-  // Uma seção N+1 aparece somente quando a seção N tem pelo menos um campo preenchido.
-  const calcMaxSecaoVisivel = (f, tipo, itens) => {
-    const temItens = itens.some(it => it.valor_total)
-    // Seção I: campos obrigatórios principais
-    if (!(f.credor_sec1 && f.data_did && f.objeto && temItens)) return 1
-    if (tipo === 'fixas') {
-      if (!(f.ci_recebido_em || f.ci_responsavel || f.despacho_ci))                           return 2
-      if (!(f.financas_recebido_em || f.financas_responsavel))                                 return 3
-      if (!(f.contabil_recebido_em || f.contabil_responsavel || f.empenho_numero))             return 4
-      if (!(f.financas2_recebido_em || f.financas2_responsavel || f.financas2_enviado_pagamento)) return 5
-      if (!(f.tesouraria_recebido_em || f.tesouraria_responsavel || f.pago))                   return 6
-      return 7
-    } else { // variaveis
-      if (!(f.ci_recebido_em || f.ci_responsavel || f.despacho_ci))                                    return 2
-      if (!(f.financas_recebido_em || f.financas_responsavel))                                          return 3
-      if (!(f.compras2_recebido_em || f.compras2_responsavel || f.compras2_nro_empenho_solicitacao))    return 4
-      if (!(f.contabil_recebido_em || f.contabil_responsavel || f.empenho_numero))                      return 5
-      if (!(f.compras_recebido_em || f.compras_responsavel))                                            return 6
-      if (!(f.receb_responsavel || f.receb_data))                                                       return 7
-      if (!(f.compras3_recebido_em || f.compras3_responsavel))                                          return 8
-      if (!(f.contabil_pc_recebido_em || f.contabil_pc_responsavel || f.contabil_pc_liquidacao_numero)) return 9
-      if (!(f.financas2_recebido_em || f.financas2_responsavel || f.financas2_enviado_pagamento))       return 10
-      if (!(f.tesouraria_recebido_em || f.tesouraria_responsavel || f.pago))                            return 11
-      return 12
-    }
-  }
-
   const loadDid = async () => {
-    // Sempre reseta ao mudar de processo (evita maxSecaoVisivel stale entre navegações)
     setDid(null)
-    setMaxSecaoVisivel(1)
     if (processoId === 'novo') { setLoading(false); return }
     setLoading(true)
     try {
@@ -422,8 +379,6 @@ export default function FormularioDid() {
         ? data.did.itens_did.map((it, i) => ({ _id: i, ...it }))
         : itensDid
       if (data.did.itens_did?.length) setItensDid(itens)
-      setEditando(false)
-      // Constrói mergedForm primeiro (síncrono) para usá-lo em calcMaxSecaoVisivel
       const mergedForm = { ...EMPTY }
       Object.keys(EMPTY).forEach(k => {
         mergedForm[k] = data.did[k] !== undefined && data.did[k] !== null ? data.did[k] : EMPTY[k]
@@ -433,8 +388,6 @@ export default function FormularioDid() {
         mergedForm.valor_bruto = parseFloat(data.did.ordem_valor_total).toFixed(2)
       }
       setForm(mergedForm)
-      // Determina seções visíveis a partir dos dados reais do banco
-      setMaxSecaoVisivel(calcMaxSecaoVisivel(mergedForm, tipo, itens))
     } catch (err) {
       if (err.response?.status === 404) {
         // Processo existe mas DID ainda não foi criado.
@@ -499,8 +452,7 @@ export default function FormularioDid() {
         navigate(`/${subdomain}/processos/${targetId}/did`, { replace: true })
         return true
       }
-      // DID já existente: desbloqueia Seção II
-      setMaxSecaoVisivel(prev => Math.max(prev, 2))
+      recarregarEtapas()
       setTimeout(() => setMsg(null), 4000)
       return true
     } catch (err) {
@@ -533,45 +485,47 @@ export default function FormularioDid() {
     }
   }
 
-  // Fábrica de handlers para seções II em diante:
-  // salva o DID e desbloqueia a próxima seção em caso de sucesso.
-  const makeOnSave = (secaoNum) => async () => {
+  // ── Ações da etapa (o servidor confere setor, recebimento e obrigatórios) ──
+  const avisar = (ok, text, ms = 6000) => { setMsg({ ok, text }); if (ms) setTimeout(() => setMsg(null), ms) }
+  const erroEtapa = (err, padrao) => {
+    const d = err.response?.data
+    const faltando = d?.faltando?.length ? ` Falta: ${d.faltando.join(", ")}.` : ""
+    avisar(false, (d?.error || err.message || padrao) + faltando, 0)
+  }
+
+  // Rascunho da etapa atual: grava sem concluir (só os campos da etapa passam)
+  const salvarRascunhoEtapa = async () => {
     const ok = await handleSave()
-    if (ok !== false) setMaxSecaoVisivel(prev => Math.max(prev, secaoNum + 1))
-    return ok
+    if (ok) recarregarEtapas()
   }
 
-  // Fábrica de "Limpar Seção" — zera os campos da seção e persiste no banco.
-  const makeLimparSecao = (campos) => async () => {
-    const patch = {}
-    campos.forEach(c => { patch[c] = EMPTY[c] !== undefined ? EMPTY[c] : '' })
-    setForm(prev => ({ ...prev, ...patch }))
-    if (did?.id) {
-      try { await api.post(`/did/processo/${processoId}`, patch) } catch { /* silently ignore */ }
-    }
-  }
-
-  const handleSaveDid = async () => {
-    setSavingDid(true)
+  const concluirEtapa = async (etapa) => {
     try {
-      const targetId = await criarProcessoSeNovo()
-      const { data } = await api.post(`/did/processo/${targetId}`, { ...form, tipo_did: tipoDid, itens_did: itensDid })
-      if (!data?.did) throw new Error('Servidor retornou resposta inválida ao salvar DID')
-      setDid(data.did)
-      setEditando(false)
-      setMsg({ ok: true, text: `DID Nº ${data.did.numero_did} salvo com sucesso!` })
-      if (processoId === 'novo') {
-        navigate(`/${subdomain}/processos/${targetId}/did`, { replace: true })
-        return true
-      }
-      setTimeout(() => setMsg(null), 4000)
-      return true
-    } catch (err) {
-      setMsg({ ok: false, text: err.response?.data?.error || err.message || 'Erro ao salvar Processo' })
-      return false
-    } finally {
-      setSavingDid(false)
-    }
+      const r = await assinar({
+        titulo: `Concluir a ${etapa.titulo}`,
+        resumo: <p>Confirmo os dados da <strong>{etapa.titulo}</strong> do {numeroDIDFmt}. A etapa fica definitiva e a próxima é liberada ao setor responsável.</p>,
+        executar: (cred) => api.post(`/did/processo/${processoId}/etapa/${etapa.id}/concluir`, { ...form, itens_did: itensDid, ...cred }),
+      })
+      if (!r) return
+      const a = r.data?.assinatura
+      avisar(true, `${etapa.titulo} concluída e assinada${a ? ` (código ${a.codigo_verificador} · CRC ${a.codigo_crc})` : ""}.${r.data?.proxima ? ` Próxima: ${r.data.proxima} — tramite o processo para o setor responsável.` : " Todas as etapas concluídas."}`, 10000)
+      await loadDid()
+      recarregarEtapas()
+    } catch (err) { erroEtapa(err, "Erro ao concluir a etapa") }
+  }
+
+  const devolverEtapa = async (etapa, justificativa) => {
+    try {
+      const r = await assinar({
+        titulo: `Devolver à etapa anterior`,
+        resumo: <p>A <strong>{etapa.titulo}</strong> devolve o DID para correção. Motivo: “{justificativa}”</p>,
+        executar: (cred) => api.post(`/did/processo/${processoId}/etapa/${etapa.id}/devolver`, { justificativa, ...cred }),
+      })
+      if (!r) return
+      avisar(true, `DID devolvido para a ${r.data.anterior}. O processo voltou para quem a concluiu.`, 10000)
+      await loadDid()
+      recarregarEtapas()
+    } catch (err) { erroEtapa(err, "Erro ao devolver a etapa") }
   }
 
   const secretariaNome = processo?.setorAtual?.secretaria?.nome || ''
@@ -603,7 +557,7 @@ export default function FormularioDid() {
   const temItensPreenchidos = itensDid.some(it => it.valor_total)
 
   // Lock de tipo: bloqueado quando DID já salvo (exceto em modo alteração)
-  const tipoBloqueado = did !== null && !alterandoTipo
+  const tipoBloqueado = (did !== null && !alterandoTipo) || (processoId !== 'novo' && !editavelEtapa(1))
   // Detecta preenchimento parcial (antes de salvar)
   const hasAnyData = !!(form.objeto?.trim() || form.contrato_ref || form.credor_sec1?.trim() || temItensPreenchidos)
   const secaoILimpa = !hasAnyData
@@ -619,7 +573,6 @@ export default function FormularioDid() {
   const handleTrocarTipo = async (novoTipo) => {
     if (novoTipo === tipoDid) { setAlterandoTipo(false); return }
     setTipoDid(novoTipo)
-    setMaxSecaoVisivel(1)
     setAlterandoTipo(false)
     if (did?.id) {
       try {
@@ -637,7 +590,6 @@ export default function FormularioDid() {
     setForm(EMPTY)
     setItensDid([{ _id: 1, descricao: '', quantidade: '', valor_unitario: '', valor_total: '' }])
     setTipoDid(novoTipo)
-    setMaxSecaoVisivel(1)
     setConfirmarTrocarTipo(false)
   }
 
@@ -654,6 +606,51 @@ export default function FormularioDid() {
     - ['desconto_inss','desconto_iss','desconto_irrf','desconto_sindicato',
        'desconto_bb','desconto_caixa','desconto_pensao','desconto_outros']
       .reduce((acc, k) => acc + (parseFloat(form[k]) || 0), 0)
+
+  // ── Fluxo por etapas ─────────────────────────────────────────────────────────
+
+  /**
+   * Cada seção passa por aqui:
+   *   concluída → só leitura + quem concluiu e assinatura
+   *   atual     → editável com as ações (se o usuário pode) ou aviso "aguardando"
+   *   futura    → escondida (aparece só o nome na linha de etapas)
+   */
+  const blocoEtapa = (n, secao) => {
+    const e = etapaDe(n)
+    if (!e) return n === 1 && !etapas ? secao : null
+    if (e.status === 'pendente') return null
+    const ehAtual = e.status === 'atual' || e.status === 'devolvida'
+    const editavel = ehAtual && editavelEtapa(n)
+    if (ehAtual && !editavel) {
+      return (
+        <Fragment key={n}>
+          <EtapaAguardando etapa={e} resumo={etapas} />
+          {e.registro?.devolucao && <EtapaRegistro etapa={e} />}
+        </Fragment>
+      )
+    }
+    return (
+      <div key={n} id={`etapa-${n}`} className="scroll-mt-4">
+        <EtapaDidContext.Provider value={{ resumo: etapas, numero: n, editavel, titulo: e.titulo }}>
+          {secao}
+        </EtapaDidContext.Provider>
+        <EtapaRegistro etapa={e} />
+        {editavel && (n > 1 || did) && (
+          <EtapaAcoes
+            etapa={e} form={form} itensDid={itensDid} salvando={saving}
+            onRascunho={n === 1 ? null : salvarRascunhoEtapa}
+            onConcluir={() => concluirEtapa(e)}
+            onDevolver={n > 1 ? (j) => devolverEtapa(e, j) : null}
+          />
+        )}
+        {editavel && n === 1 && !did && (
+          <p className="-mt-2 mb-2 rounded-b-xl border border-t-0 border-ink-200 bg-ink-50 px-4 py-2.5 text-xs text-ink-600">
+            Salve a Seção I para abrir o processo (assinatura da abertura). Depois use <strong>Concluir e assinar</strong> para liberar a Seção II.
+          </p>
+        )}
+      </div>
+    )
+  }
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -697,21 +694,6 @@ export default function FormularioDid() {
             {gerandoPDF ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
             {gerandoPDF ? 'Gerando...' : 'Gerar PDF'}
           </button>
-          {!readOnly && (
-            <>
-          <button
-            type="button"
-            onClick={() => setEditando(true)}
-            disabled={editando}
-            className="flex items-center gap-2 px-3 py-1.5 bg-warning-600 hover:bg-warning-700 dark:bg-warning-700 dark:hover:bg-warning-800 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-            ✏️ Alterar
-          </button>
-          <button onClick={handleSaveDid} disabled={savingDid || !editando} className="btn-primary flex items-center gap-2 py-1.5 text-sm">
-            {savingDid ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            {savingDid ? '⏳ Salvando...' : '✅ Salvar'}
-          </button>
-            </>
-          )}
         </div>
       </div>
 
@@ -724,6 +706,8 @@ export default function FormularioDid() {
           {msg.text}
         </div>
       )}
+
+      <LinhaEtapas resumo={etapas} />
 
       {/* Tipo DID */}
       <div className="card p-4">
@@ -819,74 +803,41 @@ export default function FormularioDid() {
         )}
       </div>
 
-      {tipoDid === 'fixas' ? (
-        <>
-          <DidFixasSecaoI
-            form={form} set={set} inp={inp}
-            itensDid={itensDid} setItensDid={setItensDid} removeItemDid={removeItemDid}
-            numeroDIDFmt={numeroDIDFmt}
-            secretariasApi={secretariasApi}
-            secDidObj={secDidObj}
-            responsaveisDid={responsaveisDid}
-            dataRefDid={dataRefDid}
-            secretariaNome={secretariaNome}
-            didId={did?.id}
-            processoId={processoId}
-            onSaveSecaoI={handleSaveSecaoI}
-            saving={saving}
-          />
-          {maxSecaoVisivel >= 2 && <DidFixasSecaoII form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(2)} onLimpar={makeLimparSecao(['ci_recebido_em','ci_responsavel','despacho_ci','dotacao_numero','fonte_recurso_numero'])} />}
-          {maxSecaoVisivel >= 3 && <DidFixasSecaoIII form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(3)} onLimpar={makeLimparSecao(['financas_recebido_em','financas_responsavel'])} />}
-          {maxSecaoVisivel >= 4 && <DidFixasSecaoIV form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(4)} onLimpar={makeLimparSecao(['contabil_recebido_em','contabil_responsavel','contabil_auditor','empenho_numero','tipo_empenho','data_empenho','liquidacao_numero','data_liquidacao','doc_caixa'])} />}
-          {maxSecaoVisivel >= 5 && <DidFixasSecaoV form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(5)} onLimpar={makeLimparSecao(['financas2_recebido_em','financas2_responsavel','financas2_enviado_pagamento'])} />}
-          {maxSecaoVisivel >= 6 && <DidFixasSecaoVI form={form} inp={inp} chk={chk} vliq={vliq} saving={saving} didId={did?.id} onSave={makeOnSave(6)} onLimpar={makeLimparSecao(['tesouraria_recebido_em','tesouraria_responsavel','conta_pagamento_id','banco_pagador','ag_pagador','cc_pagador','cert_teso_municipal','cert_teso_trabalhista','cert_teso_fgts','cert_teso_estadual','cert_teso_federal','cert_teso_simples_nac','desconto_inss','desconto_iss','desconto_irrf','desconto_outros','pago','data_pagamento','doc_caixa'])} />}
-          {maxSecaoVisivel >= 7 && <DidFixasSecaoVII form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(7)} onLimpar={makeLimparSecao(['contab_fech_finalizado','contab_fech_tce'])} />}
-        </>
-      ) : (
-        <>
-          <DidVariaveisSecaoI
-            form={form} set={set} inp={inp}
-            itensDid={itensDid} setItensDid={setItensDid} removeItemDid={removeItemDid}
-            addItemDid={addItemDid} setItemDid={setItemDid}
-            numeroDIDFmt={numeroDIDFmt}
-            secretariasApi={secretariasApi}
-            secDidObj={secDidObj}
-            responsaveisDid={responsaveisDid}
-            dataRefDid={dataRefDid}
-            secretariaNome={secretariaNome}
-            didId={did?.id}
-            processoId={processoId}
-            onSaveSecaoI={handleSaveSecaoI}
-            saving={saving}
-          />
-          {maxSecaoVisivel >= 2  && <DidVariaveisSecaoII form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(2)} onLimpar={makeLimparSecao(['ci_recebido_em','ci_responsavel','despacho_ci','dotacao_numero','fonte_recurso_numero'])} />}
-          {maxSecaoVisivel >= 3  && <DidVariaveisSecaoIII form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(3)} onLimpar={makeLimparSecao(['financas_recebido_em','financas_responsavel'])} />}
-          {maxSecaoVisivel >= 4  && <DidVariaveisSecaoIV form={form} inp={inp} set={set} saving={saving} didId={did?.id} onSave={makeOnSave(4)} onLimpar={makeLimparSecao(['compras2_recebido_em','compras2_responsavel','compras2_nro_empenho_solicitacao'])} />}
-          {maxSecaoVisivel >= 5  && <DidVariaveisSecaoV form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(5)} onLimpar={makeLimparSecao(['contabil_recebido_em','contabil_responsavel','contabil_auditor','empenho_numero','tipo_empenho','data_empenho'])} />}
-          {maxSecaoVisivel >= 6  && <DidVariaveisSecaoVI form={form} inp={inp} set={set} saving={saving} didId={did?.id} onSave={makeOnSave(6)} onLimpar={makeLimparSecao(['compras_recebido_em','compras_responsavel','nro_empenho_solicitacao','local_entrega'])} />}
-          {maxSecaoVisivel >= 7  && <DidVariaveisSecaoVII form={form} inp={inp} chk={chk} saving={saving} didId={did?.id} onSave={makeOnSave(7)} onLimpar={makeLimparSecao(['receb_data','receb_nf_data','receb_responsavel','receb_cargo','receb_nf_conferida','receb_qtd_conferida','receb_esp_conforme','receb_nf_enviado_compras','receb_obs'])} />}
-          {maxSecaoVisivel >= 8  && <DidVariaveisSecaoVIII form={form} inp={inp} set={set} saving={saving} didId={did?.id} onSave={makeOnSave(8)} onLimpar={makeLimparSecao(['compras3_recebido_em','compras3_responsavel','compras3_local_entrega'])} />}
-          {maxSecaoVisivel >= 9  && <DidVariaveisSecaoIX form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(9)} onLimpar={makeLimparSecao(['contabil_pc_recebido_em','contabil_pc_responsavel','contabil_pc_auditor','contabil_pc_liquidacao_numero','contabil_pc_data_liquidacao'])} />}
-          {maxSecaoVisivel >= 10 && <DidVariaveisSecaoX form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(10)} onLimpar={makeLimparSecao(['financas2_recebido_em','financas2_responsavel','financas2_enviado_pagamento'])} />}
-          {maxSecaoVisivel >= 11 && <DidVariaveisSecaoXI form={form} inp={inp} chk={chk} vliq={vliq} saving={saving} didId={did?.id} onSave={makeOnSave(11)} onLimpar={makeLimparSecao(['tesouraria_recebido_em','tesouraria_responsavel','conta_pagamento_id','banco_pagador','ag_pagador','cc_pagador','cert_teso_cnd','cert_teso_fgts','cert_teso_estadual','cert_teso_trabalhista','cert_teso_municipal','desconto_inss','desconto_iss','desconto_irrf','desconto_outros','pago','data_pagamento','doc_caixa'])} />}
-          {maxSecaoVisivel >= 12 && <DidVariaveisSecaoXII form={form} inp={inp} saving={saving} didId={did?.id} onSave={makeOnSave(12)} onLimpar={makeLimparSecao(['contab_fech_finalizado','contab_fech_tce'])} />}
-        </>
-      )}
-
-      {/* Indicador de próxima etapa — aparece enquanto houver seções bloqueadas */}
-      {maxSecaoVisivel < (TOTAL_SECOES[tipoDid] ?? 7) && (
-        <div className="flex items-center gap-3 px-5 py-4 rounded-xl border-2 border-dashed border-ink-200 text-center justify-center">
-          <span className="text-2xl">🔒</span>
-          <div className="text-left">
-            <p className="text-sm font-semibold text-ink-600">
-              Seção {['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'][maxSecaoVisivel]} — próxima etapa
-            </p>
-            <p className="text-xs text-ink-400">
-              Salve a Seção {['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'][maxSecaoVisivel - 1]} para liberar
-            </p>
-          </div>
-        </div>
-      )}
+      {/* Seções na ordem do fluxo deste DID (Configurações › Fluxos de Processo) */}
+      {(etapas?.etapas?.length ? etapas.etapas : [{ numero: 1, bloco: 'abertura' }]).map((e) => {
+        if (e.bloco === 'abertura') {
+          const SecaoI = tipoDid === 'fixas' ? DidFixasSecaoI : DidVariaveisSecaoI
+          return (
+            <Fragment key="abertura">
+              {blocoEtapa(1, (
+                <DidReadOnlyContext.Provider value={readOnly || !editavelEtapa(1)}>
+                  <SecaoI
+                    titulo={e.titulo}
+                    form={form} set={set} inp={inp}
+                    itensDid={itensDid} setItensDid={setItensDid} removeItemDid={removeItemDid}
+                    addItemDid={addItemDid} setItemDid={setItemDid}
+                    numeroDIDFmt={numeroDIDFmt}
+                    secretariasApi={secretariasApi}
+                    secDidObj={secDidObj}
+                    responsaveisDid={responsaveisDid}
+                    dataRefDid={dataRefDid}
+                    secretariaNome={secretariaNome}
+                    didId={did?.id}
+                    processoId={processoId}
+                    onSaveSecaoI={handleSaveSecaoI}
+                    saving={saving}
+                  />
+                </DidReadOnlyContext.Provider>
+              ))}
+            </Fragment>
+          )
+        }
+        if (e.bloco === 'personalizada') {
+          return blocoEtapa(e.numero, <EtapaPersonalizada etapa={e} form={form} set={set} />)
+        }
+        const Tela = telaDoBloco(e.bloco, tipoDid)
+        return Tela ? blocoEtapa(e.numero, <Tela form={form} inp={inp} set={set} chk={chk} vliq={vliq} didId={did?.id} />) : null
+      })}
 
       {/* Salvar bottom */}
       <div className="flex justify-end gap-3 pb-6">
@@ -899,21 +850,6 @@ export default function FormularioDid() {
           {gerandoPDF ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
           {gerandoPDF ? 'Gerando...' : 'Gerar PDF'}
         </button>
-        {!readOnly && (
-          <>
-        <button
-          type="button"
-          onClick={() => setEditando(true)}
-          disabled={editando}
-          className="flex items-center gap-2 px-4 py-2 bg-warning-600 hover:bg-warning-700 dark:bg-warning-700 dark:hover:bg-warning-800 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-          ✏️ Alterar
-        </button>
-        <button onClick={handleSaveDid} disabled={savingDid || !editando} className="btn-primary flex items-center gap-2">
-          {savingDid ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          {savingDid ? '⏳ Salvando...' : '✅ Salvar Processo'}
-        </button>
-          </>
-        )}
       </div>
     </div>
     {confirmarTrocarTipo && (

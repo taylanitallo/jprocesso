@@ -335,6 +335,7 @@ function ModalItensContrato({ contrato, itensDid, onConfirm, onClose, stockData 
 
 // ─── Seção I — Contas Variáveis ───────────────────────────────────────────────
 export default function DidVariaveisSecaoI({
+  titulo,
   form, set, inp,
   itensDid, setItensDid, removeItemDid, addItemDid, setItemDid,
   numeroDIDFmt,
@@ -751,7 +752,7 @@ export default function DidVariaveisSecaoI({
 
   return (
     <>
-    <SectionCard icon={FileText} title="Seção I - Secretaria Geral · Contas Variáveis"
+    <SectionCard icon={FileText} title={titulo ? `${titulo} · Contas Variáveis` : 'Seção I - Secretaria Geral · Contas Variáveis'}
       color="bg-ink-800 text-white">
 
       {/* ── Ordem de Compra (seletor principal — pré-preenche toda a seção) ── */}

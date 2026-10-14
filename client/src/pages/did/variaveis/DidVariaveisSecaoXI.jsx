@@ -1,9 +1,10 @@
 import { Banknote, Pencil } from 'lucide-react'
-import { useState, useEffect, useRef } from 'react'
-import { Field, Input, UserSelect, Checkbox, SectionCard, SecaoBotoes, alertarPendencias, ConfirmModal } from '../didShared'
+import { useState, useEffect, useRef, useContext } from 'react'
+import { Field, Input, Checkbox, SectionCard, ConfirmModal } from '../didShared'
+import { EtapaDidContext, ResponsavelEtapa, RecebidoEmEtapa } from '../EtapasDid'
 import { BANCOS } from '../bancosBrasil'
 import api from '../../../services/api'
-import DisponivelConta, { useDisponivelConta, valorQuePesa } from '../DisponivelConta'
+import DisponivelConta, { useDisponivelConta } from '../DisponivelConta'
 
 function BancoSelect({ value, onChange, disabled }) {
   const [query, setQuery] = useState('')
@@ -78,9 +79,10 @@ function ContaSelect({ value, onChange, disabled, onSelect }) {
   )
 }
 
-export default function DidVariaveisSecaoXI({ form, inp, chk, vliq, saving, didId, onSave, onLimpar }) {
-  const [locked, setLocked] = useState(false)
-  useEffect(() => { if (didId) setLocked(true) }, [didId])
+export default function DidVariaveisSecaoXI({ form, inp, chk, vliq, didId }) {
+  // Editável só na etapa atual, para quem pode preenchê-la (fluxo por etapas)
+  const { editavel, titulo } = useContext(EtapaDidContext)
+  const locked = !editavel
 
   // "Pago" salvo (seção travada mostra o que está gravado): só então o DID já está no saldo
   const pagoSalvo = useRef(form.pago)
@@ -93,43 +95,16 @@ export default function DidVariaveisSecaoXI({ form, inp, chk, vliq, saving, didI
   const [confirmarFonte, setConfirmarFonte] = useState(false)
   useEffect(() => { if (locked) { setEditarBancoCredor(false); setEditarFonte(false) } }, [locked])
 
-  const salvar = async () => {
-    const completo = alertarPendencias([
-      { ok: !!form.tesouraria_recebido_em, label: 'Recebido em' },
-      { ok: !!form.tesouraria_responsavel, label: 'Responsável' },
-      { ok: !!form.conta_pagamento_id, label: 'Conta de Pagamento' },
-      { ok: !!form.doc_caixa, label: 'Doc. Caixa' },
-      ...(form.pago === 'sim' ? [{ ok: !!form.data_pagamento, label: 'Data do pagamento' }] : []),
-    ], 'Seção XI')
-    if (!completo) return
-    // Aviso (não bloqueia): o DID passa do que a conta tem disponível
-    const pesa = valorQuePesa(form, pagoSalvo.current === 'sim')
-    if (situacaoConta && pesa > 0 && pesa > situacaoConta.disponivel) {
-      const fmt = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-      const seguir = window.confirm(
-        `A conta escolhida tem ` + fmt(situacaoConta.disponivel) + ` disponível e este DID é de ` + fmt(pesa) +
-        `.
-
-Deseja salvar mesmo assim?`
-      )
-      if (!seguir) return
-    }
-    const ok = await onSave?.()
-    if (ok !== false) setLocked(true)
-  }
-
-  const limpar = () => { setLocked(false); onLimpar?.() }
-
   return (
     <>
-    <SectionCard icon={Banknote} title="Seção XI - Tesouraria"
+    <SectionCard icon={Banknote} title={titulo || 'Seção XI - Tesouraria'}
       color="bg-success-700 text-white dark:bg-success-900">
 
       <Field label="Recebido em" half>
-        <Input type="date" value={form.tesouraria_recebido_em} onChange={inp('tesouraria_recebido_em')} disabled={locked} />
+        <RecebidoEmEtapa valor={form.tesouraria_recebido_em} />
       </Field>
       <Field label="Responsável" half>
-        <UserSelect value={form.tesouraria_responsavel} onChange={inp('tesouraria_responsavel')} disabled={locked} secretaria="tesouraria" />
+        <ResponsavelEtapa valor={form.tesouraria_responsavel} />
       </Field>
       <Field label="Conta de Pagamento">
         <ContaSelect
@@ -328,8 +303,6 @@ Deseja salvar mesmo assim?`
           disabled={locked}
         />
       </Field>
-
-      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção Tesouraria" onLimpar={limpar} />
     </SectionCard>
 
     {confirmarBancoCredor && (

@@ -1207,6 +1207,11 @@ const updateTenantConfiguracoes = async (req, res) => {
     // subdomain enviado livremente no header (validação JWT↔tenant já ocorreu)
     const tenant = req.tenant;
 
+    // Fluxos do DID só mudam por PUT /did/fluxos/:tipo (valida, versiona e guarda histórico)
+    if (['did_etapas', 'did_fluxos', 'did_fluxos_historico'].some(k => k in (req.body || {}))) {
+      return res.status(403).json({ error: 'Os fluxos do DID são alterados em Configurações › Fluxos de Processo.' });
+    }
+
     const novoConf = { ...(tenant.configuracoes || {}), ...req.body };
     await tenant.update({ configuracoes: novoConf });
 

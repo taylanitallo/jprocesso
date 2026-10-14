@@ -1,6 +1,7 @@
 import { BookCheck } from 'lucide-react'
-import { useState, useEffect } from 'react'
-import { Field, SectionCard, SecaoBotoes, alertarPendencias } from '../didShared'
+import { useContext } from 'react'
+import { Field, SectionCard } from '../didShared'
+import { EtapaDidContext } from '../EtapasDid'
 
 function SimNao({ value, onChange, disabled }) {
   return (
@@ -17,24 +18,13 @@ function SimNao({ value, onChange, disabled }) {
   )
 }
 
-export default function DidFixasSecaoVII({ form, inp, saving, didId, onSave, onLimpar }) {
-  const [locked, setLocked] = useState(false)
-  useEffect(() => { if (didId) setLocked(true) }, [didId])
-
-  const salvar = async () => {
-    const completo = alertarPendencias([
-      { ok: !!form.contab_fech_finalizado, label: 'Processo Finalizado' },
-      { ok: !!form.contab_fech_tce, label: 'Enviado para o TCE/SIM' },
-    ], 'Seção VII')
-    if (!completo) return
-    const ok = await onSave?.()
-    if (ok !== false) setLocked(true)
-  }
-
-  const limpar = () => { setLocked(false); onLimpar?.() }
+export default function DidFixasSecaoVII({ form, inp, didId }) {
+  // Editável só na etapa atual, para quem pode preenchê-la (fluxo por etapas)
+  const { editavel, titulo } = useContext(EtapaDidContext)
+  const locked = !editavel
 
   return (
-    <SectionCard icon={BookCheck} title="Seção VII - Contabilidade Fechamento"
+    <SectionCard icon={BookCheck} title={titulo || 'Seção VII - Contabilidade Fechamento'}
       color="bg-purple-700 text-white dark:bg-purple-900">
       <Field label="Processo Finalizado" half>
         <SimNao value={form.contab_fech_finalizado} onChange={inp('contab_fech_finalizado')} disabled={locked} />
@@ -42,7 +32,6 @@ export default function DidFixasSecaoVII({ form, inp, saving, didId, onSave, onL
       <Field label="Enviado para o TCE/SIM" half>
         <SimNao value={form.contab_fech_tce} onChange={inp('contab_fech_tce')} disabled={locked} />
       </Field>
-      <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção VII" onLimpar={limpar} />
     </SectionCard>
   )
 }

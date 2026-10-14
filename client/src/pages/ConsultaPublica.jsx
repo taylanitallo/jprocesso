@@ -238,6 +238,7 @@ export default function ConsultaPublica() {
       conclusao:     { label: 'Concluído',   cls: 'bg-violet-500/20 text-violet-300 border-violet-500/30' },
       devolucao:     { label: 'Devolvido',   cls: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
       recebimento:   { label: 'Recebimento', cls: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
+      did_etapa:     { label: 'Etapa do DID', cls: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
       arquivamento:  { label: 'Arquivado',   cls: 'bg-ink-500/20 text-ink-400 border-ink-500/30' },
     }
     const light = {
@@ -250,6 +251,7 @@ export default function ConsultaPublica() {
       conclusao:     { label: 'Concluído',   cls: 'bg-violet-100 text-violet-700 border-violet-300' },
       devolucao:     { label: 'Devolvido',   cls: 'bg-orange-100 text-orange-700 border-orange-300' },
       recebimento:   { label: 'Recebimento', cls: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
+      did_etapa:     { label: 'Etapa do DID', cls: 'bg-purple-100 text-purple-700 border-purple-300' },
       arquivamento:  { label: 'Arquivado',   cls: 'bg-ink-100 text-ink-600 border-ink-300' },
     }
     const map = mc ? light : dark
@@ -263,6 +265,7 @@ export default function ConsultaPublica() {
     tramitacao:    'bg-violet-400 shadow-fuchsia-400/50',
     devolucao:     'bg-orange-400 shadow-orange-400/50',
     recebimento:   'bg-emerald-400 shadow-emerald-400/50',
+    did_etapa:     'bg-purple-400 shadow-purple-400/50',
     conclusao:    'bg-violet-400 shadow-violet-400/50',
     deferimento:   'bg-emerald-400 shadow-emerald-400/50',
     indeferimento: 'bg-danger-400 shadow-danger-400/50',

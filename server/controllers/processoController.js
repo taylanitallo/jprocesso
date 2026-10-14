@@ -1547,4 +1547,8 @@ module.exports = {
   consultarProcessoPublico,
   deleteProcesso,
   salvarDespachoDoc,
+  // Assinatura eletrônica de atos — reaproveitada pelas etapas do DID
+  validarAssinante,
+  assinarTramitacao,
+  responderErroAssinatura,
 };

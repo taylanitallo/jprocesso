@@ -33,7 +33,8 @@ const defineTramitacaoModel = (sequelize) => {
       comment: 'FK: Usuário destinatário (opcional)'
     },
     tipo_acao: {
-      type: DataTypes.ENUM('abertura', 'tramite', 'devolucao', 'conclusao', 'arquivamento', 'recebimento'),
+      // did_etapa: conclusão assinada de uma etapa do DID (fica na linha do tempo)
+      type: DataTypes.ENUM('abertura', 'tramite', 'devolucao', 'conclusao', 'arquivamento', 'recebimento', 'did_etapa'),
       allowNull: false,
       comment: 'Tipo de ação realizada'
     },
