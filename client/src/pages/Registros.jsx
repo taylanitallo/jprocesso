@@ -178,7 +178,7 @@ export default function Registros() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-4 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">

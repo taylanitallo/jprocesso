@@ -801,7 +801,7 @@ export default function Secretarias() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-4 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
       {/* Mensagem de Sucesso */}
       {successMessage && (
         <div className="p-4 bg-success-50 dark:bg-success-900/30 border border-success-200 dark:border-success-700 rounded-lg flex items-center gap-3">
