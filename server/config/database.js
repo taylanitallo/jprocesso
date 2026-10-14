@@ -823,6 +823,28 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
       ADD COLUMN IF NOT EXISTS conta_pagamento_id UUID
   `);
 
+  // DID — caixa: data real do pagamento e recolhimento das retenções.
+  // O pagamento debita o LÍQUIDO; as retenções (INSS, ISS, IRRF…) ficam "a recolher"
+  // até a Tesouraria registrar o recolhimento. Backfill só na criação da coluna:
+  // DIDs que já estavam pagos tinham o BRUTO debitado na data em que a Tesouraria
+  // recebeu — marcar as retenções como recolhidas nessa data mantém o saldo histórico.
+  await run(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = 'dids' AND column_name = 'retencoes_recolhidas_em'
+      ) THEN
+        ALTER TABLE dids ADD COLUMN IF NOT EXISTS data_pagamento DATE;
+        ALTER TABLE dids ADD COLUMN retencoes_recolhidas_em DATE;
+        UPDATE dids
+           SET data_pagamento          = COALESCE(data_pagamento, tesouraria_recebido_em),
+               retencoes_recolhidas_em = COALESCE(data_pagamento, tesouraria_recebido_em)
+         WHERE pago = 'sim';
+      END IF;
+    END $$;
+  `);
+
   // DID — numero_did como VARCHAR(30) (schemas antigos usavam INTEGER;
   // o modelo grava strings tipo "SEMAD-001"). Idempotente: varchar→varchar é no-op.
   await run(`

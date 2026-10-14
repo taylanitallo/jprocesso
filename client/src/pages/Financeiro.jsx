@@ -1436,23 +1436,6 @@ export default function Financeiro() {
                 </div>
               )}
 
-              {/* ── Separador · Lançamentos Financeiros ─────────────── */}
-              {(painel.totais.lancamentos > 0 || parseFloat(painel.totais.valorTotal) > 0) && (
-                <>
-                  <div className="flex items-center gap-3 pt-2">
-                    <div className="h-px flex-1 bg-ink-200" />
-                    <span className="text-xs font-semibold text-ink-500 uppercase tracking-wider px-2">Lançamentos Financeiros</span>
-                    <div className="h-px flex-1 bg-ink-200" />
-                  </div>
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <MetricCard Icon={DollarSign} label="Total Despesas"  value={fmtMoeda(painel.totais.valorTotal)}     color="blue"   />
-                    <MetricCard Icon={CheckCircle2} label="Valores Pagos"   value={fmtMoeda(painel.totais.valorPago)}      color="green"  />
-                    <MetricCard Icon={Clock3} label="A Pagar"         value={fmtMoeda(painel.totais.valorPendente)}  color="yellow" />
-                    <MetricCard Icon={AlertCircle} label="Vencidos"        value={fmtMoeda(painel.totais.valorVencido)}   color="red"    />
-                  </div>
-                </>
-              )}
-
               {/* Gráfico por mês — DIDs */}
               <div className="card p-5">
                 <SectionTitle icon={Calendar} title={`DIDs por Mês — ${painelAno}`} />
@@ -1699,7 +1682,7 @@ export default function Financeiro() {
                       <th className="text-left py-3 px-4 text-xs font-semibold text-ink-500">Data</th>
                       <th className="text-right py-3 px-4 text-xs font-semibold text-ink-500">Valor Bruto</th>
                       <th className="text-center py-3 px-4 text-xs font-semibold text-ink-500">Pagto.</th>
-                      <th className="text-right py-3 px-4 text-xs font-semibold text-ink-500">Lançamentos</th>
+                      <th className="text-right py-3 px-4 text-xs font-semibold text-ink-500" title="Valor que saiu da conta para o credor (bruto − retenções)">Líquido / Pago em</th>
                       <th className="text-center py-3 px-4 text-xs font-semibold text-ink-500">Ação</th>
                     </tr>
                   </thead>
@@ -1707,7 +1690,6 @@ export default function Financeiro() {
                     {procsVisiveis.length === 0 ? (
                       <tr><td colSpan={8} className="py-12 text-center text-ink-400">Nenhum processo DID encontrado</td></tr>
                     ) : procsVisiveis.map(p => {
-                      const totalLanc = p.lancamentos?.reduce((acc, l) => acc + parseFloat(l.valor || 0), 0) || 0
                       const did = p.did
                       return (
                         <tr key={p.id} className="hover:bg-ink-50 transition-colors">
@@ -1740,9 +1722,14 @@ export default function Financeiro() {
                             <SituacaoDidBadge d={did} />
                           </td>
                           <td className="py-3 px-4 text-right">
-                            {p.lancamentos?.length > 0
-                              ? <span className="font-semibold text-success-600 dark:text-success-400">{fmtMoeda(totalLanc)}<br /><span className="text-xs font-normal text-ink-400">{p.lancamentos.length} lanç.</span></span>
-                              : <span className="text-ink-400 text-xs">Sem lançamentos</span>
+                            {did?.valor_bruto
+                              ? <span className="font-semibold text-ink-800 dark:text-white whitespace-nowrap">
+                                  {fmtMoeda(did.valor_liquido)}<br />
+                                  <span className="text-xs font-normal text-ink-400">
+                                    {did.data_pagamento_efetiva ? `pago em ${fmtData(did.data_pagamento_efetiva)}` : 'a pagar'}
+                                  </span>
+                                </span>
+                              : <span className="text-ink-400 text-xs">—</span>
                             }
                           </td>
                           <td className="py-3 px-4 text-center">

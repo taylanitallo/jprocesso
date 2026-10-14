@@ -1,7 +1,8 @@
 const { Op } = require('sequelize');
 const initializedSchemas = new Set();
-const { applyScopeToWhereByName } = require('../utils/scopeFilter');
-const { excluir } = require('../services/lixeiraService');
+const { applyScopeToWhereByName, ensurePermissoes } = require('../utils/scopeFilter');
+const { registrarLog } = require('../middleware/activityLogger');
+const caixa = require('../services/caixaService');
 
 async function ensureTable(req) {
   const schema = req.tenant?.schema;
@@ -13,6 +14,7 @@ async function ensureTable(req) {
 
 const listDespesas = async (req, res) => {
   try {
+    await ensureTable(req); // pagamentos antigos (tes_despesas) entram no include
     const { ContratoOrdem, TesDespesa, Contrato, Credor, ContaBancaria, Did, Processo, Secretaria } = req.models;
     const { tipo, pago, data_de, data_ate, busca, secretaria, processo } = req.query;
 
@@ -61,7 +63,7 @@ const listDespesas = async (req, res) => {
         {
           model: Did,
           as: 'did',
-          attributes: ['id', 'pago', 'valor_bruto', 'desconto_inss', 'desconto_iss', 'desconto_irrf', 'desconto_sindicato', 'desconto_bb', 'desconto_caixa', 'desconto_pensao', 'desconto_outros', 'doc_caixa', 'tesouraria_recebido_em', 'conta_pagamento_id', 'processo_id'],
+          attributes: ['id', 'pago', 'valor_bruto', 'desconto_inss', 'desconto_iss', 'desconto_irrf', 'desconto_sindicato', 'desconto_bb', 'desconto_caixa', 'desconto_pensao', 'desconto_outros', 'doc_caixa', 'tesouraria_recebido_em', 'data_pagamento', 'retencoes_recolhidas_em', 'conta_pagamento_id', 'processo_id'],
           required: false,
           include: [{
             model: Processo,
@@ -101,74 +103,109 @@ const listDespesas = async (req, res) => {
   }
 };
 
-const registrarPagamento = async (req, res) => {
+// ── Retenções a recolher ─────────────────────────────────────────────────────
+// O DID pago debita só o líquido; as retenções saem da conta quando recolhidas.
+// Quem pode registrar: quem edita Despesas na Tesouraria (sem configuração = pode).
+const podeRecolher = async (req) => {
+  if (req.user.tipo === 'admin' || req.user.tipo === 'jeos') return true;
+  await ensurePermissoes(req);
+  return req.user.permissoes?.tesouraria?.despesas?.editar !== false;
+};
+
+const listRetencoes = async (req, res) => {
   try {
-    await ensureTable(req);
-    const { TesDespesa, ContratoOrdem } = req.models;
-    const { ordem_id } = req.params;
-    const { conta_id, data_pagamento, valor_bruto, valor_liquido, observacao } = req.body;
-
-    const ordem = await ContratoOrdem.findByPk(ordem_id);
-    if (!ordem) return res.status(404).json({ error: 'Ordem não encontrada' });
-
-    const existing = await TesDespesa.findOne({ where: { ordem_id: parseInt(ordem_id) } });
-    if (existing) return res.status(400).json({ error: 'Esta ordem já possui pagamento registrado' });
-
-    if (!conta_id)       return res.status(400).json({ error: 'Conta bancária é obrigatória' });
-    if (!data_pagamento) return res.status(400).json({ error: 'Data do pagamento é obrigatória' });
-    if (!valor_bruto)    return res.status(400).json({ error: 'Valor bruto é obrigatório' });
-
-    const vb = parseFloat(valor_bruto);
-    const vl = parseFloat(valor_liquido || valor_bruto);
-    if (isNaN(vb) || vb <= 0) return res.status(400).json({ error: 'Valor bruto inválido' });
-
-    const despesa = await TesDespesa.create({
-      ordem_id: parseInt(ordem_id),
-      conta_id,
-      data_pagamento,
-      valor_bruto: vb,
-      valor_liquido: vl,
-      observacao: observacao || null,
+    const { Did, ContaBancaria, Processo } = req.models;
+    const recolhidas = req.query.situacao === 'recolhidas';
+    const dids = await Did.findAll({
+      where: {
+        pago: 'sim',
+        conta_pagamento_id: { [Op.ne]: null },
+        retencoes_recolhidas_em: recolhidas ? { [Op.ne]: null } : null,
+      },
+      include: [{ model: Processo, as: 'processo', attributes: ['id', 'numero'], required: false }],
+      order: [[recolhidas ? 'retencoes_recolhidas_em' : 'data_pagamento', 'DESC']],
+      limit: recolhidas ? 300 : undefined,
     });
+    const contas = await ContaBancaria.findAll({ attributes: ['id', 'nome'], paranoid: false, raw: true });
+    const nomeConta = Object.fromEntries(contas.map(c => [c.id, c.nome]));
 
-    res.status(201).json({ despesa });
+    const lista = dids
+      .map(i => i.toJSON())
+      .map(d => ({
+        id: d.id,
+        numero_did: d.numero_did,
+        processo: d.processo?.numero || null,
+        processo_id: d.processo_id,
+        credor: d.credor_sec1 || null,
+        secretaria: d.secretaria_sec1 || null,
+        conta_id: d.conta_pagamento_id,
+        conta: nomeConta[d.conta_pagamento_id] || null,
+        data_pagamento: caixa.dataPagamentoDoDid(d),
+        recolhidas_em: d.retencoes_recolhidas_em,
+        valor_bruto: parseFloat(d.valor_bruto || 0),
+        inss: parseFloat(d.desconto_inss || 0),
+        iss: parseFloat(d.desconto_iss || 0),
+        irrf: parseFloat(d.desconto_irrf || 0),
+        outros: ['desconto_sindicato', 'desconto_bb', 'desconto_caixa', 'desconto_pensao', 'desconto_outros']
+          .reduce((s, k) => s + parseFloat(d[k] || 0), 0),
+        total: caixa.retencoesDoDid(d),
+      }))
+      .filter(r => r.total > 0);
+
+    res.json({ retencoes: lista });
   } catch (err) {
-    console.error('registrarPagamento:', err);
-    res.status(500).json({ error: 'Erro ao registrar pagamento' });
+    console.error('listRetencoes:', err);
+    res.status(500).json({ error: 'Erro ao listar retenções' });
   }
 };
 
-const updatePagamento = async (req, res) => {
+const recolherRetencoes = async (req, res) => {
   try {
-    const { TesDespesa } = req.models;
-    const despesa = await TesDespesa.findByPk(req.params.id);
-    if (!despesa) return res.status(404).json({ error: 'Pagamento não encontrado' });
+    if (!(await podeRecolher(req))) return res.status(403).json({ error: 'Sem permissão para registrar recolhimentos.' });
+    const { did_ids, data } = req.body || {};
+    if (!Array.isArray(did_ids) || did_ids.length === 0) return res.status(400).json({ error: 'Selecione ao menos um DID.' });
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data || '')) return res.status(400).json({ error: 'Informe a data do recolhimento.' });
 
-    const { conta_id, data_pagamento, valor_bruto, valor_liquido, observacao } = req.body;
-    const vb = parseFloat(valor_bruto);
-    const vl = parseFloat(valor_liquido || valor_bruto);
-    if (isNaN(vb) || vb <= 0) return res.status(400).json({ error: 'Valor bruto inválido' });
-
-    await despesa.update({ conta_id, data_pagamento, valor_bruto: vb, valor_liquido: vl, observacao: observacao || null });
-    res.json({ despesa });
+    const { Did } = req.models;
+    const [qtd] = await Did.update(
+      { retencoes_recolhidas_em: data },
+      { where: { id: { [Op.in]: did_ids }, pago: 'sim', retencoes_recolhidas_em: null } }
+    );
+    await registrarLog(req, {
+      acao: 'recolher_retencoes',
+      modulo: 'tesouraria',
+      descricao: `Registrou o recolhimento das retenções de ${qtd} DID(s) em ${data.split('-').reverse().join('/')}`,
+      dados_extras: { did_ids },
+    });
+    res.json({ recolhidos: qtd });
   } catch (err) {
-    console.error('updatePagamento:', err);
-    res.status(500).json({ error: 'Erro ao atualizar pagamento' });
+    console.error('recolherRetencoes:', err);
+    res.status(500).json({ error: 'Erro ao registrar recolhimento' });
   }
 };
 
-const estornarPagamento = async (req, res) => {
+const desfazerRecolhimento = async (req, res) => {
   try {
-    const { TesDespesa } = req.models;
-    const despesa = await TesDespesa.findByPk(req.params.id);
-    if (!despesa) return res.status(404).json({ error: 'Pagamento não encontrado' });
-    // Estorno: o pagamento sai dos totais e fica em Excluídos (Pagamentos estornados)
-    await excluir(req, 'pagamentos', despesa);
-    res.json({ ok: true });
+    if (!(await podeRecolher(req))) return res.status(403).json({ error: 'Sem permissão para desfazer recolhimentos.' });
+    const { did_ids } = req.body || {};
+    if (!Array.isArray(did_ids) || did_ids.length === 0) return res.status(400).json({ error: 'Selecione ao menos um DID.' });
+
+    const { Did } = req.models;
+    const [qtd] = await Did.update(
+      { retencoes_recolhidas_em: null },
+      { where: { id: { [Op.in]: did_ids }, retencoes_recolhidas_em: { [Op.ne]: null } } }
+    );
+    await registrarLog(req, {
+      acao: 'desfazer_recolhimento_retencoes',
+      modulo: 'tesouraria',
+      descricao: `Desfez o recolhimento das retenções de ${qtd} DID(s)`,
+      dados_extras: { did_ids },
+    });
+    res.json({ desfeitos: qtd });
   } catch (err) {
-    console.error('estornarPagamento:', err);
-    res.status(500).json({ error: 'Erro ao estornar pagamento' });
+    console.error('desfazerRecolhimento:', err);
+    res.status(500).json({ error: 'Erro ao desfazer recolhimento' });
   }
 };
 
-module.exports = { listDespesas, registrarPagamento, updatePagamento, estornarPagamento };
+module.exports = { listDespesas, listRetencoes, recolherRetencoes, desfazerRecolhimento };

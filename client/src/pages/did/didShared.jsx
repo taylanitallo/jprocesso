@@ -77,7 +77,7 @@ export const EMPTY = {
   // Seção III (Finanças original)
   financas_recebido_em: '', financas_responsavel: '',
   // Seção VI
-  pago: 'nao',
+  pago: 'nao', data_pagamento: '',
   tesouraria_recebido_em: '', tesouraria_responsavel: '',
   banco_pagador: '', ag_pagador: '', cc_pagador: '',
   // Seção de Recebimento (DID Contas Variáveis)

@@ -1,8 +1,9 @@
 import { Banknote, Pencil } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Field, Input, UserSelect, Checkbox, SectionCard, SecaoBotoes, alertarPendencias, ConfirmModal } from '../didShared'
 import { BANCOS } from '../bancosBrasil'
 import api from '../../../services/api'
+import DisponivelConta, { useDisponivelConta, valorQuePesa } from '../DisponivelConta'
 
 function BancoSelect({ value, onChange, disabled }) {
   const [query, setQuery] = useState('')
@@ -81,6 +82,11 @@ export default function DidVariaveisSecaoXI({ form, inp, chk, vliq, saving, didI
   const [locked, setLocked] = useState(false)
   useEffect(() => { if (didId) setLocked(true) }, [didId])
 
+  // "Pago" salvo (seção travada mostra o que está gravado): só então o DID já está no saldo
+  const pagoSalvo = useRef(form.pago)
+  useEffect(() => { if (locked) pagoSalvo.current = form.pago }, [locked, form.pago])
+  const situacaoConta = useDisponivelConta(form.conta_pagamento_id, didId)
+
   const [editarBancoCredor, setEditarBancoCredor] = useState(false)
   const [confirmarBancoCredor, setConfirmarBancoCredor] = useState(false)
   const [editarFonte, setEditarFonte] = useState(false)
@@ -93,8 +99,21 @@ export default function DidVariaveisSecaoXI({ form, inp, chk, vliq, saving, didI
       { ok: !!form.tesouraria_responsavel, label: 'Responsável' },
       { ok: !!form.conta_pagamento_id, label: 'Conta de Pagamento' },
       { ok: !!form.doc_caixa, label: 'Doc. Caixa' },
+      ...(form.pago === 'sim' ? [{ ok: !!form.data_pagamento, label: 'Data do pagamento' }] : []),
     ], 'Seção XI')
     if (!completo) return
+    // Aviso (não bloqueia): o DID passa do que a conta tem disponível
+    const pesa = valorQuePesa(form, pagoSalvo.current === 'sim')
+    if (situacaoConta && pesa > 0 && pesa > situacaoConta.disponivel) {
+      const fmt = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+      const seguir = window.confirm(
+        `A conta escolhida tem ` + fmt(situacaoConta.disponivel) + ` disponível e este DID é de ` + fmt(pesa) +
+        `.
+
+Deseja salvar mesmo assim?`
+      )
+      if (!seguir) return
+    }
     const ok = await onSave?.()
     if (ok !== false) setLocked(true)
   }
@@ -124,6 +143,8 @@ export default function DidVariaveisSecaoXI({ form, inp, chk, vliq, saving, didI
           }}
         />
       </Field>
+
+      <DisponivelConta situacao={situacaoConta} form={form} jaPago={pagoSalvo.current === 'sim'} />
 
       {/* Dados do pagamento */}
       <div className="col-span-2">
@@ -275,6 +296,18 @@ export default function DidVariaveisSecaoXI({ form, inp, chk, vliq, saving, didI
             ⏳ Não — Pendente
           </button>
         </div>
+        {form.pago === 'sim' && (
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-semibold text-ink-600">Data do pagamento</label>
+            <Input type="date" value={form.data_pagamento || ''} onChange={inp('data_pagamento')} disabled={locked} />
+          </div>
+        )}
+        {form.pago === 'sim' && (
+          <p className="text-[11px] text-ink-500 text-center max-w-md">
+            A conta é debitada pelo valor líquido nesta data. As retenções (INSS, ISS, IRRF…) ficam
+            em Tesouraria › Despesas › Retenções a recolher até serem recolhidas.
+          </p>
+        )}
         {form.pago && (
           <span className={`inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold
             ${ form.pago === 'sim'

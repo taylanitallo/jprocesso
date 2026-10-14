@@ -97,6 +97,11 @@ const defineDidModel = (sequelize) => {
     // ── Seção VI — Tesouraria ─────────────────────────────────────────────
     pago: { type: DataTypes.STRING(10), comment: 'sim | nao — status de pagamento da despesa' },
     tesouraria_recebido_em: { type: DataTypes.DATEONLY },
+    // Caixa: o pagamento debita o líquido nesta data (antiga: tesouraria_recebido_em)
+    data_pagamento: { type: DataTypes.DATEONLY },
+    // Retenções (INSS, ISS, IRRF…) debitadas da conta só quando recolhidas — gravado
+    // pela Tesouraria (Retenções a recolher), nunca pelo formulário do DID
+    retencoes_recolhidas_em: { type: DataTypes.DATEONLY },
     tesouraria_responsavel: { type: DataTypes.STRING },
     banco_pagador: { type: DataTypes.STRING },
     ag_pagador: { type: DataTypes.STRING },
