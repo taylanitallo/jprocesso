@@ -24,6 +24,7 @@ require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env'
 const { Client } = require('pg');
 const fs = require('fs');
 const path = require('path');
+const datas = require('./seed_demo/datas');
 
 const SCHEMA_PERMITIDO = 'tenant_modelo';
 const SCHEMA = process.env.DEMO_SCHEMA || SCHEMA_PERMITIDO;
@@ -131,8 +132,10 @@ const main = async () => {
   const c = await conectar();
   try {
     // Confirmação extra: o schema precisa ser o do município fictício "Modelo".
-    const t = await c.query(`SELECT nome_municipio FROM public.clientes WHERE schema = $1`, [SCHEMA]);
+    const t = await c.query(`SELECT nome_municipio, configuracoes FROM public.clientes WHERE schema = $1`, [SCHEMA]);
     const nome = t.rows[0]?.nome_municipio || '';
+    // O seed desloca as datas para terminar no dia em que rodou; as receitas daqui acompanham
+    const desloc = datas.criarDeslocador(Number(t.rows[0]?.configuracoes?.demo?.deslocamento_dias) || 0, new Date());
     if (!/modelo/i.test(nome)) {
       console.error(`ABORTADO: o schema "${SCHEMA}" pertence a "${nome}", que não é o município de demonstração.`);
       process.exit(1);
@@ -239,12 +242,12 @@ const main = async () => {
       let nRec = 0;
       if (conta && jaLancadas === 0) {
         for (const [mes, dia, descricao, valor] of RECEITAS_COMPLEMENTO) {
-          const data = `2026-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+          const data = desloc.texto(`2026-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`);
           await c.query(
             `INSERT INTO "${SCHEMA}".tes_receitas
                (id, conta_id, data, descricao, valor, observacao, created_at, updated_at)
              VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, NOW(), NOW())`,
-            [conta.id, data, descricao, valor, MARCADOR]);
+            [conta.id, data, desloc.texto(descricao), valor, MARCADOR]);
           nRec++;
         }
       }

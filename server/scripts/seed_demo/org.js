@@ -2,9 +2,13 @@
 const { uuid, cpf, cnpj, fone, foneDig, emailDe, ri, pick, mk, fmtTs, fmtD, addD } = require('./util');
 
 // IDs já existentes no tenant_modelo (não recriar)
-const SEMAD_ID = 'aed5cabc-6956-48b1-804d-802330395200';
-const PROTO_ID = '2a0e451d-3d62-47d3-a2b6-4ece4241d347';
-const ADMIN_ID = 'b92d4065-75b7-4e54-9606-71d2ae2e5c1d';
+// Registros que já existem no município e são mantidos (SEMAD, Protocolo e o admin).
+// Os ids vêm do banco alvo (DEV e produção têm ids diferentes): ver setIds().
+let SEMAD_ID = null;
+let PROTO_ID = null;
+let ADMIN_ID = null;
+let ADMIN_NOME = 'Administrador Modelo';
+const setIds = (ids) => { ({ SEMAD_ID, PROTO_ID, ADMIN_ID } = ids); if (ids.ADMIN_NOME) ADMIN_NOME = ids.ADMIN_NOME; };
 
 // ── Secretarias ──────────────────────────────────────────────────────────────
 const SECRETARIAS_DEF = [
@@ -179,6 +183,7 @@ const permsPara = (papel) => {
 
 // ── build(ctx): monta linhas prontas para insert ─────────────────────────────
 const build = (ctx, senhaHash) => {
+  if (!SEMAD_ID || !PROTO_ID || !ADMIN_ID) throw new Error('org.setIds() não chamado');
   const t0 = fmtTs(mk(2026, 1, 10, 9));
 
   // Secretarias
@@ -234,7 +239,7 @@ const build = (ctx, senhaHash) => {
     ]);
   }
   // admin existente também atende no Protocolo
-  const admin = { id: ADMIN_ID, nome: 'Administrador Modelo', nomeRed: 'Admin', cargo: 'Administrador do Sistema', tipo: 'admin', setorKey: 'PROTO', setorId: PROTO_ID, secretariaId: SEMAD_ID, secKey: 'SEMAD' };
+  const admin = { id: ADMIN_ID, nome: ADMIN_NOME, nomeRed: 'Admin', cargo: 'Administrador do Sistema', tipo: 'admin', setorKey: 'PROTO', setorId: PROTO_ID, secretariaId: SEMAD_ID, secKey: 'SEMAD' };
   ctx.u.admin = admin;
   (ctx.userBySetor.PROTO = ctx.userBySetor.PROTO || []).push(admin);
   ctx.uRows = uRows;
@@ -332,4 +337,4 @@ const build = (ctx, senhaHash) => {
   ctx.agCols = ['id', 'nome', 'cargo', 'matricula', 'cpf', 'email', 'telefone', 'secretaria_id', 'ativo', 'created_at', 'updated_at'];
 };
 
-module.exports = { build, SEMAD_ID, PROTO_ID, ADMIN_ID, permsPara };
+module.exports = { build, setIds, permsPara, ids: () => ({ SEMAD_ID, PROTO_ID, ADMIN_ID }) };
