@@ -1496,6 +1496,27 @@ function TabContratos() {
         </div>
       </div>
 
+      {/* ── Barra de Ações ── */}
+      <div className="flex flex-wrap items-center gap-2 pb-2">
+        <button onClick={() => setModal('novo')}
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
+          <Plus className="w-4 h-4" /> Incluir
+        </button>
+        <button onClick={() => podeAgir && setModal('editar')} disabled={!podeAgir}
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+          <Edit3 className="w-4 h-4" /> Alterar
+        </button>
+        <button onClick={() => podeAgir && setModal('excluir')} disabled={!podeAgir}
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-danger-600 hover:bg-danger-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+          <Trash2 className="w-4 h-4" /> Excluir
+        </button>
+        <button onClick={() => podeAgir && setModal('visualizar')} disabled={!podeAgir}
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-ink-600 hover:bg-ink-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+          <Eye className="w-4 h-4" /> Visualizar
+        </button>
+        <BotaoExcluidos entidade="contratos" onAlterado={recarregarContratos} />
+      </div>
+
       {/* ── Tabela ── */}
       <div className="card overflow-hidden">
         <div className="overflow-x-auto" style={{ maxHeight: '380px', overflowY: 'auto' }}>
@@ -1615,27 +1636,6 @@ function TabContratos() {
           </div>
         </div>
       )}
-
-      {/* ── Barra de Ações ── */}
-      <div className="flex flex-wrap items-center gap-2 pb-2">
-        <button onClick={() => setModal('novo')}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
-          <Plus className="w-4 h-4" /> Incluir
-        </button>
-        <button onClick={() => podeAgir && setModal('editar')} disabled={!podeAgir}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-          <Edit3 className="w-4 h-4" /> Alterar
-        </button>
-        <button onClick={() => podeAgir && setModal('excluir')} disabled={!podeAgir}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-danger-600 hover:bg-danger-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-          <Trash2 className="w-4 h-4" /> Excluir
-        </button>
-        <button onClick={() => podeAgir && setModal('visualizar')} disabled={!podeAgir}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-ink-600 hover:bg-ink-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-          <Eye className="w-4 h-4" /> Visualizar
-        </button>
-        <BotaoExcluidos entidade="contratos" onAlterado={recarregarContratos} />
-      </div>
 
       {/* ── Modais ── */}
       {modal === 'novo' && (

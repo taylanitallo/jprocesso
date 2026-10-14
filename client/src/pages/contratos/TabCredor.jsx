@@ -675,6 +675,31 @@ function TabCredor() {
         </div>
       </div>
 
+      {/* ── Barra de Ações ── */}
+      <div className="flex flex-wrap items-center gap-2 pb-2">
+        <button onClick={() => setModal('novo')}
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
+          <Plus className="w-4 h-4" /> Incluir
+        </button>
+        <button onClick={() => podeAgir && setModal('editar')} disabled={!podeAgir}
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+          <Edit3 className="w-4 h-4" /> Alterar
+        </button>
+        <button onClick={() => podeAgir && setModal('excluir')} disabled={!podeAgir}
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-danger-600 hover:bg-danger-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+          <Trash2 className="w-4 h-4" /> Excluir
+        </button>
+        <button onClick={() => podeAgir && setModal('contratos_credor')} disabled={!podeAgir}
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+          <FileText className="w-4 h-4" /> Ver Contratos
+        </button>
+        <BotaoExcluidos entidade="credores" onAlterado={() => api.get('/contratos/credores').then(r => setCredores(r.data)).catch(() => {})} />
+        <button onClick={syncDids} disabled={syncando}
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-60 ml-auto">
+          {syncando ? <><Loader2 className="w-4 h-4 animate-spin" /> Importando...</> : <><RefreshCw className="w-4 h-4" /> Importar do DID</>}
+        </button>
+      </div>
+
       {/* ── Tabela ── */}
       <div className="card overflow-hidden">
         <div className="overflow-x-auto" style={{ maxHeight: '380px', overflowY: 'auto' }}>
@@ -767,31 +792,6 @@ function TabCredor() {
             </span>
           </div>
         </div>
-      </div>
-
-      {/* ── Barra de Ações ── */}
-      <div className="flex flex-wrap items-center gap-2 pb-2">
-        <button onClick={() => setModal('novo')}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
-          <Plus className="w-4 h-4" /> Incluir
-        </button>
-        <button onClick={() => podeAgir && setModal('editar')} disabled={!podeAgir}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-          <Edit3 className="w-4 h-4" /> Alterar
-        </button>
-        <button onClick={() => podeAgir && setModal('excluir')} disabled={!podeAgir}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-danger-600 hover:bg-danger-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-          <Trash2 className="w-4 h-4" /> Excluir
-        </button>
-        <button onClick={() => podeAgir && setModal('contratos_credor')} disabled={!podeAgir}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-          <FileText className="w-4 h-4" /> Ver Contratos
-        </button>
-        <BotaoExcluidos entidade="credores" onAlterado={() => api.get('/contratos/credores').then(r => setCredores(r.data)).catch(() => {})} />
-        <button onClick={syncDids} disabled={syncando}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-60 ml-auto">
-          {syncando ? <><Loader2 className="w-4 h-4 animate-spin" /> Importando...</> : <><RefreshCw className="w-4 h-4" /> Importar do DID</>}
-        </button>
       </div>
 
       {/* ── Modais ── */}

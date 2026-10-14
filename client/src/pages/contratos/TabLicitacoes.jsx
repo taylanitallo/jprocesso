@@ -590,6 +590,37 @@ function TabLicitacoes() {
         </div>
       </div>
 
+      {/* ── Barra de Ações ── */}
+      <div className="flex flex-wrap items-center gap-2 pb-2">
+        {podeCriar && (
+          <button onClick={() => setModal('novo')}
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
+            <Plus className="w-4 h-4" /> Incluir
+          </button>
+        )}
+        {podeEditar && (
+          <button onClick={() => podeAgir && setModal('editar')} disabled={!podeAgir}
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+            <Edit3 className="w-4 h-4" /> Alterar
+          </button>
+        )}
+        {podeExcluir && (
+          <button onClick={() => podeAgir && setModal('excluir')} disabled={!podeAgir}
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-danger-600 hover:bg-danger-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+            <Trash2 className="w-4 h-4" /> Excluir
+          </button>
+        )}
+        <button onClick={() => podeAgir && setModal('visualizar')} disabled={!podeAgir}
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-ink-600 hover:bg-ink-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+          <Eye className="w-4 h-4" /> Visualizar
+        </button>
+        <BotaoExcluidos entidade="licitacoes" onAlterado={() => api.get('/contratos/licitacoes').then(r => setLicitacoes(r.data)).catch(() => {})} />
+        <button onClick={() => podeAgir && setModal('contratos')} disabled={!podeAgir}
+          className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+          <FileText className="w-4 h-4" /> Ver Contratos
+        </button>
+      </div>
+
       {/* ── Tabela ── */}
       <div className="card overflow-hidden">
         <div className="overflow-x-auto" style={{ maxHeight: '380px', overflowY: 'auto' }}>
@@ -670,37 +701,6 @@ function TabLicitacoes() {
             </span>
           </div>
         </div>
-      </div>
-
-      {/* ── Barra de Ações ── */}
-      <div className="flex flex-wrap items-center gap-2 pb-2">
-        {podeCriar && (
-          <button onClick={() => setModal('novo')}
-            className="flex items-center gap-1.5 px-4 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm">
-            <Plus className="w-4 h-4" /> Incluir
-          </button>
-        )}
-        {podeEditar && (
-          <button onClick={() => podeAgir && setModal('editar')} disabled={!podeAgir}
-            className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-            <Edit3 className="w-4 h-4" /> Alterar
-          </button>
-        )}
-        {podeExcluir && (
-          <button onClick={() => podeAgir && setModal('excluir')} disabled={!podeAgir}
-            className="flex items-center gap-1.5 px-4 py-1.5 bg-danger-600 hover:bg-danger-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-            <Trash2 className="w-4 h-4" /> Excluir
-          </button>
-        )}
-        <button onClick={() => podeAgir && setModal('visualizar')} disabled={!podeAgir}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-ink-600 hover:bg-ink-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-          <Eye className="w-4 h-4" /> Visualizar
-        </button>
-        <BotaoExcluidos entidade="licitacoes" onAlterado={() => api.get('/contratos/licitacoes').then(r => setLicitacoes(r.data)).catch(() => {})} />
-        <button onClick={() => podeAgir && setModal('contratos')} disabled={!podeAgir}
-          className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-          <FileText className="w-4 h-4" /> Ver Contratos
-        </button>
       </div>
 
       {/* ── Modais ── */}
