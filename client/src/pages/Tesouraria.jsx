@@ -1865,11 +1865,13 @@ function TabRelatorios() {
     else if (tipo === 'saldo') loadSaldo(f);
   };
 
-  const temFiltroRel = tipo === 'saldo'
-    ? !!(filtros.data_de || filtros.data_ate || selecao.length || grupoAtivo)
+  // Quantos filtros estão ativos no relatório atual (aparece no botão Limpar)
+  const temFiltroRel = (tipo === 'saldo'
+    ? [filtros.data_de, filtros.data_ate, selecao.length || grupoAtivo]
     : tipo === 'fluxo'
-      ? !!(filtros.conta_id || String(filtros.ano) !== String(new Date().getFullYear()))
-      : !!(filtros.conta_id || filtros.data_de || filtros.data_ate);
+      ? [filtros.conta_id, String(filtros.ano) !== String(new Date().getFullYear())]
+      : [filtros.conta_id, filtros.data_de, filtros.data_ate]
+  ).filter(Boolean).length;
 
   const limparRel = () => {
     const f = { conta_id: '', ano: new Date().getFullYear(), data_de: '', data_ate: '' };

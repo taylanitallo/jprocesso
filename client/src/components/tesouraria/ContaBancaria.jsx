@@ -67,12 +67,22 @@ export function PeriodoRapido({ de, ate, onChange, className = '' }) {
   )
 }
 
-/** Botão "Limpar filtros" padrão (desabilitado quando não há filtro ativo) */
+/**
+ * Botão "Limpar filtros" padrão. Sempre visível e clicável (desabilitado parecia
+ * ausente); com filtro ativo ganha destaque e o número de filtros.
+ * @param ativo  boolean ou número de filtros ativos
+ */
 export function BotaoLimpar({ onClick, ativo = true, className = '' }) {
+  const qtd = typeof ativo === 'number' ? ativo : null
+  const temFiltro = qtd != null ? qtd > 0 : !!ativo
   return (
-    <button type="button" onClick={onClick} disabled={!ativo}
-      className={`btn-secondary text-sm px-3 py-2 flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed ${className}`}>
+    <button type="button" onClick={onClick}
+      title={temFiltro ? 'Remover todos os filtros' : 'Nenhum filtro aplicado'}
+      className={`btn-secondary text-sm px-3 py-2 flex items-center gap-1.5 ${temFiltro ? 'border-brand-400 text-brand-700 dark:text-info-300' : ''} ${className}`}>
       <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" /> Limpar filtros
+      {qtd > 0 && (
+        <span className="ml-0.5 text-[10px] font-bold bg-brand-600 text-white rounded-full min-w-4 h-4 px-1 inline-flex items-center justify-center" aria-label={`${qtd} filtro(s) ativo(s)`}>{qtd}</span>
+      )}
     </button>
   )
 }
