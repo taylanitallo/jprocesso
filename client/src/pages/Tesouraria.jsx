@@ -5,6 +5,7 @@ import { hasPerm } from '../utils/permissions';
 import { conferirAbasDoModulo } from '../utils/permissoesSchema';
 import api from '../services/api';
 import BotaoExcluidos from '../components/lixeira/BotaoExcluidos';
+import { ContaPicker, ContaLink, PeriodoRapido, BotaoLimpar, contaLabel } from '../components/tesouraria/ContaBancaria';
 import PageHeader from '../components/ui/PageHeader';
 import SectionTitle from '../components/ui/SectionTitle';
 import FilterBar from '../components/ui/FilterBar';
@@ -106,86 +107,10 @@ export default function Tesouraria() {
   );
 }
 
-// Rótulo padrão de uma conta bancária: "12345-6 — Nome da Conta"
-const contaLabel = (c) => {
-  const num = c.conta ? `${c.conta}${c.conta_digito ? `-${c.conta_digito}` : ''}` : null;
-  return num ? `${num} — ${c.nome}` : c.nome;
-};
-
-// ─── Combobox de busca de conta bancária ────────────────────────────────────────
-function ContaSelectInput({ value, contas, onChange }) {
-  const [inputText, setInputText] = useState('');
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  const getLabel = contaLabel;
-
-  useEffect(() => {
-    if (!value) { setInputText(''); return; }
-    const c = contas.find(c => c.id === value);
-    if (c) setInputText(getLabel(c));
-  }, [value, contas]);
-
-  useEffect(() => {
-    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
-  }, []);
-
-  const filtered = (() => {
-    const q = inputText.toLowerCase();
-    const list = q
-      ? contas.filter(c =>
-          c.nome.toLowerCase().includes(q) ||
-          (c.conta || '').includes(q) ||
-          (c.banco_nome || '').toLowerCase().includes(q)
-        )
-      : contas;
-    return list.slice(0, 8);
-  })();
-
-  const handleChange = (e) => {
-    setInputText(e.target.value);
-    onChange('');
-    setOpen(true);
-  };
-
-  const handleSelect = (c) => {
-    setInputText(getLabel(c));
-    onChange(c.id);
-    setOpen(false);
-  };
-
-  return (
-    <div ref={ref} className="relative">
-      <input
-        value={inputText}
-        onChange={handleChange}
-        onFocus={() => setOpen(true)}
-        className="input-field text-sm"
-        placeholder="Digite para buscar conta..."
-        autoComplete="off"
-      />
-      {open && filtered.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-surface border border-ink-200 rounded-xl shadow-xl max-h-52 overflow-y-auto">
-          {filtered.map(c => (
-            <button
-              key={c.id}
-              type="button"
-              onMouseDown={(e) => { e.preventDefault(); handleSelect(c); }}
-              className="w-full text-left px-3 py-2.5 hover:bg-ink-50 transition-colors border-b border-ink-100 last:border-0"
-            >
-              <div className="text-sm text-ink-800 font-medium">{getLabel(c)}</div>
-              {c.banco_nome && (
-                <div className="text-xs text-ink-400 mt-0.5">{c.banco_nome}</div>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+// Seletor de conta da Tesouraria (busca acessível — ver components/tesouraria)
+const ContaSelectInput = ({ value, contas, onChange, id, todasLabel }) => (
+  <ContaPicker id={id} value={value} contas={contas} onChange={onChange} todasLabel={todasLabel} />
+);
 
 // ─── Combobox de busca de banco ─────────────────────────────────────────────────
 function BankSearchInput({ value, onChange, onSelect, bancos }) {
@@ -245,6 +170,8 @@ function TabContas({ secretarias }) {
   const [form, setForm] = useState(EMPTY_CONTA);
   const [saving, setSaving] = useState(false);
   const [filtroSec, setFiltroSec] = useState('');
+  const [busca, setBusca] = useState('');
+  const [situacao, setSituacao] = useState(''); // '' | 'ativas' | 'inativas'
   const [bancos, setBancos] = useState([]);
   const [confirmarExcluir, setConfirmarExcluir] = useState(null);
 
@@ -310,24 +237,58 @@ function TabContas({ secretarias }) {
   const inp = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
   const chk = k => e => setForm(p => ({ ...p, [k]: e.target.checked }));
 
-  const filtradas = contas.filter(c =>
-    !filtroSec || (c.secretaria?.nome || '').toLowerCase().includes(filtroSec.toLowerCase()) ||
-    (c.secretaria?.sigla || '').toLowerCase().includes(filtroSec.toLowerCase())
-  );
+  const normT = v => String(v ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const filtradas = contas.filter(c => {
+    if (filtroSec && !normT(`${c.secretaria?.nome || ''} ${c.secretaria?.sigla || ''}`).includes(normT(filtroSec))) return false;
+    if (situacao === 'ativas' && c.ativo === false) return false;
+    if (situacao === 'inativas' && c.ativo !== false) return false;
+    if (busca) {
+      const alvo = normT([c.nome, c.banco_nome, c.banco_codigo, c.agencia, c.conta, `${c.conta || ''}-${c.conta_digito || ''}`, c.titular].join(' '));
+      // Nº de conta/agência com ou sem traço: compara só os dígitos
+      const dig = busca.replace(/\D/g, '');
+      const casaNum = dig.length >= 2 && `${c.conta || ''}${c.conta_digito || ''} ${c.agencia || ''}${c.agencia_digito || ''}`.replace(/[^\d ]/g, '').includes(dig);
+      if (!alvo.includes(normT(busca)) && !casaNum) return false;
+    }
+    return true;
+  });
+  const temFiltroContas = !!(busca || filtroSec || situacao);
+  const limparContas = () => { setBusca(''); setFiltroSec(''); setSituacao(''); };
 
   return (
     <div className="space-y-3">
       <FilterBar>
-        <div className="flex-1 min-w-48">
-          <label className="block text-xs font-medium text-ink-600 mb-1">Secretaria</label>
-          <input value={filtroSec} onChange={e => setFiltroSec(e.target.value)}
-            className="input-field text-sm" placeholder="Filtrar por secretaria..." />
+        <div className="flex-1 min-w-56">
+          <label htmlFor="contas-busca" className="block text-xs font-medium text-ink-600 mb-1">Buscar conta</label>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-ink-400" aria-hidden="true" />
+            <input id="contas-busca" value={busca} onChange={e => setBusca(e.target.value)}
+              className="input-field text-sm pl-8" placeholder="Nome, nº da conta, agência, banco ou titular..." />
+          </div>
+        </div>
+        <div className="min-w-44">
+          <label htmlFor="contas-sec" className="block text-xs font-medium text-ink-600 mb-1">Secretaria</label>
+          <input id="contas-sec" value={filtroSec} onChange={e => setFiltroSec(e.target.value)}
+            className="input-field text-sm" placeholder="Nome ou sigla..." />
+        </div>
+        <div className="min-w-36">
+          <label htmlFor="contas-sit" className="block text-xs font-medium text-ink-600 mb-1">Situação</label>
+          <select id="contas-sit" value={situacao} onChange={e => setSituacao(e.target.value)} className="input-field text-sm">
+            <option value="">Todas</option>
+            <option value="ativas">Ativas</option>
+            <option value="inativas">Inativas</option>
+          </select>
+        </div>
+        <div className="self-end">
+          <BotaoLimpar onClick={limparContas} ativo={temFiltroContas} />
         </div>
       </FilterBar>
 
       <div className="card overflow-hidden">
         <div className="px-4 py-3 border-b border-ink-200 flex items-center justify-between">
-          <SectionTitle icon={Landmark} title="Contas Bancárias Cadastradas" />
+          <div className="flex items-center gap-3">
+            <SectionTitle icon={Landmark} title="Contas Bancárias Cadastradas" />
+            {!loading && <span className="text-xs text-ink-500">{filtradas.length} de {contas.length}</span>}
+          </div>
           <div className="flex items-center gap-2">
             <BotaoExcluidos entidade="contas_bancarias" rotulo="Contas excluídas" onAlterado={load} />
             <button onClick={openNew} className="btn-primary flex items-center gap-1.5 text-sm px-3 py-1.5">
@@ -339,7 +300,10 @@ function TabContas({ secretarias }) {
           {loading ? (
             <div className="px-4 py-8 text-center text-sm text-ink-400">Carregando...</div>
           ) : filtradas.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-ink-400">Nenhuma conta cadastrada.</div>
+            <div className="px-4 py-8 text-center text-sm text-ink-400">
+              {contas.length === 0 ? 'Nenhuma conta cadastrada.' : 'Nenhuma conta corresponde aos filtros.'}
+              {temFiltroContas && <button onClick={limparContas} className="ml-2 text-brand-600 dark:text-info-400 hover:underline">Limpar filtros</button>}
+            </div>
           ) : (
             <table className="w-full text-sm">
               <thead className="bg-ink-100 border-b border-ink-200">
@@ -357,7 +321,7 @@ function TabContas({ secretarias }) {
               <tbody className="divide-y divide-ink-100">
                 {filtradas.map(c => (
                   <tr key={c.id} className="hover:bg-ink-50">
-                    <td className="px-4 py-2.5 font-medium text-ink-800">{c.nome}</td>
+                    <td className="px-4 py-2.5"><ContaLink conta={c} mostrar="nome" /></td>
                     <td className="px-4 py-2.5">
                       {c.secretaria
                         ? <span className="text-xs bg-info-50 dark:bg-info-900/20 text-brand-700 dark:text-info-300 px-1.5 py-0.5 rounded-sm font-medium">{c.secretaria.sigla}</span>
@@ -369,9 +333,7 @@ function TabContas({ secretarias }) {
                     <td className="px-4 py-2.5 text-ink-600">
                       {c.agencia}{c.agencia_digito ? `-${c.agencia_digito}` : ''}
                     </td>
-                    <td className="px-4 py-2.5 font-mono text-ink-700">
-                      {c.conta}{c.conta_digito ? `-${c.conta_digito}` : ''}
-                    </td>
+                    <td className="px-4 py-2.5"><ContaLink conta={c} mostrar="numero" /></td>
                     <td className="px-4 py-2.5 text-xs text-ink-500 capitalize">
                       {TIPOS_CONTA.find(t => t.value === c.tipo)?.label || c.tipo || '—'}
                     </td>
@@ -384,10 +346,10 @@ function TabContas({ secretarias }) {
                     </td>
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-1">
-                        <button onClick={() => openEdit(c)} className="p-1 text-ink-400 hover:text-brand-600 dark:hover:text-info-400 rounded-sm transition-colors">
+                        <button onClick={() => openEdit(c)} aria-label={`Editar conta ${c.nome}`} title="Editar" className="p-1 text-ink-400 hover:text-brand-600 dark:hover:text-info-400 rounded-sm transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500">
                           <Edit2 className="h-3.5 w-3.5" />
                         </button>
-                        <button onClick={() => setConfirmarExcluir(c)} className="p-1 text-ink-400 hover:text-danger-600 dark:hover:text-danger-400 rounded-sm transition-colors">
+                        <button onClick={() => setConfirmarExcluir(c)} aria-label={`Excluir conta ${c.nome}`} title="Excluir" className="p-1 text-ink-400 hover:text-danger-600 dark:hover:text-danger-400 rounded-sm transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500">
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
@@ -645,6 +607,9 @@ function TabReceitas() {
     setFiltros(f);
     load(f);
   };
+  const temFiltroReceitas = !!(filtros.conta_id || filtros.data_de || filtros.data_ate || filtros.busca);
+  // Conta e período aplicam na hora; a busca por texto aplica no Enter ou em Filtrar
+  const aplicar = (parcial) => { const f = { ...filtros, ...parcial }; setFiltros(f); load(f); };
 
   // Agrupamento por data para exibição estilo extrato
   const grouped = {};
@@ -764,60 +729,40 @@ tfoot .val{font-size:15px;color:#15803d}
     <div className="space-y-3">
       {/* Filtros */}
       <FilterBar>
-        <div className="flex flex-wrap gap-3 items-end w-full">
-          <div className="min-w-[9rem]">
-            <label className="block text-xs font-medium text-ink-600 mb-1">Data de</label>
-            <input type="date" value={filtros.data_de} onChange={flt('data_de')} className="input-field text-sm" />
-          </div>
-          <div className="min-w-[9rem]">
-            <label className="block text-xs font-medium text-ink-600 mb-1">Data até</label>
-            <input type="date" value={filtros.data_ate} onChange={flt('data_ate')} className="input-field text-sm" />
-          </div>
-          <div className="min-w-[12rem]">
-            <label className="block text-xs font-medium text-ink-600 mb-1">Conta</label>
-            <select value={filtros.conta_id} onChange={flt('conta_id')} className="input-field text-sm">
-              <option value="">Todas as contas</option>
-              {contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-            </select>
-          </div>
-          <div className="min-w-[10rem]">
-            <label className="block text-xs font-medium text-ink-600 mb-1">Banco</label>
-            <input
-              type="text"
-              value={filtros.banco}
-              onChange={flt('banco')}
-              onKeyDown={e => e.key === 'Enter' && filtrar()}
-              className="input-field text-sm"
-              placeholder="Ex: Banco do Brasil..."
-            />
-          </div>
-          <div className="min-w-[8rem]">
-            <label className="block text-xs font-medium text-ink-600 mb-1">Nº da Conta</label>
-            <input
-              type="text"
-              value={filtros.num_conta}
-              onChange={flt('num_conta')}
-              onKeyDown={e => e.key === 'Enter' && filtrar()}
-              className="input-field text-sm"
-              placeholder="Ex: 10537-7"
-            />
-          </div>
-          <div className="flex-1 min-w-[12rem]">
-            <label className="block text-xs font-medium text-ink-600 mb-1">Buscar na descrição</label>
-            <input
-              type="text"
-              value={filtros.busca}
-              onChange={flt('busca')}
-              onKeyDown={e => e.key === 'Enter' && filtrar()}
-              className="input-field text-sm"
-              placeholder="Ex: FPM, IPTU, ISS..."
-            />
-          </div>
-          <div className="flex gap-2 items-center">
-            <button onClick={filtrar} className="btn-primary text-sm px-3 py-2 flex items-center gap-1.5">
-              <Search className="h-4 w-4" /> Filtrar
-            </button>
-            <button onClick={limparFiltros} className="btn-secondary text-sm px-3 py-2">Limpar</button>
+        <div className="w-full space-y-2">
+          <PeriodoRapido de={filtros.data_de} ate={filtros.data_ate} onChange={(a, b) => aplicar({ data_de: a, data_ate: b })} />
+          <div className="flex flex-wrap gap-3 items-end">
+            <div className="min-w-[9rem]">
+              <label htmlFor="rec-de" className="block text-xs font-medium text-ink-600 mb-1">Data de</label>
+              <input id="rec-de" type="date" value={filtros.data_de} onChange={flt('data_de')} className="input-field text-sm" />
+            </div>
+            <div className="min-w-[9rem]">
+              <label htmlFor="rec-ate" className="block text-xs font-medium text-ink-600 mb-1">Data até</label>
+              <input id="rec-ate" type="date" value={filtros.data_ate} onChange={flt('data_ate')} className="input-field text-sm" />
+            </div>
+            <div className="min-w-[18rem] flex-1">
+              <label htmlFor="rec-conta" className="block text-xs font-medium text-ink-600 mb-1">Conta</label>
+              <ContaSelectInput id="rec-conta" value={filtros.conta_id} contas={contas} todasLabel="Todas as contas"
+                onChange={id => aplicar({ conta_id: id })} />
+            </div>
+            <div className="flex-1 min-w-[12rem]">
+              <label htmlFor="rec-busca" className="block text-xs font-medium text-ink-600 mb-1">Buscar na descrição</label>
+              <input
+                id="rec-busca"
+                type="text"
+                value={filtros.busca}
+                onChange={flt('busca')}
+                onKeyDown={e => e.key === 'Enter' && filtrar()}
+                className="input-field text-sm"
+                placeholder="Ex: FPM, IPTU, ISS..."
+              />
+            </div>
+            <div className="flex gap-2 items-center">
+              <button onClick={filtrar} className="btn-primary text-sm px-3 py-2 flex items-center gap-1.5">
+                <Search className="h-4 w-4" aria-hidden="true" /> Filtrar
+              </button>
+              <BotaoLimpar onClick={limparFiltros} ativo={temFiltroReceitas} />
+            </div>
           </div>
         </div>
       </FilterBar>
@@ -854,7 +799,10 @@ tfoot .val{font-size:15px;color:#15803d}
           {loading ? (
             <div className="py-12 text-center text-sm text-ink-400">Carregando...</div>
           ) : receitas.length === 0 ? (
-            <div className="py-12 text-center text-sm text-ink-400">Nenhum lançamento encontrado.</div>
+            <div className="py-12 text-center text-sm text-ink-400">
+              Nenhum lançamento encontrado.
+              {temFiltroReceitas && <button onClick={limparFiltros} className="ml-2 text-brand-600 dark:text-info-400 hover:underline">Limpar filtros</button>}
+            </div>
           ) : (
             <table className="w-full text-sm">
               <thead className="bg-ink-50 border-b border-ink-200">
@@ -890,25 +838,32 @@ tfoot .val{font-size:15px;color:#15803d}
                             )}
                           </td>
                           <td className="px-4 py-3">
-                            <div className="text-xs text-ink-600">{r.conta?.nome || '—'}</div>
-                            {r.conta?.banco_nome && (
-                              <div className="text-xs text-ink-400">{r.conta.banco_nome}</div>
+                            {r.conta
+                              ? <ContaLink conta={r.conta} mostrar="nome" className="text-xs" />
+                              : <span className="text-xs text-ink-400">—</span>}
+                            {(r.conta?.conta || r.conta?.banco_nome) && (
+                              <div className="text-xs text-ink-400">
+                                {[r.conta.banco_nome, r.conta.conta && `C/C ${r.conta.conta}${r.conta.conta_digito ? `-${r.conta.conta_digito}` : ''}`].filter(Boolean).join(' · ')}
+                              </div>
                             )}
                           </td>
                           <td className="px-4 py-3 text-right font-semibold text-success-600 dark:text-success-400 tabular-nums whitespace-nowrap">
                             {fmt(r.valor)}
                           </td>
                           <td className="px-4 py-3">
-                            <div className="flex gap-0.5 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                            {/* Visível no hover e também ao navegar pelo teclado (focus-within) */}
+                            <div className="flex gap-0.5 justify-end opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
                               <button
                                 onClick={() => openEdit(r)}
-                                className="p-1.5 text-ink-400 hover:text-info-500 dark:hover:text-info-400 rounded-lg hover:bg-info-50 dark:hover:bg-info-900/20 transition-colors"
+                                aria-label={`Editar receita ${r.descricao}`} title="Editar"
+                                className="p-1.5 text-ink-400 hover:text-info-500 dark:hover:text-info-400 rounded-lg hover:bg-info-50 dark:hover:bg-info-900/20 transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500"
                               >
                                 <Edit2 className="h-3.5 w-3.5" />
                               </button>
                               <button
                                 onClick={() => setConfirmarExcluir(r)}
-                                className="p-1.5 text-ink-400 hover:text-danger-500 dark:hover:text-danger-400 rounded-lg hover:bg-danger-50 dark:hover:bg-danger-900/20 transition-colors"
+                                aria-label={`Excluir receita ${r.descricao}`} title="Excluir"
+                                className="p-1.5 text-ink-400 hover:text-danger-500 dark:hover:text-danger-400 rounded-lg hover:bg-danger-50 dark:hover:bg-danger-900/20 transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
@@ -1082,6 +1037,11 @@ function OrdensDespesas() {
 
   useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const FILTROS_VAZIOS = { tipo: 'TODOS', pago: 'TODOS', data_de: '', data_ate: '', busca: '', secretaria: '', processo: '' };
+  const temFiltroOrdens = Object.keys(FILTROS_VAZIOS).some(k => filtros[k] !== FILTROS_VAZIOS[k]);
+  const limparOrdens = () => { setFiltros(FILTROS_VAZIOS); load(FILTROS_VAZIOS); };
+  const aplicarOrdens = (parcial) => { const f = { ...filtros, ...parcial }; setFiltros(f); load(f); };
+
   // Pago pelo DID (fluxo atual) ou por pagamento antigo registrado na Tesouraria
   const isPago = o => o.did?.pago === 'sim' || !!o.pagamento;
   const pendentes = ordens.filter(o => !isPago(o)).length;
@@ -1097,7 +1057,11 @@ function OrdensDespesas() {
     <div className="space-y-4">
       {/* Filtros */}
       <div className="bg-surface rounded-xl shadow-sm border border-ink-200 p-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <span className="text-xs text-ink-500">Emitidas em:</span>
+          <PeriodoRapido de={filtros.data_de} ate={filtros.data_ate} onChange={(a, b) => aplicarOrdens({ data_de: a, data_ate: b })} />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3" onKeyDown={e => e.key === 'Enter' && e.target.tagName === 'INPUT' && load()}>
           <div>
             <label className="block text-xs font-medium text-ink-600 mb-1">Tipo</label>
             <select value={filtros.tipo} onChange={inpF('tipo')} className="input-field text-sm">
@@ -1140,10 +1104,11 @@ function OrdensDespesas() {
         </div>
         <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
           <p className="text-xs text-ink-500">O pagamento é registrado no DID do processo (Seção Tesouraria).</p>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <BotaoExcluidos entidade="pagamentos" rotulo="Pagamentos estornados" onAlterado={() => load()} />
+            <BotaoLimpar onClick={limparOrdens} ativo={temFiltroOrdens} />
             <button onClick={() => load()} className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5">
-              <Search className="h-4 w-4" /> Filtrar
+              <Search className="h-4 w-4" aria-hidden="true" /> Filtrar
             </button>
           </div>
         </div>
@@ -1185,8 +1150,9 @@ function OrdensDespesas() {
           <div className="flex items-center justify-center py-12 text-ink-400">Carregando...</div>
         ) : ordens.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-ink-400 gap-2">
-            <ShoppingCart className="h-8 w-8 opacity-40" />
+            <ShoppingCart className="h-8 w-8 opacity-40" aria-hidden="true" />
             <p className="text-sm">Nenhuma ordem encontrada</p>
+            {temFiltroOrdens && <button onClick={limparOrdens} className="text-sm text-brand-600 dark:text-info-400 hover:underline">Limpar filtros</button>}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -1197,7 +1163,7 @@ function OrdensDespesas() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-ink-600">Objeto / Contrato</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-ink-600">Secretaria</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-ink-600">Processo</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-600">Data Pagamento</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-ink-600">Pagamento / Conta</th>
                   <th className="text-right px-4 py-3 text-xs font-semibold text-ink-600">Valor Total</th>
                   <th className="text-center px-4 py-3 text-xs font-semibold text-ink-600">Pagamento</th>
                 </tr>
@@ -1221,7 +1187,14 @@ function OrdensDespesas() {
                     </td>
                     <td className="px-4 py-3 text-xs text-ink-600 whitespace-nowrap">{o.secretaria_sigla || '—'}</td>
                     <td className="px-4 py-3 text-xs font-mono text-ink-600 whitespace-nowrap">{o.did?.processo?.numero || '—'}</td>
-                    <td className="px-4 py-3 text-xs text-ink-600 whitespace-nowrap">{isPago(o) ? fmtDateT(dataPagamento(o)) : '—'}</td>
+                    <td className="px-4 py-3 text-xs text-ink-600 whitespace-nowrap">
+                      {isPago(o) ? fmtDateT(dataPagamento(o)) : '—'}
+                      {o.conta_pagamento && (
+                        <div className="text-[11px]">
+                          <ContaLink conta={o.conta_pagamento} mostrar="numero" />
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-right text-xs font-medium text-ink-800 whitespace-nowrap tabular-nums">{fmtValT(o.valor_total)}</td>
                     <td className="px-4 py-3 text-center">
                       {isPago(o) ? (
@@ -1260,6 +1233,11 @@ function RetencoesARecolher() {
   const [data, setData] = useState(new Date().toISOString().slice(0, 10));
   const [salvando, setSalvando] = useState(false);
   const [busca, setBusca] = useState('');
+  const [contaFiltro, setContaFiltro] = useState('');
+  const [contas, setContas] = useState([]);
+  useEffect(() => {
+    api.get('/organizacao/contas-bancarias').then(r => setContas(r.data.contas || [])).catch(() => {});
+  }, []);
 
   const load = (s = situacao) => {
     setLoading(true);
@@ -1272,9 +1250,12 @@ function RetencoesARecolher() {
   useEffect(() => { load(situacao); }, [situacao]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const termo = busca.trim().toLowerCase();
-  const visiveis = termo
-    ? lista.filter(r => [r.numero_did, r.processo, r.credor, r.conta, r.secretaria].some(v => String(v || '').toLowerCase().includes(termo)))
-    : lista;
+  const visiveis = lista.filter(r =>
+    (!contaFiltro || r.conta_id === contaFiltro) &&
+    (!termo || [r.numero_did, r.processo, r.credor, r.conta, r.conta_numero, r.secretaria].some(v => String(v || '').toLowerCase().includes(termo)))
+  );
+  const temFiltroRet = !!(termo || contaFiltro);
+  const limparRet = () => { setBusca(''); setContaFiltro(''); };
   const total = (k, rs = visiveis) => rs.reduce((s, r) => s + (r[k] || 0), 0);
   const selecionados = visiveis.filter(r => sel.has(r.id));
   const todos = visiveis.length > 0 && visiveis.every(r => sel.has(r.id));
@@ -1306,19 +1287,24 @@ function RetencoesARecolher() {
     <div className="space-y-4">
       <div className="bg-surface rounded-xl shadow-sm border border-ink-200 p-4 flex flex-wrap items-end gap-3">
         <div>
-          <label className="block text-xs font-medium text-ink-600 mb-1">Situação</label>
-          <select value={situacao} onChange={e => setSituacao(e.target.value)} className="input-field text-sm">
+          <label htmlFor="ret-sit" className="block text-xs font-medium text-ink-600 mb-1">Situação</label>
+          <select id="ret-sit" value={situacao} onChange={e => setSituacao(e.target.value)} className="input-field text-sm">
             <option value="a_recolher">A recolher</option>
             <option value="recolhidas">Recolhidas</option>
           </select>
         </div>
+        <div className="min-w-[16rem]">
+          <label htmlFor="ret-conta" className="block text-xs font-medium text-ink-600 mb-1">Conta</label>
+          <ContaSelectInput id="ret-conta" value={contaFiltro} contas={contas} todasLabel="Todas as contas" onChange={setContaFiltro} />
+        </div>
         <div className="flex-1 min-w-[200px]">
-          <label className="block text-xs font-medium text-ink-600 mb-1">Busca</label>
+          <label htmlFor="ret-busca" className="block text-xs font-medium text-ink-600 mb-1">Busca</label>
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-ink-400" />
-            <input value={busca} onChange={e => setBusca(e.target.value)} className="input-field text-sm pl-8" placeholder="DID, processo, credor, conta..." />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-ink-400" aria-hidden="true" />
+            <input id="ret-busca" value={busca} onChange={e => setBusca(e.target.value)} className="input-field text-sm pl-8" placeholder="DID, processo, credor..." />
           </div>
         </div>
+        <BotaoLimpar onClick={limparRet} ativo={temFiltroRet} />
         {podeEditar && situacao === 'a_recolher' && (
           <div>
             <label className="block text-xs font-medium text-ink-600 mb-1">Data do recolhimento</label>
@@ -1351,6 +1337,7 @@ function RetencoesARecolher() {
           <div className="flex flex-col items-center justify-center py-12 text-ink-400 gap-2">
             <CheckCircle2 className="h-8 w-8 opacity-40" />
             <p className="text-sm">{situacao === 'a_recolher' ? 'Nenhuma retenção a recolher' : 'Nenhum recolhimento registrado'}</p>
+            {temFiltroRet && <button onClick={limparRet} className="text-sm text-brand-600 dark:text-info-400 hover:underline">Limpar filtros</button>}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -1388,7 +1375,11 @@ function RetencoesARecolher() {
                       <div className="font-mono text-[10px] text-ink-500">{r.processo || ''}</div>
                     </td>
                     <td className="px-3 py-2 max-w-xs truncate" title={r.credor || ''}>{r.credor || '—'}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{r.conta || '—'}</td>
+                    <td className="px-3 py-2 whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                      {r.conta_id
+                        ? <ContaLink conta={{ id: r.conta_id, nome: r.conta }} rotulo={r.conta_numero ? `${r.conta_numero} — ${r.conta}` : r.conta} />
+                        : '—'}
+                    </td>
                     <td className="px-3 py-2 whitespace-nowrap">{fmtDateT(r.data_pagamento)}</td>
                     {situacao === 'recolhidas' && <td className="px-3 py-2 whitespace-nowrap">{fmtDateT(r.recolhidas_em)}</td>}
                     <td className="px-3 py-2 text-right tabular-nums">{fmtValT(r.inss)}</td>
@@ -1850,8 +1841,46 @@ function TabRelatorios() {
     return `${meses[parseInt(mo) - 1]}/${y}`;
   };
 
+  // Extrato sai sozinho ao escolher a conta ou um período rápido (sem precisar de "Gerar")
+  const gerarExtrato = async (f) => {
+    if (!f.conta_id) { setResultado(null); return; }
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ conta_id: f.conta_id });
+      if (f.data_de) params.append('data_de', f.data_de);
+      if (f.data_ate) params.append('data_ate', f.data_ate);
+      const r = await api.get(`/tesouraria/relatorios/extrato?${params}`);
+      setResultado({ tipo: 'extrato', ...r.data });
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao gerar extrato');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const aplicarRel = (parcial) => {
+    const f = { ...filtros, ...parcial };
+    setFiltros(f);
+    if (tipo === 'extrato') gerarExtrato(f);
+    else if (tipo === 'saldo') loadSaldo(f);
+  };
+
+  const temFiltroRel = tipo === 'saldo'
+    ? !!(filtros.data_de || filtros.data_ate || selecao.length || grupoAtivo)
+    : tipo === 'fluxo'
+      ? !!(filtros.conta_id || String(filtros.ano) !== String(new Date().getFullYear()))
+      : !!(filtros.conta_id || filtros.data_de || filtros.data_ate);
+
+  const limparRel = () => {
+    const f = { conta_id: '', ano: new Date().getFullYear(), data_de: '', data_ate: '' };
+    setFiltros(f);
+    if (tipo === 'saldo') { setGrupoAtivo(null); setSelecao([]); loadSaldo(f, [], null, false); }
+    else setResultado(null);
+  };
+
   const gerar = async () => {
     if (tipo === 'saldo') { loadSaldo(filtros); return; }
+    if (tipo === 'extrato') { if (!filtros.conta_id) return alert('Selecione a conta para o extrato'); return gerarExtrato(filtros); }
     setLoading(true);
     setResultado(null);
     try {
@@ -2081,6 +2110,10 @@ function TabRelatorios() {
           </div>
         )}
 
+        {(tipo === 'saldo' || tipo === 'extrato') && (
+          <PeriodoRapido de={filtros.data_de} ate={filtros.data_ate} onChange={(a, b) => aplicarRel({ data_de: a, data_ate: b })} />
+        )}
+
         <div className="flex flex-wrap items-end gap-3">
           {tipo === 'saldo' && (
             <>
@@ -2089,47 +2122,50 @@ function TabRelatorios() {
                 <ContasMultiSelect contas={contas} value={selecao} onAplicar={aplicarSelecao} sinalAbrir={sinalAbrir} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-ink-600 mb-1">De</label>
-                <input type="date" value={filtros.data_de} onChange={inpF('data_de')} className="input-field text-sm" />
+                <label htmlFor="rel-saldo-de" className="block text-xs font-medium text-ink-600 mb-1">De</label>
+                <input id="rel-saldo-de" type="date" value={filtros.data_de} onChange={inpF('data_de')} className="input-field text-sm" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-ink-600 mb-1">Até</label>
-                <input type="date" value={filtros.data_ate} onChange={inpF('data_ate')} className="input-field text-sm" />
+                <label htmlFor="rel-saldo-ate" className="block text-xs font-medium text-ink-600 mb-1">Até</label>
+                <input id="rel-saldo-ate" type="date" value={filtros.data_ate} onChange={inpF('data_ate')} className="input-field text-sm" />
               </div>
             </>
           )}
           {tipo === 'fluxo' && (
             <>
               <div>
-                <label className="block text-xs font-medium text-ink-600 mb-1">Ano</label>
-                <input type="number" value={filtros.ano} onChange={inpF('ano')} min="2000" max="2099" className="input-field text-sm" style={{ width: '7rem' }} />
+                <label htmlFor="rel-fluxo-ano" className="block text-xs font-medium text-ink-600 mb-1">Ano</label>
+                <input id="rel-fluxo-ano" type="number" value={filtros.ano} onChange={inpF('ano')} min="2000" max="2099" className="input-field text-sm" style={{ width: '7rem' }} />
               </div>
-              <div style={{ minWidth: '14rem' }}>
-                <label className="block text-xs font-medium text-ink-600 mb-1">Conta (opcional)</label>
-                <ContaSelectInput value={filtros.conta_id} contas={contas} onChange={id => setFiltros(p => ({ ...p, conta_id: id }))} />
+              <div style={{ minWidth: '20rem' }}>
+                <label htmlFor="rel-fluxo-conta" className="block text-xs font-medium text-ink-600 mb-1">Conta (opcional)</label>
+                <ContaSelectInput id="rel-fluxo-conta" value={filtros.conta_id} contas={contas} todasLabel="Todas as contas"
+                  onChange={id => setFiltros(p => ({ ...p, conta_id: id }))} />
               </div>
             </>
           )}
           {tipo === 'extrato' && (
             <>
-              <div style={{ minWidth: '14rem' }}>
-                <label className="block text-xs font-medium text-ink-600 mb-1">Conta *</label>
-                <ContaSelectInput value={filtros.conta_id} contas={contas} onChange={id => setFiltros(p => ({ ...p, conta_id: id }))} />
+              <div style={{ minWidth: '22rem' }} className="flex-1 max-w-xl">
+                <label htmlFor="rel-ext-conta" className="block text-xs font-medium text-ink-600 mb-1">Conta *</label>
+                <ContaSelectInput id="rel-ext-conta" value={filtros.conta_id} contas={contas}
+                  onChange={id => aplicarRel({ conta_id: id })} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-ink-600 mb-1">De</label>
-                <input type="date" value={filtros.data_de} onChange={inpF('data_de')} className="input-field text-sm" />
+                <label htmlFor="rel-ext-de" className="block text-xs font-medium text-ink-600 mb-1">De</label>
+                <input id="rel-ext-de" type="date" value={filtros.data_de} onChange={inpF('data_de')} className="input-field text-sm" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-ink-600 mb-1">Até</label>
-                <input type="date" value={filtros.data_ate} onChange={inpF('data_ate')} className="input-field text-sm" />
+                <label htmlFor="rel-ext-ate" className="block text-xs font-medium text-ink-600 mb-1">Até</label>
+                <input id="rel-ext-ate" type="date" value={filtros.data_ate} onChange={inpF('data_ate')} className="input-field text-sm" />
               </div>
             </>
           )}
-          <div className="flex gap-2 ml-auto pt-5">
+          <div className="flex gap-2 ml-auto pt-5 flex-wrap">
+            <BotaoLimpar onClick={limparRel} ativo={temFiltroRel} />
             {resultado && (
               <button onClick={imprimir} className="btn-secondary text-sm px-4 py-2 flex items-center gap-1.5">
-                <Printer className="h-4 w-4" /> Imprimir / PDF
+                <Printer className="h-4 w-4" aria-hidden="true" /> Imprimir / PDF
               </button>
             )}
             <button onClick={gerar} disabled={loading} className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5 disabled:opacity-40">
@@ -2187,7 +2223,10 @@ function TabRelatorios() {
                   <tbody className="divide-y divide-ink-100">
                     {resultado.contas.map(c => (
                       <tr key={c.id} className="hover:bg-ink-50">
-                        <td className="px-4 py-3 text-xs font-medium text-ink-800">{c.nome}</td>
+                        <td className="px-4 py-3 text-xs">
+                          <ContaLink conta={c} mostrar="nome" />
+                          {c.conta && <div className="font-mono text-[11px] text-ink-500">C/C {c.conta}{c.conta_digito ? `-${c.conta_digito}` : ''}</div>}
+                        </td>
                         <td className="px-4 py-3 text-xs text-ink-600">{c.banco_nome || '—'}</td>
                         <td className="px-4 py-3 text-right text-xs font-medium text-success-700 dark:text-success-400 tabular-nums">{fmtVal(c.total_receitas)}</td>
                         <td className="px-4 py-3 text-right text-xs font-medium text-danger-600 dark:text-danger-400 tabular-nums">{fmtVal(c.total_despesas)}</td>
@@ -2260,7 +2299,9 @@ function TabRelatorios() {
           {resultado.tipo === 'extrato' && (
             <>
               <div className="px-4 py-3 border-b border-ink-100 bg-ink-50">
-                <h3 className="text-sm font-semibold text-ink-800">Extrato — {resultado.conta.nome}</h3>
+                <h3 className="text-sm font-semibold text-ink-800 flex flex-wrap items-center gap-x-2">
+                  Extrato — <ContaLink conta={resultado.conta} rotulo={contaLabel(resultado.conta)} />
+                </h3>
                 <p className="text-xs text-ink-500">{resultado.conta.banco_nome}</p>
                 {resultado.situacao && (
                   <p className="text-xs text-ink-600 mt-1 flex flex-wrap gap-x-4 gap-y-0.5">

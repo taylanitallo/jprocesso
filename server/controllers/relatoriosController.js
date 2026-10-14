@@ -132,7 +132,9 @@ const extratoConta = async (req, res) => {
     const { conta_id, data_de, data_ate } = req.query;
     if (!conta_id) return res.status(400).json({ error: 'Conta é obrigatória' });
 
-    const conta = await ContaBancaria.findByPk(conta_id);
+    const conta = await ContaBancaria.findByPk(conta_id, {
+      include: [{ model: req.models.Secretaria, as: 'secretaria', attributes: ['id', 'nome', 'sigla'] }],
+    });
     if (!conta) return res.status(404).json({ error: 'Conta não encontrada' });
 
     const todos = await caixa.movimentos(req.models, { contaIds: [conta_id], ate: data_ate || null });

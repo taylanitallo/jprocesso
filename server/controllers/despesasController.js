@@ -90,9 +90,17 @@ const listDespesas = async (req, res) => {
     if (pago === 'pendente') result = result.filter(o => !isPago(o));
     if (filtroProcesso)      result = result.filter(o => o.did?.processo?.numero?.toLowerCase().includes(filtroProcesso.toLowerCase()));
 
+    // Conta de onde saiu o pagamento (DID ou pagamento antigo) — clicável na tela
+    const idsContas = [...new Set(result.map(o => o.did?.conta_pagamento_id || o.pagamento?.conta_id).filter(Boolean))];
+    const contasPag = idsContas.length
+      ? await ContaBancaria.findAll({ where: { id: idsContas }, attributes: ['id', 'nome', 'conta', 'conta_digito', 'banco_nome'], paranoid: false, raw: true })
+      : [];
+    const contaPorId = Object.fromEntries(contasPag.map(c => [c.id, c]));
+
     const ordens_final = result.map(o => {
       const j = o.toJSON();
       j.secretaria_sigla = siglaMap[j.secretaria?.toLowerCase()] || j.secretaria || null;
+      j.conta_pagamento = contaPorId[j.did?.conta_pagamento_id || j.pagamento?.conta_id] || null;
       return j;
     });
 
@@ -126,8 +134,9 @@ const listRetencoes = async (req, res) => {
       order: [[recolhidas ? 'retencoes_recolhidas_em' : 'data_pagamento', 'DESC']],
       limit: recolhidas ? 300 : undefined,
     });
-    const contas = await ContaBancaria.findAll({ attributes: ['id', 'nome'], paranoid: false, raw: true });
+    const contas = await ContaBancaria.findAll({ attributes: ['id', 'nome', 'conta', 'conta_digito'], paranoid: false, raw: true });
     const nomeConta = Object.fromEntries(contas.map(c => [c.id, c.nome]));
+    const numeroConta = Object.fromEntries(contas.map(c => [c.id, c.conta ? `${c.conta}${c.conta_digito ? `-${c.conta_digito}` : ''}` : null]));
 
     const lista = dids
       .map(i => i.toJSON())
@@ -140,6 +149,7 @@ const listRetencoes = async (req, res) => {
         secretaria: d.secretaria_sec1 || null,
         conta_id: d.conta_pagamento_id,
         conta: nomeConta[d.conta_pagamento_id] || null,
+        conta_numero: numeroConta[d.conta_pagamento_id] || null,
         data_pagamento: caixa.dataPagamentoDoDid(d),
         recolhidas_em: d.retencoes_recolhidas_em,
         valor_bruto: parseFloat(d.valor_bruto || 0),

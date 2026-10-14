@@ -37,7 +37,7 @@ const listReceitas = async (req, res) => {
       include: [{
         model: ContaBancaria,
         as: 'conta',
-        attributes: ['id', 'nome', 'banco_nome', 'banco_codigo', 'agencia', 'conta'],
+        attributes: ['id', 'nome', 'banco_nome', 'banco_codigo', 'agencia', 'agencia_digito', 'conta', 'conta_digito'],
         where: hasContaFilter ? contaWhere : undefined,
         required: hasContaFilter,
       }],
