@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import api from '../../services/api'
 import BotaoExcluidos from '../../components/lixeira/BotaoExcluidos'
+import { retanguloEmCss } from '../../utils/escalaTela'
 import {
   MODALIDADES, TIPOS_OBJETO,
   VigenciaProgress, SectionCard, ModalStepper, PremiumInput,
@@ -308,7 +309,7 @@ function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
                 className="w-full h-11 px-3.5 text-sm rounded-xl border border-ink-200 bg-surface focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-hidden text-ink-900 dark:text-white"
               />
               {drop && dropRef && createPortal(
-                <div style={{ position: 'fixed', zIndex: 10001, top: dropRef.getBoundingClientRect().bottom + 4, left: dropRef.getBoundingClientRect().left, width: dropRef.getBoundingClientRect().width }}
+                <div style={{ position: 'fixed', zIndex: 10001, top: retanguloEmCss(dropRef).bottom + 4, left: retanguloEmCss(dropRef).left, width: retanguloEmCss(dropRef).width }}
                   className="bg-surface border border-ink-200 rounded-xl shadow-2xl max-h-44 overflow-y-auto">
                   {itensFiltrados.length === 0
                     ? <p className="px-3 py-2 text-xs text-ink-400">Nenhum item do catálogo — descrição livre</p>

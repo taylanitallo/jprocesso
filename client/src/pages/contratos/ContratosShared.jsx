@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { retanguloEmCss } from '../../utils/escalaTela'
 import { FileText, ShoppingBag, User, BarChart2, ClipboardList, Gavel } from 'lucide-react'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -78,7 +79,7 @@ export function PortalDropdown({ anchorRef, open, children, minWidth = 0, classN
     const el = anchorRef?.current
     if (!el) return
     const update = () => {
-      const r = el.getBoundingClientRect()
+      const r = retanguloEmCss(el)
       setStyle({ top: r.bottom + 4, left: r.left, width: Math.max(r.width, minWidth) })
     }
     update()
