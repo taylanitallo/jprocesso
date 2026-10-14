@@ -313,7 +313,7 @@ export default function AlmoxItens() {
             <BotaoExcluidos entidade="almox_itens" rotulo="Itens excluídos" onAlterado={load} />
             <button
               onClick={load}
-              className="flex items-center gap-2 px-3 py-1 border border-ink-300 text-ink-600 rounded-lg text-xs hover:bg-ink-50"
+              className="flex items-center gap-2 h-7 px-3 border border-ink-300 text-ink-600 rounded-lg text-xs hover:bg-ink-50"
               title="Atualizar"
             >
               <RefreshCw className="h-3.5 w-3.5" />

@@ -451,7 +451,7 @@ export default function Usuarios() {
               onChange={handleImportFile}
             />
             <BotaoExcluidos entidade="usuarios" rotulo="Usuários excluídos" onAlterado={fetchUsuarios} />
-            <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1">
+            <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1 h-7">
               <UserPlus className="h-3.5 w-3.5" />
               Novo Usuário
             </button>

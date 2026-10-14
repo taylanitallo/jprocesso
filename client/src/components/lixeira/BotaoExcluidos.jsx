@@ -44,7 +44,7 @@ export default function BotaoExcluidos({ entidade, rotulo = 'Excluídos', compac
   const [aberto, setAberto] = useState(false)
   if (!podeVerExcluidos(user, entidade)) return null
 
-  const tamanho = 'px-3 py-1 rounded-lg text-xs'
+  const tamanho = 'h-7 px-3 rounded-lg text-xs'
   return (
     <>
       <button type="button" onClick={() => setAberto(true)} title="Registros excluídos desta tela"

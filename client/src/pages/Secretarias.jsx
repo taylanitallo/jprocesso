@@ -879,42 +879,42 @@ export default function Secretarias() {
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={() => { setSelectedSecretaria(null); handleCreateSecretaria(); }}
-                className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1"
+                className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1 h-7"
               >
                 <Plus className="h-3.5 w-3.5" /> Incluir
               </button>
               <button
                 onClick={() => selectedSecretaria && handleEditSecretaria(selectedSecretaria)}
                 disabled={!selectedSecretaria}
-                className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
               >
                 <Edit2 className="h-3.5 w-3.5" /> Alterar
               </button>
               <button
                 onClick={() => selectedSecretaria && handleDeleteSecretaria(selectedSecretaria)}
                 disabled={!selectedSecretaria}
-                className="btn-danger flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="btn-danger flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
               >
                 <Trash2 className="h-3.5 w-3.5" /> Excluir
               </button>
               <button
                 onClick={() => { if (selectedSecretaria) { setSelectedSetorInPanel(null); setShowSetoresPanel(true); } }}
                 disabled={!selectedSecretaria}
-                className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
               >
                 <Briefcase className="h-3.5 w-3.5" /> Setores
               </button>
               <button
                 onClick={() => selectedSecretaria && openOrcamentoPanel()}
                 disabled={!selectedSecretaria}
-                className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
               >
                 <Wallet className="h-3.5 w-3.5" /> Orçamento
               </button>
               <button
                 onClick={() => selectedSecretaria && openDotacoesPanel()}
                 disabled={!selectedSecretaria}
-                className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
               >
                 <Database className="h-3.5 w-3.5" /> Dotações
               </button>
@@ -1088,14 +1088,14 @@ export default function Secretarias() {
             </div>
             <button
               onClick={() => { setSelectedAgente(null); openModalAgente(); }}
-              className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1"
+              className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1 h-7"
             >
               <Plus className="h-3.5 w-3.5" /> Incluir
             </button>
             <button
               onClick={() => selectedAgente && openModalAgente(selectedAgente)}
               disabled={!selectedAgente}
-              className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
             >
               <Edit2 className="h-3.5 w-3.5" /> Alterar
             </button>
@@ -1107,7 +1107,7 @@ export default function Secretarias() {
                 }
               }}
               disabled={!selectedAgente}
-              className="btn-danger flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="btn-danger flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
             >
               <Trash2 className="h-3.5 w-3.5" /> Excluir
             </button>
@@ -1250,21 +1250,21 @@ export default function Secretarias() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => { setSelectedResp(null); openModalResp(); }}
-                className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1"
+                className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1 h-7"
               >
                 <Plus className="h-3.5 w-3.5" /> Incluir
               </button>
               <button
                 onClick={() => selectedResp && openModalResp(selectedResp)}
                 disabled={!selectedResp}
-                className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
               >
                 <Edit2 className="h-3.5 w-3.5" /> Alterar
               </button>
               <button
                 onClick={() => selectedResp && setConfirmarExcluirResp(selectedResp)}
                 disabled={!selectedResp}
-                className="btn-danger flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="btn-danger flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
               >
                 <Trash2 className="h-3.5 w-3.5" /> Excluir
               </button>
@@ -1944,21 +1944,21 @@ export default function Secretarias() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleCreateSetor(selectedSecretaria.id)}
-                  className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1"
+                  className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1 h-7"
                 >
                   <Plus className="h-3.5 w-3.5" /> Incluir
                 </button>
                 <button
                   onClick={() => selectedSetorInPanel && handleEditSetor(selectedSetorInPanel, selectedSecretaria.id)}
                   disabled={!selectedSetorInPanel}
-                  className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
                 >
                   <Edit2 className="h-3.5 w-3.5" /> Alterar
                 </button>
                 <button
                   onClick={() => selectedSetorInPanel && handleDeleteSetor(selectedSetorInPanel, selectedSecretaria)}
                   disabled={!selectedSetorInPanel}
-                  className="btn-danger flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="btn-danger flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
                 >
                   <Trash2 className="h-3.5 w-3.5" /> Excluir
                 </button>

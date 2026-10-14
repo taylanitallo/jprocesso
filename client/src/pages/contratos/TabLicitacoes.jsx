@@ -595,29 +595,29 @@ function TabLicitacoes() {
       <div className="flex flex-wrap items-center gap-2 pb-2">
         {podeCriar && (
           <button onClick={() => setModal('novo')}
-            className="flex items-center gap-1.5 px-3 py-1 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+            className="flex items-center gap-1.5 h-7 px-3 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
             <Plus className="w-3.5 h-3.5" /> Incluir
           </button>
         )}
         {podeEditar && (
           <button onClick={() => podeAgir && setModal('editar')} disabled={!podeAgir}
-            className="flex items-center gap-1.5 px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+            className="flex items-center gap-1.5 h-7 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
             <Edit3 className="w-3.5 h-3.5" /> Alterar
           </button>
         )}
         {podeExcluir && (
           <button onClick={() => podeAgir && setModal('excluir')} disabled={!podeAgir}
-            className="flex items-center gap-1.5 px-3 py-1 bg-danger-600 hover:bg-danger-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+            className="flex items-center gap-1.5 h-7 px-3 bg-danger-600 hover:bg-danger-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
             <Trash2 className="w-3.5 h-3.5" /> Excluir
           </button>
         )}
         <button onClick={() => podeAgir && setModal('visualizar')} disabled={!podeAgir}
-          className="flex items-center gap-1.5 px-3 py-1 bg-ink-600 hover:bg-ink-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+          className="flex items-center gap-1.5 h-7 px-3 bg-ink-600 hover:bg-ink-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
           <Eye className="w-3.5 h-3.5" /> Visualizar
         </button>
         <BotaoExcluidos entidade="licitacoes" onAlterado={() => api.get('/contratos/licitacoes').then(r => setLicitacoes(r.data)).catch(() => {})} />
         <button onClick={() => podeAgir && setModal('contratos')} disabled={!podeAgir}
-          className="flex items-center gap-1.5 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+          className="flex items-center gap-1.5 h-7 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
           <FileText className="w-3.5 h-3.5" /> Ver Contratos
         </button>
       </div>

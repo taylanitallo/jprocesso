@@ -201,7 +201,7 @@ export default function AlmoxCotas() {
         <BotaoExcluidos entidade="almox_cotas" rotulo="Cotas excluídas" onAlterado={load} />
         <button
           onClick={() => { setNovoModal(true); setErro('') }}
-          className="flex items-center gap-2 px-3 py-1 bg-teal-600 text-white rounded-lg text-xs font-medium hover:bg-teal-700 transition-colors"
+          className="flex items-center gap-2 h-7 px-3 bg-teal-600 text-white rounded-lg text-xs font-medium hover:bg-teal-700 transition-colors"
         >
           <Plus className="h-3.5 w-3.5" /> Nova Cota
         </button>

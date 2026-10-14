@@ -291,7 +291,7 @@ function TabContas({ secretarias }) {
         <div className="mr-auto">
           <BotaoExcluidos entidade="contas_bancarias" rotulo="Contas excluídas" onAlterado={load} />
         </div>
-        <button onClick={openNew} className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1">
+        <button onClick={openNew} className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1 h-7">
           <Plus className="h-3.5 w-3.5" /> Nova Conta
         </button>
       </div>
@@ -785,11 +785,11 @@ tfoot .val{font-size:15px;color:#15803d}
         <button
           onClick={printExtrato}
           disabled={receitas.length === 0}
-          className="btn-secondary text-xs px-3 py-1 flex items-center gap-1.5 disabled:opacity-40"
+          className="btn-secondary text-xs px-3 py-1 flex items-center gap-1.5 disabled:opacity-40 h-7"
         >
           <Printer className="h-3.5 w-3.5" /> Imprimir / PDF
         </button>
-        <button onClick={openNew} className="btn-primary text-xs px-3 py-1 flex items-center gap-1.5">
+        <button onClick={openNew} className="btn-primary text-xs px-3 py-1 flex items-center gap-1.5 h-7">
           <Plus className="h-3.5 w-3.5" /> Novo Lançamento
         </button>
       </div>
@@ -1124,7 +1124,7 @@ function OrdensDespesas() {
           <div className="flex gap-2 flex-wrap">
             <BotaoExcluidos entidade="pagamentos" rotulo="Pagamentos estornados" onAlterado={() => load()} />
             <BotaoLimpar onClick={limparOrdens} ativo={temFiltroOrdens} />
-            <button onClick={() => load()} className="btn-primary text-xs px-3 py-1 flex items-center gap-1.5">
+            <button onClick={() => load()} className="btn-primary text-xs px-3 py-1 flex items-center gap-1.5 h-7">
               <Search className="h-3.5 w-3.5" aria-hidden="true" /> Filtrar
             </button>
           </div>
