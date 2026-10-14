@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 import { Save, Upload, X, ImageIcon, Download, FileDown, FileUp, Database, Key, RefreshCw, CheckCircle, AlertCircle, Settings, Building2, Bell, Palette, ArrowLeftRight, Sun, Moon } from 'lucide-react';
 import PageHeader from '../components/ui/PageHeader';
