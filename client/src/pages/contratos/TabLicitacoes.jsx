@@ -696,7 +696,7 @@ function TabLicitacoes() {
           className="flex items-center gap-1.5 px-4 py-1.5 bg-ink-600 hover:bg-ink-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
           <Eye className="w-4 h-4" /> Visualizar
         </button>
-        <BotaoExcluidos entidade="licitacoes" />
+        <BotaoExcluidos entidade="licitacoes" onAlterado={() => api.get('/contratos/licitacoes').then(r => setLicitacoes(r.data)).catch(() => {})} />
         <button onClick={() => podeAgir && setModal('contratos')} disabled={!podeAgir}
           className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
           <FileText className="w-4 h-4" /> Ver Contratos

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Plus, Trash2, RefreshCw, BarChart2 } from 'lucide-react'
 import api from '../services/api'
+import BotaoExcluidos from '../components/lixeira/BotaoExcluidos'
 import LoadingBar from '../components/LoadingBar'
 import AlmoxModal from './AlmoxModal'
 import { fmt } from './almoxConstants'
@@ -193,12 +194,15 @@ export default function AlmoxCotas() {
             <RefreshCw className="h-4 w-4" />
           </button>
         </div>
+        <div className="flex items-center gap-2">
+        <BotaoExcluidos entidade="almox_cotas" rotulo="Cotas excluídas" onAlterado={load} />
         <button
           onClick={() => { setNovoModal(true); setErro('') }}
           className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors"
         >
           <Plus className="h-4 w-4" /> Nova Cota
         </button>
+        </div>
       </div>
 
       {/* Tabela */}

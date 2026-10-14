@@ -47,7 +47,7 @@ const getByProcesso = async (req, res) => {
 
     // Retroativamente atribui numero_did para registros antigos com o campo nulo
     if (!did.numero_did) {
-      const pos = await Did.count({ where: { createdAt: { [Op.lt]: did.createdAt } } });
+      const pos = await Did.count({ where: { createdAt: { [Op.lt]: did.createdAt } }, paranoid: false });
       const numero = String(pos + 1);
       await did.update({ numero_did: numero });
       did.dataValues.numero_did = numero;
@@ -315,7 +315,8 @@ async function resolverProximoNumeroDid(req, { secretariaId, secretariaNomeOuSig
   }
 
   const where = nomeFiltro ? { secretaria_sec1: nomeFiltro } : {};
-  const count = await Did.count({ where });
+  // Conta também os excluídos: número de DID não é reaproveitado
+  const count = await Did.count({ where, paranoid: false });
   const proximo = count + 1;
   const formatado = sigla ? `${sigla}-${String(proximo).padStart(3, '0')}` : String(proximo);
   return { proximo, sigla, formatado };

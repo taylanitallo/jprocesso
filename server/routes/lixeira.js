@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { listar, apagar } = require('../controllers/lixeiraController');
-const { authenticate, tenantMiddleware, requireTenant, authorize } = require('../middleware/auth');
+const { listar, restaurar, apagar } = require('../controllers/lixeiraController');
+const { authenticate, tenantMiddleware, requireTenant } = require('../middleware/auth');
 
-// Excluídos: só administradores e Administrador Jeos (authorize já libera 'jeos')
-router.use(tenantMiddleware, requireTenant, authenticate, authorize('admin'));
+// Permissão checada por tela no controller (admin/Jeos sempre; demais pelo editor)
+router.use(tenantMiddleware, requireTenant, authenticate);
 
-router.get('/:entidade',         listar);
-router.post('/:entidade/apagar', apagar);
+router.get('/:entidade',            listar);
+router.post('/:entidade/restaurar', restaurar);
+router.post('/:entidade/apagar',    apagar);
 
 module.exports = router;

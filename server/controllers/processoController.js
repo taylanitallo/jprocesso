@@ -4,6 +4,7 @@ const { Op, Sequelize } = require('sequelize');
 const { registrarLog } = require('../middleware/activityLogger');
 const { getScopeSetorInclude, getScopeSecretariaInclude } = require('../utils/scopeFilter');
 const { situacaoRecebimento } = require('../utils/recebimento');
+const { registrarExclusao } = require('../services/lixeiraService');
 const { masterDb } = require('../config/database');
 const assinaturaService = require('../services/assinaturaService');
 const { AssinaturaError } = assinaturaService;
@@ -88,6 +89,7 @@ const createProcesso = async (req, res) => {
     const ultimoProcesso = await Processo.findOne({
       where: { ano },
       order: [['sequencial', 'DESC']],
+      paranoid: false, // número de processo excluído não é reaproveitado
       transaction
     });
 
@@ -1320,7 +1322,11 @@ const deleteProcesso = async (req, res) => {
       return res.status(404).json({ error: 'Processo não encontrado' });
     }
 
-    // Remove DID vinculado (se existir) — antes, desfaz tudo que ele gerou no
+    // O que a exclusão desfez em outros módulos — se houver, ela não pode ser
+    // restaurada (não há como refazer com segurança as saídas e a ordem)
+    const desfeitos = [];
+
+    // Exclui o DID vinculado (se existir) — antes, desfaz tudo que ele gerou no
     // almoxarifado e libera a Ordem de Compra vinculada.
     if (Did) {
       const did = await Did.findOne({ where: { processo_id: id }, transaction });
@@ -1344,6 +1350,7 @@ const deleteProcesso = async (req, res) => {
             }
             await mov.destroy({ transaction });
           }
+          if (movs.length) desfeitos.push('as saídas de material do almoxarifado foram estornadas');
         }
 
         // 2) Se a Ordem de Compra vinculada não estiver em uso por outro DID,
@@ -1354,10 +1361,11 @@ const deleteProcesso = async (req, res) => {
             transaction
           });
           if (outroVinculo === 0) {
-            await ContratoOrdem.update(
+            const [liberadas] = await ContratoOrdem.update(
               { status: 'EMITIDA' },
               { where: { id: did.ordem_compra_id, status: 'ATENDIDA' }, transaction }
             );
+            if (liberadas) desfeitos.push('a ordem de compra vinculada voltou a ficar disponível');
 
             if (AlmoxLote && AlmoxarifadoItem) {
               const lotes = await AlmoxLote.findAll({
@@ -1374,29 +1382,35 @@ const deleteProcesso = async (req, res) => {
                 }
                 await lote.update({ quantidade_atual: 0, ativo: false }, { transaction });
               }
+              if (lotes.length) desfeitos.push('os lotes recebidos pela ordem foram zerados no estoque');
             }
           }
         }
       }
 
-      await Did.destroy({ where: { processo_id: id }, transaction });
     }
 
-    // Remove tramitações
-    if (Tramitacao) {
-      await Tramitacao.destroy({ where: { processo_id: id }, transaction });
+    // Nada é apagado: processo, DID, tramitações e documentos vão juntos para os
+    // Excluídos com o mesmo deleted_at — é por ele que a restauração os traz de volta
+    const agora = new Date();
+    await registrarExclusao(req, 'processos', processo, {
+      transaction,
+      restauravel: desfeitos.length === 0,
+      motivoBloqueio: `Ao excluir, ${desfeitos.join('; ')}. Por isso o processo não pode ser restaurado.`,
+    });
+    for (const Model of [Did, Tramitacao, Documento].filter(Boolean)) {
+      await Model.update({ deleted_at: agora }, { where: { processo_id: id }, transaction });
     }
-
-    // Remove documentos
-    if (Documento) {
-      await Documento.destroy({ where: { processo_id: id }, transaction });
-    }
-
-    // Remove o processo
-    await processo.destroy({ transaction });
+    await Processo.update({ deleted_at: agora }, { where: { id }, transaction });
 
     await transaction.commit();
-    console.log(`[deleteProcesso] Processo ${processo.numero} excluído por uid=${req.user.id}`);
+    await registrarLog(req, {
+      acao: 'excluir_processo',
+      modulo: 'processos',
+      descricao: `Processo ${processo.numero} excluído`,
+      referencia_id: processo.id,
+      referencia_numero: processo.numero,
+    });
     res.json({ success: true, numero: processo.numero });
   } catch (error) {
     await transaction.rollback();

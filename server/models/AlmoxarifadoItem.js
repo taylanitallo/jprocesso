@@ -88,6 +88,8 @@ const defineAlmoxarifadoItemModel = (sequelize) => {
       allowNull: true,
       comment: 'Último número de patrimônio gerado para este item (auto-increments on entry)'
     },
+    // Lixeira: preenchido ao excluir (o registro segue visível onde já foi usado)
+    excluido_em: { type: DataTypes.DATE, allowNull: true },
     ativo: {
       type: DataTypes.BOOLEAN,
       defaultValue: true

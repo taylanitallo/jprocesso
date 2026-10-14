@@ -37,6 +37,8 @@ const defineAlmoxCotaModel = (sequelize) => {
       defaultValue: 0,
       comment: 'Quantidade já requisitada/entregue no mês'
     },
+    // Lixeira: preenchido ao excluir (o registro segue visível onde já foi usado)
+    excluido_em: { type: DataTypes.DATE, allowNull: true },
     ativo: {
       type: DataTypes.BOOLEAN,
       defaultValue: true

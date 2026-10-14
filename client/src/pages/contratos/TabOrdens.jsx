@@ -1784,7 +1784,7 @@ function TabOrdens() {
           className="flex items-center gap-1.5 px-4 py-2 text-xs rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-sm transition-colors">
           <Printer className="w-3.5 h-3.5" /> Gerar PDF
         </button>
-        <BotaoExcluidos entidade="ordens" compacto />
+        <BotaoExcluidos entidade="ordens" compacto onAlterado={carregar} />
       </div>
 
       {/* Modais */}

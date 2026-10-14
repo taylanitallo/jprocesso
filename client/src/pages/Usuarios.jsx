@@ -9,6 +9,7 @@ import SectionTitle from '../components/ui/SectionTitle';
 import EmptyState from '../components/ui/EmptyState';
 import FilterBar from '../components/ui/FilterBar';
 import ActionBar from '../components/ui/ActionBar';
+import BotaoExcluidos from '../components/lixeira/BotaoExcluidos';
 import {
   Smartphone,
   Users,
@@ -448,6 +449,7 @@ export default function Usuarios() {
               className="hidden"
               onChange={handleImportFile}
             />
+            <BotaoExcluidos entidade="usuarios" rotulo="Usuários excluídos" onAlterado={fetchUsuarios} />
             <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2">
               <UserPlus className="h-5 w-5" />
               Novo Usuário
@@ -819,7 +821,8 @@ export default function Usuarios() {
                 Tem certeza que deseja excluir o usuário <strong>{deleteTarget.nome}</strong>?
               </p>
               <p className="text-sm text-ink-600">
-                Esta ação não pode ser desfeita.
+                O usuário perde o acesso e vai para os Usuários excluídos, de onde pode ser restaurado.
+                O nome dele continua no histórico dos processos.
               </p>
             </div>
 

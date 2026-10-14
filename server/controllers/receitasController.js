@@ -1,6 +1,7 @@
 const { Op } = require('sequelize');
 const initializedSchemas = new Set();
 const { applyScopeToWhere } = require('../utils/scopeFilter');
+const { excluir } = require('../services/lixeiraService');
 
 async function ensureTable(req) {
   const schema = req.tenant?.schema;
@@ -96,7 +97,7 @@ const deleteReceita = async (req, res) => {
     const { TesReceita } = req.models;
     const receita = await TesReceita.findByPk(req.params.id);
     if (!receita) return res.status(404).json({ error: 'Lançamento não encontrado' });
-    await receita.destroy();
+    await excluir(req, 'receitas', receita); // vai para os Excluídos
     res.json({ ok: true });
   } catch (err) {
     console.error('deleteReceita:', err);

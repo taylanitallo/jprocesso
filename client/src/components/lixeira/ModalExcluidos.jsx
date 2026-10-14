@@ -1,7 +1,11 @@
 // Tela cheia com os registros excluídos de uma tela: quem excluiu, quando e filtros.
-// Administradores podem apagar de vez (selecionados, resultado do filtro ou tudo).
-import { useEffect, useMemo, useState } from 'react'
-import { Archive, X, Search, Loader2, Trash2, AlertTriangle, CheckCircle2, User, CalendarDays, RotateCcw } from 'lucide-react'
+// Restaurar e apagar de vez (selecionados, resultado do filtro ou tudo) conforme a
+// permissão que o servidor informa em `pode`.
+import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  Archive, X, Search, Loader2, Trash2, AlertTriangle, CheckCircle2, User,
+  CalendarDays, RotateCcw, Undo2, Lock,
+} from 'lucide-react'
 import api from '../../services/api'
 import { ConfirmModal } from '../ui'
 
@@ -24,7 +28,13 @@ const diaLocal = (iso) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-export default function ModalExcluidos({ entidade, onClose }) {
+const ACOES = {
+  restaurar: { rota: 'restaurar', feitos: 'restaurados', verbo: 'restaurado(s)' },
+  apagar:    { rota: 'apagar',    feitos: 'apagados',    verbo: 'apagado(s) definitivamente' },
+}
+
+// onAlterado: chamado ao fechar se algo foi restaurado (a tela de origem recarrega)
+export default function ModalExcluidos({ entidade, onClose, onAlterado }) {
   const [dados, setDados] = useState(null)
   const [erro, setErro] = useState('')
   const [busca, setBusca] = useState('')
@@ -32,9 +42,10 @@ export default function ModalExcluidos({ entidade, onClose }) {
   const [de, setDe] = useState('')
   const [ate, setAte] = useState('')
   const [selecionados, setSelecionados] = useState(() => new Set())
-  const [confirmar, setConfirmar] = useState(null) // { modo, ids, total }
-  const [apagando, setApagando] = useState(false)
-  const [resultado, setResultado] = useState(null)
+  const [confirmar, setConfirmar] = useState(null) // { acao, modo, ids, total }
+  const [executando, setExecutando] = useState(false)
+  const [resultado, setResultado] = useState(null) // { acao, feitos, falhas, erro }
+  const restaurouAlgo = useRef(false)
 
   const carregar = () => {
     setErro('')
@@ -44,22 +55,28 @@ export default function ModalExcluidos({ entidade, onClose }) {
   }
   useEffect(carregar, [entidade]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const fechar = () => {
+    if (restaurouAlgo.current) onAlterado?.()
+    onClose()
+  }
+
   // Esc fecha (se não houver confirmação aberta) e trava o scroll da página por trás
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape' && !confirmar) onClose() }
+    const onKey = (e) => { if (e.key === 'Escape' && !confirmar) fechar() }
     window.addEventListener('keydown', onKey)
     const overflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = overflow }
-  }, [confirmar, onClose])
+  }) // eslint-disable-line react-hooks/exhaustive-deps
 
   const registros = dados?.registros || []
   const colunas = dados?.colunas || []
+  const pode = dados?.pode || {}
 
   const autores = useMemo(() => {
-    const m = new Map()
-    registros.forEach(r => { if (r.excluido_por_nome) m.set(r.excluido_por_nome, true) })
-    return [...m.keys()].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+    const m = new Set()
+    registros.forEach(r => { if (r.excluido_por_nome) m.add(r.excluido_por_nome) })
+    return [...m].sort((a, b) => a.localeCompare(b, 'pt-BR'))
   }, [registros])
   const temSemAutor = registros.some(r => !r.excluido_por_nome)
 
@@ -95,25 +112,36 @@ export default function ModalExcluidos({ entidade, onClose }) {
     return n
   })
 
-  const apagar = async () => {
+  const pedir = (acao, modo) => {
+    if (modo === 'todos') return setConfirmar({ acao, modo, total: registros.length })
+    const ids = modo === 'selecionados' ? [...selecionados] : idsFiltrados
+    setConfirmar({ acao, modo, ids, total: ids.length })
+  }
+
+  const executar = async () => {
     if (!confirmar) return
-    setApagando(true)
+    const { acao, modo, ids } = confirmar
+    setExecutando(true)
     try {
-      const corpo = confirmar.modo === 'todos' ? { todos: true } : { ids: confirmar.ids }
-      const { data } = await api.post(`/lixeira/${entidade}/apagar`, corpo)
-      setResultado(data)
+      const corpo = modo === 'todos' ? { todos: true } : { ids }
+      const { data } = await api.post(`/lixeira/${entidade}/${ACOES[acao].rota}`, corpo)
+      const feitos = data[ACOES[acao].feitos] || []
+      if (acao === 'restaurar' && feitos.length) restaurouAlgo.current = true
+      setResultado({ acao, feitos, falhas: data.falhas || [] })
       setSelecionados(new Set())
-      setConfirmar(null)
       carregar()
     } catch (e) {
-      setConfirmar(null)
-      setResultado({ apagados: [], falhas: [], erro: e.response?.data?.error || 'Erro ao apagar.' })
+      setResultado({ acao, feitos: [], falhas: [], erro: e.response?.data?.error || 'Não foi possível concluir a ação.' })
     } finally {
-      setApagando(false)
+      setConfirmar(null)
+      setExecutando(false)
     }
   }
 
   const titulo = dados?.titulo || 'Excluídos'
+  const alvoTexto = (c) => c.modo === 'todos'
+    ? `todos os ${c.total} excluído(s) de ${titulo}`
+    : c.modo === 'filtrados' ? `${c.total} registro(s) do resultado do filtro` : `${c.total} registro(s) selecionado(s)`
 
   return (
     <div className="fixed inset-0 z-[70] flex flex-col bg-ink-50 animate-fade-in" role="dialog" aria-modal="true" aria-label={`Excluídos — ${titulo}`}>
@@ -125,10 +153,10 @@ export default function ModalExcluidos({ entidade, onClose }) {
         <div className="min-w-0 flex-1">
           <h2 className="text-base font-bold text-ink-900 truncate">Excluídos — {titulo}</h2>
           <p className="text-xs text-ink-500 truncate">
-            Registros excluídos desta tela, com data, hora e usuário. Visível só para administradores.
+            Registros excluídos desta tela, com data, hora e usuário que excluiu.
           </p>
         </div>
-        <button onClick={onClose} title="Fechar (Esc)"
+        <button onClick={fechar} title="Fechar (Esc)"
           className="p-2 rounded-lg text-ink-500 hover:bg-ink-100 hover:text-ink-800 transition-colors">
           <X className="w-5 h-5" />
         </button>
@@ -181,10 +209,10 @@ export default function ModalExcluidos({ entidade, onClose }) {
             <div className="flex-1 min-w-0">
               {resultado.erro
                 ? <p>{resultado.erro}</p>
-                : <p><strong>{resultado.apagados.length}</strong> registro(s) apagado(s) definitivamente.</p>}
+                : <p><strong>{resultado.feitos.length}</strong> registro(s) {ACOES[resultado.acao].verbo}.</p>}
               {resultado.falhas.length > 0 && (
                 <>
-                  <p className="mt-1">{resultado.falhas.length} não puderam ser apagado(s):</p>
+                  <p className="mt-1">{resultado.falhas.length} não puderam ser {resultado.acao === 'restaurar' ? 'restaurado(s)' : 'apagado(s)'}:</p>
                   <ul className="mt-1 list-disc pl-5 text-xs space-y-0.5 max-h-24 overflow-y-auto">
                     {resultado.falhas.map(f => <li key={f.id}><strong>{f.descricao}</strong> — {f.motivo}</li>)}
                   </ul>
@@ -211,7 +239,7 @@ export default function ModalExcluidos({ entidade, onClose }) {
                 <tr className="bg-ink-100 text-ink-600 text-xs uppercase tracking-wider select-none">
                   <th className="w-10 px-3 py-2.5">
                     <input type="checkbox" checked={todosFiltradosMarcados} onChange={alternarTodos}
-                      disabled={filtrados.length === 0} aria-label="Selecionar todos os listados" className="accent-danger-600" />
+                      disabled={filtrados.length === 0} aria-label="Selecionar todos os listados" className="accent-brand-600" />
                   </th>
                   {colunas.map(c => (
                     <th key={c.campo} className={`text-left px-3 py-2.5 font-semibold whitespace-nowrap ${c.largo ? 'min-w-[240px]' : ''}`}>{c.rotulo}</th>
@@ -233,13 +261,18 @@ export default function ModalExcluidos({ entidade, onClose }) {
                   const sel = selecionados.has(r.id)
                   return (
                     <tr key={r.id} onClick={() => alternar(r.id)}
-                      className={`cursor-pointer text-xs transition-colors ${sel ? 'bg-danger-50 dark:bg-danger-900/20' : 'hover:bg-ink-50 text-ink-700'}`}>
+                      className={`cursor-pointer text-xs transition-colors ${sel ? 'bg-info-50 dark:bg-info-900/20' : 'hover:bg-ink-50 text-ink-700'}`}>
                       <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
-                        <input type="checkbox" checked={sel} onChange={() => alternar(r.id)} aria-label="Selecionar" className="accent-danger-600" />
+                        <input type="checkbox" checked={sel} onChange={() => alternar(r.id)} aria-label="Selecionar" className="accent-brand-600" />
                       </td>
-                      {colunas.map(c => (
+                      {colunas.map((c, i) => (
                         <td key={c.campo} className={`px-3 py-2 ${c.largo ? 'max-w-md truncate' : 'whitespace-nowrap'} ${c.tipo === 'moeda' ? 'tabular-nums' : ''}`}
                           title={c.largo ? String(r.valores[c.campo] ?? '') : undefined}>
+                          {i === 0 && !r.restauravel && (
+                            <span title={r.motivo_bloqueio || 'Esta exclusão não pode ser desfeita.'} className="inline-flex align-middle mr-1 text-amber-600">
+                              <Lock className="w-3 h-3" />
+                            </span>
+                          )}
                           {fmtValor(r.valores[c.campo], c.tipo)}
                         </td>
                       ))}
@@ -262,43 +295,71 @@ export default function ModalExcluidos({ entidade, onClose }) {
         </div>
       </div>
 
-      {/* Rodapé: contagem + apagar definitivamente */}
+      {/* Rodapé: contagem + ações */}
       <div className="shrink-0 flex flex-wrap items-center gap-2 px-4 sm:px-6 py-3 bg-surface border-t border-ink-200">
         <span className="text-xs text-ink-500 mr-auto">
           {temFiltro
             ? <><strong>{filtrados.length}</strong> de {registros.length} excluído(s)</>
             : <><strong>{registros.length}</strong> excluído(s)</>}
           {selecionados.size > 0 && <> · <strong>{selecionados.size}</strong> selecionado(s)</>}
+          {registros.some(r => !r.restauravel) && (
+            <span className="ml-2 inline-flex items-center gap-1 text-amber-700 dark:text-amber-400">
+              <Lock className="w-3 h-3" /> não pode ser restaurado (passe o mouse para ver o motivo)
+            </span>
+          )}
         </span>
-        <button disabled={selecionados.size === 0}
-          onClick={() => setConfirmar({ modo: 'selecionados', ids: [...selecionados], total: selecionados.size })}
-          className="inline-flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg bg-danger-600 hover:bg-danger-700 text-white font-semibold shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-          <Trash2 className="w-3.5 h-3.5" /> Apagar selecionados
-        </button>
-        <button disabled={!temFiltro || filtrados.length === 0}
-          onClick={() => setConfirmar({ modo: 'filtrados', ids: idsFiltrados, total: filtrados.length })}
-          className="inline-flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg bg-danger-700 hover:bg-danger-800 text-white font-semibold shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-          <Trash2 className="w-3.5 h-3.5" /> Apagar filtrados
-        </button>
-        <button disabled={registros.length === 0}
-          onClick={() => setConfirmar({ modo: 'todos', total: registros.length })}
-          className="inline-flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg bg-danger-800 hover:bg-danger-900 text-white font-semibold shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-          <Trash2 className="w-3.5 h-3.5" /> Apagar tudo
-        </button>
+
+        {pode.restaurar && (
+          <div className="flex flex-wrap gap-2">
+            <button disabled={selecionados.size === 0} onClick={() => pedir('restaurar', 'selecionados')}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg bg-success-600 hover:bg-success-700 text-white font-semibold shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              <Undo2 className="w-3.5 h-3.5" /> Restaurar selecionados
+            </button>
+            <button disabled={!temFiltro || filtrados.length === 0} onClick={() => pedir('restaurar', 'filtrados')}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg border border-success-600 text-success-700 dark:text-success-400 hover:bg-success-50 dark:hover:bg-success-900/20 font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              <Undo2 className="w-3.5 h-3.5" /> Restaurar filtrados
+            </button>
+          </div>
+        )}
+
+        {pode.apagar && (
+          <div className="flex flex-wrap gap-2">
+            <button disabled={selecionados.size === 0} onClick={() => pedir('apagar', 'selecionados')}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg bg-danger-600 hover:bg-danger-700 text-white font-semibold shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              <Trash2 className="w-3.5 h-3.5" /> Apagar selecionados
+            </button>
+            <button disabled={!temFiltro || filtrados.length === 0} onClick={() => pedir('apagar', 'filtrados')}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg bg-danger-700 hover:bg-danger-800 text-white font-semibold shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              <Trash2 className="w-3.5 h-3.5" /> Apagar filtrados
+            </button>
+            <button disabled={registros.length === 0} onClick={() => pedir('apagar', 'todos')}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg bg-danger-800 hover:bg-danger-900 text-white font-semibold shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              <Trash2 className="w-3.5 h-3.5" /> Apagar tudo
+            </button>
+          </div>
+        )}
       </div>
 
-      {confirmar && (
+      {confirmar && (confirmar.acao === 'restaurar' ? (
+        <ConfirmModal
+          title="Restaurar?"
+          message={`${alvoTexto(confirmar)} voltarão para a tela de origem. O que depender de outro registro ainda excluído (ex.: contrato de credor excluído) será informado e não volta.`}
+          confirmLabel="Restaurar"
+          danger={false}
+          loading={executando}
+          onConfirm={executar}
+          onClose={() => !executando && setConfirmar(null)}
+        />
+      ) : (
         <ConfirmModal
           title="Apagar definitivamente?"
-          message={`${confirmar.total} registro(s) ${
-            confirmar.modo === 'todos' ? `— todos os excluídos de ${titulo} —` : confirmar.modo === 'filtrados' ? 'do resultado do filtro' : 'selecionado(s)'
-          } serão apagados do sistema de forma permanente. Esta ação não pode ser desfeita.`}
+          message={`${alvoTexto(confirmar)} serão apagados do sistema de forma permanente. Esta ação não pode ser desfeita.`}
           confirmLabel="Apagar definitivamente"
-          loading={apagando}
-          onConfirm={apagar}
-          onClose={() => !apagando && setConfirmar(null)}
+          loading={executando}
+          onConfirm={executar}
+          onClose={() => !executando && setConfirmar(null)}
         />
-      )}
+      ))}
     </div>
   )
 }

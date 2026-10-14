@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { hasPerm } from '../utils/permissions';
 import { conferirAbasDoModulo } from '../utils/permissoesSchema';
 import api from '../services/api';
+import BotaoExcluidos from '../components/lixeira/BotaoExcluidos';
 import PageHeader from '../components/ui/PageHeader';
 import SectionTitle from '../components/ui/SectionTitle';
 import FilterBar from '../components/ui/FilterBar';
@@ -327,9 +328,12 @@ function TabContas({ secretarias }) {
       <div className="card overflow-hidden">
         <div className="px-4 py-3 border-b border-ink-200 flex items-center justify-between">
           <SectionTitle icon={Landmark} title="Contas Bancárias Cadastradas" />
-          <button onClick={openNew} className="btn-primary flex items-center gap-1.5 text-sm px-3 py-1.5">
-            <Plus className="h-4 w-4" /> Nova Conta
-          </button>
+          <div className="flex items-center gap-2">
+            <BotaoExcluidos entidade="contas_bancarias" rotulo="Contas excluídas" onAlterado={load} />
+            <button onClick={openNew} className="btn-primary flex items-center gap-1.5 text-sm px-3 py-1.5">
+              <Plus className="h-4 w-4" /> Nova Conta
+            </button>
+          </div>
         </div>
         <div className="overflow-x-auto">
           {loading ? (
@@ -523,7 +527,7 @@ function TabContas({ secretarias }) {
       {confirmarExcluir && (
         <ConfirmModal
           title={`Excluir a conta "${confirmarExcluir.nome}"?`}
-          message="Esta conta bancária será removida permanentemente."
+          message="A conta vai para as Contas excluídas, de onde pode ser restaurada."
           confirmLabel="Excluir"
           onConfirm={() => excluir(confirmarExcluir)}
           onClose={() => setConfirmarExcluir(null)}
@@ -839,6 +843,7 @@ tfoot .val{font-size:15px;color:#15803d}
             >
               <Printer className="h-4 w-4" /> Imprimir / PDF
             </button>
+            <BotaoExcluidos entidade="receitas" rotulo="Receitas excluídas" onAlterado={() => load()} />
             <button onClick={openNew} className="btn-primary text-sm px-3 py-1.5 flex items-center gap-1.5">
               <Plus className="h-4 w-4" /> Novo Lançamento
             </button>
@@ -1010,7 +1015,7 @@ tfoot .val{font-size:15px;color:#15803d}
       {confirmarExcluir && (
         <ConfirmModal
           title={`Excluir "${confirmarExcluir.descricao}"?`}
-          message="Esta receita será removida permanentemente."
+          message="A receita sai dos totais e vai para as Receitas excluídas, de onde pode ser restaurada."
           confirmLabel="Excluir"
           onConfirm={() => excluir(confirmarExcluir)}
           onClose={() => setConfirmarExcluir(null)}
@@ -1135,7 +1140,7 @@ function TabDespesas() {
   };
 
   const estornar = async (pag) => {
-    if (!window.confirm('Estornar este pagamento? Esta ação não pode ser desfeita.')) return;
+    if (!window.confirm('Estornar este pagamento? Ele sai dos totais e fica em Pagamentos estornados, de onde pode ser restaurado.')) return;
     try {
       await api.delete(`/tesouraria/despesas/pagamento/${pag.id}`);
       load();
@@ -1197,7 +1202,8 @@ function TabDespesas() {
             <input value={filtros.processo} onChange={inpF('processo')} className="input-field text-sm" placeholder="Nº do processo..." />
           </div>
         </div>
-        <div className="mt-3 flex justify-end">
+        <div className="mt-3 flex justify-end gap-2">
+          <BotaoExcluidos entidade="pagamentos" rotulo="Pagamentos estornados" onAlterado={() => load()} />
           <button onClick={() => load()} className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5">
             <Search className="h-4 w-4" /> Filtrar
           </button>

@@ -16,6 +16,15 @@
 const VER = { key: 'ver', label: 'Ver' }
 const CRUD = [VER, { key: 'criar', label: 'Criar' }, { key: 'editar', label: 'Editar' }, { key: 'excluir', label: 'Excluir' }]
 
+// Tela "Excluídos" da aba/módulo. padrao:false → sem configuração = negado (só
+// administradores até alguém ligar). As chaves são conferidas no servidor (lixeiraService).
+export const LIXEIRA = [
+  { key: 'excluidos',        label: 'Ver excluídos',    padrao: false },
+  { key: 'restaurar',        label: 'Restaurar',        padrao: false },
+  { key: 'apagar_excluidos', label: 'Apagar excluídos', padrao: false },
+]
+const CRUD_LIXEIRA = [...CRUD, ...LIXEIRA]
+
 export const MODULOS = [
   {
     key: 'processos', label: 'Processos',
@@ -30,6 +39,7 @@ export const MODULOS = [
       { key: 'arquivar',          label: 'Arquivar' },
       { key: 'anexar_documento',  label: 'Anexar doc.' },
       { key: 'excluir_documento', label: 'Excluir doc.' },
+      ...LIXEIRA, // excluídos de processos e de documentos
     ],
   },
   {
@@ -39,13 +49,13 @@ export const MODULOS = [
     key: 'almoxarifado', label: 'Almoxarifado', comAcesso: true,
     abas: [
       { key: 'painel',      label: 'Painel',       acoes: [VER] },
-      { key: 'estoque',     label: 'Estoque',      acoes: [VER, { key: 'editar', label: 'Editar' }] },
+      { key: 'estoque',     label: 'Estoque',      acoes: [VER, { key: 'editar', label: 'Editar' }, ...LIXEIRA] },
       { key: 'entradas',    label: 'Entradas',     acoes: [VER, { key: 'registrar', label: 'Registrar' }] },
       { key: 'saidas',      label: 'Saídas',       acoes: [VER, { key: 'registrar', label: 'Registrar' }] },
       { key: 'requisicoes', label: 'Requisições',  acoes: [VER, { key: 'criar', label: 'Criar' }, { key: 'aprovar', label: 'Aprovar' }, { key: 'cancelar', label: 'Cancelar' }] },
       // chave 'cotas' mantida por compatibilidade com permissões já salvas
-      { key: 'cotas',       label: 'Solicitações', acoes: [VER, { key: 'gerenciar', label: 'Gerenciar' }] },
-      { key: 'inventario',  label: 'Inventário',   acoes: [VER, { key: 'realizar', label: 'Realizar' }] },
+      { key: 'cotas',       label: 'Solicitações', acoes: [VER, { key: 'gerenciar', label: 'Gerenciar' }, ...LIXEIRA] },
+      { key: 'inventario',  label: 'Inventário',   acoes: [VER, { key: 'realizar', label: 'Realizar' }, ...LIXEIRA] },
       { key: 'auditoria',   label: 'Auditoria',    acoes: [VER] },
     ],
   },
@@ -72,11 +82,11 @@ export const MODULOS = [
   {
     key: 'contratos', label: 'Contratos', comAcesso: true,
     abas: [
-      { key: 'licitacoes', label: 'Licitação',               acoes: CRUD },
-      { key: 'credores',   label: 'Credores',                acoes: CRUD },
-      { key: 'itens',      label: 'Itens',                   acoes: CRUD },
-      { key: 'contratos',  label: 'Contratos',               acoes: CRUD },
-      { key: 'ordens',     label: 'Ordem de Serviço/Compra', acoes: CRUD },
+      { key: 'licitacoes', label: 'Licitação',               acoes: CRUD_LIXEIRA },
+      { key: 'credores',   label: 'Credores',                acoes: CRUD_LIXEIRA },
+      { key: 'itens',      label: 'Itens',                   acoes: CRUD_LIXEIRA },
+      { key: 'contratos',  label: 'Contratos',               acoes: CRUD_LIXEIRA },
+      { key: 'ordens',     label: 'Ordem de Serviço/Compra', acoes: CRUD_LIXEIRA },
       { key: 'relatorios', label: 'Relatórios',              acoes: [VER] },
       { key: 'dashboard',  label: 'Dashboard',               acoes: [VER], escopo: false },
     ],
@@ -84,9 +94,10 @@ export const MODULOS = [
   {
     key: 'tesouraria', label: 'Tesouraria', comAcesso: true,
     abas: [
-      { key: 'contas',     label: 'Contas Bancárias', acoes: CRUD },
-      { key: 'receitas',   label: 'Receitas',         acoes: CRUD },
-      { key: 'despesas',   label: 'Despesas',         acoes: CRUD },
+      { key: 'contas',     label: 'Contas Bancárias', acoes: CRUD_LIXEIRA },
+      { key: 'receitas',   label: 'Receitas',         acoes: CRUD_LIXEIRA },
+      // Excluídos de Despesas = pagamentos estornados
+      { key: 'despesas',   label: 'Despesas',         acoes: CRUD_LIXEIRA },
       { key: 'relatorios', label: 'Relatórios',       acoes: [VER] },
     ],
   },
@@ -96,10 +107,10 @@ export const MODULOS = [
     key: 'organizacao', label: 'Organização',
     abas: [
       { key: 'entidade',     label: 'Entidade',              acoes: [VER], escopo: false },
-      { key: 'secretarias',  label: 'Secretarias e Setores', acoes: [VER], escopo: false },
-      { key: 'agentes',      label: 'Cadastro de Agentes',   acoes: [VER], escopo: false },
+      { key: 'secretarias',  label: 'Secretarias e Setores', acoes: [VER, ...LIXEIRA], escopo: false },
+      { key: 'agentes',      label: 'Cadastro de Agentes',   acoes: [VER, ...LIXEIRA], escopo: false },
       { key: 'responsaveis', label: 'Responsáveis',          acoes: [VER], escopo: false },
-      { key: 'usuarios',     label: 'Usuários',              acoes: [VER], escopo: false },
+      { key: 'usuarios',     label: 'Usuários',              acoes: [VER, ...LIXEIRA], escopo: false },
     ],
   },
   {

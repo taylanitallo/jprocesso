@@ -5,6 +5,7 @@ const archiver = require('archiver');
 const { PDFDocument } = require('pdf-lib');
 const storage = require('../services/storageService');
 const { situacaoRecebimento, MSG_BLOQUEADO } = require('../utils/recebimento');
+const { excluir } = require('../services/lixeiraService');
 
 // Documentos de processo ainda não recebido pelo destino ficam inacessíveis a ele
 const bloqueadoAteReceber = async (req, processo) =>
@@ -183,15 +184,9 @@ const deleteDocumento = async (req, res) => {
       }
     }
 
-    if (storage.isLocalPath(documento.url_arquivo)) {
-      if (fs.existsSync(documento.url_arquivo)) {
-        try { fs.unlinkSync(documento.url_arquivo); } catch (_) {}
-      }
-    } else {
-      try { await storage.deleteDocumento(documento.url_arquivo); } catch (_) {}
-    }
-
-    await documento.destroy();
+    // Vai para os Excluídos com o arquivo intacto; o arquivo só sai do storage
+    // quando o documento for apagado de vez (lixeiraService)
+    await excluir(req, 'documentos', documento);
     res.json({ message: 'Documento excluído com sucesso' });
   } catch (error) {
     console.error('Erro ao excluir documento:', error);

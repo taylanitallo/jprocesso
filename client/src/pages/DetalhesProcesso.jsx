@@ -1211,17 +1211,19 @@ export default function DetalhesProcesso() {
               </div>
               <div>
                 <h3 className="font-semibold text-ink-900">Excluir Processo</h3>
-                <p className="text-xs text-ink-500">Esta ação não pode ser desfeita.</p>
+                <p className="text-xs text-ink-500">O processo vai para os Excluídos.</p>
               </div>
             </div>
             <p className="text-sm text-ink-700 mb-2">
-              Você está prestes a excluir permanentemente o processo:
+              Você está prestes a excluir o processo:
             </p>
             <p className="font-mono font-bold text-danger-600 dark:text-danger-400 bg-danger-50 dark:bg-danger-900/20 rounded-lg px-3 py-2 mb-4 text-sm">
               {processo.numero}
             </p>
             <p className="text-xs text-ink-500 mb-6">
-              Tramitações, documentos e DID vinculados serão removidos permanentemente.
+              Tramitações, documentos e DID vão junto e podem ser restaurados pela tela Excluídos.
+              Se o DID já tiver gerado saídas de estoque ou atendido uma ordem de compra, isso é
+              desfeito agora e o processo não poderá mais ser restaurado.
             </p>
             <div className="flex gap-3 justify-end">
               <button
@@ -1247,7 +1249,7 @@ export default function DetalhesProcesso() {
       {confirmarExcluirDoc && (
         <ConfirmModal
           title="Excluir este documento?"
-          message="O documento será removido permanentemente do processo."
+          message="O documento sai do processo e vai para os Excluídos, de onde pode ser restaurado."
           confirmLabel="Excluir"
           onConfirm={() => handleDeleteDocumento(confirmarExcluirDoc)}
           onClose={() => setConfirmarExcluirDoc(null)}

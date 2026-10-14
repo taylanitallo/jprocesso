@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Search, Edit2, RefreshCw, Package, MapPin, AlertTriangle, Building2, Trash2 } from 'lucide-react'
 import api from '../services/api'
+import BotaoExcluidos from '../components/lixeira/BotaoExcluidos'
 import { useAuth } from '../context/AuthContext'
 import LoadingBar from '../components/LoadingBar'
 import AlmoxModal from './AlmoxModal'
@@ -307,13 +308,16 @@ export default function AlmoxItens() {
         title="Estoque"
         subtitle="Itens com entradas registradas — quantidade, localização e secretaria"
         actions={
-          <button
-            onClick={load}
-            className="flex items-center gap-2 px-3 py-2 border border-ink-300 text-ink-600 rounded-lg text-sm hover:bg-ink-50"
-            title="Atualizar"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <BotaoExcluidos entidade="almox_itens" rotulo="Itens excluídos" onAlterado={load} />
+            <button
+              onClick={load}
+              className="flex items-center gap-2 px-3 py-2 border border-ink-300 text-ink-600 rounded-lg text-sm hover:bg-ink-50"
+              title="Atualizar"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+          </div>
         }
       />
 
@@ -565,7 +569,7 @@ export default function AlmoxItens() {
       {confirmarExcluir && (
         <ConfirmModal
           title={`Excluir "${confirmarExcluir.nome}"?`}
-          message="O item será removido do estoque. Esta ação não pode ser desfeita."
+          message="O item sai do estoque e vai para os Itens excluídos, de onde pode ser restaurado."
           confirmLabel="Excluir"
           onConfirm={() => handleDelete(confirmarExcluir)}
           onClose={() => setConfirmarExcluir(null)}

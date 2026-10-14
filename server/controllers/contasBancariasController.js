@@ -1,6 +1,7 @@
 const axios = require('axios');
 const initializedSchemas = new Set();
 const { applyScopeToWhere } = require('../utils/scopeFilter');
+const { excluir } = require('../services/lixeiraService');
 
 // Cache em memória — lista de bancos muda raramente
 let _bancosCache = null;
@@ -122,7 +123,7 @@ const deleteConta = async (req, res) => {
       });
     }
 
-    await conta.destroy();
+    await excluir(req, 'contas_bancarias', conta); // vai para os Excluídos
     res.json({ ok: true });
   } catch (err) {
     console.error('deleteConta:', err);

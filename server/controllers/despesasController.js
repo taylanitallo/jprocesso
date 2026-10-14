@@ -1,6 +1,7 @@
 const { Op } = require('sequelize');
 const initializedSchemas = new Set();
 const { applyScopeToWhereByName } = require('../utils/scopeFilter');
+const { excluir } = require('../services/lixeiraService');
 
 async function ensureTable(req) {
   const schema = req.tenant?.schema;
@@ -161,7 +162,8 @@ const estornarPagamento = async (req, res) => {
     const { TesDespesa } = req.models;
     const despesa = await TesDespesa.findByPk(req.params.id);
     if (!despesa) return res.status(404).json({ error: 'Pagamento não encontrado' });
-    await despesa.destroy();
+    // Estorno: o pagamento sai dos totais e fica em Excluídos (Pagamentos estornados)
+    await excluir(req, 'pagamentos', despesa);
     res.json({ ok: true });
   } catch (err) {
     console.error('estornarPagamento:', err);

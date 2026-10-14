@@ -4,6 +4,7 @@ const xml2js = require('xml2js');
 const nfseService = require('../services/nfseService');
 const { registrarLog } = require('../middleware/activityLogger');
 const { applyScopeToWhere, getScope, ensurePermissoes } = require('../utils/scopeFilter');
+const { excluir } = require('../services/lixeiraService');
 
 // â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -259,7 +260,7 @@ const listItens = async (req, res) => {
     const { AlmoxarifadoItem } = req.models;
     const { busca, categoria, criticos } = req.query;
 
-    const where = {};
+    const where = { excluido_em: null }; // excluídos ficam na tela Excluídos
     if (busca) {
       where[Op.or] = [
         { nome: { [Op.iLike]: `%${busca}%` } },
@@ -349,9 +350,9 @@ const deleteItem = async (req, res) => {
     await ensureTables(req);
     const { AlmoxarifadoItem } = req.models;
     const item = await AlmoxarifadoItem.findByPk(req.params.id);
-    if (!item) return res.status(404).json({ error: 'Item nÃ£o encontrado' });
-    await item.update({ ativo: false });
-    res.json({ message: 'Item desativado com sucesso' });
+    if (!item || item.excluido_em) return res.status(404).json({ error: 'Item não encontrado' });
+    await excluir(req, 'almox_itens', item);
+    res.json({ message: 'Item excluído com sucesso' });
   } catch (error) {
     console.error('Erro deleteItem:', error);
     res.status(500).json({ error: 'Erro ao desativar item' });
@@ -1554,7 +1555,12 @@ const createCota = async (req, res) => {
     });
 
     if (!created) {
-      await cota.update({ quantidade_cota, observacao });
+      // Mesma cota já existia (inclusive excluída): volta a valer com os novos dados
+      const estavaExcluida = !!cota.excluido_em;
+      await cota.update({ quantidade_cota, observacao, ativo: true, excluido_em: null });
+      if (estavaExcluida) {
+        await req.models.RegistroExcluido.destroy({ where: { entidade: 'almox_cotas', registro_id: String(cota.id) } });
+      }
     }
 
     res.status(created ? 201 : 200).json(cota);
@@ -1568,9 +1574,15 @@ const deleteCota = async (req, res) => {
   try {
     await ensureTables(req);
     const { AlmoxCota } = req.models;
-    const cota = await AlmoxCota.findByPk(req.params.id);
-    if (!cota) return res.status(404).json({ error: 'Cota não encontrada' });
-    await cota.update({ ativo: false });
+    const { AlmoxarifadoItem, Setor } = req.models;
+    const cota = await AlmoxCota.findByPk(req.params.id, {
+      include: [
+        { model: Setor, as: 'setor', attributes: ['nome'] },
+        { model: AlmoxarifadoItem, as: 'item', attributes: ['nome'] },
+      ],
+    });
+    if (!cota || cota.excluido_em) return res.status(404).json({ error: 'Cota não encontrada' });
+    await excluir(req, 'almox_cotas', cota);
     res.json({ ok: true });
   } catch (error) {
     res.status(500).json({ error: 'Erro ao remover cota' });
@@ -1606,7 +1618,8 @@ const createInventario = async (req, res) => {
     const { observacao } = req.body;
 
     // Gera número sequencial
-    const count = await AlmoxInventario.count();
+    // Conta também os excluídos: o número do inventário é único e não se repete
+    const count = await AlmoxInventario.count({ paranoid: false });
     const ano = new Date().getFullYear();
     const numero = `INV-${ano}-${String(count + 1).padStart(3, '0')}`;
 
@@ -1762,8 +1775,8 @@ const deleteInventario = async (req, res) => {
     if (inv.status === 'CONCLUIDO') {
       return res.status(400).json({ error: 'Não é possível excluir um inventário concluído' });
     }
-    await AlmoxInventarioItem.destroy({ where: { inventario_id: inv.id } });
-    await inv.destroy();
+    // Itens contados ficam com o inventário (vão juntos para os Excluídos)
+    await excluir(req, 'almox_inventarios', inv);
     res.json({ ok: true });
   } catch (error) {
     res.status(500).json({ error: 'Erro ao excluir inventário' });

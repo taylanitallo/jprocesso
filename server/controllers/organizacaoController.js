@@ -1,4 +1,5 @@
 ﻿const { Op } = require('sequelize');
+const { excluir } = require('../services/lixeiraService');
 
 const createSecretaria = async (req, res) => {
   try {
@@ -47,7 +48,8 @@ const listSecretarias = async (req, res) => {
 
     const secretarias = await Secretaria.findAll({
       where,
-      include: [{ model: Setor, as: 'setores', required: false }],
+      // Setor excluído fica só na tela Excluídos
+      include: [{ model: Setor, as: 'setores', required: false, where: { excluido_em: null } }],
       order: [
         ['nome', 'ASC'],
         [{ model: Setor, as: 'setores' }, 'nome', 'ASC']
@@ -110,9 +112,9 @@ const deleteSecretaria = async (req, res) => {
       return res.status(404).json({ error: 'Secretaria nÃ£o encontrada' });
     }
 
-    await secretaria.update({ ativo: false });
+    await excluir(req, 'secretarias', secretaria);
 
-    res.json({ message: 'Secretaria desativada com sucesso' });
+    res.json({ message: 'Secretaria excluída com sucesso' });
   } catch (error) {
     console.error('Erro ao deletar secretaria:', error);
     res.status(500).json({ error: 'Erro ao deletar secretaria' });
@@ -198,9 +200,9 @@ const deleteSetor = async (req, res) => {
       return res.status(404).json({ error: 'Setor nÃ£o encontrado' });
     }
 
-    await setor.update({ ativo: false });
+    await excluir(req, 'setores', setor);
 
-    res.json({ message: 'Setor desativado com sucesso' });
+    res.json({ message: 'Setor excluído com sucesso' });
   } catch (error) {
     console.error('Erro ao deletar setor:', error);
     res.status(500).json({ error: 'Erro ao deletar setor' });
@@ -398,12 +400,9 @@ const updateAgente = async (req, res) => {
 // â”€â”€ Excluir agente (soft delete) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const deleteAgente = async (req, res) => {
   try {
-    const schema = req.tenant.schema;
-    const { id } = req.params;
-    await req.tenantDb.query(
-      `UPDATE "${schema}".agentes SET ativo=false, updated_at=NOW() WHERE id=:id`,
-      { replacements: { id }, type: req.tenantDb.QueryTypes.UPDATE }
-    );
+    const agente = await req.models.Agente.findByPk(req.params.id);
+    if (!agente || agente.excluido_em) return res.status(404).json({ error: 'Agente não encontrado' });
+    await excluir(req, 'agentes', agente);
     res.json({ success: true });
   } catch (err) {
     console.error('deleteAgente:', err);

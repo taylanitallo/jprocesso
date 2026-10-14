@@ -91,8 +91,11 @@ export default function PermissoesEditor({ permissoes, onChange, secretariasList
   const perm = permissoes ?? {}
 
   // ── leitura/escrita de ações simples (boolean) ────────────────────────────
-  const get = (modKey, ...path) => {
-    const val = getIn(perm[modKey], path)
+  // Sem configuração vale o padrão da ação: ligada, exceto as com padrao:false
+  // (ex.: Excluídos, que só administradores têm até alguém ligar)
+  const get = (modKey, acao, ...path) => {
+    const val = getIn(perm[modKey], [...path, acao.key])
+    if (val === undefined) return acao.padrao !== false
     return val !== false
   }
 
@@ -172,7 +175,7 @@ export default function PermissoesEditor({ permissoes, onChange, secretariasList
                                   onChange={s => setVerScope(mod.key, s, s === 'algumas' ? secretariaIds : [], aba.key)}
                                 />
                               ) : (
-                                <Toggle checked={get(mod.key, aba.key, acao.key)} onChange={v => set(mod.key, v, aba.key, acao.key)} />
+                                <Toggle checked={get(mod.key, acao, aba.key)} onChange={v => set(mod.key, v, aba.key, acao.key)} />
                               )}
                               <span className="text-xs text-ink-600">{acao.label}</span>
                             </div>
@@ -207,7 +210,7 @@ export default function PermissoesEditor({ permissoes, onChange, secretariasList
                                 onChange={s => setVerScope(mod.key, s, s === 'algumas' ? secretariaIds : [])}
                               />
                             ) : (
-                              <Toggle checked={get(mod.key, acao.key)} onChange={v => set(mod.key, v, acao.key)} />
+                              <Toggle checked={get(mod.key, acao)} onChange={v => set(mod.key, v, acao.key)} />
                             )}
                             <span className="text-xs text-ink-600">{acao.label}</span>
                           </div>

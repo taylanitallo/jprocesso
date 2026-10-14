@@ -210,6 +210,25 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
         excluido_em       TIMESTAMPTZ   NOT NULL DEFAULT NOW()
       );
       CREATE UNIQUE INDEX IF NOT EXISTS registros_excluidos_uq ON registros_excluidos (entidade, registro_id);
+      -- Exclusão que desfez efeitos em outros módulos (ex.: estoque do DID) não volta atrás
+      ALTER TABLE registros_excluidos
+        ADD COLUMN IF NOT EXISTS restauravel     BOOLEAN NOT NULL DEFAULT true,
+        ADD COLUMN IF NOT EXISTS motivo_bloqueio TEXT;
+    `),
+
+    // 0k. Lixeira no restante do sistema
+    //   deleted_at  → tabelas que antes apagavam de verdade (Sequelize paranoid: some
+    //                 sozinho das consultas feitas pelos modelos)
+    //   excluido_em → cadastros referenciados no histórico (usuário, secretaria, setor…):
+    //                 continuam aparecendo onde já foram usados, só saem das listagens
+    run(`
+      ALTER TABLE processos             ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+      ALTER TABLE tramitacoes           ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+      ALTER TABLE anexos                ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+      ALTER TABLE usuarios              ADD COLUMN IF NOT EXISTS excluido_em TIMESTAMPTZ;
+      ALTER TABLE secretarias           ADD COLUMN IF NOT EXISTS excluido_em TIMESTAMPTZ;
+      ALTER TABLE setores               ADD COLUMN IF NOT EXISTS excluido_em TIMESTAMPTZ;
+      CREATE INDEX IF NOT EXISTS processos_deleted_at_idx ON processos (deleted_at);
     `),
 
     // 0h. Contratos — Licitações (processos licitatórios / contratações diretas)
@@ -948,6 +967,19 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
     )
   `);
   await run(`CREATE INDEX IF NOT EXISTS idx_tes_grupos_contas_usuario ON tes_grupos_contas(usuario_id)`);
+
+  // ── Lixeira (continuação do bloco 0k — tabelas criadas acima ou sob demanda) ──
+  // Tabela ainda inexistente falha em silêncio; o sync do modelo a cria já com a coluna.
+  await Promise.allSettled([
+    run(`ALTER TABLE dids                 ADD COLUMN IF NOT EXISTS deleted_at  TIMESTAMPTZ`),
+    run(`ALTER TABLE almox_inventarios    ADD COLUMN IF NOT EXISTS deleted_at  TIMESTAMPTZ`),
+    run(`ALTER TABLE tes_receitas         ADD COLUMN IF NOT EXISTS deleted_at  TIMESTAMPTZ`),
+    run(`ALTER TABLE tes_despesas         ADD COLUMN IF NOT EXISTS deleted_at  TIMESTAMPTZ`),
+    run(`ALTER TABLE contas_bancarias     ADD COLUMN IF NOT EXISTS deleted_at  TIMESTAMPTZ`),
+    run(`ALTER TABLE agentes              ADD COLUMN IF NOT EXISTS excluido_em TIMESTAMPTZ`),
+    run(`ALTER TABLE almoxarifado_itens   ADD COLUMN IF NOT EXISTS excluido_em TIMESTAMPTZ`),
+    run(`ALTER TABLE almox_cotas          ADD COLUMN IF NOT EXISTS excluido_em TIMESTAMPTZ`),
+  ]);
 };
 
 const getTenantConnection = async (tenantSchema) => {

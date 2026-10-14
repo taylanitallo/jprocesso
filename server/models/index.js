@@ -35,6 +35,7 @@ const defineTesDespesaModel = require('./TesDespesa');
 const defineTesGrupoContaModel = require('./TesGrupoConta');
 const defineLogModel = require('./Log');
 const defineRegistroExcluidoModel = require('./RegistroExcluido');
+const defineAgenteModel = require('./Agente');
 
 const initTenantModels = (sequelize) => {
   const User = defineUserModel(sequelize);
@@ -74,6 +75,8 @@ const initTenantModels = (sequelize) => {
   const TesGrupoConta = defineTesGrupoContaModel(sequelize);
   const Log = defineLogModel(sequelize);
   const RegistroExcluido = defineRegistroExcluidoModel(sequelize);
+  const Agente = defineAgenteModel(sequelize);
+  Agente.belongsTo(Secretaria, { foreignKey: 'secretaria_id', as: 'secretaria', constraints: false });
 
   // Contrato → Credor
   Contrato.belongsTo(Credor, { foreignKey: 'credor_id', as: 'credor' });
@@ -247,6 +250,7 @@ const initTenantModels = (sequelize) => {
     TesGrupoConta,
     Log,
     RegistroExcluido,
+    Agente,
   };
 };
 

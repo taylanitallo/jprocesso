@@ -190,6 +190,9 @@ const defineDidModel = (sequelize) => {
   }, {
     tableName: 'dids',
     timestamps: true,
+    // Lixeira: excluir só marca deleted_at; apagar de vez é pela tela Excluídos
+    paranoid: true,
+    deletedAt: 'deleted_at',
     underscored: true
   });
 };

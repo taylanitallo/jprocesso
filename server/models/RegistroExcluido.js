@@ -11,6 +11,8 @@ module.exports = (sequelize) => {
     excluido_por_id:   { type: DataTypes.UUID },
     excluido_por_nome: { type: DataTypes.STRING(255) },
     excluido_em:       { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+    restauravel:       { type: DataTypes.BOOLEAN, defaultValue: true },
+    motivo_bloqueio:   { type: DataTypes.TEXT },
   }, {
     tableName: 'registros_excluidos',
     timestamps: false,
