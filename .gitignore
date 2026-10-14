@@ -75,3 +75,7 @@ SYSTEM_PROMPT.md
 
 # Estado local do preparo da demo: aponta para valores de UMA m�quina/execu��o.
 server/scripts/seed_demo_tensao.backup.json
+
+# Vídeo de apresentação gerado (apresentacao/video/montar.js)
+apresentacao/video/*.mp4
+apresentacao/telas-2026/

@@ -249,6 +249,7 @@ const CENAS = {
       if (!(await cx.isChecked())) await cx.check();
     }
     await digitar(p, campo(p, 'Nº do parecer'), 'PJ 071/2026', 70);
+    await rolar(p, 320, 900); // botão acima da barra fixa do rodapé
     await apontar(p, p.getByRole('button', { name: 'Concluir e assinar' }).first(), { clicar: true });
     await apontar(p, p.getByRole('button', { name: 'Concluir e assinar' }).last(), { clicar: true });
     await assinar(p);
@@ -315,7 +316,8 @@ const CENAS = {
     await p.mouse.move(800, 400, { steps: 15 });
     await rolar(p, 300, 1500);
     await ir(p, '/almoxarifado/requisicoes');
-    for (const t of ['Entregue', 'Autorizada', 'Em Separação']) await apontar(p, t, { pausa: 700 }).catch(() => {});
+    const linhas = p.locator('tbody tr:visible');
+    for (let i = 0; i < Math.min(5, await linhas.count()); i++) await apontar(p, linhas.nth(i), { pausa: 650 }).catch(() => {});
   } },
 
   's11-patrimonio': { usuario: 'admin', inicio: (p) => ir(p, '/patrimonio/painel'), acao: async (p) => {
@@ -327,9 +329,9 @@ const CENAS = {
   's12-seguranca': { usuario: 'admin', inicio: (p) => ir(p, '/contratos/licitacoes'), acao: async (p) => {
     await apontar(p, p.getByRole('button', { name: /Excluídos/ }).first(), { clicar: true });
     await esperar(1200);
-    await apontar(p, 'EXCLUÍDO POR', { pausa: 900 }).catch(() => {});
-    await apontar(p, p.getByRole('button', { name: /Restaurar selecionados/ }), { pausa: 900 }).catch(() => {});
-    await p.keyboard.press('Escape');
+    await apontar(p, p.locator('tbody tr:visible').first(), { pausa: 1500 }).catch(() => {});
+    await p.mouse.move(1100, 860, { steps: 20 }); await esperar(1200);
+    await p.keyboard.press('Escape'); await esperar(500);
     await ir(p, '/registros');
     await rolar(p, 300, 1500);
   } },
@@ -346,9 +348,11 @@ const CENAS = {
   } },
 
   's14-celular': { usuario: 'admin', celular: true, inicio: (p) => ir(p, ''), acao: async (p) => {
-    await esperar(1200);
+    await esperar(1500);
     await rolar(p, 600, 2500);
     await ir(p, '/financeiro/painel');
+    await p.getByText('Valor Bruto Total').first().waitFor({ timeout: 15000 }).catch(() => {});
+    await esperar(800);
     await rolar(p, 500, 2200);
   } },
 };
@@ -367,12 +371,13 @@ const CENAS = {
     const alvo = (DUR[cena.id] || 8) + 1.4; // narração + respiro
     process.stdout.write(`${cena.id} (${alvo.toFixed(1)}s) ... `);
     if (cena.id === 's13-verificacao') ctxGlobal.ultimaAssinatura = await ultimaAssinatura();
-    const tamanho = def.celular ? { width: 390, height: 844 } : TELA;
+    // celular: tela gravada no tamanho exato da moldura do vídeo (montar.js)
+    const tamanho = def.celular ? { width: 478, height: 1004 } : TELA;
     const context = await browser.newContext({
-      viewport: tamanho, deviceScaleFactor: def.celular ? 2 : 1, isMobile: !!def.celular, hasTouch: !!def.celular,
+      viewport: tamanho, deviceScaleFactor: 1, isMobile: !!def.celular, hasTouch: !!def.celular,
       locale: 'pt-BR', timezoneId: 'America/Fortaleza', colorScheme: 'light',
       storageState: def.usuario ? estados[def.usuario] : undefined,
-      recordVideo: { dir: DIR_CENAS, size: def.celular ? { width: 780, height: 1688 } : TELA },
+      recordVideo: { dir: DIR_CENAS, size: tamanho },
     });
     await context.addInitScript(() => { try { localStorage.setItem('theme', 'light'); localStorage.setItem('subdomain', 'modelo'); } catch {} });
     await context.addInitScript(SCRIPT_PALCO(cena.legenda));
