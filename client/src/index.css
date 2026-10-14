@@ -520,6 +520,17 @@
   50%      { opacity: 0.7; }
 }
 
+/* Escala padrão no computador: o sistema em 100% do navegador fica como ficava
+   em 80% (mais conteúdo por tela, menos rolagem). Celular e tablet não mudam.
+   O que ocupa a tela inteira (100vh) é compensado para continuar ocupando.
+   Elementos posicionados por coordenada de tela: utils/escalaTela.js. */
+@media screen and (min-width: 1024px) {
+  html { zoom: 0.8; }
+  html, body, #root { height: 125vh; }
+  .h-screen { height: 125vh; }
+  .min-h-screen { min-height: 125vh; }
+}
+
 /* print */
 @media print {
   @page { size: A4 portrait; margin: 0; }

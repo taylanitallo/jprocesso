@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Copy, Check, Link2 } from 'lucide-react'
+import { escalaTela } from '../utils/escalaTela'
 
 const copiarTexto = async (texto) => {
   try {
@@ -50,8 +51,9 @@ export default function NumeroProcesso({ numero, linkConsulta, className = '' })
     e.preventDefault()
     e.stopPropagation()
     // mantém o menu dentro da tela
-    const x = Math.min(e.clientX, window.innerWidth - 250)
-    const y = Math.min(e.clientY, window.innerHeight - 110)
+    const z = escalaTela()
+    const x = Math.min(e.clientX / z, window.innerWidth / z - 250)
+    const y = Math.min(e.clientY / z, window.innerHeight / z - 110)
     setMenu({ x, y })
     setCopiado(null)
   }
