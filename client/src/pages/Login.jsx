@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext'
 import { Eye, EyeOff, Search, LogIn, Building2, Scale, ShieldCheck } from 'lucide-react'
 import api, { apiUrl } from '../services/api'
 import BotaoTema from '../components/BotaoTema'
+import { aplicarTema } from '../utils/tema'
 
 // Acessos públicos do município: consulta, legislação e verificação de assinaturas
 function LinksPublicos({ subdomain }) {
@@ -55,6 +56,7 @@ export default function Login() {
     try {
       const response = await api.get(`/tenants/info?subdomain=${sub}`)
       setTenantInfo(response.data)
+      aplicarTema(response.data?.tenant?.configuracoes, sub)
     } catch (err) {
       // Só 404 significa município inexistente. Limite de requisições, rede ou
       // servidor fora não podem esconder a tela de login atrás de "não encontrada".

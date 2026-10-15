@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import AbaLegislacao from './superadmin/AbaLegislacao';
 import BotaoTema from '../components/BotaoTema';
+import SeletorTema from '../components/SeletorTema';
+import { temaDaConfiguracao } from '../utils/tema';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -528,7 +530,11 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
 
   const [editNome, setEditNome]   = useState(tenant.nome_municipio);
   const [editAtivo, setEditAtivo] = useState(tenant.ativo);
-  const [cor, setCor]             = useState(tenant.configuracoes?.cor_primaria || '#1e3a5f');
+  // Tema do sistema (substitui a antiga "Cor do Menu Lateral"; o cor_primaria vira tema na leitura)
+  const [tema, setTema] = useState(() => {
+    const t = temaDaConfiguracao(tenant.configuracoes || {});
+    return { tema: t.id, tema_cor: t.id === 'personalizado' ? t.cor : (tenant.configuracoes?.tema_cor || '#2547eb'), tema_menu: t.menu };
+  });
   const [modulosHabilitados, setModulosHabilitados] = useState(tenant.configuracoes?.modulos_habilitados || []);
   const [saveLoading, setSaveLoading] = useState(false);
 
@@ -810,7 +816,9 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
         // Só os campos editados aqui — o servidor faz o merge. Reenviar o objeto
         // inteiro (possivelmente desatualizado) apagaria logos enviadas há pouco.
         configuracoes: {
-          cor_primaria: cor,
+          tema: tema.tema,
+          tema_cor: tema.tema_cor,
+          tema_menu: tema.tema_menu,
           modulos_habilitados: modulosHabilitados
         }
       });
@@ -2174,15 +2182,10 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                       <option value="false">Inativo</option>
                     </select>
                   </div>
-                  <div className="col-span-2">
-                    <label className="block text-sm font-medium text-ink-700 mb-1">Cor do Menu Lateral</label>
-                    <div className="flex items-center gap-2">
-                      <input type="color" value={cor} onChange={e => setCor(e.target.value)}
-                        className="w-10 h-10 rounded-sm border border-ink-300 cursor-pointer" />
-                      <input value={cor} onChange={e => setCor(e.target.value)}
-                        className="flex-1 px-3 py-2 border border-ink-300 rounded-lg text-sm font-mono bg-surface dark:text-white" />
-                    </div>
-                  </div>
+                </div>
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-ink-700 mb-2">Tema do sistema</label>
+                  <SeletorTema valor={tema} onChange={setTema} />
                 </div>
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-ink-700 mb-2">Módulos Habilitados</label>
