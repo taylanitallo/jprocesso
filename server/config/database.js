@@ -208,6 +208,16 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
         created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
         updated_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
       );
+
+      -- 2º fator alternativo: código de uso único enviado por e-mail (quem está sem
+      -- o celular). Só o hash do código fica gravado; vale 10 min e 5 tentativas.
+      CREATE TABLE IF NOT EXISTS usuario_codigo_email (
+        usuario_id  UUID         PRIMARY KEY,
+        codigo_hash TEXT         NOT NULL,
+        expira_em   TIMESTAMPTZ  NOT NULL,
+        tentativas  INTEGER      NOT NULL DEFAULT 0,
+        enviado_em  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+      );
     `),
 
     // 0j. Lixeira — quem excluiu e quando. O registro em si continua na tabela de
@@ -1158,6 +1168,13 @@ const criarTabelasAssinaturaLegislacao = async () => {
       atualizado_em          TIMESTAMPTZ   NOT NULL DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS legislacoes_tenant_idx ON public.legislacoes (tenant_id, ordem);
+
+    -- Configurações gerais do sistema (ex.: servidor SMTP, cadastrado no superadmin)
+    CREATE TABLE IF NOT EXISTS public.config_sistema (
+      chave         VARCHAR(60)  PRIMARY KEY,
+      valor         JSONB        NOT NULL,
+      atualizado_em TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    );
   `).catch((err) => console.warn('[migration] assinatura/legislação:', err.message));
 };
 

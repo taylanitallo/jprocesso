@@ -20,8 +20,22 @@ const tratarErro = (res, err, contexto) => {
 // ── Status do app autenticador do usuário logado ──────────────────────────────
 router.get('/totp', ...tenantAuth, async (req, res) => {
   try {
-    res.json(await assinatura.statusTotp(req.tenantDb, req.user.id));
+    const status = await assinatura.statusTotp(req.tenantDb, req.user.id);
+    // e-mail é alternativa só para quem já tem o app e se o SMTP estiver cadastrado
+    const email_disponivel = status.configurado && await require('../services/emailService').smtpConfigurado(masterDb);
+    res.json({ ...status, email_disponivel });
   } catch (err) { tratarErro(res, err, 'status'); }
+});
+
+// ── Sem o celular: envia um código de uso único para o e-mail do usuário ─────
+router.post('/email/enviar', ...tenantAuth, async (req, res) => {
+  try {
+    const usuario = await req.models.User.findByPk(req.user.id, { attributes: ['id', 'nome', 'email'] });
+    if (!usuario) return res.status(404).json({ error: 'Usuário não encontrado' });
+    const r = await assinatura.enviarCodigoEmail({ db: req.tenantDb, masterDb, usuario, tenant: req.tenant });
+    await registrarLog(req, { acao: 'codigo_email_assinatura', modulo: 'assinatura', descricao: `Pediu código de assinatura por e-mail (${r.email})` });
+    res.json(r);
+  } catch (err) { tratarErro(res, err, 'email'); }
 });
 
 // ── Inicia o cadastro: gera segredo e QR code para o app ─────────────────────

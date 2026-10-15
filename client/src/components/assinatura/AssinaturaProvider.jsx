@@ -14,14 +14,15 @@
 //  qualquer outro erro é repassado a quem chamou.
 // ══════════════════════════════════════════════════════════════════════════════
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { ShieldCheck, Smartphone, X, Loader2, AlertTriangle, KeyRound } from 'lucide-react'
+import { ShieldCheck, Smartphone, X, Loader2, AlertTriangle, KeyRound, Mail } from 'lucide-react'
 import api from '../../services/api'
 
 const AssinaturaContext = createContext({ assinar: async () => null, configurarAutenticador: async () => false })
 export const useAssinatura = () => useContext(AssinaturaContext)
 
 // Erros que o próprio modal resolve (o usuário corrige e tenta de novo)
-const ERROS_DE_CREDENCIAL = ['SENHA_OBRIGATORIA', 'SENHA_INVALIDA', 'CODIGO_OBRIGATORIO', 'TOTP_INVALIDO', 'TOTP_REUTILIZADO']
+const ERROS_DE_CREDENCIAL = ['SENHA_OBRIGATORIA', 'SENHA_INVALIDA', 'CODIGO_OBRIGATORIO', 'TOTP_INVALIDO', 'TOTP_REUTILIZADO',
+  'EMAIL_SEM_CODIGO', 'EMAIL_EXPIRADO', 'EMAIL_BLOQUEADO', 'EMAIL_INVALIDO']
 
 export default function AssinaturaProvider({ children }) {
   const [pedido, setPedido] = useState(null) // { titulo, resumo, executar }
@@ -68,6 +69,31 @@ function ModalAssinatura({ pedido, onSucesso, onCancelar, onErro }) {
   const [erro, setErro] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [cadastro, setCadastro] = useState(null) // { qrcode, segredo }
+  // Sem o celular: código de uso único enviado por e-mail (só aparece se o SMTP estiver cadastrado)
+  const [emailDisponivel, setEmailDisponivel] = useState(false)
+  const [viaEmail, setViaEmail] = useState(null) // { email, validade_minutos } depois do envio
+  const [enviandoEmail, setEnviandoEmail] = useState(false)
+  const [esperaReenvio, setEsperaReenvio] = useState(0)
+
+  useEffect(() => {
+    if (soCadastro) return
+    api.get('/assinaturas/totp', { _silent: true }).then(r => setEmailDisponivel(!!r.data?.email_disponivel)).catch(() => {})
+  }, [soCadastro])
+  useEffect(() => {
+    if (esperaReenvio <= 0) return
+    const t = setTimeout(() => setEsperaReenvio(n => n - 1), 1000)
+    return () => clearTimeout(t)
+  }, [esperaReenvio])
+
+  const pedirCodigoEmail = async () => {
+    setErro(''); setEnviandoEmail(true)
+    try {
+      const { data } = await api.post('/assinaturas/email/enviar')
+      setViaEmail(data); setCodigo(''); setEsperaReenvio(60)
+    } catch (er) {
+      setErro(er.response?.data?.error || 'Não foi possível enviar o código por e-mail.')
+    } finally { setEnviandoEmail(false) }
+  }
 
   const iniciarCadastro = async () => {
     setEtapa('cadastro'); setErro(''); setCodigo('')
@@ -99,10 +125,12 @@ function ModalAssinatura({ pedido, onSucesso, onCancelar, onErro }) {
     e.preventDefault()
     setErro('')
     if (!senha) return setErro('Informe sua senha.')
-    if (!/^\d{6}$/.test(codigo)) return setErro('Informe os 6 dígitos do aplicativo autenticador.')
+    if (!/^\d{6}$/.test(codigo)) return setErro(viaEmail ? 'Informe os 6 dígitos enviados para o seu e-mail.' : 'Informe os 6 dígitos do aplicativo autenticador.')
     setEnviando(true)
     try {
-      const resultado = await pedido.executar({ senhaConfirmacao: senha, codigoTotp: codigo })
+      const resultado = await pedido.executar(viaEmail
+        ? { senhaConfirmacao: senha, codigoEmail: codigo }
+        : { senhaConfirmacao: senha, codigoTotp: codigo })
       onSucesso(resultado)
     } catch (er) {
       const cod = er.response?.data?.codigo
@@ -166,9 +194,30 @@ function ModalAssinatura({ pedido, onSucesso, onCancelar, onErro }) {
             </div>
             <div>
               <label className="block text-xs font-semibold text-ink-600 mb-1.5 flex items-center gap-1.5">
-                <Smartphone className="w-3.5 h-3.5" /> Código do aplicativo autenticador
+                {viaEmail
+                  ? <><Mail className="w-3.5 h-3.5" /> Código enviado para {viaEmail.email}</>
+                  : <><Smartphone className="w-3.5 h-3.5" /> Código do aplicativo autenticador</>}
               </label>
               {campoCodigo}
+              {viaEmail ? (
+                <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-ink-500">
+                  <span>Vale por {viaEmail.validade_minutos} minutos e só pode ser usado uma vez. Confira também a caixa de spam.</span>
+                  <span className="flex gap-3">
+                    <button type="button" onClick={pedirCodigoEmail} disabled={enviandoEmail || esperaReenvio > 0}
+                      className="font-semibold text-brand-600 hover:underline disabled:text-ink-400 disabled:no-underline">
+                      {esperaReenvio > 0 ? `Reenviar em ${esperaReenvio}s` : 'Reenviar'}
+                    </button>
+                    <button type="button" onClick={() => { setViaEmail(null); setCodigo(''); setErro('') }}
+                      className="font-semibold text-brand-600 hover:underline">Usar o aplicativo</button>
+                  </span>
+                </div>
+              ) : emailDisponivel && (
+                <button type="button" onClick={pedirCodigoEmail} disabled={enviandoEmail}
+                  className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-brand-600 hover:underline disabled:opacity-60">
+                  {enviandoEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
+                  Estou sem o celular — receber o código por e-mail
+                </button>
+              )}
             </div>
             <p className="text-[11px] leading-relaxed text-ink-500">
               Assinatura eletrônica avançada (Lei Federal nº 14.063/2020, art. 4º, II), de uso pessoal e intransferível.
