@@ -5,7 +5,7 @@ import { hasPerm } from '../utils/permissions'
 import {
   Home, Building2, LogOut, Menu, X, Inbox, BarChart3, Settings,
   Users, Package, Sun, Moon, ChevronRight, ChevronLeft, DollarSign, ScrollText,
-  Lock, Landmark, ClipboardList, Archive,
+  Lock, Landmark, ClipboardList, Archive, RefreshCw,
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import JAI from './JAI'
@@ -27,6 +27,28 @@ export default function Layout() {
   const [profileOpen, setProfileOpen] = useState(false)
   const [showJAI, setShowJAI] = useState(true)
   const [geoLocation, setGeoLocation] = useState('')
+  const [meuIp, setMeuIp] = useState('')
+  const [atualizando, setAtualizando] = useState(false)
+
+  // IP de onde o usuário acessa (o navegador não enxerga o IP da máquina; quem vê é o servidor)
+  useEffect(() => {
+    api.get('/auth/meu-ip', { _silent: true }).then(r => setMeuIp(r.data?.ip || '')).catch(() => {})
+  }, [])
+
+  // Atualiza o sistema sem sair: descarta o que o navegador guardou e recarrega a
+  // versão mais nova (a sessão continua — ela é restaurada pelo cookie de acesso)
+  const atualizarSistema = async () => {
+    setAtualizando(true)
+    try {
+      if ('caches' in window) {
+        const chaves = await caches.keys()
+        await Promise.all(chaves.map(k => caches.delete(k)))
+      }
+      await fetch(window.location.pathname, { cache: 'reload' }).catch(() => {})
+    } finally {
+      window.location.reload()
+    }
+  }
   const profileRef = useRef(null)
 
   const BR_STATES = {
@@ -321,6 +343,16 @@ export default function Layout() {
               {/* Direita: tema + perfil colados */}
               <div ref={profileRef} className="ml-auto relative flex items-center gap-4 shrink-0">
 
+                {/* Atualizar o sistema (sem sair, sem F5) */}
+                <button
+                  onClick={atualizarSistema}
+                  disabled={atualizando}
+                  className="p-2 rounded-lg text-ink-500 hover:bg-ink-100 transition-colors shrink-0 disabled:opacity-60"
+                  title="Atualizar o sistema (carrega a versão mais nova sem sair)"
+                >
+                  <RefreshCw className={`h-4 w-4 ${atualizando ? 'animate-spin' : ''}`} />
+                </button>
+
                 {/* Botão tema */}
                 <button
                   onClick={toggleTheme}
@@ -409,16 +441,17 @@ export default function Layout() {
       <footer className="fixed bottom-0 left-0 right-0 z-40 h-8 flex items-center bg-surface border-t border-ink-200 px-3 sm:px-4">
         {/* Mobile: só nome do sistema + hora */}
         <div className="sm:hidden w-full flex items-center justify-between text-[10px] text-ink-400">
-          <span className="font-medium text-ink-500 truncate">JEOS Sistema de Governo</span>
+          <span className="font-medium text-ink-500 truncate">JEOS Sistema de Governo · V{__APP_VERSION__}</span>
           <span className="tabular-nums shrink-0 ml-2">{fmtHora(now)}</span>
         </div>
         {/* Desktop: 3 colunas */}
         <div className="hidden sm:grid w-full grid-cols-3 items-center text-[11px] text-ink-400">
           <span className="flex items-center gap-1 truncate">
             {geoLocation ? <>📍 {geoLocation}</> : <span className="opacity-40">localizando...</span>}
+            {meuIp && <span className="ml-2 tabular-nums" title="IP de onde você está acessando">· IP {meuIp}</span>}
           </span>
           <span className="text-center font-medium text-ink-500 whitespace-nowrap">
-            JEOS Sistema de Governo &copy;
+            JEOS Sistema de Governo &copy; <span className="ml-1 font-normal text-ink-400 tabular-nums">· V{__APP_VERSION__}</span>
           </span>
           <span className="text-right tabular-nums capitalize">
             {fmtData(now)} &middot; {fmtHora(now)}
