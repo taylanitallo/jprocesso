@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { usePode } from '../../utils/permissions'
 import {
   PackageOpen, Tag, FileText, Search, X, Plus, Edit3, Trash2, Eye,
   BarChart2, List, Check, AlertTriangle, Printer, ChevronUp, ChevronDown,
@@ -961,6 +962,8 @@ function ExcluirSemVinculoModal({ onClose, onSucesso }) {
 }
 
 function TabItens() {
+  // Ações conforme o editor de permissões. Só "Ver" = sem botões de ação.
+  const pode = usePode('contratos', 'itens')
   const { user, tenant } = useAuth()
   const isAdmin = user?.tipo === 'admin' || user?.tipo === 'jeos'
   const urlImportacao = tenant?.configuracoes?.url_importacao_itens || ''
@@ -1169,18 +1172,24 @@ function TabItens() {
 
       {/* ── Barra de Ações ── */}
       <div className="flex flex-wrap items-center gap-2 pb-2">
-        <button onClick={() => setModal('novo')}
-          className="flex items-center gap-1.5 h-7 px-3 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
-          <Plus className="w-3.5 h-3.5" /> Incluir
-        </button>
-        <button onClick={abrirEditar} disabled={!podeAgir}
-          className="flex items-center gap-1.5 h-7 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-          <Edit3 className="w-3.5 h-3.5" /> Alterar
-        </button>
-        <button onClick={abrirExcluir} disabled={!podeAgir}
-          className="flex items-center gap-1.5 h-7 px-3 bg-danger-600 hover:bg-danger-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-          <Trash2 className="w-3.5 h-3.5" /> Excluir
-        </button>
+        {pode('criar') && (
+          <button onClick={() => setModal('novo')}
+            className="flex items-center gap-1.5 h-7 px-3 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+            <Plus className="w-3.5 h-3.5" /> Incluir
+          </button>
+        )}
+        {pode('editar') && (
+          <button onClick={abrirEditar} disabled={!podeAgir}
+            className="flex items-center gap-1.5 h-7 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+            <Edit3 className="w-3.5 h-3.5" /> Alterar
+          </button>
+        )}
+        {pode('excluir') && (
+          <button onClick={abrirExcluir} disabled={!podeAgir}
+            className="flex items-center gap-1.5 h-7 px-3 bg-danger-600 hover:bg-danger-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+            <Trash2 className="w-3.5 h-3.5" /> Excluir
+          </button>
+        )}
         <button onClick={abrirVisualizar} disabled={!podeAgir}
           className="flex items-center gap-1.5 h-7 px-3 bg-ink-600 hover:bg-ink-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
           <Eye className="w-3.5 h-3.5" /> Visualizar
@@ -1189,18 +1198,24 @@ function TabItens() {
 
         {isAdmin && (
           <>
-            <button onClick={() => setModal('importar-url')}
-              className="flex items-center gap-1.5 h-7 px-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
-              <Download className="w-3.5 h-3.5" /> Importar Itens
-            </button>
-            <button onClick={() => setModal('excluir-inativos')}
-              className="flex items-center gap-1.5 h-7 px-3 bg-danger-700 hover:bg-danger-800 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
-              <XOctagon className="w-3.5 h-3.5" /> Excluir Inativos
-            </button>
-            <button onClick={() => setModal('excluir-sem-vinculo')}
-              className="flex items-center gap-1.5 h-7 px-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
-              <XOctagon className="w-3.5 h-3.5" /> Excluir Sem Vínculo
-            </button>
+            {pode('criar') && (
+              <button onClick={() => setModal('importar-url')}
+                className="flex items-center gap-1.5 h-7 px-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                <Download className="w-3.5 h-3.5" /> Importar Itens
+              </button>
+            )}
+            {pode('excluir') && (
+              <button onClick={() => setModal('excluir-inativos')}
+                className="flex items-center gap-1.5 h-7 px-3 bg-danger-700 hover:bg-danger-800 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                <XOctagon className="w-3.5 h-3.5" /> Excluir Inativos
+              </button>
+            )}
+            {pode('excluir') && (
+              <button onClick={() => setModal('excluir-sem-vinculo')}
+                className="flex items-center gap-1.5 h-7 px-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                <XOctagon className="w-3.5 h-3.5" /> Excluir Sem Vínculo
+              </button>
+            )}
           </>
         )}
 

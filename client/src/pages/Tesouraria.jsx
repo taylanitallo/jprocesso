@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { hasPerm } from '../utils/permissions';
+import { hasPerm, usePode } from '../utils/permissions';
 import { conferirAbasDoModulo } from '../utils/permissoesSchema';
 import api from '../services/api';
 import { Paginacao, usePaginacao } from '../components/ui';
@@ -164,6 +164,8 @@ function BankSearchInput({ value, onChange, onSelect, bancos }) {
 
 // ─── Tab: Contas Bancárias ──────────────────────────────────────────────────────
 function TabContas({ secretarias }) {
+  // Ações conforme o editor de permissões. Só "Ver" = sem botões de ação.
+  const pode = usePode('tesouraria', 'contas')
   const [contas, setContas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -291,9 +293,11 @@ function TabContas({ secretarias }) {
         <div className="mr-auto">
           <BotaoExcluidos entidade="contas_bancarias" rotulo="Contas excluídas" onAlterado={load} />
         </div>
-        <button onClick={openNew} className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1 h-7">
-          <Plus className="h-3.5 w-3.5" /> Nova Conta
-        </button>
+        {pode('criar') && (
+          <button onClick={openNew} className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1 h-7">
+            <Plus className="h-3.5 w-3.5" /> Nova Conta
+          </button>
+        )}
       </div>
 
       <div className="card overflow-hidden">
@@ -353,12 +357,16 @@ function TabContas({ secretarias }) {
                     </td>
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-1">
-                        <button onClick={() => openEdit(c)} aria-label={`Editar conta ${c.nome}`} title="Editar" className="p-1 text-ink-400 hover:text-brand-600 dark:hover:text-info-400 rounded-sm transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500">
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </button>
-                        <button onClick={() => setConfirmarExcluir(c)} aria-label={`Excluir conta ${c.nome}`} title="Excluir" className="p-1 text-ink-400 hover:text-danger-600 dark:hover:text-danger-400 rounded-sm transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        {pode('editar') && (
+                          <button onClick={() => openEdit(c)} aria-label={`Editar conta ${c.nome}`} title="Editar" className="p-1 text-ink-400 hover:text-brand-600 dark:hover:text-info-400 rounded-sm transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500">
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        {pode('excluir') && (
+                          <button onClick={() => setConfirmarExcluir(c)} aria-label={`Excluir conta ${c.nome}`} title="Excluir" className="p-1 text-ink-400 hover:text-danger-600 dark:hover:text-danger-400 rounded-sm transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -509,6 +517,8 @@ function TabContas({ secretarias }) {
 
 // ─── Tab: Receitas ──────────────────────────────────────────────────────────────
 function TabReceitas() {
+  // Ações conforme o editor de permissões. Só "Ver" = sem botões de ação.
+  const pode = usePode('tesouraria', 'receitas')
   const { tenant } = useAuth();
   const [contas, setContas] = useState([]);
   const [receitas, setReceitas] = useState([]);
@@ -789,9 +799,11 @@ tfoot .val{font-size:15px;color:#15803d}
         >
           <Printer className="h-3.5 w-3.5" /> Imprimir / PDF
         </button>
-        <button onClick={openNew} className="btn-primary text-xs px-3 py-1 flex items-center gap-1.5 h-7">
-          <Plus className="h-3.5 w-3.5" /> Novo Lançamento
-        </button>
+        {pode('criar') && (
+          <button onClick={openNew} className="btn-primary text-xs px-3 py-1 flex items-center gap-1.5 h-7">
+            <Plus className="h-3.5 w-3.5" /> Novo Lançamento
+          </button>
+        )}
       </div>
 
       {/* Extrato */}
@@ -867,20 +879,24 @@ tfoot .val{font-size:15px;color:#15803d}
                           <td className="px-4 py-3">
                             {/* Visível no hover e também ao navegar pelo teclado (focus-within) */}
                             <div className="flex gap-0.5 justify-end opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
-                              <button
-                                onClick={() => openEdit(r)}
-                                aria-label={`Editar receita ${r.descricao}`} title="Editar"
-                                className="p-1.5 text-ink-400 hover:text-info-500 dark:hover:text-info-400 rounded-lg hover:bg-info-50 dark:hover:bg-info-900/20 transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500"
-                              >
-                                <Edit2 className="h-3.5 w-3.5" />
-                              </button>
-                              <button
-                                onClick={() => setConfirmarExcluir(r)}
-                                aria-label={`Excluir receita ${r.descricao}`} title="Excluir"
-                                className="p-1.5 text-ink-400 hover:text-danger-500 dark:hover:text-danger-400 rounded-lg hover:bg-danger-50 dark:hover:bg-danger-900/20 transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
+                              {pode('editar') && (
+                                <button
+                                  onClick={() => openEdit(r)}
+                                  aria-label={`Editar receita ${r.descricao}`} title="Editar"
+                                  className="p-1.5 text-ink-400 hover:text-info-500 dark:hover:text-info-400 rounded-lg hover:bg-info-50 dark:hover:bg-info-900/20 transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500"
+                                >
+                                  <Edit2 className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                              {pode('excluir') && (
+                                <button
+                                  onClick={() => setConfirmarExcluir(r)}
+                                  aria-label={`Excluir receita ${r.descricao}`} title="Excluir"
+                                  className="p-1.5 text-ink-400 hover:text-danger-500 dark:hover:text-danger-400 rounded-lg hover:bg-danger-50 dark:hover:bg-danger-900/20 transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>

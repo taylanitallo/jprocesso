@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { usePode } from '../utils/permissions'
 import { RefreshCw, ArrowLeftRight, UserCheck } from 'lucide-react'
 import api from '../services/api'
 import SectionTitle from '../components/ui/SectionTitle'
@@ -7,6 +8,8 @@ import ActionBar from '../components/ui/ActionBar'
 const base = 'w-full border rounded-lg px-3 py-2 text-sm dark:text-white focus:outline-hidden focus:ring-2 focus:ring-warning-300'
 
 export default function PatTransferencia({ bem, onSuccess, onCancel }) {
+  // Ações conforme o editor de permissões. Só "Ver" = sem botões de ação.
+  const pode = usePode('patrimonio', 'transferencia')
   const [loading, setLoading]   = useState(false)
   const [secretarias, setSecs]  = useState([])
   const [setores, setSetores]   = useState([])
@@ -163,11 +166,13 @@ export default function PatTransferencia({ bem, onSuccess, onCancel }) {
               Cancelar
             </button>
           )}
-          <button type="submit" disabled={loading}
-            className="flex items-center gap-2 px-6 py-2 bg-warning-600 dark:bg-warning-700 text-white rounded-lg text-sm hover:bg-warning-700 dark:hover:bg-warning-800 disabled:opacity-60">
-            {loading && <RefreshCw className="h-4 w-4 animate-spin" />}
-            Confirmar Transferência
-          </button>
+          {pode('realizar') && (
+            <button type="submit" disabled={loading}
+              className="flex items-center gap-2 px-6 py-2 bg-warning-600 dark:bg-warning-700 text-white rounded-lg text-sm hover:bg-warning-700 dark:hover:bg-warning-800 disabled:opacity-60">
+              {loading && <RefreshCw className="h-4 w-4 animate-spin" />}
+              Confirmar Transferência
+            </button>
+          )}
         </ActionBar>
       </div>
     </form>

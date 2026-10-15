@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from 'react-query'
+import { usePode } from '../utils/permissions'
 import BotaoExcluidos from '../components/lixeira/BotaoExcluidos'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useState, useCallback } from 'react'
@@ -40,6 +41,8 @@ const PRIO_INFO = {
 
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function Processos() {
+  // Ações conforme o editor de permissões. Só "Ver" = sem botões de ação.
+  const pode = usePode('processos')
   const { subdomain } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const aba = searchParams.get('aba') || 'entrada'
@@ -198,10 +201,12 @@ export default function Processos() {
         actions={
           <div className="flex items-center gap-2">
             <BotaoExcluidos entidade="processos" onAlterado={() => queryClient.invalidateQueries('processos')} />
-            <Link to={`/${subdomain}/processos/novo`} className="btn-primary">
-              <Plus className="h-3.5 w-3.5" />
-              Novo Processo
-            </Link>
+            {pode('criar') && (
+              <Link to={`/${subdomain}/processos/novo`} className="btn-primary">
+                <Plus className="h-3.5 w-3.5" />
+                Novo Processo
+              </Link>
+            )}
           </div>
         }
       />
@@ -388,10 +393,12 @@ export default function Processos() {
                   : 'A caixa de entrada está vazia'
               }
               action={!search && filtrosAtivos === 0 && (
-                <Link to={`/${subdomain}/processos/novo`} className="btn-primary">
-                  <Plus className="h-4 w-4" />
-                  Novo Processo
-                </Link>
+                pode('criar') && (
+                  <Link to={`/${subdomain}/processos/novo`} className="btn-primary">
+                    <Plus className="h-4 w-4" />
+                    Novo Processo
+                  </Link>
+                )
               )}
             />
           )}

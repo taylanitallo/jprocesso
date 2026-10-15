@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { login, register, getProfile, getUsersBySecretaria, listUsers, updateUser, deleteUser, refreshToken, logoutUser, buscarMunicipiosPorEmail } = require('../controllers/authController');
-const { authenticate, tenantMiddleware, requireTenant, authorize } = require('../middleware/auth');
+const { authenticate, tenantMiddleware, requireTenant, authorize, requirePermission } = require('../middleware/auth');
 
 // M-4: em produção, valida Origin nos endpoints que recebem o cookie cross-site
 // (refresh e logout). Previne CSRF: sem Origin válido → 403.
@@ -32,11 +32,11 @@ router.post('/logout',  validateRefreshOrigin, logoutUser);    // revoga refresh
 
 // ── Usuários (protegidos) ─────────────────────────────────────────────────────
 // A-5: register/updateUser/deleteUser requerem papel admin para evitar privilege escalation
-router.post('/register',       tenantMiddleware, requireTenant, authenticate, authorize('admin'), register);
+router.post('/register',       tenantMiddleware, requireTenant, authenticate, authorize('admin'), requirePermission('organizacao', 'usuarios', 'criar'), register);
 router.get('/profile',                 tenantMiddleware, requireTenant, authenticate, getProfile);
 router.get('/users/por-secretaria',    tenantMiddleware, requireTenant, authenticate, getUsersBySecretaria);
 router.get('/users',                   tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), listUsers);
-router.put('/users/:id',       tenantMiddleware, requireTenant, authenticate, authorize('admin'), updateUser);
-router.delete('/users/:id',    tenantMiddleware, requireTenant, authenticate, authorize('admin'), deleteUser);
+router.put('/users/:id',       tenantMiddleware, requireTenant, authenticate, authorize('admin'), requirePermission('organizacao', 'usuarios', 'editar'), updateUser);
+router.delete('/users/:id',    tenantMiddleware, requireTenant, authenticate, authorize('admin'), requirePermission('organizacao', 'usuarios', 'excluir'), deleteUser);
 
 module.exports = router;

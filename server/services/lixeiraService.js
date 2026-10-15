@@ -353,15 +353,15 @@ const ENTIDADES = {
 
 const ACOES = { ver: 'excluidos', restaurar: 'restaurar', apagar: 'apagar_excluidos' };
 
-// Admin e Administrador Jeos sempre podem. Os demais só com a ação ligada
-// explicitamente no editor de permissões (sem configuração = não pode).
+// Administrador Jeos sempre pode. Administrador pode até a ação ser desligada no
+// editor de permissões; os demais só com a ação ligada explicitamente.
 const pode = (user, entidade, acao) => {
-  if (user?.tipo === 'admin' || user?.tipo === 'jeos') return true;
+  if (require('../middleware/auth').ignoraPermissoes(user)) return true;
   const c = ENTIDADES[entidade];
   if (!c) return false;
   let obj = user?.permissoes;
   for (const k of c.perm) obj = obj?.[k];
-  return obj?.[ACOES[acao]] === true;
+  return user?.tipo === 'admin' ? obj?.[ACOES[acao]] !== false : obj?.[ACOES[acao]] === true;
 };
 
 const config = (entidade) => {

@@ -2,7 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import PermissoesEditor from '../components/PermissoesEditor';
+import ModalPermissoes from '../components/ModalPermissoes';
+import ModalConfigurarAutenticador from '../components/ModalConfigurarAutenticador';
+import { usePode, VERSAO_PERMISSOES } from '../utils/permissions';
 import LoadingBar from '../components/LoadingBar';
 import StatCard from '../components/ui/StatCard';
 import SectionTitle from '../components/ui/SectionTitle';
@@ -13,6 +15,8 @@ import BotaoExcluidos from '../components/lixeira/BotaoExcluidos';
 import { Paginacao, usePorPagina } from '../components/ui';
 import {
   Smartphone,
+  QrCode,
+  KeyRound,
   Users,
   UserPlus,
   Edit2, 
@@ -48,6 +52,10 @@ const DEFAULT_PERMISSOES = () => ({
 
 export default function Usuarios() {
   const { user, refreshUser } = useAuth();
+  // Organização › Usuários no editor de permissões. Só "Ver" = lista sem botões de ação.
+  const pode = usePode('organizacao', 'usuarios');
+  const [permUsuario, setPermUsuario] = useState(null);   // janela de Permissões
+  const [autUsuario, setAutUsuario] = useState(null);     // janela de configurar autenticador
   const [showModal, setShowModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -262,7 +270,6 @@ export default function Usuarios() {
       setorId: usuario.setor?.id || usuario.setorId || '',
       ativo: usuario.ativo,
       novaSenha: '',
-      permissoes: { ...DEFAULT_PERMISSOES(), ...(usuario.permissoes || {}) },
     });
     setShowEditPassword(false);
     setShowEditModal(true);
@@ -282,7 +289,6 @@ export default function Usuarios() {
         secretariaId: editData.secretariaId || null,
         setorId: editData.setorId || null,
         ativo: editData.ativo,
-        permissoes: editData.permissoes,
       };
       if (editData.novaSenha && editData.novaSenha.trim().length >= 6) {
         payload.novaSenha = editData.novaSenha.trim();
@@ -316,6 +322,7 @@ export default function Usuarios() {
     try {
       await api.post(`/assinaturas/totp/resetar/${usuario.id}`);
       alert('Autenticador revogado. O usuário fará um novo cadastro na próxima assinatura.');
+      fetchUsuarios();
     } catch (err) {
       alert(err.response?.data?.error || 'Erro ao revogar o autenticador.');
     }
@@ -344,16 +351,7 @@ export default function Usuarios() {
     const novoAtivo = !usuario.ativo;
     setUsuarios(prev => prev.map(u => u.id === usuario.id ? { ...u, ativo: novoAtivo } : u));
     try {
-      await api.put(`/auth/users/${usuario.id}`, {
-        nome: usuario.nome,
-        email: usuario.email,
-        cpf: usuario.cpf,
-        tipo: usuario.tipo,
-        secretariaId: usuario.secretaria?.id || usuario.secretariaId || null,
-        setorId: usuario.setor?.id || usuario.setorId || null,
-        ativo: novoAtivo,
-        permissoes: usuario.permissoes,
-      });
+      await api.put(`/auth/users/${usuario.id}`, { ativo: novoAtivo });
     } catch (error) {
       setUsuarios(prev => prev.map(u => u.id === usuario.id ? { ...u, ativo: usuario.ativo } : u));
       alert('Erro ao alterar status do usuário');
@@ -422,16 +420,18 @@ export default function Usuarios() {
                         <div className="text-xs text-ink-400">Baixar lista em .xlsx</div>
                       </div>
                     </button>
+                    {pode('criar') && (
                     <button
-                      onClick={() => { setShowIoMenu(false); importInputRef.current?.click(); }}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-ink-700 hover:bg-ink-50 text-left border-t border-ink-100"
-                    >
-                      <Upload className="h-4 w-4 text-brand-600" />
-                      <div>
-                        <div className="font-medium">Importar usuários</div>
-                        <div className="text-xs text-ink-400">Carregar planilha .xlsx</div>
-                      </div>
-                    </button>
+                        onClick={() => { setShowIoMenu(false); importInputRef.current?.click(); }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-ink-700 hover:bg-ink-50 text-left border-t border-ink-100"
+                      >
+                        <Upload className="h-4 w-4 text-brand-600" />
+                        <div>
+                          <div className="font-medium">Importar usuários</div>
+                          <div className="text-xs text-ink-400">Carregar planilha .xlsx</div>
+                        </div>
+                      </button>
+                    )}
                     <button
                       onClick={() => { setShowIoMenu(false); handleDownloadModelo(); }}
                       className="w-full flex items-center gap-3 px-4 py-3 text-sm text-ink-700 hover:bg-ink-50 text-left border-t border-ink-100"
@@ -455,10 +455,10 @@ export default function Usuarios() {
               onChange={handleImportFile}
             />
             <BotaoExcluidos entidade="usuarios" rotulo="Usuários excluídos" onAlterado={fetchUsuarios} />
-            <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1 h-7">
+            {pode('criar') && <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1 h-7">
               <UserPlus className="h-3.5 w-3.5" />
               Novo Usuário
-            </button>
+            </button>}
         </div>}
       />
 
@@ -534,8 +534,10 @@ export default function Usuarios() {
                 <td className="px-4 py-2 whitespace-nowrap">
                   <button
                     type="button"
-                    onClick={() => handleToggleStatus(usuario)}
-                    className="flex items-center gap-1"
+                    onClick={() => pode('editar') && handleToggleStatus(usuario)}
+                    disabled={!pode('editar')}
+                    title={pode('editar') ? 'Clique para ativar/inativar' : undefined}
+                    className="flex items-center gap-1 disabled:cursor-default"
                   >
                     {usuario.ativo ? (
                       <>
@@ -551,25 +553,45 @@ export default function Usuarios() {
                   </button>
                 </td>
                 <td className="px-4 py-2 whitespace-nowrap text-right text-sm font-medium">
-                  <button
-                    onClick={() => handleEdit(usuario)}
-                    className="text-brand-600 hover:text-info-900 mr-3"
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => handleRevogarAutenticador(usuario)}
-                    title="Revogar aplicativo autenticador (celular perdido ou trocado)"
-                    className="text-amber-600 hover:text-amber-800 mr-3"
-                  >
-                    <Smartphone className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(usuario)}
-                    className="text-danger-600 hover:text-danger-900"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <div className="inline-flex items-center gap-3">
+                    {pode('editar') && (
+                      <button onClick={() => handleEdit(usuario)} title="Alterar dados" className="text-brand-600 hover:text-info-900">
+                        <Edit2 className="h-4 w-4" />
+                      </button>
+                    )}
+                    {pode('permissoes') && usuario.id !== user?.id && (
+                      <button
+                        onClick={() => setPermUsuario({
+                          usuario,
+                          // Administrador nunca configurado aqui: começa tudo ligado (os desligados
+                          // antigos vieram do modelo de cadastro e nunca valeram para ele)
+                          permissoes: usuario.tipo === 'admin' && usuario.permissoes?._v !== VERSAO_PERMISSOES
+                            ? {}
+                            : { ...DEFAULT_PERMISSOES(), ...(usuario.permissoes || {}) },
+                        })}
+                        title="Permissões"
+                        className="text-violet-600 hover:text-violet-800"
+                      >
+                        <KeyRound className="h-4 w-4" />
+                      </button>
+                    )}
+                    {pode('autenticador') && (usuario.autenticador ? (
+                      <button onClick={() => handleRevogarAutenticador(usuario)}
+                        title="Revogar aplicativo autenticador (celular perdido ou trocado)" className="text-amber-600 hover:text-amber-800">
+                        <Smartphone className="h-4 w-4" />
+                      </button>
+                    ) : (
+                      <button onClick={() => setAutUsuario(usuario)}
+                        title="Configurar aplicativo autenticador (ainda não configurado)" className="text-emerald-600 hover:text-emerald-800">
+                        <QrCode className="h-4 w-4" />
+                      </button>
+                    ))}
+                    {pode('excluir') && (
+                      <button onClick={() => handleDelete(usuario)} title="Excluir" className="text-danger-600 hover:text-danger-900">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -584,13 +606,41 @@ export default function Usuarios() {
           rotulo="usuário" className="border-t border-ink-200 bg-ink-50 px-6" />
       </div>
 
+      {permUsuario && (
+        <ModalPermissoes
+          usuario={permUsuario.usuario}
+          permissoesIniciais={permUsuario.permissoes}
+          secretarias={secretarias}
+          onFechar={() => setPermUsuario(null)}
+          onSalvo={async () => {
+            setPermUsuario(null);
+            await fetchUsuarios();
+            setSuccessMessage('Permissões salvas!');
+            setTimeout(() => setSuccessMessage(''), 3000);
+          }}
+        />
+      )}
+
+      {autUsuario && (
+        <ModalConfigurarAutenticador
+          usuario={autUsuario}
+          onFechar={() => setAutUsuario(null)}
+          onConcluido={async () => {
+            setAutUsuario(null);
+            await fetchUsuarios();
+            setSuccessMessage('Aplicativo autenticador configurado!');
+            setTimeout(() => setSuccessMessage(''), 3000);
+          }}
+        />
+      )}
+
       {/* Modal Criar Usuário */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-surface rounded-xl max-w-4xl w-full my-8 shadow-xl">
             <div className="px-4 py-3 border-b border-ink-200 sticky top-0 bg-surface z-10">
               <h2 className="text-xl font-semibold text-ink-900">Novo Usuário</h2>
-              <p className="text-sm text-ink-500 mt-1">Preencha as informações do usuário</p>
+              <p className="text-sm text-ink-500 mt-1">Preencha as informações do usuário. Depois de cadastrar, ajuste as permissões no botão de chave da lista.</p>
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[calc(90vh-120px)] overflow-y-auto">
@@ -653,17 +703,6 @@ export default function Usuarios() {
                 </div>
               </div>
 
-              <div className="border-t pt-6">
-                <SectionTitle icon={Shield} title="Permissões de Acesso" />
-                <div className="mt-3">
-                  <PermissoesEditor
-                    permissoes={formData.permissoes}
-                    onChange={(p) => setFormData({ ...formData, permissoes: p })}
-                    secretariasList={secretarias}
-                  />
-                </div>
-              </div>
-
               <div className="pt-4 border-t sticky bottom-0 bg-surface">
                 <ActionBar>
                   <button type="button" onClick={() => setShowModal(false)} className="btn-secondary">Cancelar</button>
@@ -683,7 +722,7 @@ export default function Usuarios() {
           <div className="bg-surface rounded-xl w-[95%] my-8 shadow-xl">
             <div className="px-4 py-3 border-b border-ink-200 sticky top-0 bg-surface z-10">
               <h2 className="text-xl font-semibold text-ink-900">Editar Usuário</h2>
-              <p className="text-sm text-ink-500 mt-1">Atualize as informações e permissões</p>
+              <p className="text-sm text-ink-500 mt-1">Atualize as informações (permissões ficam no botão de chave da lista)</p>
             </div>
 
             <form onSubmit={handleSubmitEdit} className="p-6 space-y-4 max-h-[calc(90vh-120px)] overflow-y-auto">
@@ -751,18 +790,6 @@ export default function Usuarios() {
                     <div className="w-11 h-6 bg-ink-200 peer-focus:outline-hidden peer-focus:ring-4 peer-focus:ring-info-300 dark:peer-focus:ring-info-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface after:border-ink-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-600 relative" />
                     <span className="text-sm font-medium text-ink-700">Usuário ativo (pode fazer login)</span>
                   </label>
-                </div>
-              </div>
-
-              {/* Permissões */}
-              <div className="border-t pt-6">
-                <SectionTitle icon={Shield} title="Permissões de Acesso" />
-                <div className="mt-3">
-                  <PermissoesEditor
-                    permissoes={editData.permissoes}
-                    onChange={(p) => setEditData({ ...editData, permissoes: p })}
-                    secretariasList={secretarias}
-                  />
                 </div>
               </div>
 

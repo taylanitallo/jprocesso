@@ -92,7 +92,8 @@ function SecretariasCheckboxes({ secretariaIds, secretariasList, onChange }) {
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
-export default function PermissoesEditor({ permissoes, onChange, secretariasList = [] }) {
+// tipoAlvo: tipo do usuário editado — para o Administrador, o que não foi configurado vale ligado
+export default function PermissoesEditor({ permissoes, onChange, secretariasList = [], tipoAlvo }) {
   const [open, setOpen] = useState({})
   const { tenant } = useAuth()
 
@@ -111,7 +112,7 @@ export default function PermissoesEditor({ permissoes, onChange, secretariasList
   // (ex.: Excluídos, que só administradores têm até alguém ligar)
   const get = (modKey, acao, ...path) => {
     const val = getIn(perm[modKey], [...path, acao.key])
-    if (val === undefined) return acao.padrao !== false
+    if (val === undefined) return tipoAlvo === 'admin' || acao.padrao !== false
     return val !== false
   }
 

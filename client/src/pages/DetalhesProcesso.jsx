@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom'
+import { usePode } from '../utils/permissions'
 import { useQuery, useQueryClient } from 'react-query'
 import { useState, useRef, useEffect } from 'react'
 import api from '../services/api'
@@ -50,6 +51,8 @@ function InfoField({ icon: Icon, label, value, sub }) {
 }
 
 export default function DetalhesProcesso() {
+  // Ações conforme o editor de permissões. Só "Ver" = sem botões de ação.
+  const pode = usePode('processos')
   const { id, subdomain } = useParams()
   const navigate           = useNavigate()
   const fileInputRef       = useRef(null)
@@ -134,7 +137,7 @@ export default function DetalhesProcesso() {
     ['tramite', 'devolucao'].includes(ultimaTramitacao?.tipo_acao || ultimaTramitacao?.tipo)
 
   const podeAgir      = isResponsavel && !precisaReceber
-  const podeDevolver  = podeAgir && processo?.status !== 'aberto'
+  const podeDevolver  = podeAgir && processo?.status !== 'aberto' && pode('devolver')
 
   const handleReceber = async () => {
     setRecebendo(true)
@@ -630,14 +633,16 @@ export default function DetalhesProcesso() {
                     </>
                   )}
                   {processo.status !== 'concluido' && (
-                    <button
-                      onClick={() => setShowAnexar(true)}
-                      className="flex items-center gap-1.5 text-xs font-medium text-brand-600 dark:text-info-400
-                                 hover:text-brand-700 dark:hover:text-info-300 transition-colors"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      Anexar documento
-                    </button>
+                    pode('anexar_documento') && (
+                      <button
+                        onClick={() => setShowAnexar(true)}
+                        className="flex items-center gap-1.5 text-xs font-medium text-brand-600 dark:text-info-400
+                                   hover:text-brand-700 dark:hover:text-info-300 transition-colors"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Anexar documento
+                      </button>
+                    )
                   )}
                 </div>
               }
@@ -695,7 +700,7 @@ export default function DetalhesProcesso() {
                       >
                         <Download className="h-4 w-4" />
                       </button>
-                      {currentUser?.tipo === 'admin' && (
+                      {['admin', 'jeos'].includes(currentUser?.tipo) && pode('excluir_documento') && (
                         <button
                           onClick={() => setConfirmarExcluirDoc(doc.id)}
                           className="p-1.5 rounded-lg text-ink-400
@@ -718,13 +723,15 @@ export default function DetalhesProcesso() {
                 <p className="text-sm font-medium text-ink-600 mb-1">Nenhum arquivo anexado</p>
                 <p className="text-xs text-ink-400 mb-4">Ainda não há documentos vinculados a este processo.</p>
                 {processo.status !== 'concluido' && (
-                  <button
-                    onClick={() => setShowAnexar(true)}
-                    className="btn-primary"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Anexar documento
-                  </button>
+                  pode('anexar_documento') && (
+                    <button
+                      onClick={() => setShowAnexar(true)}
+                      className="btn-primary"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Anexar documento
+                    </button>
+                  )
                 )}
               </div>
             )}
@@ -931,22 +938,26 @@ export default function DetalhesProcesso() {
               {/* Ações de tramitação — somente após receber */}
               {processo.status !== 'concluido' && podeAgir && (
                 <>
-                  <button
-                    onClick={() => setShowTramitar(true)}
-                    className="w-full btn-primary justify-start"
-                  >
-                    <Send className="h-4 w-4" />
-                    Tramitar processo
-                  </button>
-                  <button
-                    onClick={() => setShowConcluir(true)}
-                    className="w-full inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
-                               bg-success-600 text-white hover:bg-success-700 shadow-sm hover:shadow-md
-                               active:scale-95 justify-start"
-                  >
-                    <CheckCircle className="h-4 w-4" />
-                    Concluir processo
-                  </button>
+                  {pode('tramitar') && (
+                    <button
+                      onClick={() => setShowTramitar(true)}
+                      className="w-full btn-primary justify-start"
+                    >
+                      <Send className="h-4 w-4" />
+                      Tramitar processo
+                    </button>
+                  )}
+                  {pode('concluir') && (
+                    <button
+                      onClick={() => setShowConcluir(true)}
+                      className="w-full inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
+                                 bg-success-600 text-white hover:bg-success-700 shadow-sm hover:shadow-md
+                                 active:scale-95 justify-start"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      Concluir processo
+                    </button>
+                  )}
                   {podeDevolver && (
                     <button
                       onClick={() => setShowDevolver(true)}
@@ -1036,8 +1047,8 @@ export default function DetalhesProcesso() {
                 </button>
               )}
 
-              {/* Excluir — somente admin */}
-              {currentUser?.tipo === 'admin' && (
+              {/* Excluir — somente admin, com a permissão Excluir */}
+              {['admin', 'jeos'].includes(currentUser?.tipo) && pode('excluir') && (
                 <>
                   <div className="border-t border-ink-100 pt-2 mt-1" />
                   <button

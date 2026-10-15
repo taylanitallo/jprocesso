@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { usePode } from '../utils/permissions'
 import { RefreshCw, Plus, Pencil, Layers } from 'lucide-react'
 import api from '../services/api'
 import { Paginacao, usePaginacao } from '../components/ui'
@@ -11,6 +12,8 @@ import ActionBar from '../components/ui/ActionBar'
 const base = 'w-full border rounded-lg px-3 py-2 text-sm dark:text-white focus:outline-hidden focus:ring-2 focus:ring-info-300'
 
 export default function PatGrupos() {
+  // Ações conforme o editor de permissões. Só "Ver" = sem botões de ação.
+  const pode = usePode('patrimonio', 'grupos')
   const [grupos, setGrupos]   = useState([])
   const [loading, setLoading] = useState(true)
   const [edit, setEdit]       = useState(null)   // null = novo; objeto = editar
@@ -80,10 +83,12 @@ export default function PatGrupos() {
             <button onClick={load} className="p-2 rounded-lg border border-ink-300 hover:bg-ink-50">
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
-            <button onClick={abrirNovo}
-              className="flex items-center gap-2 px-4 py-2 bg-brand-600 text-white rounded-lg text-sm hover:bg-brand-700">
-              <Plus className="h-4 w-4" /> Novo Grupo
-            </button>
+            {pode('gerenciar') && (
+              <button onClick={abrirNovo}
+                className="flex items-center gap-2 px-4 py-2 bg-brand-600 text-white rounded-lg text-sm hover:bg-brand-700">
+                <Plus className="h-4 w-4" /> Novo Grupo
+              </button>
+            )}
           </ActionBar>
         }
       />
@@ -134,10 +139,12 @@ export default function PatGrupos() {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-center">
-                  <button onClick={() => abrirEdit(g)}
-                    className="p-1.5 rounded-sm hover:bg-info-50 dark:hover:bg-info-900/30 text-brand-600">
-                    <Pencil className="h-4 w-4" />
-                  </button>
+                  {pode('gerenciar') && (
+                    <button onClick={() => abrirEdit(g)}
+                      className="p-1.5 rounded-sm hover:bg-info-50 dark:hover:bg-info-900/30 text-brand-600">
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

@@ -127,16 +127,21 @@ const requireTenant = (req, res, next) => {
   next();
 };
 
+// Quem passa direto pelas permissões: o Administrador Jeos e o Administrador cujas
+// permissões ainda não foram salvas na janela de Permissões (sem a marca _v = 2 —
+// os "desligados" antigos vieram do modelo de cadastro, não de uma decisão).
+const ignoraPermissoes = (u) => u?.tipo === 'jeos' || (u?.tipo === 'admin' && u?.permissoes?._v !== 2);
+
 // Verifica permissão nested no JSONB do usuário. Ex: requirePermission('almoxarifado','estoque','criar')
-// Admin e jeos bypassam. undefined = permitido; false = negado.
+// Só o jeos passa direto; o admin segue o que estiver desligado. undefined = permitido; false = negado.
 const requirePermission = (...path) => async (req, res, next) => {
   if (!req.user) return res.status(401).json({ error: 'Não autenticado' });
-  if (req.user.tipo === 'admin' || req.user.tipo === 'jeos') return next();
+  if (req.user.tipo === 'jeos') return next();
   try {
     const { User } = req.models;
     const u = await User.findByPk(req.user.id, { attributes: ['permissoes', 'tipo'] });
     if (!u) return res.status(401).json({ error: 'Usuário não encontrado' });
-    if (u.tipo === 'admin' || u.tipo === 'jeos') return next();
+    if (ignoraPermissoes(u)) return next();
     let obj = u.permissoes;
     for (const key of path) {
       if (obj == null || typeof obj !== 'object') { obj = undefined; break; }
@@ -156,4 +161,5 @@ module.exports = {
   authorize,
   requireSuperAdmin,
   requirePermission,
+  ignoraPermissoes,
 };

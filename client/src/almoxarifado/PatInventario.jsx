@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { usePode } from '../utils/permissions'
 import { RefreshCw, Plus, ClipboardList, CheckCircle, AlertCircle, XCircle } from 'lucide-react'
 import api from '../services/api'
 import { Paginacao, usePaginacao } from '../components/ui'
@@ -20,6 +21,8 @@ const statusInfo = {
 const conservacaoOpts = ['OTIMO','BOM','REGULAR','RUIM','PESSIMO','INSERVIVEL']
 
 export default function PatInventario({ userRole }) {
+  // Ações conforme o editor de permissões. Só "Ver" = sem botões de ação.
+  const pode = usePode('patrimonio', 'inventario')
   const [inventarios, setInventarios] = useState([])
   const [loading, setLoading]         = useState(true)
   const [selected, setSelected]       = useState(null)
@@ -101,7 +104,7 @@ export default function PatInventario({ userRole }) {
     item.bem?.descricao?.toLowerCase().includes(busca.toLowerCase())
   ) || []
 
-  const podeEditar = userRole === 'admin' || userRole === 'gestor'
+  const podeEditar = ['admin', 'gestor', 'jeos'].includes(userRole) && pode('realizar')
 
   const pgInventarios = usePaginacao('patrimonio-inventarios', inventarios.length);
 

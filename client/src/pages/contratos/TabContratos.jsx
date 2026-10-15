@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { usePode } from '../../utils/permissions'
 import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
@@ -1333,6 +1334,8 @@ function ConfirmModalContrato({ contrato, onConfirm, onClose }) {
 //  TAB CONTRATOS
 // ══════════════════════════════════════════════════════════════════════════════
 function TabContratos() {
+  // Ações conforme o editor de permissões. Só "Ver" = sem botões de ação.
+  const pode = usePode('contratos', 'contratos')
   const { subdomain } = useParams()
   const navigate = useNavigate()
   const [contratos, setContratos] = useState([])
@@ -1499,18 +1502,24 @@ function TabContratos() {
 
       {/* ── Barra de Ações ── */}
       <div className="flex flex-wrap items-center gap-2 pb-2">
-        <button onClick={() => setModal('novo')}
-          className="flex items-center gap-1.5 h-7 px-3 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
-          <Plus className="w-3.5 h-3.5" /> Incluir
-        </button>
-        <button onClick={() => podeAgir && setModal('editar')} disabled={!podeAgir}
-          className="flex items-center gap-1.5 h-7 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-          <Edit3 className="w-3.5 h-3.5" /> Alterar
-        </button>
-        <button onClick={() => podeAgir && setModal('excluir')} disabled={!podeAgir}
-          className="flex items-center gap-1.5 h-7 px-3 bg-danger-600 hover:bg-danger-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-          <Trash2 className="w-3.5 h-3.5" /> Excluir
-        </button>
+        {pode('criar') && (
+          <button onClick={() => setModal('novo')}
+            className="flex items-center gap-1.5 h-7 px-3 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+            <Plus className="w-3.5 h-3.5" /> Incluir
+          </button>
+        )}
+        {pode('editar') && (
+          <button onClick={() => podeAgir && setModal('editar')} disabled={!podeAgir}
+            className="flex items-center gap-1.5 h-7 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+            <Edit3 className="w-3.5 h-3.5" /> Alterar
+          </button>
+        )}
+        {pode('excluir') && (
+          <button onClick={() => podeAgir && setModal('excluir')} disabled={!podeAgir}
+            className="flex items-center gap-1.5 h-7 px-3 bg-danger-600 hover:bg-danger-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+            <Trash2 className="w-3.5 h-3.5" /> Excluir
+          </button>
+        )}
         <button onClick={() => podeAgir && setModal('visualizar')} disabled={!podeAgir}
           className="flex items-center gap-1.5 h-7 px-3 bg-ink-600 hover:bg-ink-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
           <Eye className="w-3.5 h-3.5" /> Visualizar

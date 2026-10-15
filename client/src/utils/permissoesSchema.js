@@ -14,7 +14,12 @@
 // ══════════════════════════════════════════════════════════════════════════════
 
 const VER = { key: 'ver', label: 'Ver' }
-const CRUD = [VER, { key: 'criar', label: 'Criar' }, { key: 'editar', label: 'Editar' }, { key: 'excluir', label: 'Excluir' }]
+// Mesmos nomes dos botões das telas (Incluir / Alterar / Excluir). Só "Ver" = a tela
+// abre só para consulta, sem nenhum botão de ação.
+const INCLUIR = { key: 'criar', label: 'Incluir' }
+const ALTERAR = { key: 'editar', label: 'Alterar' }
+const EXCLUIR = { key: 'excluir', label: 'Excluir' }
+const CRUD = [VER, INCLUIR, ALTERAR, EXCLUIR]
 
 // Tela "Excluídos" da aba/módulo. padrao:false → sem configuração = negado (só
 // administradores até alguém ligar). As chaves são conferidas no servidor (lixeiraService).
@@ -30,9 +35,9 @@ export const MODULOS = [
     key: 'processos', label: 'Processos',
     acoes: [
       VER,
-      { key: 'criar',             label: 'Criar' },
-      { key: 'editar',            label: 'Editar' },
-      { key: 'excluir',           label: 'Excluir' },
+      INCLUIR,
+      ALTERAR,
+      EXCLUIR,
       { key: 'tramitar',          label: 'Tramitar' },
       { key: 'devolver',          label: 'Devolver' },
       { key: 'concluir',          label: 'Concluir' },
@@ -49,10 +54,10 @@ export const MODULOS = [
     key: 'almoxarifado', label: 'Almoxarifado', comAcesso: true,
     abas: [
       { key: 'painel',      label: 'Painel',       acoes: [VER] },
-      { key: 'estoque',     label: 'Estoque',      acoes: [VER, { key: 'editar', label: 'Editar' }, ...LIXEIRA] },
+      { key: 'estoque',     label: 'Estoque',      acoes: [VER, ALTERAR, ...LIXEIRA] },
       { key: 'entradas',    label: 'Entradas',     acoes: [VER, { key: 'registrar', label: 'Registrar' }] },
       { key: 'saidas',      label: 'Saídas',       acoes: [VER, { key: 'registrar', label: 'Registrar' }] },
-      { key: 'requisicoes', label: 'Requisições',  acoes: [VER, { key: 'criar', label: 'Criar' }, { key: 'aprovar', label: 'Aprovar' }, { key: 'cancelar', label: 'Cancelar' }] },
+      { key: 'requisicoes', label: 'Requisições',  acoes: [VER, INCLUIR, { key: 'aprovar', label: 'Aprovar' }, { key: 'cancelar', label: 'Cancelar' }] },
       // chave 'cotas' mantida por compatibilidade com permissões já salvas
       { key: 'cotas',       label: 'Solicitações', acoes: [VER, { key: 'gerenciar', label: 'Gerenciar' }, ...LIXEIRA] },
       { key: 'inventario',  label: 'Inventário',   acoes: [VER, { key: 'realizar', label: 'Realizar' }, ...LIXEIRA] },
@@ -106,11 +111,16 @@ export const MODULOS = [
     // aqui se restringe aba a aba.
     key: 'organizacao', label: 'Organização',
     abas: [
-      { key: 'entidade',     label: 'Entidade',              acoes: [VER], escopo: false },
-      { key: 'secretarias',  label: 'Secretarias e Setores', acoes: [VER, ...LIXEIRA], escopo: false },
-      { key: 'agentes',      label: 'Cadastro de Agentes',   acoes: [VER, ...LIXEIRA], escopo: false },
-      { key: 'responsaveis', label: 'Responsáveis',          acoes: [VER], escopo: false },
-      { key: 'usuarios',     label: 'Usuários',              acoes: [VER, ...LIXEIRA], escopo: false },
+      { key: 'entidade',     label: 'Entidade',              acoes: [VER, ALTERAR], escopo: false },
+      { key: 'secretarias',  label: 'Secretarias e Setores', acoes: [...CRUD_LIXEIRA], escopo: false },
+      { key: 'agentes',      label: 'Cadastro de Agentes',   acoes: [...CRUD_LIXEIRA], escopo: false },
+      { key: 'responsaveis', label: 'Responsáveis',          acoes: CRUD, escopo: false },
+      { key: 'usuarios',     label: 'Usuários',              escopo: false, acoes: [
+        ...CRUD,
+        { key: 'permissoes',   label: 'Permissões' },
+        { key: 'autenticador', label: 'Autenticador (configurar/revogar)' },
+        ...LIXEIRA,
+      ] },
     ],
   },
   {

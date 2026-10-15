@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { usePode } from '../utils/permissions'
 import {
   Plus, Package, RefreshCw, ChevronLeft, ChevronRight,
   Calendar, FileText, Truck, AlertTriangle, X, CheckCircle2,
@@ -564,6 +565,8 @@ function NovaEntradaModal({ itens, onClose, onSave, saving, erro }) {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function AlmoxLotes() {
+  // Ações conforme o editor de permissões. Só "Ver" = sem botões de ação.
+  const pode = usePode('almoxarifado', 'entradas')
   const [lotes,    setLotes]    = useState([])
   const [total,    setTotal]    = useState(0)
   const [page,     setPage]     = useState(1)
@@ -633,12 +636,14 @@ export default function AlmoxLotes() {
             <RefreshCw className="h-4 w-4" />
           </button>
         </div>
-        <button
-          onClick={() => { setNovaModal(true); setErro('') }}
-          className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 transition-colors"
-        >
-          <Plus className="h-4 w-4" /> Nova Entrada
-        </button>
+        {pode('registrar') && (
+          <button
+            onClick={() => { setNovaModal(true); setErro('') }}
+            className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 transition-colors"
+          >
+            <Plus className="h-4 w-4" /> Nova Entrada
+          </button>
+        )}
       </div>
 
       {/* Tabela */}
