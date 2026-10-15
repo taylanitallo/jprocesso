@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const { authenticate, tenantMiddleware, requireTenant } = require('../middleware/auth');
 const { getCachedModels } = require('../config/database');
+const { importarContratos } = require('../services/importContratosService');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
@@ -21,7 +22,7 @@ const toCSV = (rows) => {
 };
 
 // Parser CSV RFC 4180 — suporta campos com vírgulas entre aspas
-const parseCSVLine = (line) => {
+const parseCSVLine = (line, sep = ',') => {
   const result = [];
   let cur = '';
   let inQuote = false;
@@ -30,7 +31,7 @@ const parseCSVLine = (line) => {
     if (ch === '"') {
       if (inQuote && line[i + 1] === '"') { cur += '"'; i++; }
       else inQuote = !inQuote;
-    } else if (ch === ',' && !inQuote) {
+    } else if (ch === sep && !inQuote) {
       result.push(cur.trim());
       cur = '';
     } else {
@@ -230,14 +231,16 @@ router.post('/', tenantMiddleware, requireTenant, authenticate, upload.single('f
 
     let registros;
     if (ext === 'json') {
-      try { registros = JSON.parse(req.file.buffer.toString('utf-8')); }
+      try { registros = JSON.parse(req.file.buffer.toString('utf-8').replace(/^﻿/, '')); }
       catch { return res.status(400).json({ error: 'JSON inválido.' }); }
     } else {
-      const lines = req.file.buffer.toString('utf-8').split(/\r?\n/).filter(l => l.trim());
+      const lines = req.file.buffer.toString('utf-8').replace(/^﻿/, '').split(/\r?\n/).filter(l => l.trim());
       if (lines.length < 2) return res.status(400).json({ error: 'CSV vazio ou sem dados.' });
-      const headers = parseCSVLine(lines[0]);
+      // Excel em pt-BR exporta CSV com ";" — detecta pelo cabeçalho
+      const sep = (lines[0].match(/;/g) || []).length > (lines[0].match(/,/g) || []).length ? ';' : ',';
+      const headers = parseCSVLine(lines[0], sep);
       registros = lines.slice(1).map(line => {
-        const vals = parseCSVLine(line);
+        const vals = parseCSVLine(line, sep);
         return Object.fromEntries(headers.map((h, i) => [h, vals[i] ?? '']));
       });
     }
@@ -320,123 +323,13 @@ router.post('/', tenantMiddleware, requireTenant, authenticate, upload.single('f
         created ? importados++ : ignorados++;
       }
     } else if (tipo === 'contratos') {
-      const { Contrato, Credor } = models;
-
-      // Normaliza linha: aceita tanto colunas do sistema quanto formato externo
-      const norm = (r) => {
-        const aliases = {
-          numerocontrato:      'numero_contrato',
-          contrato:            'numero_contrato',
-          numcontrato:         'numero_contrato',
-          numerolicitacao:     'numero_licitacao',
-          numlicitacao:        'numero_licitacao',
-          numeroproceso:       'numero_licitacao',
-          numeroprocimento:    'numero_licitacao',
-          numeroproces:        'numero_licitacao',
-          numeroprocesso:      'numero_licitacao',
-          vigenciainicio:      'vigencia_inicio',
-          datainicio:          'vigencia_inicio',
-          vigenciafim:         'vigencia_fim',
-          datafim:             'vigencia_fim',
-          datatermino:         'vigencia_fim',
-          datacontrato:        'data_assinatura',
-          dataassinatura:      'data_assinatura',
-          valorglobal:         'valor',
-          valortotal:          'valor',
-          valorcontrato:       'valor',
-          valormensal:         'valor_mensal',
-          nomecredore:         'nome_credor',
-          nomecredor:          'nome_credor',
-          fornecedor:          'nome_credor',
-          nomefornecedor:      'nome_credor',
-          cnpjcpf:             'cnpj_cpf',
-          cnpj:                'cnpj_cpf',
-          cpf:                 'cnpj_cpf',
-          tipo:                'tipo_contrato',
-          tipocontrato:        'tipo_contrato',
-          descricao:           'objeto',
-          descricaocontrato:   'objeto',
-          objetocontrato:      'objeto',
-          descricaoobjeto:     'objeto',
-          objeto:              'objeto',
-          modalidade:          'modalidade',
-          secretaria:          'secretaria',
-          status:              'status',
-          observacoes:         'observacoes',
-          observacao:          'observacoes',
-        };
-        const out = {};
-        for (const [k, v] of Object.entries(r)) {
-          const key = k.toLowerCase().replace(/[^a-z0-9]/g, '');
-          out[aliases[key] || k.toLowerCase()] = v;
-        }
-        return out;
-      };
-
-      // Log diagnóstico na primeira linha
-      if (registros.length > 0) {
-        console.log('[import contratos] colunas:', Object.keys(registros[0]));
-        console.log('[import contratos] primeira linha normalizada:', norm(registros[0]));
-      }
-
-      let invalidos = 0;
-      let atualizados = 0;
-
-      for (const raw of registros) {
-        const r = norm(raw);
-        const numeroContrato = (r.numero_contrato || '').trim();
-        if (!numeroContrato) { invalidos++; ignorados++; continue; }
-
-        const objeto = (r.objeto || '').trim() || 'Importado';
-
-        // Resolve credor: por credor_id (sistema) ou por cnpj_cpf + nome (externo)
-        let credorId = r.credor_id ? parseInt(r.credor_id) : null;
-        if (!credorId && (r.cnpj_cpf || r.nome_credor)) {
-          const cnpj = (r.cnpj_cpf || '').replace(/\D/g, '');
-          const nome = (r.nome_credor || '').trim() || 'Credor importado';
-          const tipoCredor = cnpj.length > 0 && cnpj.length <= 11 ? 'Física' : 'Jurídica';
-          const [credor] = await Credor.findOrCreate({
-            where: { cnpj_cpf: cnpj || nome },
-            defaults: { razao_social: nome, cnpj_cpf: cnpj || nome, tipo: tipoCredor, status: 'ATIVO' },
-          });
-          credorId = credor.id;
-        }
-
-        const dadosContrato = {
-          tipo_contrato: r.tipo_contrato || 'CONTRATO',
-          objeto,
-          modalidade: r.modalidade || null,
-          numero_licitacao: r.numero_licitacao || null,
-          credor_id: credorId,
-          valor: r.valor ? parseFloat(String(r.valor).replace(/\./g, '').replace(',', '.')) : null,
-          vigencia_inicio: r.vigencia_inicio || null,
-          vigencia_fim: r.vigencia_fim || null,
-          data_assinatura: r.data_assinatura || null,
-          secretaria: r.secretaria || null,
-          observacoes: r.observacoes || null,
-          status: r.status || 'ATIVO',
-        };
-
-        const existente = await Contrato.findOne({ where: { numero_contrato: numeroContrato } });
-        if (existente) {
-          await existente.update(dadosContrato);
-          atualizados++;
-        } else {
-          await Contrato.create({ numero_contrato: numeroContrato, ...dadosContrato });
-          importados++;
-        }
-      }
-
-      // Complementa mensagem final
-      ignorados = invalidos; // já existiam viram "atualizados"
-      if (atualizados > 0) {
-        return res.json({
-          message: `Importação concluída: ${importados} inserido(s), ${atualizados} atualizado(s), ${invalidos} inválido(s).`,
-          importados,
-          atualizados,
-          ignorados: invalidos,
-        });
-      }
+      const r = await importarContratos(registros, models);
+      const partes = [`${r.importados} inserido(s)`, `${r.atualizados} atualizado(s)`];
+      if (r.invalidos) partes.push(`${r.invalidos} sem número (ignorado(s))`);
+      if (r.credoresCriados) partes.push(`${r.credoresCriados} credor(es) novo(s)`);
+      let message = `Importação concluída: ${partes.join(', ')}.`;
+      if (r.renumerados.length) message += ` Número repetido com credor diferente: ${r.renumerados.join('; ')}.`;
+      return res.json({ message, importados: r.importados, atualizados: r.atualizados, ignorados: r.invalidos, renumerados: r.renumerados });
     } else {
       return res.status(400).json({ error: `Tipo de importação '${tipo}' não suportado.` });
     }
