@@ -192,15 +192,19 @@ export default function Usuarios() {
 
   const [secretarias, setSecretarias] = useState([]);
   const [setores, setSetores] = useState([]);
+  const [agentes, setAgentes] = useState([]);   // para "puxar do cadastro de agentes"
+  const [agenteEscolhido, setAgenteEscolhido] = useState('');
 
   // Buscar secretarias e setores da API
   useEffect(() => {
     const fetchOrganizacao = async () => {
       try {
-        const [secretariasRes, setoresRes] = await Promise.all([
+        const [secretariasRes, setoresRes, agentesRes] = await Promise.all([
           api.get('/organizacao/secretarias'),
-          api.get('/organizacao/setores')
+          api.get('/organizacao/setores'),
+          api.get('/organizacao/agentes').catch(() => ({ data: { agentes: [] } })),
         ]);
+        setAgentes((agentesRes.data?.agentes || []).filter(a => a.ativo !== false).sort((a, b) => (a.nome || '').localeCompare(b.nome || '')));
         setSecretarias((secretariasRes.data?.secretarias || secretariasRes.data || []).sort((a, b) => a.nome.localeCompare(b.nome)));
         setSetores((setoresRes.data?.setores || setoresRes.data || []).sort((a, b) => a.nome.localeCompare(b.nome)));
       } catch (error) {
@@ -218,12 +222,30 @@ export default function Usuarios() {
     nomeReduzido: '',
     cpf: '',
     email: '',
+    telefone: '',
     senha: '',
     tipo: 'operacional',
     secretariaId: '',
     setorId: '',
     permissoes: DEFAULT_PERMISSOES(),
   });
+
+  // Preenche o cadastro com os dados do agente escolhido (o que estiver vazio no agente fica como está)
+  const puxarAgente = (agenteId) => {
+    setAgenteEscolhido(agenteId);
+    const ag = agentes.find(a => String(a.id) === String(agenteId));
+    if (!ag) return;
+    setFormData(prev => ({
+      ...prev,
+      nome: ag.nome || prev.nome,
+      nomeReduzido: ag.nome_reduzido || prev.nomeReduzido,
+      cpf: String(ag.cpf || '').replace(/\D/g, '') || prev.cpf,
+      email: ag.email || prev.email,
+      telefone: ag.telefone || prev.telefone,
+      ...(ag.secretaria_id ? { secretariaId: ag.secretaria_id, setorId: '' } : {}),
+    }));
+  };
+  const cpfsUsuarios = new Set(usuarios.map(u => String(u.cpf || '').replace(/\D/g, '')).filter(Boolean));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -236,6 +258,7 @@ export default function Usuarios() {
       await fetchUsuarios();
       
       setShowModal(false);
+      setAgenteEscolhido('');
       
       // Reset form
       setFormData({
@@ -266,6 +289,7 @@ export default function Usuarios() {
       nome: usuario.nome || '',
       nomeReduzido: usuario.nomeReduzido || '',
       email: usuario.email || '',
+      telefone: usuario.telefone || '',
       cpf: usuario.cpf || '',
       tipo: usuario.tipo || 'operacional',
       secretariaId: usuario.secretaria?.id || usuario.secretariaId || '',
@@ -286,6 +310,7 @@ export default function Usuarios() {
         nome: editData.nome,
         nomeReduzido: editData.nomeReduzido || null,
         email: editData.email,
+        telefone: editData.telefone || null,
         cpf: String(editData.cpf || '').replace(/\D/g, ''),
         tipo: editData.tipo,
         secretariaId: editData.secretariaId || null,
@@ -649,6 +674,21 @@ export default function Usuarios() {
               {/* Dados Pessoais */}
               <div>
                 <SectionTitle icon={Users} title="Dados Pessoais" />
+                <div className="mb-4 rounded-lg border border-brand-200 bg-brand-50 p-3">
+                  <label className="block text-sm font-medium text-ink-700 mb-1">Puxar do cadastro de agentes <span className="text-ink-400 font-normal">(opcional)</span></label>
+                  <select value={agenteEscolhido} onChange={(e) => puxarAgente(e.target.value)} className="input-field">
+                    <option value="">— escolher agente para preencher os dados —</option>
+                    {agentes.map(a => {
+                      const jaUsuario = cpfsUsuarios.has(String(a.cpf || '').replace(/\D/g, ''));
+                      return (
+                        <option key={a.id} value={a.id} disabled={jaUsuario}>
+                          {a.nome}{a.cpf ? ` — CPF ${a.cpf}` : ''}{jaUsuario ? ' (já é usuário)' : ''}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <p className="mt-1 text-xs text-ink-500">Preenche nome, nome reduzido, CPF, e-mail, telefone e secretaria com o que estiver no cadastro do agente. Dá para ajustar depois.</p>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-ink-700 mb-1">Nome Completo *</label>
@@ -665,6 +705,10 @@ export default function Usuarios() {
                   <div>
                     <label className="block text-sm font-medium text-ink-700 mb-1">E-mail *</label>
                     <input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required className="input-field" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">Telefone</label>
+                    <input type="text" value={formData.telefone} onChange={(e) => setFormData({ ...formData, telefone: e.target.value })} className="input-field" placeholder="(00) 00000-0000" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-ink-700 mb-1">Senha *</label>
@@ -752,6 +796,10 @@ export default function Usuarios() {
                   <div>
                     <label className="block text-sm font-medium text-ink-700 mb-1">E-mail *</label>
                     <input type="email" value={editData.email} onChange={(e) => setEditData({ ...editData, email: e.target.value })} required className="input-field" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-ink-700 mb-1">Telefone</label>
+                    <input type="text" value={editData.telefone || ''} onChange={(e) => setEditData({ ...editData, telefone: e.target.value })} className="input-field" placeholder="(00) 00000-0000" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-ink-700 mb-1">Nova Senha <span className="text-ink-400 font-normal">(opcional)</span></label>
