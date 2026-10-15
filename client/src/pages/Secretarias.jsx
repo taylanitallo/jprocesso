@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense, Fragment } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -38,6 +38,8 @@ import {
   User,
   Save,
   ChevronRight,
+  ChevronDown,
+  Layers,
 } from 'lucide-react';
 
 
@@ -1011,9 +1013,10 @@ export default function Secretarias() {
 
                     return pageItems.map(sec => {
                       const isSelected = selectedSecretaria?.id === sec.id;
+                      const setoresSec = sec.setores || [];
                       return (
+                        <Fragment key={sec.id}>
                         <tr
-                          key={sec.id}
                           onClick={() => { setSelectedSecretaria(isSelected ? null : sec); setSelectedSetorInPanel(null); }}
                           onDoubleClick={() => { if (pSec('editar')) { handleEditSecretaria(sec) } }}
                           className={`cursor-pointer transition-colors select-none ${
@@ -1023,10 +1026,16 @@ export default function Secretarias() {
                           }`}
                         >
                           <td className="px-4 py-2.5 text-center">
-                            {isSelected && <span className="text-white text-xs">▶</span>}
+                            {/* Seta da cascata: aberta quando a secretaria está selecionada */}
+                            {isSelected
+                              ? <ChevronDown className="h-4 w-4 text-white mx-auto" />
+                              : <ChevronRight className="h-4 w-4 text-ink-400 mx-auto" />}
                           </td>
                           <td className={`px-4 py-2.5 font-medium ${isSelected ? 'text-white' : 'text-ink-900'}`}>
                             {sec.nome}
+                            <span className={`ml-2 text-[11px] font-normal ${isSelected ? 'text-info-100' : 'text-ink-400'}`}>
+                              {setoresSec.length} setor{setoresSec.length === 1 ? '' : 'es'}
+                            </span>
                           </td>
                           <td className="px-4 py-2.5">
                             {sec.sigla
@@ -1045,6 +1054,30 @@ export default function Secretarias() {
                             {sec.data_fim ? new Date(sec.data_fim + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
                           </td>
                         </tr>
+                        {isSelected && (
+                          setoresSec.length === 0 ? (
+                            <tr className="bg-brand-50/60">
+                              <td />
+                              <td colSpan={5} className="px-4 py-2 text-xs text-ink-500 italic">Nenhum setor vinculado a esta secretaria.</td>
+                            </tr>
+                          ) : [...setoresSec].sort((a, b) => (a.nome || '').localeCompare(b.nome || '')).map(setor => (
+                            <tr key={setor.id}
+                              onDoubleClick={() => { if (pSec('editar')) handleEditSetor(setor, sec.id) }}
+                              title={pSec('editar') ? 'Duplo clique para alterar o setor' : undefined}
+                              className="bg-brand-50/60 hover:bg-brand-50 border-l-4 border-l-brand-600 select-none">
+                              <td />
+                              <td colSpan={5} className="py-1.5 pl-8 pr-4 text-sm text-ink-700">
+                                <span className="inline-flex items-center gap-2">
+                                  <Layers className="h-3.5 w-3.5 shrink-0 text-brand-600" />
+                                  {setor.nome}
+                                  {setor.sigla && <span className="text-[11px] font-mono text-ink-500">({setor.sigla})</span>}
+                                  {setor.descricao && <span className="text-xs text-ink-400">— {setor.descricao}</span>}
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                        </Fragment>
                       );
                     });
                   })()}
@@ -1903,7 +1936,7 @@ export default function Secretarias() {
 
       {/* Modal de Confirmação de Exclusão */}
       {showDeleteModal && deleteTarget && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
           <div className="bg-surface rounded-xl max-w-md w-full shadow-xl">
             <div className="px-4 py-3 border-b border-ink-200">
               <div className="flex items-center gap-3">
