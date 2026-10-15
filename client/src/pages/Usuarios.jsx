@@ -54,6 +54,8 @@ export default function Usuarios() {
   const { user, refreshUser } = useAuth();
   // Organização › Usuários no editor de permissões. Só "Ver" = lista sem botões de ação.
   const pode = usePode('organizacao', 'usuarios');
+  // CPF só muda pelas mãos do Administrador Jeos ou de Administrador com "Alterar" em Usuários
+  const podeAlterarCpf = ['jeos', 'admin'].includes(user?.tipo) && pode('editar');
   const [permUsuario, setPermUsuario] = useState(null);   // janela de Permissões
   const [autUsuario, setAutUsuario] = useState(null);     // janela de configurar autenticador
   const [showModal, setShowModal] = useState(false);
@@ -284,7 +286,7 @@ export default function Usuarios() {
         nome: editData.nome,
         nomeReduzido: editData.nomeReduzido || null,
         email: editData.email,
-        cpf: editData.cpf,
+        cpf: String(editData.cpf || '').replace(/\D/g, ''),
         tipo: editData.tipo,
         secretariaId: editData.secretariaId || null,
         setorId: editData.setorId || null,
@@ -636,14 +638,14 @@ export default function Usuarios() {
 
       {/* Modal Criar Usuário */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-surface rounded-xl max-w-4xl w-full my-8 shadow-xl">
+        <div className="fixed inset-0 bg-black/60 flex z-50 p-2 sm:p-3">
+          <div className="bg-surface rounded-xl w-full h-full flex flex-col overflow-hidden shadow-xl">
             <div className="px-4 py-3 border-b border-ink-200 sticky top-0 bg-surface z-10">
               <h2 className="text-xl font-semibold text-ink-900">Novo Usuário</h2>
               <p className="text-sm text-ink-500 mt-1">Preencha as informações do usuário. Depois de cadastrar, ajuste as permissões no botão de chave da lista.</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[calc(90vh-120px)] overflow-y-auto">
+            <form onSubmit={handleSubmit} className="flex-1 p-6 space-y-4 overflow-y-auto">
               {/* Dados Pessoais */}
               <div>
                 <SectionTitle icon={Users} title="Dados Pessoais" />
@@ -718,14 +720,14 @@ export default function Usuarios() {
 
       {/* Modal Editar Usuário */}
       {showEditModal && selectedUser && editData && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-surface rounded-xl w-[95%] my-8 shadow-xl">
+        <div className="fixed inset-0 bg-black/60 flex z-50 p-2 sm:p-3">
+          <div className="bg-surface rounded-xl w-full h-full flex flex-col overflow-hidden shadow-xl">
             <div className="px-4 py-3 border-b border-ink-200 sticky top-0 bg-surface z-10">
               <h2 className="text-xl font-semibold text-ink-900">Editar Usuário</h2>
               <p className="text-sm text-ink-500 mt-1">Atualize as informações (permissões ficam no botão de chave da lista)</p>
             </div>
 
-            <form onSubmit={handleSubmitEdit} className="p-6 space-y-4 max-h-[calc(90vh-120px)] overflow-y-auto">
+            <form onSubmit={handleSubmitEdit} className="flex-1 p-6 space-y-4 overflow-y-auto">
 
               {/* Dados Pessoais */}
               <div>
@@ -741,7 +743,11 @@ export default function Usuarios() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-ink-700 mb-1">CPF</label>
-                    <input type="text" value={editData.cpf} disabled className="input-field disabled:bg-ink-50 disabled:text-ink-500" />
+                    <input type="text" value={editData.cpf} disabled={!podeAlterarCpf}
+                      onChange={(e) => setEditData({ ...editData, cpf: e.target.value.replace(/\D/g, '').slice(0, 11) })}
+                      inputMode="numeric" maxLength={11} placeholder="Apenas números"
+                      title={podeAlterarCpf ? undefined : 'Só o Administrador Jeos ou um Administrador com permissão de alterar usuários muda o CPF'}
+                      className="input-field disabled:bg-ink-50 disabled:text-ink-500" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-ink-700 mb-1">E-mail *</label>

@@ -569,9 +569,25 @@ const updateUser = async (req, res) => {
       if (emailExists) return res.status(400).json({ error: 'Email já cadastrado para outro usuário' });
     }
 
+    // CPF: só o Administrador Jeos ou um Administrador (a rota já exige Alterar em
+    // Organização › Usuários) trocam; 11 dígitos e sem repetir o de outro usuário
+    let cpfNovo;
+    if (cpf !== undefined && cpf !== null) {
+      const digitos = String(cpf).replace(/\D/g, '');
+      if (digitos !== String(user.cpf || '').replace(/\D/g, '')) {
+        if (!['jeos', 'admin'].includes(req.user?.tipo)) {
+          return res.status(403).json({ error: 'Só o Administrador Jeos ou um Administrador pode alterar o CPF' });
+        }
+        if (digitos.length !== 11) return res.status(400).json({ error: 'CPF deve ter 11 dígitos' });
+        const cpfExiste = await User.findOne({ where: { cpf: digitos, id: { [Op.ne]: id } } });
+        if (cpfExiste) return res.status(400).json({ error: 'CPF já cadastrado para outro usuário' });
+        cpfNovo = digitos;
+      }
+    }
+
     // Só grava o que veio na requisição (ex.: a janela de Permissões manda só permissoes)
     const updatePayload = Object.fromEntries(Object.entries(
-      { nome, nomeReduzido: nomeReduzido ?? undefined, email, cpf, telefone, tipo, secretariaId, setorId, permissoes, ativo }
+      { nome, nomeReduzido: nomeReduzido ?? undefined, email, cpf: cpfNovo, telefone, tipo, secretariaId, setorId, permissoes, ativo }
     ).filter(([, v]) => v !== undefined));
 
     // B-2: mesma regra do register — 8+ chars, letra + número

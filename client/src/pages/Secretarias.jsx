@@ -1697,7 +1697,7 @@ export default function Secretarias() {
         iconBg="from-info-500 to-info-600"
         title={`Secretaria — ${editingSecretaria ? 'Alteração' : 'Inclusão'}`}
         subtitle="Cadastre e gerencie os dados da secretaria municipal."
-        width={700}
+        cheia
         badge={
           editingSecretaria ? (
             <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
@@ -1868,7 +1868,7 @@ export default function Secretarias() {
         iconBg="from-violet-500 to-violet-600"
         title={`Setor — ${editingSetor ? 'Alteração' : 'Inclusão'}`}
         subtitle="Defina os setores internos da secretaria selecionada."
-        width={520}
+        cheia
         footer={
           <>
             <button type="button" onClick={() => { setShowModalSetor(false); setEditingSetor(null); }} className="btn-secondary px-5 py-2 text-sm">Cancelar</button>
@@ -2057,7 +2057,7 @@ export default function Secretarias() {
         iconBg="from-emerald-500 to-emerald-600"
         title={`Agente — ${editingAgente ? 'Alteração' : 'Inclusão'}`}
         subtitle="Cadastre os servidores que atuam como agentes públicos."
-        width={580}
+        cheia
         footer={
           <>
             <button type="button" onClick={() => { setShowModalAgente(false); setEditingAgente(null); }} className="btn-secondary px-5 py-2 text-sm">Cancelar</button>
