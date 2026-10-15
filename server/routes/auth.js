@@ -27,6 +27,11 @@ const validateRefreshOrigin = (req, res, next) => {
 // ── Autenticação ──────────────────────────────────────────────────────────────
 router.post('/buscar-municipios', buscarMunicipiosPorEmail); // pública — passo 1 do login por e-mail
 router.post('/login',   login);
+// IP de onde vem a requisição (mostrado no rodapé). Atrás do proxy do Railway,
+// req.ip já vem do X-Forwarded-For (trust proxy no index.js).
+router.get('/meu-ip', (req, res) => {
+  res.json({ ip: String(req.ip || '').replace(/^::ffff:/, '') || null });
+});
 router.post('/refresh', validateRefreshOrigin, refreshToken);  // lê cookie httpOnly
 router.post('/logout',  validateRefreshOrigin, logoutUser);    // revoga refresh + limpa cookie
 
