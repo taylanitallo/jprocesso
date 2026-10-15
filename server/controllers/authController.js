@@ -192,7 +192,7 @@ const register = async (req, res) => {
     }
 
     // Verificar se CPF já existe
-    const existingCpf = await User.findOne({ where: { cpf } });
+    const existingCpf = await User.findOne({ where: { cpf, excluido_em: null } });
     if (existingCpf) {
       return res.status(400).json({ error: 'CPF já cadastrado' });
     }
@@ -328,8 +328,8 @@ const login = async (req, res) => {
     const { Op, fn, col, where: sqlWhere } = require('sequelize');
     const user = await User.findOne({
       where: email
-        ? { [Op.and]: [sqlWhere(fn('LOWER', col('User.email')), email.trim().toLowerCase()), { ativo: true }] }
-        : { cpf, ativo: true },
+        ? { [Op.and]: [sqlWhere(fn('LOWER', col('User.email')), email.trim().toLowerCase()), { ativo: true, excluido_em: null }] }
+        : { cpf, ativo: true, excluido_em: null },
       include: [
         { model: models.Secretaria, as: 'secretaria' },
         { model: models.Setor, as: 'setor' }
@@ -565,7 +565,7 @@ const updateUser = async (req, res) => {
 
     // Validar unicidade de email (excluindo o próprio usuário)
     if (email && email !== user.email) {
-      const emailExists = await User.findOne({ where: { email, id: { [Op.ne]: id } } });
+      const emailExists = await User.findOne({ where: { email, id: { [Op.ne]: id }, excluido_em: null } });
       if (emailExists) return res.status(400).json({ error: 'Email já cadastrado para outro usuário' });
     }
 
@@ -579,7 +579,8 @@ const updateUser = async (req, res) => {
           return res.status(403).json({ error: 'Só o Administrador Jeos ou um Administrador pode alterar o CPF' });
         }
         if (digitos.length !== 11) return res.status(400).json({ error: 'CPF deve ter 11 dígitos' });
-        const cpfExiste = await User.findOne({ where: { cpf: digitos, id: { [Op.ne]: id } } });
+        // excluídos não contam: ficam na tela Excluídos e a restauração confere o CPF
+        const cpfExiste = await User.findOne({ where: { cpf: digitos, id: { [Op.ne]: id }, excluido_em: null } });
         if (cpfExiste) return res.status(400).json({ error: 'CPF já cadastrado para outro usuário' });
         cpfNovo = digitos;
       }

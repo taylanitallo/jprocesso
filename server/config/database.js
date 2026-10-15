@@ -65,15 +65,19 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
         CHECK (tipo IN ('admin', 'gestor', 'operacional', 'jeos'));
     `),
 
-    // 0f. Usuários — CPF/e-mail únicos só entre usuários não-'jeos'. Administrador
-    // Jeos (equipe JEOS) reutiliza o mesmo CPF/e-mail em todos os municípios.
+    // 0f. Usuários — CPF/e-mail únicos só entre usuários não-'jeos' e não excluídos.
+    // Administrador Jeos (equipe JEOS) reutiliza o mesmo CPF/e-mail em todos os
+    // municípios; um usuário excluído (na tela Excluídos) não prende o CPF/e-mail —
+    // a restauração confere se ainda estão livres (lixeiraService).
     run(`
       ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS usuarios_cpf_key;
       ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS usuarios_email_key;
-      CREATE UNIQUE INDEX IF NOT EXISTS usuarios_cpf_unico_idx
-        ON usuarios (cpf) WHERE tipo <> 'jeos';
-      CREATE UNIQUE INDEX IF NOT EXISTS usuarios_email_unico_idx
-        ON usuarios (email) WHERE tipo <> 'jeos';
+      DROP INDEX IF EXISTS usuarios_cpf_unico_idx;
+      DROP INDEX IF EXISTS usuarios_email_unico_idx;
+      CREATE UNIQUE INDEX IF NOT EXISTS usuarios_cpf_ativo_idx
+        ON usuarios (cpf) WHERE tipo <> 'jeos' AND excluido_em IS NULL;
+      CREATE UNIQUE INDEX IF NOT EXISTS usuarios_email_ativo_idx
+        ON usuarios (email) WHERE tipo <> 'jeos' AND excluido_em IS NULL;
     `),
 
     // 0g. Tramitações — CHECK de tipo_acao precisa aceitar 'recebimento' e 'did_etapa'

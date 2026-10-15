@@ -949,10 +949,10 @@ async function criarEstruturaIsolada(schema, tenant, usuarioAdmin) {
       -- CPF/e-mail únicos apenas entre usuários "normais" — Administrador Jeos (tipo='jeos')
       -- fica de fora, pois é a mesma pessoa (equipe JEOS) logando em todos os municípios
       -- com o mesmo CPF/e-mail.
-      CREATE UNIQUE INDEX IF NOT EXISTS usuarios_cpf_unico_idx
-        ON ${schema}.usuarios (cpf) WHERE tipo <> 'jeos';
-      CREATE UNIQUE INDEX IF NOT EXISTS usuarios_email_unico_idx
-        ON ${schema}.usuarios (email) WHERE tipo <> 'jeos';
+      CREATE UNIQUE INDEX IF NOT EXISTS usuarios_cpf_ativo_idx
+        ON ${schema}.usuarios (cpf) WHERE tipo <> 'jeos' AND excluido_em IS NULL;
+      CREATE UNIQUE INDEX IF NOT EXISTS usuarios_email_ativo_idx
+        ON ${schema}.usuarios (email) WHERE tipo <> 'jeos' AND excluido_em IS NULL;
 
       -- Processos
       CREATE TABLE IF NOT EXISTS ${schema}.processos (

@@ -238,6 +238,19 @@ const ENTIDADES = {
       { campo: 'secretaria', rotulo: 'Secretaria', valor: (r) => r.secretaria?.sigla || r.secretaria?.nome || '' },
     ],
     descricao: (r) => `Usuário ${r.nome}`,
+    // CPF/e-mail de excluído ficam livres para outro cadastro; na volta, conferir
+    antesDeRestaurar: async (req, r) => {
+      if (r.tipo === 'jeos') return;
+      const { Op } = require('sequelize');
+      const conflito = await req.models.User.findOne({
+        where: { id: { [Op.ne]: r.id }, excluido_em: null, tipo: { [Op.ne]: 'jeos' }, [Op.or]: [{ cpf: r.cpf }, { email: r.email }] },
+        attributes: ['nome', 'cpf', 'email'],
+      });
+      if (conflito) {
+        const campo = conflito.cpf === r.cpf ? 'CPF' : 'e-mail';
+        bloquear(`O ${campo} deste usuário agora pertence a ${conflito.nome}. Altere o ${campo} de um dos dois antes de restaurar.`);
+      }
+    },
   },
 
   // ── Almoxarifado ───────────────────────────────────────────────────────────
