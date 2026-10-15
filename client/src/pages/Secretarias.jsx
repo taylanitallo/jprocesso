@@ -712,9 +712,12 @@ export default function Secretarias() {
   // E-mail, telefone e nascimento vêm do cadastro do agente; o nome também, quando o
   // responsável foi salvo sem ele (apareciam linhas com o nome em branco)
   const agentePorId = new Map((agentes || []).map(a => [String(a.id), a]));
+  // responsáveis antigos têm só o nome digitado: casa com o agente de mesmo nome
+  const chaveNome = (n) => String(n || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+  const agentePorNome = new Map((agentes || []).map(a => [chaveNome(a.nome), a]));
   const todosResponsaveis = (Array.isArray(secretarias) ? secretarias : []).flatMap(sec =>
     (sec.responsaveis || []).map((r, i) => {
-      const ag = r.agente_id ? agentePorId.get(String(r.agente_id)) : null;
+      const ag = (r.agente_id && agentePorId.get(String(r.agente_id))) || (r.nome ? agentePorNome.get(chaveNome(r.nome)) : null) || null;
       return {
         ...r, nome: r.nome || ag?.nome || '', _secId: sec.id, _secNome: sec.nome, _secSigla: sec.sigla, _idx: i,
         _email: ag?.email || '', _telefone: ag?.telefone || '', _nascimento: ag?.nascimento ? String(ag.nascimento).slice(0, 10) : '',
