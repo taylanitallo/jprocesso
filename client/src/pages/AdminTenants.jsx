@@ -606,7 +606,13 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
 
   const handleSaveUser = async () => {
     const cpfDigits = (userForm.cpf || '').replace(/\D/g, '');
-    if (cpfDigits && !validateCPF(userForm.cpf)) {
+    // Administrador Jeos não passa pela validação do CPF (é opcional para ele)
+    const ehJeos = userForm.tipo === 'jeos';
+    if (ehJeos && !cpfDigits && !userForm.email) {
+      alert('Informe o e-mail: sem CPF, o Administrador Jeos entra pelo e-mail.');
+      return;
+    }
+    if (!ehJeos && cpfDigits && !validateCPF(userForm.cpf)) {
       alert('CPF inválido. Verifique os dígitos informados.');
       return;
     }
@@ -986,16 +992,16 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                             </div>
                           ))}
                           <div>
-                            <label className="block text-xs font-medium text-ink-600 mb-1">CPF</label>
+                            <label className="block text-xs font-medium text-ink-600 mb-1">CPF{userForm.tipo === 'jeos' && <span className="font-normal text-ink-400"> (opcional para o Administrador Jeos)</span>}</label>
                             <input type="text" value={userForm.cpf || ''}
                               onChange={e => setUserForm(f => ({ ...f, cpf: formatCPF(e.target.value) }))}
                               maxLength={14} placeholder="000.000.000-00"
                               className={`w-full px-3 py-1.5 border rounded-lg text-sm bg-surface dark:text-white focus:ring-2 focus:ring-brand-500 ${
-                                userForm.cpf && userForm.cpf.replace(/\D/g,'').length === 11 && !validateCPF(userForm.cpf)
+                                userForm.tipo !== 'jeos' && userForm.cpf && userForm.cpf.replace(/\D/g,'').length === 11 && !validateCPF(userForm.cpf)
                                   ? 'border-danger-400' : 'border-ink-300'
                               }`}
                             />
-                            {userForm.cpf && userForm.cpf.replace(/\D/g,'').length === 11 && !validateCPF(userForm.cpf) && (
+                            {userForm.tipo !== 'jeos' && userForm.cpf && userForm.cpf.replace(/\D/g,'').length === 11 && !validateCPF(userForm.cpf) && (
                               <p className="text-xs text-danger-500 mt-0.5">CPF inválido</p>
                             )}
                           </div>
