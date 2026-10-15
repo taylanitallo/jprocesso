@@ -119,7 +119,9 @@ export default function VerificarDocumento() {
                 ['CPF', a.signatario_cpf],
                 ['Cargo', a.signatario_cargo],
                 ['Data e hora', fmtDataHora(a.assinado_em)],
-                ['Tipo de assinatura', 'Eletrônica avançada — senha + código de verificação (app autenticador)'],
+                ['Tipo de assinatura', a.metodo === 'senha+email'
+                  ? 'Eletrônica avançada — senha + código de uso único enviado ao e-mail do signatário'
+                  : 'Eletrônica avançada — senha + código de verificação (app autenticador)'],
                 ['Fundamento legal', a.fundamento],
                 ['Código verificador', a.codigo_verificador],
                 ['Código CRC', a.codigo_crc],

@@ -91,6 +91,33 @@ router.delete('/tenants/:id/logos/:tipo', ...sa, deleteLogo);
 router.put   ('/tenants/:id/config',      ...sa, updateConfig);
 router.get   ('/tenants/:id/timbrado',    ...sa, getTimbrado);
 
+// ─── Servidor de e-mail (SMTP) — um só para todos os municípios ──────────────
+// Usado no código de assinatura por e-mail (alternativa ao app autenticador).
+{
+  const { masterDb } = require('../config/database');
+  const email = require('../services/emailService');
+  const falha = (res, err) => res.status(err.status || 500).json({ error: err.message || 'Erro no servidor de e-mail' });
+  router.get('/smtp', ...sa, async (req, res) => {
+    try { res.json(await email.obterConfigPublica(masterDb)); } catch (err) { falha(res, err); }
+  });
+  router.put('/smtp', ...sa, async (req, res) => {
+    try { res.json(await email.salvarConfig(masterDb, req.body || {}, req.user?.email || req.user?.nome)); } catch (err) { falha(res, err); }
+  });
+  router.post('/smtp/testar', ...sa, async (req, res) => {
+    try {
+      const para = String(req.body?.para || '').trim();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(para)) return res.status(400).json({ error: 'Informe um e-mail válido para o teste.' });
+      await email.enviar(masterDb, {
+        para,
+        assunto: 'Teste do servidor de e-mail — jProcesso',
+        texto: 'Se você recebeu esta mensagem, o servidor de e-mail do jProcesso está configurado corretamente.',
+        html: '<p style="font-family:Arial,sans-serif">Se você recebeu esta mensagem, o servidor de e-mail do <strong>jProcesso</strong> está configurado corretamente.</p>',
+      });
+      res.json({ success: true });
+    } catch (err) { falha(res, err); }
+  });
+}
+
 // ─── Legislação do município (normas exibidas na tela de login) ──────────────
 const legislacao = require('../controllers/legislacaoController');
 router.get   ('/tenants/:id/legislacoes',      ...sa, legislacao.listar);

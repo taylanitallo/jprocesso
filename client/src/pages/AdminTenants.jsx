@@ -12,11 +12,12 @@ import {
   Users, FileText, HardDrive, RotateCcw, Settings, ExternalLink,
   RefreshCw, Download, Power, ChevronRight, Image, Palette,
   Upload as CloudUpload, Layers, Archive, Clock, Calendar, Bell, Zap,
-  TrendingUp, Activity, Server, Eye, MoreVertical, Scale,
+  TrendingUp, Activity, Server, Eye, MoreVertical, Scale, Mail,
 } from 'lucide-react';
 import AbaLegislacao from './superadmin/AbaLegislacao';
 import BotaoTema from '../components/BotaoTema';
 import SeletorTema from '../components/SeletorTema';
+import ModalSmtp from '../components/ModalSmtp';
 import { temaDaConfiguracao } from '../utils/tema';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -2307,6 +2308,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function AdminTenants() {
+  const [showSmtp, setShowSmtp] = useState(false);
   const navigate = useNavigate();
   const qc = useQueryClient();
 
@@ -2374,6 +2376,8 @@ export default function AdminTenants() {
 
   return (
     <div className="min-h-screen bg-ink-50">
+      {showSmtp && <ModalSmtp onClose={() => setShowSmtp(false)} />}
+
       {/* Header */}
       <header className="bg-surface border-b border-ink-200 shadow-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -2387,6 +2391,10 @@ export default function AdminTenants() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <button onClick={() => setShowSmtp(true)} title="Servidor de e-mail (SMTP) — código de assinatura por e-mail"
+              className="flex items-center gap-1.5 text-sm text-ink-600 hover:text-brand-600 hover:bg-ink-100 px-3 py-1.5 rounded-lg transition-colors">
+              <Mail className="h-4 w-4" /> <span className="hidden md:inline">Servidor de e-mail</span>
+            </button>
             <BotaoTema />
             <span className="text-sm font-medium text-ink-700 hidden sm:block">Administrador Geral</span>
             <button onClick={handleLogout}

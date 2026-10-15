@@ -25,15 +25,20 @@ const fundamentoMunicipal = async (tenant) => {
   return rows[0]?.titulo || null;
 };
 
-const validarAssinante = (req, usuario, transaction) => assinaturaService.validarCredenciais({
-  db: req.tenantDb, transaction, usuario,
-  senha: req.body?.senhaConfirmacao, codigo: req.body?.codigoTotp,
-});
+// 2º fator: código do app (codigoTotp) ou, sem o celular, o código do e-mail (codigoEmail).
+// O método usado fica em req para constar na assinatura (assinarTramitacao).
+const validarAssinante = async (req, usuario, transaction) => {
+  req._metodoAssinatura = await assinaturaService.validarCredenciais({
+    db: req.tenantDb, transaction, usuario,
+    senha: req.body?.senhaConfirmacao, codigo: req.body?.codigoTotp, codigoEmail: req.body?.codigoEmail,
+  });
+  return req._metodoAssinatura;
+};
 
 const assinarTramitacao = async (req, transaction, processo, tramitacao, signatario) => {
   const row = await assinaturaService.assinarAto({
     db: req.tenantDb, transaction, masterDb, tenant: req.tenant, processo, tramitacao, signatario, req,
-    fundamentoMunicipal: await fundamentoMunicipal(req.tenant),
+    fundamentoMunicipal: await fundamentoMunicipal(req.tenant), metodo: req._metodoAssinatura,
   });
   await tramitacao.update({ assinatura_digital: row.hash_conteudo }, { transaction });
   return { codigo_verificador: row.codigo_verificador, codigo_crc: row.codigo_crc, assinado_em: row.assinado_em };

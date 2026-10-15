@@ -22,6 +22,10 @@ const { QueryTypes } = require('sequelize');
 const FUNDAMENTO_LEGAL = 'Lei Federal nº 14.063/2020';
 const NIVEL = 'avancada';
 const METODO = 'senha+totp';
+const METODO_EMAIL = 'senha+email';
+const CODIGO_EMAIL_MINUTOS = 10;
+const CODIGO_EMAIL_TENTATIVAS = 5;
+const CODIGO_EMAIL_INTERVALO_S = 60;
 const PREFIXO_MENSAGEM = 'jprocesso-assinatura-v1';
 
 // ── Segredo do sistema ────────────────────────────────────────────────────────
@@ -206,11 +210,89 @@ const definirTotp = (db, usuarioId, segredoBase32) => db.query(
 const removerTotp = (db, usuarioId) =>
   db.query(`DELETE FROM usuario_totp WHERE usuario_id = :id`, { replacements: { id: usuarioId } });
 
+// ── 2º fator alternativo: código por e-mail ──────────────────────────────────
+// Só para quem já tem o app configurado e está sem o celular no momento.
+const hashCodigoEmail = (usuarioId, codigo) =>
+  crypto.createHmac('sha256', segredo()).update(`email|${usuarioId}|${codigo}`).digest('hex');
+const mascararEmail = (email) => {
+  const [nome, dominio] = String(email || '').split('@');
+  if (!dominio) return '';
+  return `${nome.slice(0, 2)}${'*'.repeat(Math.max(1, nome.length - 2))}@${dominio}`;
+};
+
+/** Gera, guarda (hash) e envia por e-mail um código de 6 dígitos para assinar. */
+const enviarCodigoEmail = async ({ db, masterDb, usuario, tenant }) => {
+  const email = require('./emailService');
+  const totp = await statusTotp(db, usuario.id);
+  if (!totp.configurado) {
+    throw new AssinaturaError(428, 'TOTP_NAO_CONFIGURADO', 'O código por e-mail é uma alternativa para quem já usa o aplicativo autenticador. Configure o aplicativo primeiro.');
+  }
+  if (!usuario.email) throw new AssinaturaError(400, 'SEM_EMAIL', 'Seu cadastro não tem e-mail. Peça ao administrador para incluir.');
+  if (!(await email.smtpConfigurado(masterDb))) {
+    throw new AssinaturaError(503, 'SMTP_NAO_CONFIGURADO', 'O envio de código por e-mail ainda não foi configurado pelo administrador do sistema.');
+  }
+  const ultimo = await db.query(
+    `SELECT EXTRACT(EPOCH FROM (NOW() - enviado_em))::int AS seg FROM usuario_codigo_email WHERE usuario_id = :id`,
+    { replacements: { id: usuario.id }, type: QueryTypes.SELECT }
+  );
+  if (ultimo[0] && ultimo[0].seg < CODIGO_EMAIL_INTERVALO_S) {
+    throw new AssinaturaError(429, 'AGUARDE', `Aguarde ${CODIGO_EMAIL_INTERVALO_S - ultimo[0].seg} segundos para pedir outro código.`);
+  }
+  const codigo = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
+  await db.query(
+    `INSERT INTO usuario_codigo_email (usuario_id, codigo_hash, expira_em, tentativas, enviado_em)
+     VALUES (:id, :h, NOW() + make_interval(mins => :min), 0, NOW())
+     ON CONFLICT (usuario_id) DO UPDATE SET codigo_hash = :h, expira_em = NOW() + make_interval(mins => :min), tentativas = 0, enviado_em = NOW()`,
+    { replacements: { id: usuario.id, h: hashCodigoEmail(usuario.id, codigo), min: CODIGO_EMAIL_MINUTOS } }
+  );
+  const municipio = tenant?.nome_municipio || 'jProcesso';
+  try {
+    await email.enviar(masterDb, {
+      para: usuario.email,
+      assunto: `Código para assinatura eletrônica: ${codigo}`,
+      texto: `Olá, ${usuario.nome}.\n\nSeu código para assinar no jProcesso (${municipio}) é: ${codigo}\n\nEle vale por ${CODIGO_EMAIL_MINUTOS} minutos e só pode ser usado uma vez.\nSe não foi você quem pediu, ignore este e-mail e avise o administrador.`,
+      html: `<div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;color:#1e293b">
+        <p>Olá, <strong>${usuario.nome}</strong>.</p>
+        <p>Seu código para assinar eletronicamente no jProcesso (${municipio}) é:</p>
+        <p style="font-size:32px;font-weight:bold;letter-spacing:8px;text-align:center;background:#f1f5f9;padding:16px;border-radius:8px">${codigo}</p>
+        <p style="font-size:13px;color:#64748b">Vale por ${CODIGO_EMAIL_MINUTOS} minutos e só pode ser usado uma vez.<br>Se não foi você quem pediu, ignore este e-mail e avise o administrador.</p>
+      </div>`,
+    });
+  } catch (err) {
+    await db.query(`DELETE FROM usuario_codigo_email WHERE usuario_id = :id`, { replacements: { id: usuario.id } }).catch(() => {});
+    throw new AssinaturaError(err.status || 502, err.codigo || 'SMTP_FALHOU', err.message);
+  }
+  return { email: mascararEmail(usuario.email), validade_minutos: CODIGO_EMAIL_MINUTOS };
+};
+
+const validarCodigoEmail = async ({ db, transaction, usuario, codigoEmail }) => {
+  const c = String(codigoEmail || '').replace(/\D/g, '');
+  if (c.length !== 6) throw new AssinaturaError(400, 'CODIGO_OBRIGATORIO', 'Informe o código de 6 dígitos enviado para o seu e-mail.');
+  const rows = await db.query(
+    `SELECT codigo_hash, tentativas, expira_em < NOW() AS expirado FROM usuario_codigo_email WHERE usuario_id = :id`,
+    { replacements: { id: usuario.id }, type: QueryTypes.SELECT, transaction }
+  );
+  const r = rows[0];
+  if (!r) throw new AssinaturaError(400, 'EMAIL_SEM_CODIGO', 'Peça um novo código por e-mail.');
+  if (r.expirado) throw new AssinaturaError(400, 'EMAIL_EXPIRADO', 'O código do e-mail expirou. Peça um novo.');
+  if (r.tentativas >= CODIGO_EMAIL_TENTATIVAS) throw new AssinaturaError(400, 'EMAIL_BLOQUEADO', 'Muitas tentativas com este código. Peça um novo.');
+  const esperado = Buffer.from(r.codigo_hash, 'hex');
+  const informado = Buffer.from(hashCodigoEmail(usuario.id, c), 'hex');
+  if (esperado.length !== informado.length || !crypto.timingSafeEqual(esperado, informado)) {
+    // fora da transação: a tentativa errada conta mesmo que a assinatura seja desfeita
+    await db.query(`UPDATE usuario_codigo_email SET tentativas = tentativas + 1 WHERE usuario_id = :id`, { replacements: { id: usuario.id } });
+    throw new AssinaturaError(400, 'EMAIL_INVALIDO', 'Código do e-mail incorreto.');
+  }
+  // uso único
+  await db.query(`DELETE FROM usuario_codigo_email WHERE usuario_id = :id`, { replacements: { id: usuario.id }, transaction });
+};
+
 /**
- * Valida senha + código do app (2º fator) do signatário. Lança AssinaturaError.
- * O mesmo código não pode ser reutilizado (anti-replay por passo TOTP).
+ * Valida senha + 2º fator do signatário (código do app ou, na falta do celular,
+ * código enviado por e-mail). Lança AssinaturaError. Devolve o método usado.
+ * O mesmo código não pode ser reutilizado (anti-replay por passo TOTP / uso único no e-mail).
  */
-const validarCredenciais = async ({ db, transaction, usuario, senha, codigo }) => {
+const validarCredenciais = async ({ db, transaction, usuario, senha, codigo, codigoEmail }) => {
   if (!senha) throw new AssinaturaError(400, 'SENHA_OBRIGATORIA', 'Informe sua senha para assinar eletronicamente.');
   if (!(await bcrypt.compare(String(senha), usuario.senha))) {
     throw new AssinaturaError(400, 'SENHA_INVALIDA', 'Senha incorreta. A assinatura eletrônica requer a sua senha.');
@@ -222,6 +304,10 @@ const validarCredenciais = async ({ db, transaction, usuario, senha, codigo }) =
   if (!rows[0]?.ativo) {
     throw new AssinaturaError(428, 'TOTP_NAO_CONFIGURADO', 'Configure o aplicativo autenticador para assinar eletronicamente.');
   }
+  if (codigoEmail) {
+    await validarCodigoEmail({ db, transaction, usuario, codigoEmail });
+    return METODO_EMAIL;
+  }
   if (!codigo) throw new AssinaturaError(400, 'CODIGO_OBRIGATORIO', 'Informe o código de 6 dígitos do aplicativo autenticador.');
   const passo = verificarTotp(decifrarOuRecadastrar(rows[0].segredo_cifrado), codigo);
   if (passo === null) throw new AssinaturaError(400, 'TOTP_INVALIDO', 'Código do aplicativo inválido ou expirado.');
@@ -232,6 +318,7 @@ const validarCredenciais = async ({ db, transaction, usuario, senha, codigo }) =
     `UPDATE usuario_totp SET ultimo_passo = :passo, updated_at = NOW() WHERE usuario_id = :id`,
     { replacements: { id: usuario.id, passo }, transaction }
   );
+  return METODO;
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -268,7 +355,7 @@ const TIPOS_ATO = {
  * Pré-requisito: validarCredenciais() já executado para o signatário.
  * assinadoEm: só para cargas de dados (seed de demonstração); o padrão é agora.
  */
-const assinarAto = async ({ db, transaction, masterDb, tenant, processo, tramitacao, signatario, req, fundamentoMunicipal, assinadoEm: quando }) => {
+const assinarAto = async ({ db, transaction, masterDb, tenant, processo, tramitacao, signatario, req, fundamentoMunicipal, assinadoEm: quando, metodo }) => {
   await registrarChavePublica(masterDb);
   const { privateKey, kid } = obterChave();
 
@@ -301,7 +388,7 @@ const assinarAto = async ({ db, transaction, masterDb, tenant, processo, tramita
     },
     assinado_em: assinadoEm.toISOString(),
     nivel: NIVEL,
-    metodo: METODO,
+    metodo: metodo || METODO,
     fundamento: [FUNDAMENTO_LEGAL, fundamentoMunicipal].filter(Boolean).join('; '),
   };
   const hash_conteudo = sha256(canonico(conteudo));
@@ -333,7 +420,7 @@ const assinarAto = async ({ db, transaction, masterDb, tenant, processo, tramita
       replacements: {
         codigo: codigo_verificador, crc: codigo_crc, pid: processo.id, tid: tramitacao.id,
         ato: tramitacao.tipo_acao, sid: signatario.id, snome: signatario.nome, scpf: signatario.cpf || null,
-        scargo: signatario.cargo || null, nivel: NIVEL, metodo: METODO, conteudo: JSON.stringify(conteudo),
+        scargo: signatario.cargo || null, nivel: NIVEL, metodo: conteudo.metodo, conteudo: JSON.stringify(conteudo),
         hash: hash_conteudo, hant: hash_anterior, assinatura, kid, ip,
         ua: (req?.headers?.['user-agent'] || '').slice(0, 300), em: assinadoEm,
       },
@@ -434,6 +521,8 @@ module.exports = {
   // TOTP
   hotp, verificarTotp, base32Encode, base32Decode, uriOtpAuth,
   statusTotp, iniciarCadastroTotp, ativarTotp, removerTotp, definirTotp,
+  // código por e-mail (alternativa ao app) e a cifra usada também na senha do SMTP
+  enviarCodigoEmail, METODO_EMAIL, cifrar, decifrar,
   // assinatura
   validarCredenciais, assinarAto, verificar, listarPorProcesso,
   obterChave, registrarChavePublica, canonico,
