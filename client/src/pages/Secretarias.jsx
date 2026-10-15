@@ -279,9 +279,11 @@ export default function Secretarias() {
   const [respFiltroNome, setRespFiltroNome]     = useState('')
   const [respFiltroSec, setRespFiltroSec]       = useState('')
   const [respFiltroCargo, setRespFiltroCargo]   = useState('')
-  const [respFiltroStatus, setRespFiltroStatus] = useState('')
+  const [respFiltroEmail, setRespFiltroEmail]   = useState('')
+  const [respFiltroTel, setRespFiltroTel]       = useState('')
+  const [respFiltroNasc, setRespFiltroNasc]     = useState('')
   // Reset paginação dos responsáveis quando filtros mudarem
-  useEffect(() => { setRespPage(1) }, [respFiltroVigor, respFiltroNome, respFiltroSec, respFiltroCargo, respFiltroStatus])
+  useEffect(() => { setRespPage(1) }, [respFiltroVigor, respFiltroNome, respFiltroSec, respFiltroCargo, respFiltroEmail, respFiltroTel, respFiltroNasc])
 
   const fetchSecretarias = async () => {
     try {
@@ -707,11 +709,39 @@ export default function Secretarias() {
   };
 
   // ── Responsáveis functions ─────────────────────────────────────────────────
+  // E-mail, telefone e nascimento vêm do cadastro do agente; o nome também, quando o
+  // responsável foi salvo sem ele (apareciam linhas com o nome em branco)
+  const agentePorId = new Map((agentes || []).map(a => [String(a.id), a]));
+  // responsáveis antigos têm só o nome digitado: casa com o agente de mesmo nome
+  const chaveNome = (n) => String(n || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+  const agentePorNome = new Map((agentes || []).map(a => [chaveNome(a.nome), a]));
   const todosResponsaveis = (Array.isArray(secretarias) ? secretarias : []).flatMap(sec =>
-    (sec.responsaveis || []).map((r, i) => ({
-      ...r, _secId: sec.id, _secNome: sec.nome, _secSigla: sec.sigla, _idx: i
-    }))
+    (sec.responsaveis || []).map((r, i) => {
+      const ag = (r.agente_id && agentePorId.get(String(r.agente_id))) || (r.nome ? agentePorNome.get(chaveNome(r.nome)) : null) || null;
+      return {
+        ...r, nome: r.nome || ag?.nome || '', _secId: sec.id, _secNome: sec.nome, _secSigla: sec.sigla, _idx: i,
+        _email: ag?.email || '', _telefone: ag?.telefone || '', _nascimento: ag?.nascimento ? String(ag.nascimento).slice(0, 10) : '',
+      };
+    })
   );
+  const soDigitosResp = (v) => String(v || '').replace(/\D/g, '');
+  const filtrarResp = (r) => {
+    const vigor = respFiltroVigor ? new Date(respFiltroVigor + 'T12:00:00') : null;
+    if (vigor) {
+      const ini = r.data_inicio ? new Date(r.data_inicio + 'T00:00:00') : null;
+      const fim = r.data_fim    ? new Date(r.data_fim    + 'T23:59:59') : null;
+      if (ini && ini > vigor) return false;
+      if (fim && fim < vigor)  return false;
+    }
+    if (respFiltroNome  && !(r.nome || '').toLowerCase().includes(respFiltroNome.toLowerCase())) return false;
+    if (respFiltroSec   && !(r._secNome || '').toLowerCase().includes(respFiltroSec.toLowerCase()) && !(r._secSigla || '').toLowerCase().includes(respFiltroSec.toLowerCase())) return false;
+    if (respFiltroCargo && !(r.cargo || '').toLowerCase().includes(respFiltroCargo.toLowerCase())) return false;
+    if (respFiltroEmail && !r._email.toLowerCase().includes(respFiltroEmail.trim().toLowerCase())) return false;
+    if (respFiltroTel   && !soDigitosResp(r._telefone).includes(soDigitosResp(respFiltroTel))) return false;
+    if (respFiltroNasc  && r._nascimento !== respFiltroNasc) return false;
+    return true;
+  };
+  const fmtDataResp = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '—');
 
   const openModalResp = (resp = null) => {
     setEditingResp(resp ? { secId: resp._secId, index: resp._idx } : null);
@@ -1209,7 +1239,7 @@ export default function Secretarias() {
         <div className="space-y-3">
           {/* Campos para pesquisa */}
           <FilterBar>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 items-end flex-1">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 items-end flex-1">
               <div>
                 <label className="block text-xs font-medium text-ink-600 mb-1">Nome</label>
                 <input
@@ -1238,17 +1268,19 @@ export default function Secretarias() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-ink-600 mb-1">Status</label>
-                <select
-                  value={respFiltroStatus}
-                  onChange={e => setRespFiltroStatus(e.target.value)}
-                  className="input-field text-sm"
-                >
-                  <option value="">Todos</option>
-                  <option value="ativo">Ativo</option>
-                  <option value="encerrado">Encerrado</option>
-                  <option value="futuro">Futuro</option>
-                </select>
+                <label className="block text-xs font-medium text-ink-600 mb-1">E-mail</label>
+                <input value={respFiltroEmail} onChange={e => setRespFiltroEmail(e.target.value)}
+                  className="input-field text-sm" placeholder="email@..." />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-ink-600 mb-1">Telefone</label>
+                <input value={respFiltroTel} onChange={e => setRespFiltroTel(e.target.value)}
+                  className="input-field text-sm" placeholder="(00) 00000-0000" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-ink-600 mb-1">Nascimento</label>
+                <input type="date" value={respFiltroNasc} onChange={e => setRespFiltroNasc(e.target.value)}
+                  className="input-field text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-ink-600 mb-1">Vigência</label>
@@ -1307,34 +1339,23 @@ export default function Secretarias() {
                     <th className="text-left px-4 py-2.5 font-semibold text-ink-600">Nome</th>
                     <th className="text-left px-4 py-2.5 font-semibold text-ink-600">Cargo / Função</th>
                     <th className="text-left px-4 py-2.5 font-semibold text-ink-600">Secretaria</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-28">Início</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-28">Fim</th>
-                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-28">Status</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600">E-mail</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-36">Telefone</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-28">Nascimento</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-24">Início</th>
+                    <th className="text-left px-4 py-2.5 font-semibold text-ink-600 w-24">Fim</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-ink-100">
                   {(() => {
-                    const filtrados = todosResponsaveis.filter(r => {
-                      const vigor = respFiltroVigor ? new Date(respFiltroVigor + 'T12:00:00') : null;
-                      if (vigor) {
-                        const ini = r.data_inicio ? new Date(r.data_inicio + 'T00:00:00') : null;
-                        const fim = r.data_fim    ? new Date(r.data_fim    + 'T23:59:59') : null;
-                        if (ini && ini > vigor) return false;
-                        if (fim && fim < vigor)  return false;
-                      }
-                      if (respFiltroNome  && !(r.nome || "").toLowerCase().includes(respFiltroNome.toLowerCase())) return false;
-                      if (respFiltroSec   && !(r._secNome || "").toLowerCase().includes(respFiltroSec.toLowerCase()) && !(r._secSigla||'').toLowerCase().includes(respFiltroSec.toLowerCase())) return false;
-                      if (respFiltroCargo && !(r.cargo||'').toLowerCase().includes(respFiltroCargo.toLowerCase())) return false;
-                      if (respFiltroStatus && getStatusVigencia(r.data_inicio, r.data_fim) !== respFiltroStatus) return false;
-                      return true;
-                    });
+                    const filtrados = todosResponsaveis.filter(filtrarResp);
 
                     const pageResp = filtrados.slice((respPage - 1) * respPorPagina, respPage * respPorPagina);
 
                     if (filtrados.length === 0) {
                       return (
                         <tr>
-                          <td colSpan={7}>
+                          <td colSpan={9}>
                             <EmptyState
                               icon={UserCheck}
                               title={todosResponsaveis.length === 0 ? 'Nenhum responsável cadastrado' : 'Nenhum resultado para o filtro'}
@@ -1369,6 +1390,9 @@ export default function Secretarias() {
                           <td className={`px-4 py-2.5 ${isSelected ? 'text-info-100' : 'text-ink-600'}`}>
                             {resp._secNome}
                           </td>
+                          <td className={`px-4 py-2.5 text-xs ${isSelected ? 'text-info-100' : 'text-ink-600'}`}>{resp._email || '—'}</td>
+                          <td className={`px-4 py-2.5 text-xs ${isSelected ? 'text-info-100' : 'text-ink-600'}`}>{resp._telefone || '—'}</td>
+                          <td className={`px-4 py-2.5 text-xs ${isSelected ? 'text-info-100' : 'text-ink-600'}`}>{fmtDataResp(resp._nascimento)}</td>
                           <td className={`px-4 py-2.5 text-xs ${isSelected ? 'text-info-100' : 'text-ink-500'}`}>
                             {resp.data_inicio
                               ? new Date(resp.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR')
@@ -1378,11 +1402,6 @@ export default function Secretarias() {
                             {resp.data_fim
                               ? new Date(resp.data_fim + 'T00:00:00').toLocaleDateString('pt-BR')
                               : '—'}
-                          </td>
-                          <td className="px-4 py-2.5">
-                            {isSelected
-                              ? (() => { const s=getStatusVigencia(resp.data_inicio,resp.data_fim); return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-info-500/30 text-info-100">{s==='ativo'?'Ativo':s==='futuro'?'Futuro':'Encerrado'}</span>; })()
-                              : <StatusBadge status={getStatusVigencia(resp.data_inicio, resp.data_fim)} />}
                           </td>
                         </tr>
                       );
@@ -1394,20 +1413,7 @@ export default function Secretarias() {
 
             {/* Paginação */}
             <PaginationBar
-              total={todosResponsaveis.filter(r => {
-                const vigor = respFiltroVigor ? new Date(respFiltroVigor + 'T12:00:00') : null;
-                if (vigor) {
-                  const ini = r.data_inicio ? new Date(r.data_inicio + 'T00:00:00') : null;
-                  const fim = r.data_fim    ? new Date(r.data_fim    + 'T23:59:59') : null;
-                  if (ini && ini > vigor) return false;
-                  if (fim && fim < vigor)  return false;
-                }
-                if (respFiltroNome  && !(r.nome || "").toLowerCase().includes(respFiltroNome.toLowerCase())) return false;
-                if (respFiltroSec   && !(r._secNome || "").toLowerCase().includes(respFiltroSec.toLowerCase()) && !(r._secSigla||'').toLowerCase().includes(respFiltroSec.toLowerCase())) return false;
-                if (respFiltroCargo && !(r.cargo||'').toLowerCase().includes(respFiltroCargo.toLowerCase())) return false;
-                if (respFiltroStatus && getStatusVigencia(r.data_inicio, r.data_fim) !== respFiltroStatus) return false;
-                return true;
-              }).length}
+              total={todosResponsaveis.filter(filtrarResp).length}
               page={respPage}
               setPage={setRespPage}
               porPagina={respPorPagina}
