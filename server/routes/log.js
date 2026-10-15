@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticate, tenantMiddleware, requireTenant } = require('../middleware/auth');
+const { authenticate, tenantMiddleware, requireTenant, ignoraPermissoes } = require('../middleware/auth');
 const { listLogs, listModulos } = require('../controllers/logController');
 // SEGURANÇA: tenantMiddleware DEVE rodar antes de authenticate para que o binding
 // token↔tenant (em authenticate) seja aplicado. Caso contrário req.tenant fica
@@ -16,10 +16,11 @@ const checkRegistrosPermissao = async (req, res, next) => {
     if (req.user.permissoes == null && req.models?.User) {
       const u = await req.models.User.findByPk(req.user.id, { attributes: ['permissoes', 'tipo'] });
       if (!u) return res.status(401).json({ error: 'Usuário não encontrado' });
-      if (u.tipo === 'jeos') return next();
+      if (ignoraPermissoes(u)) return next();
       req.user.permissoes = u.permissoes || {};
     }
     const p = req.user.permissoes || {};
+    if (ignoraPermissoes({ tipo: req.user.tipo, permissoes: p })) return next();
     // Permissão aninhada (padrão atual) com fallback para o formato plano legado.
     // undefined = permitido (backward compat); false = negado.
     const val = p.administracao?.visualizar_registros ?? p.visualizar_registros;

@@ -550,9 +550,10 @@ const updateUser = async (req, res) => {
     }
 
     // Alterar permissões de outro usuário depende de Organização › Usuários › Permissões
-    if (permissoes !== undefined && req.user?.tipo !== 'jeos') {
-      const eu = await User.findByPk(req.user.id, { attributes: ['permissoes'] });
-      if (eu?.permissoes?.organizacao?.usuarios?.permissoes === false) {
+    if (permissoes !== undefined) {
+      const eu = await User.findByPk(req.user.id, { attributes: ['tipo', 'permissoes'] });
+      const { ignoraPermissoes } = require('../middleware/auth');
+      if (!ignoraPermissoes(eu) && eu?.permissoes?.organizacao?.usuarios?.permissoes === false) {
         return res.status(403).json({ error: 'Sem permissão para alterar permissões de usuários' });
       }
     }

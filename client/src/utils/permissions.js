@@ -2,11 +2,15 @@ import { useAuth } from '../context/AuthContext'
 
 // Verifica permissão nested. Caminho: hasPerm(user, 'modulo', 'aba', 'acao')
 // undefined = permitido (backward compat); false = negado; true = permitido.
+// Passa direto: Administrador Jeos, e Administrador cujas permissões ainda não foram
+// salvas na janela de Permissões (marca _v = 2). Os "desligados" antigos dos
+// administradores vieram do modelo de cadastro, não de uma decisão de alguém.
+export const VERSAO_PERMISSOES = 2
+export const ignoraPermissoes = (u) => u?.tipo === 'jeos' || (u?.tipo === 'admin' && u?.permissoes?._v !== VERSAO_PERMISSOES)
+
 export const hasPerm = (user, ...path) => {
   if (!user) return false
-  // Só o Administrador Jeos passa direto. O Administrador segue o que estiver
-  // desligado no editor de permissões (sem configuração = permitido).
-  if (user.tipo === 'jeos') return true
+  if (ignoraPermissoes(user)) return true
   let obj = user.permissoes
   for (const key of path) {
     if (obj == null || typeof obj !== 'object') return true

@@ -4,7 +4,7 @@ const QRCode = require('qrcode');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const { masterDb } = require('../config/database');
-const { authenticate, tenantMiddleware, requireTenant } = require('../middleware/auth');
+const { authenticate, tenantMiddleware, requireTenant, ignoraPermissoes } = require('../middleware/auth');
 const { registrarLog } = require('../middleware/activityLogger');
 const assinatura = require('../services/assinaturaService');
 const { AssinaturaError } = assinatura;
@@ -73,7 +73,7 @@ router.post('/totp/desativar', ...tenantAuth, async (req, res) => {
 // Autenticador não esteja desligado.
 const podeGerenciarAutenticador = async (req) => {
   const eu = await req.models.User.findByPk(req.user.id, { attributes: ['tipo', 'permissoes'] });
-  if (eu?.tipo === 'jeos') return true;
+  if (ignoraPermissoes(eu)) return true;
   if (eu?.permissoes?.organizacao?.usuarios?.autenticador === false) return false;
   return eu?.tipo === 'admin' || eu?.permissoes?.administracao?.gerenciar_usuarios === true;
 };

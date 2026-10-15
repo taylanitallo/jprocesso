@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import ModalPermissoes from '../components/ModalPermissoes';
 import ModalConfigurarAutenticador from '../components/ModalConfigurarAutenticador';
-import { usePode } from '../utils/permissions';
+import { usePode, VERSAO_PERMISSOES } from '../utils/permissions';
 import LoadingBar from '../components/LoadingBar';
 import StatCard from '../components/ui/StatCard';
 import SectionTitle from '../components/ui/SectionTitle';
@@ -561,7 +561,14 @@ export default function Usuarios() {
                     )}
                     {pode('permissoes') && usuario.id !== user?.id && (
                       <button
-                        onClick={() => setPermUsuario({ usuario, permissoes: { ...DEFAULT_PERMISSOES(), ...(usuario.permissoes || {}) } })}
+                        onClick={() => setPermUsuario({
+                          usuario,
+                          // Administrador nunca configurado aqui: começa tudo ligado (os desligados
+                          // antigos vieram do modelo de cadastro e nunca valeram para ele)
+                          permissoes: usuario.tipo === 'admin' && usuario.permissoes?._v !== VERSAO_PERMISSOES
+                            ? {}
+                            : { ...DEFAULT_PERMISSOES(), ...(usuario.permissoes || {}) },
+                        })}
                         title="Permissões"
                         className="text-violet-600 hover:text-violet-800"
                       >

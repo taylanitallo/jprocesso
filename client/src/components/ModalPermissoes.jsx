@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Shield, X } from 'lucide-react'
 import api from '../services/api'
 import PermissoesEditor from './PermissoesEditor'
+import { VERSAO_PERMISSOES } from '../utils/permissions'
 
 const TIPOS = { admin: 'Administrador', gestor: 'Gestor', operacional: 'Operacional', jeos: 'Administrador Jeos' }
 
@@ -16,7 +17,9 @@ export default function ModalPermissoes({ usuario, permissoesIniciais, secretari
   const salvar = async () => {
     setSalvando(true)
     try {
-      await api.put(`/auth/users/${usuario.id}`, { permissoes })
+      // _v marca que estas permissões foram decididas aqui — a partir daí valem
+      // também para o Administrador (ver ignoraPermissoes)
+      await api.put(`/auth/users/${usuario.id}`, { permissoes: { ...permissoes, _v: VERSAO_PERMISSOES } })
       onSalvo?.()
     } catch (err) {
       alert(err.response?.data?.error || 'Erro ao salvar as permissões')

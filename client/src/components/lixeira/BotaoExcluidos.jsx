@@ -4,6 +4,7 @@
 import { useState } from 'react'
 import { Archive } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { ignoraPermissoes } from '../../utils/permissions'
 import ModalExcluidos from './ModalExcluidos'
 
 // Caminho da permissão de cada tela no permissoesSchema (espelha o lixeiraService)
@@ -28,7 +29,7 @@ const PERM = {
 }
 
 export const podeVerExcluidos = (user, entidade) => {
-  if (user?.tipo === 'jeos') return true
+  if (ignoraPermissoes(user)) return true
   const caminho = PERM[entidade]
   if (!caminho) return user?.tipo === 'admin'
   let obj = user?.permissoes
