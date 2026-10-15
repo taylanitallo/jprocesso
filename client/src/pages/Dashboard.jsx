@@ -178,14 +178,6 @@ export default function Dashboard() {
                   Atualizado {lastUpdatedLabel}
                 </span>
               )}
-              <button
-                onClick={refetchAll}
-                disabled={isFetching}
-                className="inline-flex items-center justify-center p-2 rounded-lg border border-ink-200 text-ink-500 hover:bg-ink-100 dark:hover:bg-surface/5 transition-colors disabled:opacity-50"
-                title="Atualizar dashboard"
-              >
-                <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-              </button>
             </div>
             <Link to={`/${subdomain}/processos/novo`} className="btn-primary">
               <Plus className="h-4 w-4" />

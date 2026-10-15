@@ -8,6 +8,7 @@ import {
   Lock, Landmark, ClipboardList, Archive, RefreshCw,
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
+import { useQueryClient } from 'react-query'
 import JAI from './JAI'
 import api, { apiUrl } from '../services/api'
 import AvisoAssinatura from './assinatura/AvisoAssinatura'
@@ -35,19 +36,36 @@ export default function Layout() {
     api.get('/auth/meu-ip', { _silent: true }).then(r => setMeuIp(r.data?.ip || '')).catch(() => {})
   }, [])
 
-  // Atualiza o sistema sem sair: descarta o que o navegador guardou e recarrega a
-  // versão mais nova (a sessão continua — ela é restaurada pelo cookie de acesso)
+  // Atualizar sem sair do sistema:
+  //  - se saiu versão nova do sistema, recarrega a página para carregá-la;
+  //  - senão, só busca de novo os dados da tela atual (remonta a tela e invalida
+  //    as consultas em cache), sem fechar e abrir a página.
+  const queryClient = useQueryClient()
+  const [versaoTela, setVersaoTela] = useState(0)
+  const temVersaoNova = async () => {
+    try {
+      const atual = document.querySelector('script[type="module"][src*="/assets/"]')?.getAttribute('src')
+      const html = await (await fetch('/index.html', { cache: 'no-store' })).text()
+      const m = html.match(/<script[^>]+type="module"[^>]+src="([^"]+\/assets\/[^"]+\.js)"/i)
+        || html.match(/src="([^"]+\/assets\/[^"]+\.js)"/i)
+      return !!(m && atual && m[1] !== atual)
+    } catch {
+      return false
+    }
+  }
   const atualizarSistema = async () => {
     setAtualizando(true)
-    try {
+    if (await temVersaoNova()) {
       if ('caches' in window) {
-        const chaves = await caches.keys()
+        const chaves = await caches.keys().catch(() => [])
         await Promise.all(chaves.map(k => caches.delete(k)))
       }
-      await fetch(window.location.pathname, { cache: 'reload' }).catch(() => {})
-    } finally {
       window.location.reload()
+      return
     }
+    await queryClient.invalidateQueries()
+    setVersaoTela(v => v + 1)
+    setTimeout(() => setAtualizando(false), 600)
   }
   const profileRef = useRef(null)
 
@@ -348,7 +366,7 @@ export default function Layout() {
                   onClick={atualizarSistema}
                   disabled={atualizando}
                   className="p-2 rounded-lg text-ink-500 hover:bg-ink-100 transition-colors shrink-0 disabled:opacity-60"
-                  title="Atualizar o sistema (carrega a versão mais nova sem sair)"
+                  title="Atualizar (busca os dados de novo; se houver versão nova do sistema, carrega)"
                 >
                   <RefreshCw className={`h-4 w-4 ${atualizando ? 'animate-spin' : ''}`} />
                 </button>
@@ -428,7 +446,8 @@ export default function Layout() {
         <main className="flex-1 overflow-auto">
           <div className="px-3 py-4 sm:px-4 lg:px-6 max-w-[1600px] mx-auto animate-fade-in">
             <AvisoAssinatura />
-            <Outlet />
+            {/* key: o botão Atualizar remonta a tela para buscar os dados de novo */}
+            <Outlet key={versaoTela} />
           </div>
         </main>
 
