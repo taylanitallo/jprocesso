@@ -65,13 +65,14 @@ function SectionCard({ icon: Icon, title, subtitle, children }) {
 }
 
 // ── ModalShell — shell padrão de modal ────────────────────────────────────────
-function ModalShell({ open, onClose, icon: Icon, iconBg = 'from-info-500 to-info-600', title, subtitle, badge, width = 640, children, footer }) {
+// cheia: ocupa toda a área disponível da tela (em vez da largura fixa)
+function ModalShell({ open, onClose, icon: Icon, iconBg = 'from-info-500 to-info-600', title, subtitle, badge, width = 640, cheia = false, children, footer }) {
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-[9990] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div className={`fixed inset-0 z-[9990] flex items-center justify-center bg-black/60 backdrop-blur-sm ${cheia ? 'p-2 sm:p-3' : 'p-4'}`}>
       <div
-        className="bg-ink-50 rounded-3xl shadow-2xl w-full flex flex-col overflow-hidden"
-        style={{ maxWidth: '90vw', maxHeight: '90vh', width }}
+        className={`bg-ink-50 shadow-2xl w-full flex flex-col overflow-hidden ${cheia ? 'h-full rounded-xl' : 'rounded-3xl'}`}
+        style={cheia ? undefined : { maxWidth: '90vw', maxHeight: '90vh', width }}
       >
         {/* Header */}
         <div className="bg-surface border-b border-ink-100 px-4 py-3 shrink-0">
@@ -1696,7 +1697,7 @@ export default function Secretarias() {
         iconBg="from-info-500 to-info-600"
         title={`Secretaria — ${editingSecretaria ? 'Alteração' : 'Inclusão'}`}
         subtitle="Cadastre e gerencie os dados da secretaria municipal."
-        width={700}
+        cheia
         badge={
           editingSecretaria ? (
             <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
@@ -1867,7 +1868,7 @@ export default function Secretarias() {
         iconBg="from-violet-500 to-violet-600"
         title={`Setor — ${editingSetor ? 'Alteração' : 'Inclusão'}`}
         subtitle="Defina os setores internos da secretaria selecionada."
-        width={520}
+        cheia
         footer={
           <>
             <button type="button" onClick={() => { setShowModalSetor(false); setEditingSetor(null); }} className="btn-secondary px-5 py-2 text-sm">Cancelar</button>
@@ -2056,7 +2057,7 @@ export default function Secretarias() {
         iconBg="from-emerald-500 to-emerald-600"
         title={`Agente — ${editingAgente ? 'Alteração' : 'Inclusão'}`}
         subtitle="Cadastre os servidores que atuam como agentes públicos."
-        width={580}
+        cheia
         footer={
           <>
             <button type="button" onClick={() => { setShowModalAgente(false); setEditingAgente(null); }} className="btn-secondary px-5 py-2 text-sm">Cancelar</button>
@@ -2145,7 +2146,7 @@ export default function Secretarias() {
         iconBg="from-amber-500 to-amber-600"
         title={`Responsável — ${editingResp ? 'Alteração' : 'Inclusão'}`}
         subtitle="Defina os responsáveis de cada secretaria e suas funções."
-        width={600}
+        cheia
         footer={
           <>
             <button type="button" onClick={() => { setShowModalResp(false); setEditingResp(null); }} className="btn-secondary px-5 py-2 text-sm">Cancelar</button>
