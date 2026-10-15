@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import api, { setAccessToken, clearAccessToken, isAdminContext, getPageSubdomain } from '../services/api'
+import { aplicarTema, limparTema } from '../utils/tema'
 
 const AuthContext = createContext({})
 
@@ -9,6 +10,12 @@ export default function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [tenant, setTenant] = useState(null)
   const [loading, setLoading] = useState(true)
+
+  // Tema do sistema escolhido para o município no superadmin
+  useEffect(() => {
+    if (isAdminContext()) { limparTema(); return }
+    if (tenant) aplicarTema(tenant.configuracoes, tenant.subdominio)
+  }, [tenant])
 
   const refreshUser = async () => {
     try {

@@ -95,20 +95,12 @@ export default function Layout() {
     return Array.isArray(modHabilitados) && modHabilitados.includes(modulo)
   }
 
-  // Cor do menu lateral escolhida no superadmin. A cor que o cadastro grava
-  // sozinho (#1e3a5f) conta como "sem cor": o menu continua no padrão.
-  const corMenuBruta = String(tenant?.configuracoes?.cor_primaria || '').trim().toLowerCase()
-  const corMenu = /^#[0-9a-f]{6}$/.test(corMenuBruta) && !['#1e3a5f', '#0066cc'].includes(corMenuBruta) ? corMenuBruta : null
-  const menuEscuro = (() => {
-    if (!corMenu) return false
-    const [r, g, b] = [1, 3, 5].map(i => parseInt(corMenu.slice(i, i + 2), 16) / 255)
-      .map(c => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b < 0.45
-  })()
-  const clsItem = menuEscuro ? 'text-white/85 hover:bg-white/10 hover:text-white' : 'text-ink-600 hover:bg-ink-100 hover:text-ink-900'
-  const clsAtivo = menuEscuro ? 'bg-white/20 text-white shadow-xs' : 'bg-brand-600 text-white shadow-xs'
-  const clsIconeAtivo = menuEscuro ? 'text-white' : 'text-info-500 dark:text-info-400'
-  const clsSetaAtiva = menuEscuro ? 'text-white/80' : 'text-info-400 dark:text-info-500'
+  // Cores do menu lateral vêm dos tokens --color-sidebar-* (o tema do município
+  // decide se o menu é claro ou colorido — ver utils/tema.js)
+  const clsItem = 'text-sidebar-texto hover:bg-sidebar-hover'
+  const clsAtivo = 'bg-sidebar-ativo text-sidebar-ativo-texto shadow-xs'
+  const clsIconeAtivo = 'text-sidebar-ativo-texto'
+  const clsSetaAtiva = 'text-sidebar-ativo-texto opacity-80'
 
   const temPermissao = (permissao) => {
     if (!permissao) return true
@@ -161,12 +153,12 @@ export default function Layout() {
       {/* â"€â"€â"€ Sidebar â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
       <aside className={`
         fixed top-0 bottom-8 left-0 z-50 w-[264px] bg-sidebar
-        border-r ${corMenu ? 'border-transparent' : 'border-ink-200'}
+        border-r border-sidebar-borda
         flex flex-col transform transition-all duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0
         ${sidebarCollapsed ? 'lg:w-[76px]' : 'lg:w-[264px]'}
-      `} style={corMenu ? { backgroundColor: corMenu } : undefined}>
+      `}>
 
         {/* Botão recolher/expandir — somente desktop */}
         <button
@@ -181,7 +173,7 @@ export default function Layout() {
         </button>
 
         {/* Logo */}
-        <div className={`h-12 px-4 flex items-center justify-between border-b border-ink-200 shrink-0 overflow-hidden ${corMenu ? 'bg-surface' : ''}`}>
+        <div className={`h-12 px-4 flex items-center justify-between border-b border-ink-200 shrink-0 overflow-hidden bg-sidebar-logo`}>
           {!sidebarCollapsed && (
             tenant?.configuracoes?.logo_interna_url && tenant?.subdominio
               ? <img src={apiUrl(`/tenants/${tenant.subdominio}/logo/interna`)} alt="logo" className="max-h-9 w-auto max-w-full object-contain" />
@@ -219,7 +211,7 @@ export default function Layout() {
                     type="button"
                     title={sidebarCollapsed ? item.label : undefined}
                     onClick={() => { setSidebarOpen(false); setModuloBloqueado({ label: item.label }) }}
-                    className={`w-full flex items-center px-3 py-2.5 rounded-[10px] text-sm font-semibold ${menuEscuro ? 'text-white/50 hover:bg-white/5' : 'text-ink-400 hover:bg-ink-50'} ${sidebarCollapsed ? 'lg:justify-center' : 'justify-between'}`}
+                    className={`w-full flex items-center px-3 py-2.5 rounded-[10px] text-sm font-semibold text-sidebar-fraco hover:bg-sidebar-hover ${sidebarCollapsed ? 'lg:justify-center' : 'justify-between'}`}
                   >
                     <div className="flex items-center gap-3">
                       <Icon className="h-4 w-4 shrink-0 opacity-50" />
@@ -258,7 +250,7 @@ export default function Layout() {
           {/* Menu administração */}
           {visibleAdminMenuItems.length > 0 && (
             <div>
-              <p className={`px-3 mb-2 text-[10px] font-bold uppercase tracking-[0.12em] ${menuEscuro ? 'text-white/60' : 'text-ink-400'} ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
+              <p className={`px-3 mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-sidebar-fraco ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
                 Administração
               </p>
               <div className="space-y-0.5">

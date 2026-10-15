@@ -31,6 +31,15 @@
      como token próprio, e não como `surface`, para permitir afinar só a
      sidebar depois sem mexer no restante das superfícies. */
   --color-sidebar: #ffffff;
+  /* Itens do menu lateral — os temas "colorido" trocam por branco translúcido
+     (ver utils/tema.js); aqui ficam os valores do menu claro. */
+  --color-sidebar-texto: #475569;
+  --color-sidebar-fraco: #748094;
+  --color-sidebar-hover: #f1f5f9;
+  --color-sidebar-ativo: var(--color-brand-600);
+  --color-sidebar-ativo-texto: #ffffff;
+  --color-sidebar-borda: #e2e8f0;
+  --color-sidebar-logo: transparent;
   --color-ink-50: #f8fafc;
   --color-ink-100: #f1f5f9;
   --color-ink-200: #e2e8f0;
@@ -256,6 +265,10 @@
     --color-surface: #0b1020;
     --color-canvas: #050816;
     --color-sidebar: #0b1020;
+    --color-sidebar-texto: #d1d5db;
+    --color-sidebar-fraco: #6b7280;
+    --color-sidebar-hover: #1f2937;
+    --color-sidebar-borda: #374151;
     --color-ink-50: #111827;
     --color-ink-100: #1f2937;
     --color-ink-200: #374151;
@@ -450,7 +463,7 @@
   }
 
   /* Status de processo */
-  .status-aberto     { @apply bg-info-50    text-info-500    ring-info-500/20; }
+  .status-aberto     { @apply bg-sky-50     text-sky-600     ring-sky-600/20 dark:bg-sky-950 dark:text-sky-400; }
   .status-em_analise { @apply bg-warning-50 text-warning-600 ring-warning-600/20; }
   .status-pendente   { @apply bg-orange-50  text-orange-600  ring-orange-600/20; }
   .status-devolvido  { @apply bg-danger-50  text-danger-600  ring-danger-600/20; }
@@ -460,7 +473,7 @@
   /* Prioridade */
   .prio-urgente { @apply bg-danger-50 text-danger-600 ring-danger-600/20; }
   .prio-alta    { @apply bg-orange-50 text-orange-600 ring-orange-600/20; }
-  .prio-normal  { @apply bg-info-50   text-info-500   ring-info-500/20; }
+  .prio-normal  { @apply bg-sky-50    text-sky-600    ring-sky-600/20 dark:bg-sky-950 dark:text-sky-400; }
   .prio-baixa   { @apply bg-ink-100   text-ink-500    ring-ink-400/20; }
 }
 

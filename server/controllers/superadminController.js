@@ -871,6 +871,15 @@ const updateConfig = async (req, res) => {
     if (!tenant) return;
 
     const { nome, ativo, configuracoes } = req.body;
+    // Tema do sistema (lista em client/src/utils/tema.js)
+    const TEMAS = ['institucional', 'ceu', 'noite', 'esmeralda', 'floresta', 'oceano', 'turquesa',
+      'aurora', 'orquidea', 'carmim', 'sol', 'terra', 'grafite', 'personalizado'];
+    if (configuracoes?.tema !== undefined && !TEMAS.includes(configuracoes.tema)) {
+      return res.status(400).json({ error: 'Tema inválido' });
+    }
+    if (configuracoes?.tema === 'personalizado' && !/^#[0-9a-f]{6}$/i.test(String(configuracoes.tema_cor || ''))) {
+      return res.status(400).json({ error: 'Cor do tema personalizado inválida (use o formato #RRGGBB)' });
+    }
     await tenant.update({
       nome_municipio: nome ?? tenant.nome_municipio,
       ativo:          ativo !== undefined ? ativo : tenant.ativo,
