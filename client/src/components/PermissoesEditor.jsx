@@ -1,6 +1,13 @@
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { MODULOS } from '../utils/permissoesSchema'
+import { useAuth } from '../context/AuthContext'
+
+// Módulo de permissão → módulo contratável do município (sem entrada: sempre aparece)
+const MODULO_CONTRATADO = {
+  processos: 'processos', arquivo: 'processos', almoxarifado: 'almoxarifado', patrimonio: 'patrimonio',
+  financeiro: 'financeiro', contratos: 'contratos', tesouraria: 'tesouraria',
+}
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 const getIn = (obj, path) => path.reduce((o, k) => (o == null ? undefined : o[k]), obj)
@@ -87,8 +94,17 @@ function SecretariasCheckboxes({ secretariaIds, secretariasList, onChange }) {
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function PermissoesEditor({ permissoes, onChange, secretariasList = [] }) {
   const [open, setOpen] = useState({})
+  const { tenant } = useAuth()
 
   const perm = permissoes ?? {}
+
+  // Só os módulos liberados para o município (mesma regra do menu lateral)
+  const modHabilitados = tenant?.configuracoes?.modulos_habilitados
+  const modulosVisiveis = MODULOS.filter(mod => {
+    const contratado = MODULO_CONTRATADO[mod.key]
+    if (!contratado || modHabilitados === undefined) return true
+    return Array.isArray(modHabilitados) && modHabilitados.includes(contratado)
+  })
 
   // ── leitura/escrita de ações simples (boolean) ────────────────────────────
   // Sem configuração vale o padrão da ação: ligada, exceto as com padrao:false
@@ -129,7 +145,7 @@ export default function PermissoesEditor({ permissoes, onChange, secretariasList
 
   return (
     <div className="space-y-2">
-      {MODULOS.map(mod => {
+      {modulosVisiveis.map(mod => {
         const isOpen = open[mod.key] ?? false
         const acessar = mod.comAcesso ? (perm[mod.key]?.acessar !== false) : true
 

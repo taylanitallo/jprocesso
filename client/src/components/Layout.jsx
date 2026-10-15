@@ -95,6 +95,21 @@ export default function Layout() {
     return Array.isArray(modHabilitados) && modHabilitados.includes(modulo)
   }
 
+  // Cor do menu lateral escolhida no superadmin. A cor que o cadastro grava
+  // sozinho (#1e3a5f) conta como "sem cor": o menu continua no padrão.
+  const corMenuBruta = String(tenant?.configuracoes?.cor_primaria || '').trim().toLowerCase()
+  const corMenu = /^#[0-9a-f]{6}$/.test(corMenuBruta) && !['#1e3a5f', '#0066cc'].includes(corMenuBruta) ? corMenuBruta : null
+  const menuEscuro = (() => {
+    if (!corMenu) return false
+    const [r, g, b] = [1, 3, 5].map(i => parseInt(corMenu.slice(i, i + 2), 16) / 255)
+      .map(c => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b < 0.45
+  })()
+  const clsItem = menuEscuro ? 'text-white/85 hover:bg-white/10 hover:text-white' : 'text-ink-600 hover:bg-ink-100 hover:text-ink-900'
+  const clsAtivo = menuEscuro ? 'bg-white/20 text-white shadow-xs' : 'bg-brand-600 text-white shadow-xs'
+  const clsIconeAtivo = menuEscuro ? 'text-white' : 'text-info-500 dark:text-info-400'
+  const clsSetaAtiva = menuEscuro ? 'text-white/80' : 'text-info-400 dark:text-info-500'
+
   const temPermissao = (permissao) => {
     if (!permissao) return true
     const path = Array.isArray(permissao) ? permissao : permissao.split('.')
@@ -146,17 +161,17 @@ export default function Layout() {
       {/* â"€â"€â"€ Sidebar â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
       <aside className={`
         fixed top-0 bottom-8 left-0 z-50 w-[264px] bg-sidebar
-        border-r border-ink-200
+        border-r ${corMenu ? 'border-transparent' : 'border-ink-200'}
         flex flex-col transform transition-all duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0
         ${sidebarCollapsed ? 'lg:w-[76px]' : 'lg:w-[264px]'}
-      `}>
+      `} style={corMenu ? { backgroundColor: corMenu } : undefined}>
 
         {/* Botão recolher/expandir — somente desktop */}
         <button
           onClick={() => setSidebarCollapsed(v => !v)}
-          className="hidden lg:flex absolute -right-3 top-16 z-10 w-6 h-6 items-center justify-center rounded-full
+          className="hidden lg:flex absolute -right-3 top-12 z-10 w-6 h-6 items-center justify-center rounded-full
             bg-surface border border-ink-200 shadow-md
             text-ink-500 hover:text-brand-600 dark:hover:text-info-400 hover:border-info-300
             transition-colors"
@@ -166,17 +181,17 @@ export default function Layout() {
         </button>
 
         {/* Logo */}
-        <div className="h-16 px-4 flex items-center justify-between border-b border-ink-200 shrink-0 overflow-hidden">
+        <div className={`h-12 px-4 flex items-center justify-between border-b border-ink-200 shrink-0 overflow-hidden ${corMenu ? 'bg-surface' : ''}`}>
           {!sidebarCollapsed && (
             tenant?.configuracoes?.logo_interna_url && tenant?.subdominio
-              ? <img src={apiUrl(`/tenants/${tenant.subdominio}/logo/interna`)} alt="logo" className="max-h-10 w-auto max-w-full object-contain" />
+              ? <img src={apiUrl(`/tenants/${tenant.subdominio}/logo/interna`)} alt="logo" className="max-h-9 w-auto max-w-full object-contain" />
               /*
                * A arte tem "Processo" e o subtítulo em branco — foi desenhada
                * para fundo escuro e sumia no tema claro. `brightness-0` achata
                * tudo em preto (legível no claro) e o `dark:invert` devolve o
                * branco no escuro, mantendo o comportamento que já existia lá.
                */
-              : <img src="/logo_jprocesso_trim.png" alt="jProcesso" className="h-11 w-auto max-w-full object-contain brightness-0 dark:invert" />
+              : <img src="/logo_jprocesso_trim.png" alt="jProcesso" className="h-9 w-auto max-w-full object-contain brightness-0 dark:invert" />
           )}
           <button
             onClick={() => setSidebarOpen(false)}
@@ -204,7 +219,7 @@ export default function Layout() {
                     type="button"
                     title={sidebarCollapsed ? item.label : undefined}
                     onClick={() => { setSidebarOpen(false); setModuloBloqueado({ label: item.label }) }}
-                    className={`w-full flex items-center px-3 py-2.5 rounded-[10px] text-sm font-semibold text-ink-400 hover:bg-ink-50 ${sidebarCollapsed ? 'lg:justify-center' : 'justify-between'}`}
+                    className={`w-full flex items-center px-3 py-2.5 rounded-[10px] text-sm font-semibold ${menuEscuro ? 'text-white/50 hover:bg-white/5' : 'text-ink-400 hover:bg-ink-50'} ${sidebarCollapsed ? 'lg:justify-center' : 'justify-between'}`}
                   >
                     <div className="flex items-center gap-3">
                       <Icon className="h-4 w-4 shrink-0 opacity-50" />
@@ -225,16 +240,16 @@ export default function Layout() {
                     flex items-center px-3 py-2.5 rounded-[10px] text-sm font-semibold transition-colors
                     ${sidebarCollapsed ? 'lg:justify-center' : 'justify-between'}
                     ${active
-                      ? 'bg-brand-600 text-white shadow-xs'
-                      : 'text-ink-600 hover:bg-ink-100 hover:text-ink-900'
+                      ? clsAtivo
+                      : clsItem
                     }
                   `}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-info-500 dark:text-info-400' : 'opacity-70'}`} />
+                    <Icon className={`h-4 w-4 shrink-0 ${active ? clsIconeAtivo : 'opacity-70'}`} />
                     <span className={sidebarCollapsed ? 'lg:hidden' : ''}>{item.label}</span>
                   </div>
-                  {active && <ChevronRight className={`h-3.5 w-3.5 text-info-400 dark:text-info-500 shrink-0 ${sidebarCollapsed ? 'lg:hidden' : ''}`} />}
+                  {active && <ChevronRight className={`h-3.5 w-3.5 ${clsSetaAtiva} shrink-0 ${sidebarCollapsed ? 'lg:hidden' : ''}`} />}
                 </Link>
               )
             })}
@@ -243,7 +258,7 @@ export default function Layout() {
           {/* Menu administração */}
           {visibleAdminMenuItems.length > 0 && (
             <div>
-              <p className={`px-3 mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-ink-400 ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
+              <p className={`px-3 mb-2 text-[10px] font-bold uppercase tracking-[0.12em] ${menuEscuro ? 'text-white/60' : 'text-ink-400'} ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
                 Administração
               </p>
               <div className="space-y-0.5">
@@ -260,16 +275,16 @@ export default function Layout() {
                         flex items-center px-3 py-2.5 rounded-[10px] text-sm font-semibold transition-colors
                         ${sidebarCollapsed ? 'lg:justify-center' : 'justify-between'}
                         ${active
-                          ? 'bg-brand-600 text-white shadow-xs'
-                          : 'text-ink-600 hover:bg-ink-100 hover:text-ink-900'
+                          ? clsAtivo
+                          : clsItem
                         }
                       `}
                     >
                       <div className="flex items-center gap-3">
-                        <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-info-500 dark:text-info-400' : 'opacity-70'}`} />
+                        <Icon className={`h-4 w-4 shrink-0 ${active ? clsIconeAtivo : 'opacity-70'}`} />
                         <span className={sidebarCollapsed ? 'lg:hidden' : ''}>{item.label}</span>
                       </div>
-                      {active && <ChevronRight className={`h-3.5 w-3.5 text-info-400 dark:text-info-500 shrink-0 ${sidebarCollapsed ? 'lg:hidden' : ''}`} />}
+                      {active && <ChevronRight className={`h-3.5 w-3.5 ${clsSetaAtiva} shrink-0 ${sidebarCollapsed ? 'lg:hidden' : ''}`} />}
                     </Link>
                   )
                 })}
@@ -294,7 +309,7 @@ export default function Layout() {
         {/* Topbar */}
         <header className="bg-surface/90 backdrop-blur border-b border-ink-200 sticky top-0 z-30 shrink-0">
           <div className="px-4 sm:px-6">
-            <div className="flex items-center h-16 gap-4">
+            <div className="flex items-center h-12 gap-4">
 
               {/* Esquerda: hamburger + nome da entidade */}
               <div className="flex items-center gap-3 min-w-0">
