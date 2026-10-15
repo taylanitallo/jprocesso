@@ -175,15 +175,20 @@ const createTenantUser = async (req, res) => {
 
     const { nome, email, cpf, senha, tipo = 'operacional', ativo = true,
             secretaria_id, setor_id, permissoes } = req.body;
-    if (!nome || !cpf || !senha) {
-      return res.status(400).json({ error: 'nome, cpf e senha são obrigatórios' });
+    // Administrador Jeos: CPF é opcional (a equipe JEOS entra pelo e-mail)
+    const ehJeos = tipo === 'jeos';
+    if (!nome || !senha || (!ehJeos && !cpf)) {
+      return res.status(400).json({ error: ehJeos ? 'nome e senha são obrigatórios' : 'nome, cpf e senha são obrigatórios' });
+    }
+    if (ehJeos && !cpf && !email) {
+      return res.status(400).json({ error: 'Informe o e-mail: sem CPF, o Administrador Jeos entra pelo e-mail' });
     }
 
     const senhaHash = await bcrypt.hash(senha, 10);
     const schemaQ = qi().quoteIdentifier(tenant.schema);
 
-    const cpfDigits = cpf.replace(/\D/g, '');
-    const permsJson = permissoes ? JSON.stringify(permissoes) : null;
+    const cpfDigits = String(cpf || '').replace(/\D/g, '');  // '' para Adm. Jeos sem CPF
+    const permsJson = JSON.stringify(permissoes || {});
 
     const rows = await masterDb.query(
       `INSERT INTO ${schemaQ}.usuarios
