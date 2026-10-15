@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { usePode } from '../utils/permissions'
 import { RefreshCw, PackageX } from 'lucide-react'
 import api from '../services/api'
 import ActionBar from '../components/ui/ActionBar'
@@ -18,6 +19,8 @@ const MOTIVOS = [
 ]
 
 export default function PatBaixa({ bem, onSuccess, onCancel }) {
+  // Ações conforme o editor de permissões. Só "Ver" = sem botões de ação.
+  const pode = usePode('patrimonio', 'baixa')
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
     motivo: '',
@@ -126,11 +129,13 @@ export default function PatBaixa({ bem, onSuccess, onCancel }) {
               Cancelar
             </button>
           )}
-          <button type="submit" disabled={loading}
-            className="flex items-center gap-2 px-6 py-2 bg-danger-600 text-white rounded-lg text-sm hover:bg-danger-700 disabled:opacity-60">
-            {loading && <RefreshCw className="h-4 w-4 animate-spin" />}
-            Confirmar Baixa
-          </button>
+          {pode('realizar') && (
+            <button type="submit" disabled={loading}
+              className="flex items-center gap-2 px-6 py-2 bg-danger-600 text-white rounded-lg text-sm hover:bg-danger-700 disabled:opacity-60">
+              {loading && <RefreshCw className="h-4 w-4 animate-spin" />}
+              Confirmar Baixa
+            </button>
+          )}
         </ActionBar>
       </div>
     </form>

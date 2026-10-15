@@ -8,6 +8,7 @@ import api from '../../services/api'
 import { ESTADOS_BR, SectionCard, PremiumInput, PremiumSelect, ViewField, PortalDropdown } from './ContratosShared'
 import BotaoExcluidos from '../../components/lixeira/BotaoExcluidos'
 import { Paginacao, usePorPagina } from '../../components/ui'
+import { usePode } from '../../utils/permissions'
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  MODAL: FORMULÁRIO DE CREDOR (Incluir / Alterar / Visualizar)
@@ -509,6 +510,8 @@ function CredorContratosModal({ credor, onClose }) {
 // ══════════════════════════════════════════════════════════════════════════════
 
 function TabCredor() {
+  // Ações conforme o editor de permissões. Só "Ver" = sem botões de ação.
+  const pode = usePode('contratos', 'credores')
   const [credores, setCredores] = useState([])
   const [syncando, setSyncando] = useState(false)
 
@@ -678,27 +681,35 @@ function TabCredor() {
 
       {/* ── Barra de Ações ── */}
       <div className="flex flex-wrap items-center gap-2 pb-2">
-        <button onClick={() => setModal('novo')}
-          className="flex items-center gap-1.5 h-7 px-3 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
-          <Plus className="w-3.5 h-3.5" /> Incluir
-        </button>
-        <button onClick={() => podeAgir && setModal('editar')} disabled={!podeAgir}
-          className="flex items-center gap-1.5 h-7 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-          <Edit3 className="w-3.5 h-3.5" /> Alterar
-        </button>
-        <button onClick={() => podeAgir && setModal('excluir')} disabled={!podeAgir}
-          className="flex items-center gap-1.5 h-7 px-3 bg-danger-600 hover:bg-danger-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-          <Trash2 className="w-3.5 h-3.5" /> Excluir
-        </button>
+        {pode('criar') && (
+          <button onClick={() => setModal('novo')}
+            className="flex items-center gap-1.5 h-7 px-3 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+            <Plus className="w-3.5 h-3.5" /> Incluir
+          </button>
+        )}
+        {pode('editar') && (
+          <button onClick={() => podeAgir && setModal('editar')} disabled={!podeAgir}
+            className="flex items-center gap-1.5 h-7 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+            <Edit3 className="w-3.5 h-3.5" /> Alterar
+          </button>
+        )}
+        {pode('excluir') && (
+          <button onClick={() => podeAgir && setModal('excluir')} disabled={!podeAgir}
+            className="flex items-center gap-1.5 h-7 px-3 bg-danger-600 hover:bg-danger-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+            <Trash2 className="w-3.5 h-3.5" /> Excluir
+          </button>
+        )}
         <button onClick={() => podeAgir && setModal('contratos_credor')} disabled={!podeAgir}
           className="flex items-center gap-1.5 h-7 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
           <FileText className="w-3.5 h-3.5" /> Ver Contratos
         </button>
         <BotaoExcluidos entidade="credores" onAlterado={() => api.get('/contratos/credores').then(r => setCredores(r.data)).catch(() => {})} />
-        <button onClick={syncDids} disabled={syncando}
-          className="flex items-center gap-1.5 h-7 px-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-60 ml-auto">
-          {syncando ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Importando...</> : <><RefreshCw className="w-3.5 h-3.5" /> Importar do DID</>}
-        </button>
+        {pode('criar') && (
+          <button onClick={syncDids} disabled={syncando}
+            className="flex items-center gap-1.5 h-7 px-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-60 ml-auto">
+            {syncando ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Importando...</> : <><RefreshCw className="w-3.5 h-3.5" /> Importar do DID</>}
+          </button>
+        )}
       </div>
 
       {/* ── Tabela ── */}

@@ -60,9 +60,9 @@ export default function Patrimonio() {
       case 'bens':
         return (
           <PatBens
-            onEntrada={() => setActiveTab('tombamento')}
-            onTransferir={handleTransferir}
-            onBaixar={handleBaixar}
+            onEntrada={hasPerm(user, 'patrimonio', 'tombamento', 'realizar') ? () => setActiveTab('tombamento') : undefined}
+            onTransferir={hasPerm(user, 'patrimonio', 'transferencia', 'realizar') ? handleTransferir : undefined}
+            onBaixar={hasPerm(user, 'patrimonio', 'baixa', 'realizar') ? handleBaixar : undefined}
           />
         )
       case 'tombamento':

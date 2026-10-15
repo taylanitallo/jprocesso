@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { usePode } from '../utils/permissions'
 import {
   Plus, ChevronLeft, ChevronRight, RefreshCw, X,
   CheckCircle, Clock, AlertTriangle, XCircle, Package,
@@ -694,12 +695,14 @@ function RequisicaoViewModal({ reqId, onClose }) {
 
 // ─── Linha de Requisição ──────────────────────────────────────────────────────
 function ReqRow({ r, onAutorizar, onCancelar, onVisualizar, userTipo }) {
+  // Ações conforme o editor de permissões. Só "Ver" = sem botões de ação.
+  const pode = usePode('almoxarifado', 'requisicoes')
   const st      = STATUS_REQ[r.status] || STATUS_REQ.PENDENTE_AUTORIZACAO
   const StIcon  = STATUS_ICONS[r.status] || Clock
   const priorSt = PRIORIDADE[r.prioridade]
 
-  const podeAutorizar = ['PENDENTE', 'PENDENTE_AUTORIZACAO'].includes(r.status) && ['admin', 'gestor'].includes(userTipo)
-  const podeCancelar  = ['PENDENTE', 'PENDENTE_AUTORIZACAO'].includes(r.status)
+  const podeAutorizar = ['PENDENTE', 'PENDENTE_AUTORIZACAO'].includes(r.status) && ['admin', 'gestor', 'jeos'].includes(userTipo) && pode('aprovar')
+  const podeCancelar  = ['PENDENTE', 'PENDENTE_AUTORIZACAO'].includes(r.status) && pode('cancelar')
 
   return (
     <tr className="hover:bg-ink-50 transition-colors">
@@ -750,6 +753,8 @@ function ReqRow({ r, onAutorizar, onCancelar, onVisualizar, userTipo }) {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function AlmoxRequisicoes() {
+  // Ações conforme o editor de permissões. Só "Ver" = sem botões de ação.
+  const pode = usePode('almoxarifado', 'requisicoes')
   const { user } = useAuth() || {}
   const userTipo = user?.tipo || 'operacional'
 
@@ -842,10 +847,12 @@ export default function AlmoxRequisicoes() {
             <button onClick={() => load(page, statusFiltro)} className="p-2 text-ink-400 hover:text-ink-600 rounded-lg hover:bg-ink-100">
               <RefreshCw className="h-4 w-4" />
             </button>
-            <button onClick={() => { setNovaReq(true); setErro('') }}
-              className="flex items-center gap-2 px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700">
-              <Plus className="h-4 w-4" /> Nova Requisição
-            </button>
+            {pode('criar') && (
+              <button onClick={() => { setNovaReq(true); setErro('') }}
+                className="flex items-center gap-2 px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700">
+                <Plus className="h-4 w-4" /> Nova Requisição
+              </button>
+            )}
           </ActionBar>
         }
       />

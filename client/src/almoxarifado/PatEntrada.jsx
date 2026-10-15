@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { usePode } from '../utils/permissions'
 import { RefreshCw, Hash, FileText, DollarSign, TrendingDown, MapPin } from 'lucide-react'
 import api from '../services/api'
 import SectionTitle from '../components/ui/SectionTitle'
@@ -8,6 +9,8 @@ const required = 'border-danger-400 focus:ring-danger-300'
 const base = 'w-full border rounded-lg px-3 py-2 text-sm dark:text-white focus:outline-hidden focus:ring-2 focus:ring-info-300'
 
 export default function PatEntrada({ onSuccess, onCancel }) {
+  // Ações conforme o editor de permissões. Só "Ver" = sem botões de ação.
+  const pode = usePode('patrimonio', 'tombamento')
   const [loading, setLoading]     = useState(false)
   const [loadingTomb, setLT]      = useState(false)
   const [grupos, setGrupos]       = useState([])
@@ -369,11 +372,13 @@ export default function PatEntrada({ onSuccess, onCancel }) {
               Cancelar
             </button>
           )}
-          <button type="submit" disabled={loading}
-            className="flex items-center gap-2 px-6 py-2 bg-brand-600 text-white rounded-lg text-sm hover:bg-brand-700 disabled:opacity-60">
-            {loading && <RefreshCw className="h-4 w-4 animate-spin" />}
-            Registrar Tombamento
-          </button>
+          {pode('realizar') && (
+            <button type="submit" disabled={loading}
+              className="flex items-center gap-2 px-6 py-2 bg-brand-600 text-white rounded-lg text-sm hover:bg-brand-700 disabled:opacity-60">
+              {loading && <RefreshCw className="h-4 w-4 animate-spin" />}
+              Registrar Tombamento
+            </button>
+          )}
         </ActionBar>
       </div>
     </form>

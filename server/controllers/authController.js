@@ -490,7 +490,7 @@ const listUsers = async (req, res) => {
     const { User, Secretaria, Setor } = req.models;
 
     const where = { excluido_em: null }; // excluídos ficam na tela Excluídos
-    if (req.user.tipo !== 'admin' && req.user.secretariaId) {
+    if (!['admin', 'jeos'].includes(req.user.tipo) && req.user.secretariaId) {
       where.secretariaId = req.user.secretariaId;
     }
 
@@ -513,10 +513,19 @@ const listUsers = async (req, res) => {
     });
 
     // B-5: operacional não recebe CPF nem telefone de outros usuários
-    const isSensivel = req.user?.tipo !== 'admin' && req.user?.tipo !== 'gestor';
-    const result = isSensivel
-      ? users.map(u => { const o = u.toJSON(); delete o.cpf; delete o.telefone; return o; })
-      : users;
+    // (o Administrador Jeos não estava na lista e a busca por CPF não achava ninguém)
+    const isSensivel = !['admin', 'gestor', 'jeos'].includes(req.user?.tipo);
+    // Quem já tem o app autenticador ativo (ícone de configurar × revogar na tela)
+    const comTotp = new Set(
+      (await req.tenantDb.query('SELECT usuario_id FROM usuario_totp WHERE ativo = true', { type: require('sequelize').QueryTypes.SELECT })
+        .catch(() => [])).map(r => String(r.usuario_id))
+    );
+    const result = users.map(u => {
+      const o = u.toJSON();
+      if (isSensivel) { delete o.cpf; delete o.telefone; }
+      o.autenticador = comTotp.has(String(o.id));
+      return o;
+    });
 
     res.json({ users: result });
   } catch (error) {
@@ -534,9 +543,18 @@ const updateUser = async (req, res) => {
 
     // A-5: impede que um admin altere seu próprio tipo/permissões
     // (evita auto-escalada acidental e lockout de último admin)
-    const isSelf = req.user && req.user.id === id;
-    if (isSelf && (tipo !== undefined || permissoes !== undefined)) {
+    // (o tipo só conta se mudar — a tela de edição sempre manda o tipo atual)
+    const isSelf = req.user && String(req.user.id) === String(id);
+    if (isSelf && (permissoes !== undefined || (tipo !== undefined && tipo !== req.user.tipo))) {
       return res.status(403).json({ error: 'Não é permitido alterar o próprio tipo ou permissões' });
+    }
+
+    // Alterar permissões de outro usuário depende de Organização › Usuários › Permissões
+    if (permissoes !== undefined && req.user?.tipo !== 'jeos') {
+      const eu = await User.findByPk(req.user.id, { attributes: ['permissoes'] });
+      if (eu?.permissoes?.organizacao?.usuarios?.permissoes === false) {
+        return res.status(403).json({ error: 'Sem permissão para alterar permissões de usuários' });
+      }
     }
 
     const user = await User.findByPk(id);
@@ -550,7 +568,10 @@ const updateUser = async (req, res) => {
       if (emailExists) return res.status(400).json({ error: 'Email já cadastrado para outro usuário' });
     }
 
-    const updatePayload = { nome, nomeReduzido: nomeReduzido ?? undefined, email, cpf, telefone, tipo, secretariaId, setorId, permissoes, ativo };
+    // Só grava o que veio na requisição (ex.: a janela de Permissões manda só permissoes)
+    const updatePayload = Object.fromEntries(Object.entries(
+      { nome, nomeReduzido: nomeReduzido ?? undefined, email, cpf, telefone, tipo, secretariaId, setorId, permissoes, ativo }
+    ).filter(([, v]) => v !== undefined));
 
     // B-2: mesma regra do register — 8+ chars, letra + número
     const senhaRe = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;

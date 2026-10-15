@@ -21,29 +21,47 @@ const {
   deleteAgente,
 } = require('../controllers/organizacaoController');
 const { listBancos, listContas, createConta, updateConta, deleteConta } = require('../controllers/contasBancariasController');
-const { authenticate, tenantMiddleware, requireTenant, authorize } = require('../middleware/auth');
+const { authenticate, tenantMiddleware, requireTenant, authorize, requirePermission } = require('../middleware/auth');
+
+// Permissões de Organização (editor de permissões › Organização)
+const perm = (aba, acao) => requirePermission('organizacao', aba, acao);
+
+// Responsáveis ficam dentro da secretaria (mesma rota PUT). Quando o corpo traz a
+// lista, a ação sai da comparação com a atual: mais = incluir, menos = excluir.
+const permEdicaoSecretaria = async (req, res, next) => {
+  if (!Array.isArray(req.body?.responsaveis)) return perm('secretarias', 'editar')(req, res, next);
+  try {
+    const sec = await req.models.Secretaria.findByPk(req.params.id, { attributes: ['responsaveis'] });
+    const antes = Array.isArray(sec?.responsaveis) ? sec.responsaveis.length : 0;
+    const depois = req.body.responsaveis.length;
+    const acao = depois > antes ? 'criar' : depois < antes ? 'excluir' : 'editar';
+    return perm('responsaveis', acao)(req, res, next);
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao verificar permissão' });
+  }
+};
 
 router.get('/secretarias/publico', tenantMiddleware, requireTenant, listSecretariasPublico);
-router.post('/secretarias', tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), createSecretaria);
+router.post('/secretarias', tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), perm('secretarias', 'criar'), createSecretaria);
 router.get('/secretarias', tenantMiddleware, requireTenant, authenticate, listSecretarias);
 router.get('/secretarias/:secretariaId/setores', tenantMiddleware, requireTenant, authenticate, getSetoresBySecretaria);
-router.put('/secretarias/:id', tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), updateSecretaria);
-router.patch('/secretarias/:id/logo', tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), updateSecretariaLogo);
-router.delete('/secretarias/:id', tenantMiddleware, requireTenant, authenticate, authorize('admin'), deleteSecretaria);
+router.put('/secretarias/:id', tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), permEdicaoSecretaria, updateSecretaria);
+router.patch('/secretarias/:id/logo', tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), perm('secretarias', 'editar'), updateSecretariaLogo);
+router.delete('/secretarias/:id', tenantMiddleware, requireTenant, authenticate, authorize('admin'), perm('secretarias', 'excluir'), deleteSecretaria);
 
-router.post('/setores', tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), createSetor);
+router.post('/setores', tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), perm('secretarias', 'criar'), createSetor);
 router.get('/setores', tenantMiddleware, requireTenant, authenticate, listSetores);
 router.get('/setores/:setorId/usuarios', tenantMiddleware, requireTenant, authenticate, getUsuariosBySetor);
-router.put('/setores/:id', tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), updateSetor);
-router.delete('/setores/:id', tenantMiddleware, requireTenant, authenticate, authorize('admin'), deleteSetor);
+router.put('/setores/:id', tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), perm('secretarias', 'editar'), updateSetor);
+router.delete('/setores/:id', tenantMiddleware, requireTenant, authenticate, authorize('admin'), perm('secretarias', 'excluir'), deleteSetor);
 
 router.get('/entidade', tenantMiddleware, requireTenant, authenticate, getEntidade);
-router.put('/entidade', tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), updateEntidade);
+router.put('/entidade', tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), perm('entidade', 'editar'), updateEntidade);
 
 router.get('/agentes', tenantMiddleware, requireTenant, authenticate, listAgentes);
-router.post('/agentes', tenantMiddleware, requireTenant, authenticate, createAgente);
-router.put('/agentes/:id', tenantMiddleware, requireTenant, authenticate, updateAgente);
-router.delete('/agentes/:id', tenantMiddleware, requireTenant, authenticate, deleteAgente);
+router.post('/agentes', tenantMiddleware, requireTenant, authenticate, perm('agentes', 'criar'), createAgente);
+router.put('/agentes/:id', tenantMiddleware, requireTenant, authenticate, perm('agentes', 'editar'), updateAgente);
+router.delete('/agentes/:id', tenantMiddleware, requireTenant, authenticate, perm('agentes', 'excluir'), deleteAgente);
 
 router.get('/bancos',                  authenticate, listBancos);
 router.get('/contas-bancarias',        tenantMiddleware, requireTenant, authenticate, listContas);

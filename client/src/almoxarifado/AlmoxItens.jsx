@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { usePode } from '../utils/permissions'
 import { Search, Edit2, RefreshCw, Package, MapPin, AlertTriangle, Building2, Trash2 } from 'lucide-react'
 import api from '../services/api'
 import { Paginacao, usePorPagina } from '../components/ui'
@@ -188,6 +189,8 @@ function ItemModal({ item, onClose, onSave, saving, erro }) {
 // ─── Tab: Estoque ─────────────────────────────────────────────────────────────
 // Mostra apenas itens que possuem entradas registradas (estoque_atual > 0)
 export default function AlmoxItens() {
+  // Ações conforme o editor de permissões. Só "Ver" = sem botões de ação.
+  const pode = usePode('almoxarifado', 'estoque')
   const { user } = useAuth()
   const isAdmin = user?.tipo === 'admin' || user?.tipo === 'jeos'
   const [secMap, setSecMap] = useState({})
@@ -473,14 +476,16 @@ export default function AlmoxItens() {
                       </td>
                       <td className="px-4 py-3">
                         <ActionBar align="left">
-                          <button
-                            onClick={() => setEditando(item)}
-                            className="p-1.5 rounded-sm hover:bg-amber-50 dark:hover:bg-amber-900/20 text-amber-600"
-                            title="Editar localização e configurações"
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </button>
-                          {isAdmin && (
+                          {pode('editar') && (
+                            <button
+                              onClick={() => setEditando(item)}
+                              className="p-1.5 rounded-sm hover:bg-amber-50 dark:hover:bg-amber-900/20 text-amber-600"
+                              title="Editar localização e configurações"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                          {isAdmin && pode('editar') && (
                             <button
                               onClick={() => setConfirmarExcluir(item)}
                               className="p-1.5 rounded-sm hover:bg-danger-50 dark:hover:bg-danger-900/20 text-danger-500"

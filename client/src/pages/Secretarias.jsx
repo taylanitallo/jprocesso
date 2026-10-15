@@ -2,7 +2,7 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { hasPerm } from '../utils/permissions';
+import { hasPerm, usePode } from '../utils/permissions';
 import { conferirAbasDoModulo } from '../utils/permissoesSchema';
 import PageHeader from '../components/ui/PageHeader';
 import SectionTitle from '../components/ui/SectionTitle';
@@ -149,6 +149,11 @@ export default function Secretarias() {
   const { subdomain, tab: tabParam } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
+  // Ações por aba (editor de permissões › Organização). Só "Ver" = sem botões.
+  const pSec  = usePode('organizacao', 'secretarias')
+  const pAg   = usePode('organizacao', 'agentes')
+  const pResp = usePode('organizacao', 'responsaveis')
+  const pEnt  = usePode('organizacao', 'entidade')
 
   const podeSecretarias = hasPerm(user, 'administracao', 'gerenciar_secretarias')
   const podeUsuarios     = hasPerm(user, 'administracao', 'gerenciar_usuarios')
@@ -877,26 +882,32 @@ export default function Secretarias() {
               <BotaoExcluidos entidade="setores" rotulo="Setores excluídos" onAlterado={fetchSecretarias} />
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <button
-                onClick={() => { setSelectedSecretaria(null); handleCreateSecretaria(); }}
-                className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1 h-7"
-              >
-                <Plus className="h-3.5 w-3.5" /> Incluir
-              </button>
-              <button
-                onClick={() => selectedSecretaria && handleEditSecretaria(selectedSecretaria)}
-                disabled={!selectedSecretaria}
-                className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
-              >
-                <Edit2 className="h-3.5 w-3.5" /> Alterar
-              </button>
-              <button
-                onClick={() => selectedSecretaria && handleDeleteSecretaria(selectedSecretaria)}
-                disabled={!selectedSecretaria}
-                className="btn-danger flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
-              >
-                <Trash2 className="h-3.5 w-3.5" /> Excluir
-              </button>
+              {pSec('criar') && (
+                <button
+                  onClick={() => { setSelectedSecretaria(null); handleCreateSecretaria(); }}
+                  className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1 h-7"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Incluir
+                </button>
+              )}
+              {pSec('editar') && (
+                <button
+                  onClick={() => selectedSecretaria && handleEditSecretaria(selectedSecretaria)}
+                  disabled={!selectedSecretaria}
+                  className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
+                >
+                  <Edit2 className="h-3.5 w-3.5" /> Alterar
+                </button>
+              )}
+              {pSec('excluir') && (
+                <button
+                  onClick={() => selectedSecretaria && handleDeleteSecretaria(selectedSecretaria)}
+                  disabled={!selectedSecretaria}
+                  className="btn-danger flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Excluir
+                </button>
+              )}
               <button
                 onClick={() => { if (selectedSecretaria) { setSelectedSetorInPanel(null); setShowSetoresPanel(true); } }}
                 disabled={!selectedSecretaria}
@@ -973,7 +984,7 @@ export default function Secretarias() {
                         <tr
                           key={sec.id}
                           onClick={() => { setSelectedSecretaria(isSelected ? null : sec); setSelectedSetorInPanel(null); }}
-                          onDoubleClick={() => handleEditSecretaria(sec)}
+                          onDoubleClick={() => { if (pSec('editar')) { handleEditSecretaria(sec) } }}
                           className={`cursor-pointer transition-colors select-none ${
                             isSelected
                               ? 'bg-brand-600 text-white'
@@ -1086,31 +1097,37 @@ export default function Secretarias() {
             <div className="mr-auto">
               <BotaoExcluidos entidade="agentes" rotulo="Agentes excluídos" onAlterado={fetchSecretarias} />
             </div>
-            <button
-              onClick={() => { setSelectedAgente(null); openModalAgente(); }}
-              className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1 h-7"
-            >
-              <Plus className="h-3.5 w-3.5" /> Incluir
-            </button>
-            <button
-              onClick={() => selectedAgente && openModalAgente(selectedAgente)}
-              disabled={!selectedAgente}
-              className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
-            >
-              <Edit2 className="h-3.5 w-3.5" /> Alterar
-            </button>
-            <button
-              onClick={() => {
-                if (selectedAgente) {
-                  setDeleteAgenteTarget(selectedAgente);
-                  setShowDeleteAgenteModal(true);
-                }
-              }}
-              disabled={!selectedAgente}
-              className="btn-danger flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
-            >
-              <Trash2 className="h-3.5 w-3.5" /> Excluir
-            </button>
+            {pAg('criar') && (
+              <button
+                onClick={() => { setSelectedAgente(null); openModalAgente(); }}
+                className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1 h-7"
+              >
+                <Plus className="h-3.5 w-3.5" /> Incluir
+              </button>
+            )}
+            {pAg('editar') && (
+              <button
+                onClick={() => selectedAgente && openModalAgente(selectedAgente)}
+                disabled={!selectedAgente}
+                className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
+              >
+                <Edit2 className="h-3.5 w-3.5" /> Alterar
+              </button>
+            )}
+            {pAg('excluir') && (
+              <button
+                onClick={() => {
+                  if (selectedAgente) {
+                    setDeleteAgenteTarget(selectedAgente);
+                    setShowDeleteAgenteModal(true);
+                  }
+                }}
+                disabled={!selectedAgente}
+                className="btn-danger flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Excluir
+              </button>
+            )}
           </div>
 
           {/* Tabela de agentes */}
@@ -1148,7 +1165,7 @@ export default function Secretarias() {
                       <tr
                         key={agente.id}
                         onClick={() => setSelectedAgente(isSelected ? null : agente)}
-                        onDoubleClick={() => openModalAgente(agente)}
+                        onDoubleClick={() => { if (pAg('editar')) { openModalAgente(agente) } }}
                         className={`cursor-pointer transition-colors select-none ${
                           isSelected
                             ? 'bg-brand-600 text-white'
@@ -1248,26 +1265,32 @@ export default function Secretarias() {
           {/* Barra de ações (fora do card, acima da tabela) */}
           <div className="flex items-center justify-end flex-wrap gap-2">
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => { setSelectedResp(null); openModalResp(); }}
-                className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1 h-7"
-              >
-                <Plus className="h-3.5 w-3.5" /> Incluir
-              </button>
-              <button
-                onClick={() => selectedResp && openModalResp(selectedResp)}
-                disabled={!selectedResp}
-                className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
-              >
-                <Edit2 className="h-3.5 w-3.5" /> Alterar
-              </button>
-              <button
-                onClick={() => selectedResp && setConfirmarExcluirResp(selectedResp)}
-                disabled={!selectedResp}
-                className="btn-danger flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
-              >
-                <Trash2 className="h-3.5 w-3.5" /> Excluir
-              </button>
+              {pResp('criar') && (
+                <button
+                  onClick={() => { setSelectedResp(null); openModalResp(); }}
+                  className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1 h-7"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Incluir
+                </button>
+              )}
+              {pResp('editar') && (
+                <button
+                  onClick={() => selectedResp && openModalResp(selectedResp)}
+                  disabled={!selectedResp}
+                  className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
+                >
+                  <Edit2 className="h-3.5 w-3.5" /> Alterar
+                </button>
+              )}
+              {pResp('excluir') && (
+                <button
+                  onClick={() => selectedResp && setConfirmarExcluirResp(selectedResp)}
+                  disabled={!selectedResp}
+                  className="btn-danger flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Excluir
+                </button>
+              )}
             </div>
           </div>
 
@@ -1327,7 +1350,7 @@ export default function Secretarias() {
                         <tr
                           key={`${resp._secId}-${resp._idx}`}
                           onClick={() => setSelectedResp(isSelected ? null : resp)}
-                          onDoubleClick={() => openModalResp(resp)}
+                          onDoubleClick={() => { if (pResp('editar')) { openModalResp(resp) } }}
                           className={`cursor-pointer transition-colors select-none ${
                             isSelected
                               ? 'bg-brand-600 text-white'
@@ -1617,13 +1640,15 @@ export default function Secretarias() {
                 </span>
               )}
               {!entidadeEditing ? (
-                <button
-                  type="button"
-                  onClick={() => setEntidadeEditing(true)}
-                  className="btn-primary flex items-center gap-1.5 text-sm px-4 py-2"
-                >
-                  <Edit2 className="h-4 w-4" /> Alterar
-                </button>
+                pEnt('editar') && (
+                  <button
+                    type="button"
+                    onClick={() => setEntidadeEditing(true)}
+                    className="btn-primary flex items-center gap-1.5 text-sm px-4 py-2"
+                  >
+                    <Edit2 className="h-4 w-4" /> Alterar
+                  </button>
+                )
               ) : (
                 <>
                   <button
@@ -1942,26 +1967,32 @@ export default function Secretarias() {
                 {(selectedSecretaria.setores || []).length} setor(es)
               </span>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleCreateSetor(selectedSecretaria.id)}
-                  className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1 h-7"
-                >
-                  <Plus className="h-3.5 w-3.5" /> Incluir
-                </button>
-                <button
-                  onClick={() => selectedSetorInPanel && handleEditSetor(selectedSetorInPanel, selectedSecretaria.id)}
-                  disabled={!selectedSetorInPanel}
-                  className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
-                >
-                  <Edit2 className="h-3.5 w-3.5" /> Alterar
-                </button>
-                <button
-                  onClick={() => selectedSetorInPanel && handleDeleteSetor(selectedSetorInPanel, selectedSecretaria)}
-                  disabled={!selectedSetorInPanel}
-                  className="btn-danger flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
-                >
-                  <Trash2 className="h-3.5 w-3.5" /> Excluir
-                </button>
+                {pSec('criar') && (
+                  <button
+                    onClick={() => handleCreateSetor(selectedSecretaria.id)}
+                    className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1 h-7"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Incluir
+                  </button>
+                )}
+                {pSec('editar') && (
+                  <button
+                    onClick={() => selectedSetorInPanel && handleEditSetor(selectedSetorInPanel, selectedSecretaria.id)}
+                    disabled={!selectedSetorInPanel}
+                    className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
+                  >
+                    <Edit2 className="h-3.5 w-3.5" /> Alterar
+                  </button>
+                )}
+                {pSec('excluir') && (
+                  <button
+                    onClick={() => selectedSetorInPanel && handleDeleteSetor(selectedSetorInPanel, selectedSecretaria)}
+                    disabled={!selectedSetorInPanel}
+                    className="btn-danger flex items-center gap-1.5 text-xs px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed h-7"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> Excluir
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1989,7 +2020,7 @@ export default function Secretarias() {
                         <tr
                           key={setor.id}
                           onClick={() => setSelectedSetorInPanel(isSel ? null : setor)}
-                          onDoubleClick={() => { handleEditSetor(setor, selectedSecretaria.id); }}
+                          onDoubleClick={() => { if (pSec('editar')) { handleEditSetor(setor, selectedSecretaria.id) } }}
                           className={`cursor-pointer transition-colors select-none ${
                             isSel ? 'bg-brand-600 text-white' : 'hover:bg-info-50 dark:hover:bg-info-900/10'
                           }`}
@@ -2260,9 +2291,11 @@ export default function Secretarias() {
               {!orcamentoEditing ? (
                 <>
                   <button onClick={() => setShowOrcamentoPanel(false)} className="btn-secondary px-5 py-2 text-sm">Fechar</button>
-                  <button onClick={() => setOrcamentoEditing(true)} className="btn-primary flex items-center gap-2 px-5 py-2 text-sm">
-                    <Edit2 className="w-4 h-4" /> Alterar
-                  </button>
+                  {pSec('editar') && (
+                    <button onClick={() => setOrcamentoEditing(true)} className="btn-primary flex items-center gap-2 px-5 py-2 text-sm">
+                      <Edit2 className="w-4 h-4" /> Alterar
+                    </button>
+                  )}
                 </>
               ) : (
                 <>
@@ -2340,7 +2373,7 @@ export default function Secretarias() {
                               <tr
                                 key={dot.id}
                                 onClick={() => setSelectedDotacao(isSel ? null : dot)}
-                                onDoubleClick={() => { setEditingDotacao(dot); setFormDotacao({ codigo: dot.codigo||'', descricao: dot.descricao||'', elemento_despesa: dot.elemento_despesa||'', fonte_recurso: dot.fonte_recurso||'', valor_previsto: dot.valor_previsto||'' }); setShowFormDotacao(true); }}
+                                onDoubleClick={() => { if (pSec('editar')) { setEditingDotacao(dot); setFormDotacao({ codigo: dot.codigo||'', descricao: dot.descricao||'', elemento_despesa: dot.elemento_despesa||'', fonte_recurso: dot.fonte_recurso||'', valor_previsto: dot.valor_previsto||'' }); setShowFormDotacao(true) } }}
                                 className={`cursor-pointer select-none transition-colors ${isSel ? 'bg-indigo-600 text-white' : 'hover:bg-indigo-50 dark:hover:bg-indigo-900/10'}`}
                               >
                                 <td className="px-3 py-2.5 text-center">
@@ -2402,15 +2435,21 @@ export default function Secretarias() {
             <div className="bg-surface border-t border-ink-100 px-4 py-3 shrink-0 flex items-center justify-between">
               <span className="text-xs text-ink-500">{dotacoesList.length} dotação(ões)</span>
               <div className="flex items-center gap-2">
-                <button onClick={() => { setEditingDotacao(null); setFormDotacao({ codigo:'', descricao:'', elemento_despesa:'', fonte_recurso:'', valor_previsto:'' }); setShowFormDotacao(true); setSelectedDotacao(null); }} className="btn-primary flex items-center gap-1.5 text-sm px-3 py-1.5">
-                  <Plus className="h-4 w-4" /> Incluir
-                </button>
-                <button onClick={() => { if(!selectedDotacao) return; setEditingDotacao(selectedDotacao); setFormDotacao({ codigo: selectedDotacao.codigo||'', descricao: selectedDotacao.descricao||'', elemento_despesa: selectedDotacao.elemento_despesa||'', fonte_recurso: selectedDotacao.fonte_recurso||'', valor_previsto: selectedDotacao.valor_previsto||'' }); setShowFormDotacao(true); }} disabled={!selectedDotacao} className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
-                  <Edit2 className="h-4 w-4" /> Alterar
-                </button>
-                <button onClick={() => selectedDotacao && setConfirmarExcluirDotacao(true)} disabled={!selectedDotacao} className="btn-danger flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
-                  <Trash2 className="h-4 w-4" /> Excluir
-                </button>
+                {pSec('criar') && (
+                  <button onClick={() => { setEditingDotacao(null); setFormDotacao({ codigo:'', descricao:'', elemento_despesa:'', fonte_recurso:'', valor_previsto:'' }); setShowFormDotacao(true); setSelectedDotacao(null); }} className="btn-primary flex items-center gap-1.5 text-sm px-3 py-1.5">
+                    <Plus className="h-4 w-4" /> Incluir
+                  </button>
+                )}
+                {pSec('editar') && (
+                  <button onClick={() => { if(!selectedDotacao) return; setEditingDotacao(selectedDotacao); setFormDotacao({ codigo: selectedDotacao.codigo||'', descricao: selectedDotacao.descricao||'', elemento_despesa: selectedDotacao.elemento_despesa||'', fonte_recurso: selectedDotacao.fonte_recurso||'', valor_previsto: selectedDotacao.valor_previsto||'' }); setShowFormDotacao(true); }} disabled={!selectedDotacao} className="btn-secondary flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+                    <Edit2 className="h-4 w-4" /> Alterar
+                  </button>
+                )}
+                {pSec('excluir') && (
+                  <button onClick={() => selectedDotacao && setConfirmarExcluirDotacao(true)} disabled={!selectedDotacao} className="btn-danger flex items-center gap-1.5 text-sm px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+                    <Trash2 className="h-4 w-4" /> Excluir
+                  </button>
+                )}
               </div>
             </div>
           </div>

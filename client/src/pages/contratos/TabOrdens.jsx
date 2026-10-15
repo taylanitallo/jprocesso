@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { usePode } from '../../utils/permissions'
 import {
   ClipboardList, ShoppingCart, Wrench, Plus, Pencil, Trash2, Eye,
   Search, X, AlertTriangle, CheckCircle2, XCircle,
@@ -1511,6 +1512,8 @@ function ConfirmExcluirModal({ numero, onConfirm, onClose }) {
 
 // ── Tab Principal ──────────────────────────────────────────────────────────────
 function TabOrdens() {
+  // Ações conforme o editor de permissões. Só "Ver" = sem botões de ação.
+  const pode = usePode('contratos', 'ordens')
   const { user } = useAuth()
   const isAdmin = user?.tipo === 'admin' || user?.tipo === 'jeos'
   const [ordens, setOrdens] = useState([])
@@ -1642,27 +1645,35 @@ function TabOrdens() {
 
       {/* Barra de Ações */}
       <div className="flex items-center gap-2 flex-wrap">
-        <button onClick={() => { setSelecionada(null); setModal('novo') }}
-          className="flex items-center gap-1.5 h-7 px-3 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm transition-colors">
-          <Plus className="w-3.5 h-3.5" /> Incluir
-        </button>
-        <button onClick={() => ordemSel && setModal('editar')}
-          disabled={!selecionada || ordemSel?.status === 'CANCELADA' || (ordemSel?.status === 'EMITIDA' && (ordemSel?.did_vinculado || ordemSel?.dataValues?.did_vinculado))}
-          className="flex items-center gap-1.5 h-7 px-3 text-xs rounded-lg bg-amber-600 hover:bg-amber-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-sm transition-colors">
-          <Pencil className="w-3.5 h-3.5" /> Alterar
-        </button>
-        <button onClick={() => ordemSel && ordemSel.status !== 'CANCELADA' && !(ordemSel.status === 'EMITIDA' && (ordemSel.did_vinculado || ordemSel.dataValues?.did_vinculado)) && setModal('cancelar')}
-          disabled={!selecionada || ordemSel?.status === 'CANCELADA' || (ordemSel?.status === 'EMITIDA' && (ordemSel?.did_vinculado || ordemSel?.dataValues?.did_vinculado))}
-          className="flex items-center gap-1.5 h-7 px-3 text-xs rounded-lg bg-danger-600 hover:bg-danger-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-sm transition-colors">
-          <Trash2 className="w-3.5 h-3.5" /> Cancelar
-        </button>
-        {isAdmin && (
-          <button onClick={() => ordemSel && ordemSel.status === 'CANCELADA' && setModal('excluir')}
-            disabled={!selecionada || ordemSel?.status !== 'CANCELADA'}
-            title="Excluir (somente ordens já canceladas)"
-            className="flex items-center gap-1.5 h-7 px-3 text-xs rounded-lg bg-danger-800 hover:bg-danger-900 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-sm transition-colors">
-            <Trash2 className="w-3.5 h-3.5" /> Excluir
+        {pode('criar') && (
+          <button onClick={() => { setSelecionada(null); setModal('novo') }}
+            className="flex items-center gap-1.5 h-7 px-3 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm transition-colors">
+            <Plus className="w-3.5 h-3.5" /> Incluir
           </button>
+        )}
+        {pode('editar') && (
+          <button onClick={() => ordemSel && setModal('editar')}
+            disabled={!selecionada || ordemSel?.status === 'CANCELADA' || (ordemSel?.status === 'EMITIDA' && (ordemSel?.did_vinculado || ordemSel?.dataValues?.did_vinculado))}
+            className="flex items-center gap-1.5 h-7 px-3 text-xs rounded-lg bg-amber-600 hover:bg-amber-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-sm transition-colors">
+            <Pencil className="w-3.5 h-3.5" /> Alterar
+          </button>
+        )}
+        {pode('editar') && (
+          <button onClick={() => ordemSel && ordemSel.status !== 'CANCELADA' && !(ordemSel.status === 'EMITIDA' && (ordemSel.did_vinculado || ordemSel.dataValues?.did_vinculado)) && setModal('cancelar')}
+            disabled={!selecionada || ordemSel?.status === 'CANCELADA' || (ordemSel?.status === 'EMITIDA' && (ordemSel?.did_vinculado || ordemSel?.dataValues?.did_vinculado))}
+            className="flex items-center gap-1.5 h-7 px-3 text-xs rounded-lg bg-danger-600 hover:bg-danger-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-sm transition-colors">
+            <Trash2 className="w-3.5 h-3.5" /> Cancelar
+          </button>
+        )}
+        {isAdmin && (
+          pode('excluir') && (
+            <button onClick={() => ordemSel && ordemSel.status === 'CANCELADA' && setModal('excluir')}
+              disabled={!selecionada || ordemSel?.status !== 'CANCELADA'}
+              title="Excluir (somente ordens já canceladas)"
+              className="flex items-center gap-1.5 h-7 px-3 text-xs rounded-lg bg-danger-800 hover:bg-danger-900 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-sm transition-colors">
+              <Trash2 className="w-3.5 h-3.5" /> Excluir
+            </button>
+          )
         )}
         <button onClick={() => ordemSel && setModal('visualizar')}
           disabled={!selecionada}

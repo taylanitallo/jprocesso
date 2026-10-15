@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { usePode } from '../utils/permissions'
 import {
   ClipboardList, Plus, RefreshCw, ChevronDown, ChevronRight,
   CheckCircle2, AlertTriangle, X, Eye, Pencil, Trash2
@@ -305,6 +306,8 @@ function ConfirmarExclusaoModal({ inventario, onClose, onConfirm, deleting }) {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function AlmoxInventario() {
+  // Ações conforme o editor de permissões. Só "Ver" = sem botões de ação.
+  const pode = usePode('almoxarifado', 'inventario')
   const [inventarios, setInventarios] = useState([])
   const [loading,     setLoading]     = useState(true)
   const [novoModal,   setNovoModal]   = useState(false)
@@ -386,12 +389,14 @@ export default function AlmoxInventario() {
         </div>
         <div className="flex items-center gap-2">
         <BotaoExcluidos entidade="almox_inventarios" rotulo="Inventários excluídos" onAlterado={load} />
-        <button
-          onClick={() => { setNovoModal(true); setErro('') }}
-          className="flex items-center gap-2 h-7 px-3 bg-brand-600 text-white rounded-lg text-xs font-medium hover:bg-brand-700 transition-colors"
-        >
-          <Plus className="h-3.5 w-3.5" /> Novo Inventario
-        </button>
+        {pode('realizar') && (
+          <button
+            onClick={() => { setNovoModal(true); setErro('') }}
+            className="flex items-center gap-2 h-7 px-3 bg-brand-600 text-white rounded-lg text-xs font-medium hover:bg-brand-700 transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" /> Novo Inventario
+          </button>
+        )}
         </div>
       </div>
 

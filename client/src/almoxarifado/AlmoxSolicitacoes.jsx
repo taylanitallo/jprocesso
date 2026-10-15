@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { usePode } from '../utils/permissions'
 import {
   ChevronLeft, ChevronRight, RefreshCw,
   CheckCircle, Clock, XCircle, Package,
@@ -160,14 +161,16 @@ function CancelarModal({ req, onClose, onSave, saving, erro }) {
 
 // ─── Linha da tabela ──────────────────────────────────────────────────────────
 function SolRow({ r, onSeparar, onAguardandoRetirada, onEntregar, onCancelar, onVisualizar, userTipo }) {
+  // Ações conforme o editor de permissões. Só "Ver" = sem botões de ação.
+  const pode = usePode('almoxarifado', 'cotas')
   const st     = STATUS_REQ[r.status] || STATUS_REQ.AUTORIZADA
   const StIcon = STATUS_ICONS[r.status] || Clock
   const priorSt = PRIORIDADE[r.prioridade]
 
-  const podeSeparar           = r.status === 'AUTORIZADA'
-  const podeAguardandoRetirada = r.status === 'EM_SEPARACAO'
-  const podeEntregar          = r.status === 'AGUARDANDO_RETIRADA'
-  const podeCancelar          = !['ENTREGUE', 'ATENDIDA', 'CANCELADA'].includes(r.status) && ['admin', 'gestor'].includes(userTipo)
+  const podeSeparar           = r.status === 'AUTORIZADA' && pode('gerenciar')
+  const podeAguardandoRetirada = r.status === 'EM_SEPARACAO' && pode('gerenciar')
+  const podeEntregar          = r.status === 'AGUARDANDO_RETIRADA' && pode('gerenciar')
+  const podeCancelar          = !['ENTREGUE', 'ATENDIDA', 'CANCELADA'].includes(r.status) && ['admin', 'gestor', 'jeos'].includes(userTipo) && pode('gerenciar')
 
   return (
     <tr className="hover:bg-ink-50 transition-colors">

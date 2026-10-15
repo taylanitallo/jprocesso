@@ -28,12 +28,13 @@ const PERM = {
 }
 
 export const podeVerExcluidos = (user, entidade) => {
-  if (user?.tipo === 'admin' || user?.tipo === 'jeos') return true
+  if (user?.tipo === 'jeos') return true
   const caminho = PERM[entidade]
-  if (!caminho) return false
+  if (!caminho) return user?.tipo === 'admin'
   let obj = user?.permissoes
   for (const k of caminho) obj = obj?.[k]
-  return obj?.excluidos === true
+  // Administrador: liberado até alguém desligar. Demais: só se ligado.
+  return user?.tipo === 'admin' ? obj?.excluidos !== false : obj?.excluidos === true
 }
 
 // Mesma altura dos botões das barras de ações (compactos, text-xs). `compacto`

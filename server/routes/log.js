@@ -9,13 +9,14 @@ const { listLogs, listModulos } = require('../controllers/logController');
 // Verifica se o usuário tem acesso ao módulo de registros
 const checkRegistrosPermissao = async (req, res, next) => {
   if (!req.user) return res.status(401).json({ error: 'Não autenticado' });
-  if (req.user.tipo === 'admin' || req.user.tipo === 'jeos') return next();
+  // Só o Administrador Jeos passa direto; o Administrador segue o editor de permissões
+  if (req.user.tipo === 'jeos') return next();
   try {
     // JWT não carrega permissoes — busca do banco quando necessário
     if (req.user.permissoes == null && req.models?.User) {
       const u = await req.models.User.findByPk(req.user.id, { attributes: ['permissoes', 'tipo'] });
       if (!u) return res.status(401).json({ error: 'Usuário não encontrado' });
-      if (u.tipo === 'admin' || u.tipo === 'jeos') return next();
+      if (u.tipo === 'jeos') return next();
       req.user.permissoes = u.permissoes || {};
     }
     const p = req.user.permissoes || {};
