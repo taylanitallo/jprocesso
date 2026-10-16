@@ -175,8 +175,9 @@ const buscarMunicipiosPorEmail = async (req, res) => {
 };
 
 // ── Gestor: administra só os usuários da própria secretaria ──────────────────
-// Não cria nem promove administradores e não concede permissão que ele mesmo não tem.
-const TIPOS_DO_GESTOR = ['gestor', 'operacional'];
+// Regras: administrador cria gestor; gestor cria só operacional (nem administrador, nem gestor).
+// O gestor também não concede permissão que ele mesmo não tem.
+const TIPOS_DO_GESTOR = ['operacional'];
 
 const ESCOPO_VER = { todas: 3, algumas: 2 }; // demais valores = só a própria secretaria
 const tudoDesligado = (v) => (v && typeof v === 'object' && !Array.isArray(v))
@@ -202,14 +203,18 @@ const conferirGestor = async (req, { alvo, tipo, secretariaId, setorId, permisso
   const eu = await User.findByPk(req.user.id, { attributes: ['secretariaId', 'permissoes'] });
   const minhaSec = eu?.secretariaId ? String(eu.secretariaId) : null;
   if (!minhaSec) return { erro: 'Gestor sem secretaria não pode administrar usuários' };
-  if (alvo) {
-    if (['admin', 'jeos'].includes(alvo.tipo)) return { erro: 'Gestor não altera administradores' };
+  const ehProprio = alvo && String(alvo.id) === String(req.user.id);
+  if (alvo && !ehProprio) {
+    if (!TIPOS_DO_GESTOR.includes(alvo.tipo)) return { erro: 'Gestor só administra operacionais' };
     if (String(alvo.secretariaId || '') !== minhaSec) return { erro: 'Gestor só administra usuários da própria secretaria' };
   }
   if (secretariaId !== undefined && String(secretariaId || '') !== minhaSec) {
     return { erro: 'Gestor só cadastra usuários na própria secretaria' };
   }
-  if (tipo !== undefined && !TIPOS_DO_GESTOR.includes(tipo)) return { erro: 'Gestor só cadastra gestores e operacionais' };
+  // O próprio gestor pode manter o tipo dele (a tela de edição sempre manda o tipo atual)
+  if (tipo !== undefined && !TIPOS_DO_GESTOR.includes(tipo) && !(ehProprio && tipo === alvo.tipo)) {
+    return { erro: 'Gestor só cadastra operacionais' };
+  }
   if (setorId) {
     const setor = await Setor.findByPk(setorId, { attributes: ['secretariaId'] });
     if (!setor || String(setor.secretariaId) !== minhaSec) return { erro: 'Setor não pertence à sua secretaria' };
