@@ -49,8 +49,9 @@ function ItemModal({ modo, item, onSave, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in duration-150">
-      <div className="bg-ink-50 rounded-3xl shadow-2xl w-full flex flex-col overflow-hidden" style={{ maxWidth: '90vw', maxHeight: '90vh', width: '680px' }}>
+    // Ver / Incluir / Alterar item: tela cheia (toda a área disponível)
+    <div className="fixed inset-0 z-50 flex bg-black/60 p-2 sm:p-3 animate-in fade-in duration-150">
+      <div className="bg-ink-50 rounded-3xl shadow-2xl w-full h-full flex flex-col overflow-hidden">
 
         {/* ── Header Premium ── */}
         <div className="bg-surface border-b border-ink-100 px-4 py-3 shrink-0">
