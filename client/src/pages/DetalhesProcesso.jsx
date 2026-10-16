@@ -30,7 +30,7 @@ const TIPO_CONFIG = {
   tramite:     { label: 'Tramitação',  icon: Send,            dot: 'bg-indigo-500',  badge: 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300'  },
   devolucao:   { label: 'Devolução',   icon: ArrowLeftCircle, dot: 'bg-danger-500',     badge: 'bg-danger-100    dark:bg-danger-900/40    text-danger-700    dark:text-danger-300'     },
   conclusao:   { label: 'Conclusão',   icon: CheckCircle,     dot: 'bg-success-500',   badge: 'bg-success-100  dark:bg-success-900/40  text-success-700  dark:text-success-300'   },
-  recebimento: { label: 'Recebimento', icon: Inbox,           dot: 'bg-emerald-500', badge: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' },
+  recebimento: { label: 'Recebido',    icon: Inbox,           dot: 'bg-emerald-500', badge: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' },
   did_etapa:   { label: 'Etapa do DID', icon: ClipboardList,  dot: 'bg-purple-500',  badge: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300' },
 }
 
@@ -129,12 +129,14 @@ export default function DetalhesProcesso() {
     (processo.usuario_atual_id === null && processo.setor_atual_id === currentUser.setor?.id)
   ))
 
-  // Precisa clicar "Receber" antes de poder agir (apenas destinatário real, não admin/gestor)
-  const precisaReceber = isDestinatarioReal &&
-    currentUser?.tipo !== 'admin' &&
-    currentUser?.tipo !== 'gestor' &&
-    processo?.status !== 'concluido' &&
+  // Tramitado/devolvido e ainda não recebido pelo destino
+  const aguardandoRecebimento = !!processo && processo.status !== 'concluido' &&
     ['tramite', 'devolucao'].includes(ultimaTramitacao?.tipo_acao || ultimaTramitacao?.tipo)
+
+  // Destinatário precisa clicar "Receber" antes de poder agir — vale também para
+  // administrador e gestor quando são o destino (servidor: utils/recebimento.js)
+  const precisaReceber = isDestinatarioReal && aguardandoRecebimento &&
+    (ultimaTramitacao?.origem_usuario_id || ultimaTramitacao?.origemUsuario?.id) !== currentUser?.id
 
   const podeAgir      = isResponsavel && !precisaReceber
   const podeDevolver  = podeAgir && processo?.status !== 'aberto' && pode('devolver')
@@ -753,6 +755,24 @@ export default function DetalhesProcesso() {
                 <div className="absolute left-[18px] top-5 bottom-5 w-px bg-ink-200" />
 
                 <div className="space-y-4">
+                  {/* Enviado e ainda não recebido pelo destino */}
+                  {aguardandoRecebimento && (
+                    <div className="relative flex gap-4">
+                      <div className="relative z-10 shrink-0 flex items-center justify-center w-9 h-9 rounded-full shadow-sm bg-amber-500 text-white">
+                        <Clock className="w-4 h-4" strokeWidth={2} />
+                      </div>
+                      <div className="flex-1 min-w-0 pb-1">
+                        <div className="rounded-xl border p-4 bg-amber-50 dark:bg-amber-900/15 border-amber-200 dark:border-amber-800/40">
+                          <span className="badge text-xs bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300">Aguardando recebimento</span>
+                          <p className="text-sm text-ink-700 mt-2">
+                            Com {processo.usuarioAtual?.nome || ultimaTramitacao?.destinoUsuario?.nome || 'o setor'}
+                            {(processo.setorAtual?.nome || ultimaTramitacao?.destinoSetor?.nome) && ` — ${processo.setorAtual?.nome || ultimaTramitacao?.destinoSetor?.nome}`}.
+                            {' '}Só pode ser movimentado depois que o destino clicar em "Receber processo".
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {[...processo.tramitacoes]
                     .sort((a, b) => new Date(b.data_hora || b.dataHora) - new Date(a.data_hora || a.dataHora))
                     .map((tramitacao, index) => {
