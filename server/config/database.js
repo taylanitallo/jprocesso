@@ -916,6 +916,14 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
   await run(`ALTER TABLE contratos_itens ADD COLUMN IF NOT EXISTS codigo_item VARCHAR(100)`);
   await run(`ALTER TABLE contratos_itens ADD COLUMN IF NOT EXISTS lote VARCHAR(50)`);
   await run(`ALTER TABLE contratos_itens_vinculo ADD COLUMN IF NOT EXISTS codigo_item VARCHAR(100)`);
+  // Item distribuído por setor (ex.: 4 impressoras locadas, 3 na Secretaria e 1 na
+  // Biblioteca): distribuicao = [{ local, quantidade }], valor_unitario_base = valor de
+  // cada unidade; valor_unitario passa a ser a média mensal (base × soma das quantidades)
+  await run(`
+    ALTER TABLE contratos_itens_vinculo
+      ADD COLUMN IF NOT EXISTS distribuicao        JSONB,
+      ADD COLUMN IF NOT EXISTS valor_unitario_base NUMERIC(15,2)
+  `);
 
   // ── Ordens de Compra/Serviço ──────────────────────────────────────────────
   await run(`

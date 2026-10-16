@@ -109,8 +109,10 @@ const createProcesso = async (req, res) => {
       transaction
     });
 
-    // Abertura é ato assinado: senha + código do app autenticador
-    await validarAssinante(req, user, transaction);
+    // Abrir processo não pede assinatura eletrônica; só a tramitação pede. O Protocolo
+    // que já sai encaminhado é uma tramitação — esse encaminhamento é assinado.
+    const vaiEncaminhar = tipo_processo === 'Protocolo' && destinoSetorId && destinoSetorId !== user.setorId;
+    if (vaiEncaminhar) await validarAssinante(req, user, transaction);
 
     const secretariaNome = user.setor?.secretaria?.sigla || 'SEC';
     const numero = `Proc.${ano}.${String(sequencial).padStart(7, '0')} - ${secretariaNome}`;
@@ -142,7 +144,8 @@ const createProcesso = async (req, res) => {
       .update(`${processo.id}-${req.user.id}-${new Date().toISOString()}`)
       .digest('hex');
 
-    const tramAbertura = await Tramitacao.create({
+    // A abertura fica registrada (hash) sem assinatura eletrônica
+    await Tramitacao.create({
       processo_id: processo.id,
       tipo_acao: 'abertura',
       despacho: `Processo aberto por ${user.nome}`,
@@ -152,14 +155,13 @@ const createProcesso = async (req, res) => {
       ip_origem: req.ip || req.connection.remoteAddress,
       assinatura_digital: assinaturaDigital
     }, { transaction });
-    const assinaturas = [await assinarTramitacao(req, transaction, processo, tramAbertura, user)];
+    const assinaturas = [];
 
     // ── Encaminhamento no ato do protocolo ───────────────────────────────────
-    // O balcão de protocolo registra e já encaminha ao setor competente. É o
-    // mesmo ato autenticado da abertura (assinado pela sessão, como a abertura),
-    // por isso não repete a confirmação de senha exigida em /tramitar.
+    // O balcão de protocolo registra e já encaminha ao setor competente. É uma
+    // tramitação: assinada com a senha + código validados acima.
     let encaminhadoPara = null;
-    if (tipo_processo === 'Protocolo' && destinoSetorId && destinoSetorId !== user.setorId) {
+    if (vaiEncaminhar) {
       const destinoSetor = await Setor.findByPk(destinoSetorId, {
         include: [{ model: Secretaria, as: 'secretaria' }],
         transaction

@@ -342,6 +342,25 @@ async function migrarAgentes(schema, pool) {
   `);
 }
 
+// Primeiro acesso (troca obrigatória de senha) e convites de cadastro por link/QR Code
+async function migrarAcessoUsuarios(schema, pool) {
+  await pool.query(`
+    ALTER TABLE ${schema}.usuarios ADD COLUMN IF NOT EXISTS trocar_senha BOOLEAN NOT NULL DEFAULT FALSE;
+    CREATE TABLE IF NOT EXISTS ${schema}.convites_usuario (
+      id             UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+      token          VARCHAR(64)  NOT NULL UNIQUE,
+      tipo           VARCHAR(20)  NOT NULL DEFAULT 'operacional',
+      secretaria_id  UUID         NOT NULL,
+      setor_id       UUID,
+      criado_por_id  UUID         NOT NULL,
+      expira_em      TIMESTAMP    NOT NULL,
+      usos           INTEGER      NOT NULL DEFAULT 0,
+      ativo          BOOLEAN      NOT NULL DEFAULT TRUE,
+      created_at     TIMESTAMP    NOT NULL DEFAULT NOW()
+    );
+  `);
+}
+
 async function migrarTesouraria(schema, pool) {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS ${schema}.contas_bancarias (
@@ -878,6 +897,10 @@ const migrarTodosOsSchemas = async () => {
         } catch (_) {
           // schema pode não ter sido criado ainda
         }
+        // Separada: não depende das anteriores terem dado certo
+        try { await migrarAcessoUsuarios(tenant.schema, pool); } catch (e) {
+          console.error(`[migração] acesso de usuários (${tenant.schema}):`, e.message);
+        }
       })
     );
   } finally {
@@ -1043,6 +1066,7 @@ async function criarEstruturaIsolada(schema, tenant, usuarioAdmin) {
 
     // Tabelas do módulo Tesouraria
     await migrarTesouraria(schema, pool);
+    await migrarAcessoUsuarios(schema, pool);
 
     // Inserir secretaria padrão
     const secretariaResult = await pool.query(`

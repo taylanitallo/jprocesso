@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { login, register, getProfile, getUsersBySecretaria, listUsers, updateUser, deleteUser, refreshToken, logoutUser, buscarMunicipiosPorEmail } = require('../controllers/authController');
+const {
+  login, register, getProfile, getUsersBySecretaria, listUsers, updateUser, deleteUser, refreshToken, logoutUser, buscarMunicipiosPorEmail,
+  trocarSenhaPrimeiroAcesso, criarConvite, listarConvites, desativarConvite, verConvite, cadastrarPorConvite,
+} = require('../controllers/authController');
 const { authenticate, tenantMiddleware, requireTenant, authorize, requirePermission } = require('../middleware/auth');
 
 // M-4: em produção, valida Origin nos endpoints que recebem o cookie cross-site
@@ -48,5 +51,17 @@ router.get('/users/por-secretaria',    tenantMiddleware, requireTenant, authenti
 router.get('/users',                   tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), listUsers);
 router.put('/users/:id',       tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), acessoUsuarios, requirePermission('organizacao', 'usuarios', 'editar'), updateUser);
 router.delete('/users/:id',    tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), acessoUsuarios, requirePermission('organizacao', 'usuarios', 'excluir'), deleteUser);
+
+// ── Primeiro acesso: troca obrigatória da senha recebida de quem cadastrou ───
+router.post('/primeiro-acesso/senha', tenantMiddleware, requireTenant, authenticate, trocarSenhaPrimeiroAcesso);
+
+// ── Convites de cadastro (link / QR Code) ─────────────────────────────────────
+// Gerar/listar/desativar: administrador ou gestor com Organização › Usuários › Incluir e Link de cadastro
+router.post('/convites',       tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), acessoUsuarios, requirePermission('organizacao', 'usuarios', 'criar'), requirePermission('organizacao', 'usuarios', 'convite'), criarConvite);
+router.get('/convites',        tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), acessoUsuarios, requirePermission('organizacao', 'usuarios', 'criar'), requirePermission('organizacao', 'usuarios', 'convite'), listarConvites);
+router.delete('/convites/:id', tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), acessoUsuarios, requirePermission('organizacao', 'usuarios', 'criar'), requirePermission('organizacao', 'usuarios', 'convite'), desativarConvite);
+// Públicas: página do link (o próprio link é a credencial; expira e pode ser desativado)
+router.get('/convite/:token',          tenantMiddleware, requireTenant, verConvite);
+router.post('/convite/:token/cadastro', tenantMiddleware, requireTenant, cadastrarPorConvite);
 
 module.exports = router;

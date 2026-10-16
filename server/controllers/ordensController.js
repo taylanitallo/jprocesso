@@ -458,6 +458,9 @@ const getItensContrato = async (req, res) => {
         descricao: v.descricao || v.catalogo?.descricao || '',
         unidade: v.unidade || v.catalogo?.unidade_medida || '',
         valor_unitario: parseFloat(v.valor_unitario || 0),
+        // Item distribuído por setor: valor_unitario já é a média mensal
+        distribuicao: v.distribuicao || null,
+        valor_unitario_base: v.valor_unitario_base != null ? parseFloat(v.valor_unitario_base) : null,
         qtd_contratada,
         qtd_usada,
         qtd_disponivel,

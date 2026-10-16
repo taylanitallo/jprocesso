@@ -16,6 +16,36 @@ const { excluir } = require('../services/lixeiraService');
 
 const REFRESH_EXPIRE_MS = 30 * 24 * 60 * 60 * 1000; // 30 dias
 
+// Permissões de um usuário novo (cadastro pela tela ou pelo link de convite)
+const PERMISSOES_PADRAO = () => ({
+  processos:     { ver: true, criar: true, editar: true, excluir: false, tramitar: true, devolver: true, concluir: true, arquivar: false, anexar_documento: true, excluir_documento: false },
+  arquivo:       { acessar: false },
+  almoxarifado:  { acessar: false, painel: { ver: true }, estoque: { ver: true, editar: true }, entradas: { ver: true, registrar: true }, saidas: { ver: true, registrar: true }, requisicoes: { ver: true, criar: true, aprovar: false, cancelar: false }, cotas: { ver: true, gerenciar: false }, inventario: { ver: true, realizar: false }, auditoria: { ver: false } },
+  patrimonio:    { acessar: false, painel: { ver: true }, bens: { ver: true, criar: false, editar: false, excluir: false }, tombamento: { ver: true, realizar: false }, transferencia: { ver: true, realizar: false }, baixa: { ver: true, realizar: false }, inventario: { ver: true, realizar: false }, grupos: { ver: false, gerenciar: false } },
+  financeiro:    { acessar: false, painel: { ver: true }, processos_did: { ver: true }, relatorio: { ver: false } },
+  contratos:     { acessar: false, itens: { ver: true, criar: false, editar: false, excluir: false }, credores: { ver: true, criar: false, editar: false, excluir: false }, contratos: { ver: true, criar: false, editar: false, excluir: false }, ordens: { ver: true, criar: false, editar: false, excluir: false }, relatorios: { ver: true } },
+  tesouraria:    { acessar: false, contas: { ver: true, criar: false, editar: false, excluir: false }, receitas: { ver: true, criar: false, editar: false, excluir: false }, despesas: { ver: true, criar: false, editar: false, excluir: false }, relatorios: { ver: true } },
+  administracao: { gerenciar_usuarios: false, gerenciar_secretarias: false, gerenciar_configuracoes: false, visualizar_relatorios: false, visualizar_registros: false },
+});
+
+// B-2: mínimo 8 chars, ao menos uma letra e um número
+const SENHA_RE = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
+
+// ── Primeiro acesso: troca obrigatória de senha ──────────────────────────────
+// Quem foi cadastrado (ou teve a senha redefinida) por outra pessoa fica com
+// usuarios.trocar_senha = true: no próximo login precisa informar a senha atual
+// e escolher uma nova, para que só ele saiba a senha. Coluna lida por SQL (não
+// está no model) — schema ainda sem a migração simplesmente não exige a troca.
+const lerTrocarSenha = async (db, schema, id) => {
+  try {
+    const [rows] = await db.query(`SELECT trocar_senha FROM "${schema}".usuarios WHERE id = :id`, { replacements: { id } });
+    return !!rows[0]?.trocar_senha;
+  } catch { return false; }
+};
+const marcarTrocarSenha = (db, schema, id, valor, transaction) =>
+  db.query(`UPDATE "${schema}".usuarios SET trocar_senha = :valor WHERE id = :id`, { replacements: { id, valor }, transaction })
+    .catch((e) => console.error('[trocar_senha]', e.message));
+
 // Retorna o segredo do refresh token; lança erro em produção se a variável
 // obrigatória REFRESH_TOKEN_SECRET não estiver definida.
 const _getRefreshSecret = () => {
@@ -234,9 +264,7 @@ const register = async (req, res) => {
       permissoes = r.permissoes;
     }
 
-    // B-2: mínimo 8 chars, ao menos uma letra e um número
-    const senhaRe = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
-    if (!senha || !senhaRe.test(senha)) {
+    if (!senha || !SENHA_RE.test(senha)) {
       return res.status(400).json({ error: 'A senha deve ter pelo menos 8 caracteres, incluindo uma letra e um número' });
     }
 
@@ -264,17 +292,11 @@ const register = async (req, res) => {
       tipo: tipo || 'operacional',
       secretariaId,
       setorId,
-      permissoes: permissoes || {
-        processos:     { ver: true, criar: true, editar: true, excluir: false, tramitar: true, devolver: true, concluir: true, arquivar: false, anexar_documento: true, excluir_documento: false },
-        arquivo:       { acessar: false },
-        almoxarifado:  { acessar: false, painel: { ver: true }, estoque: { ver: true, editar: true }, entradas: { ver: true, registrar: true }, saidas: { ver: true, registrar: true }, requisicoes: { ver: true, criar: true, aprovar: false, cancelar: false }, cotas: { ver: true, gerenciar: false }, inventario: { ver: true, realizar: false }, auditoria: { ver: false } },
-        patrimonio:    { acessar: false, painel: { ver: true }, bens: { ver: true, criar: false, editar: false, excluir: false }, tombamento: { ver: true, realizar: false }, transferencia: { ver: true, realizar: false }, baixa: { ver: true, realizar: false }, inventario: { ver: true, realizar: false }, grupos: { ver: false, gerenciar: false } },
-        financeiro:    { acessar: false, painel: { ver: true }, processos_did: { ver: true }, relatorio: { ver: false } },
-        contratos:     { acessar: false, itens: { ver: true, criar: false, editar: false, excluir: false }, credores: { ver: true, criar: false, editar: false, excluir: false }, contratos: { ver: true, criar: false, editar: false, excluir: false }, ordens: { ver: true, criar: false, editar: false, excluir: false }, relatorios: { ver: true } },
-        tesouraria:    { acessar: false, contas: { ver: true, criar: false, editar: false, excluir: false }, receitas: { ver: true, criar: false, editar: false, excluir: false }, despesas: { ver: true, criar: false, editar: false, excluir: false }, relatorios: { ver: true } },
-        administracao: { gerenciar_usuarios: false, gerenciar_secretarias: false, gerenciar_configuracoes: false, visualizar_relatorios: false, visualizar_registros: false },
-      }
+      permissoes: permissoes || PERMISSOES_PADRAO()
     });
+
+    // Senha definida por quem cadastrou: o usuário troca no primeiro acesso
+    await marcarTrocarSenha(req.tenantDb, req.tenant.schema, user.id, true);
 
     const token = jwt.sign(
       {
@@ -401,6 +423,9 @@ const login = async (req, res) => {
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
 
+    // Primeiro acesso: enquanto não trocar a senha, o token só abre a troca (middleware/auth)
+    const trocarSenha = await lerTrocarSenha(tenantDb, tenant.schema, user.id);
+
     const token = jwt.sign(
       {
         id: user.id,
@@ -411,7 +436,8 @@ const login = async (req, res) => {
         subdomain: tenant.subdominio,
         secretariaId: user.secretariaId,
         secretariaNome: user.secretaria?.nome,
-        setorId: user.setorId || null
+        setorId: user.setorId || null,
+        ...(trocarSenha ? { trocarSenha: true } : {}),
       },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRE || '30m' }
@@ -455,7 +481,8 @@ const login = async (req, res) => {
         secretariaId: user.secretariaId,
         permissoes: user.permissoes,
         secretaria: user.secretaria,
-        setor: user.setor
+        setor: user.setor,
+        trocarSenha,
       },
       token,
       tenant: {
@@ -503,7 +530,8 @@ const getProfile = async (req, res) => {
       return res.status(404).json({ error: 'Usuário não encontrado' });
     }
 
-    res.json({ user });
+    const trocarSenha = await lerTrocarSenha(req.tenantDb, req.tenant.schema, user.id);
+    res.json({ user: { ...user.toJSON(), trocarSenha } });
   } catch (error) {
     console.error('Erro ao buscar perfil:', error);
     res.status(500).json({ error: 'Erro ao buscar perfil' });
@@ -654,15 +682,17 @@ const updateUser = async (req, res) => {
     ).filter(([, v]) => v !== undefined));
 
     // B-2: mesma regra do register — 8+ chars, letra + número
-    const senhaRe = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
     if (novaSenha) {
-      if (!senhaRe.test(novaSenha.trim())) {
+      if (!SENHA_RE.test(novaSenha.trim())) {
         return res.status(400).json({ error: 'A senha deve ter pelo menos 8 caracteres, incluindo uma letra e um número' });
       }
       updatePayload.senha = await bcrypt.hash(novaSenha.trim(), 10);
     }
 
     await user.update(updatePayload);
+
+    // Senha redefinida por outra pessoa: o usuário troca no próximo acesso
+    if (novaSenha) await marcarTrocarSenha(req.tenantDb, req.tenant.schema, user.id, !isSelf);
 
     const { senha: _, ...userSafe } = user.toJSON();
     res.json({ message: 'Usuário atualizado com sucesso', user: userSafe });
@@ -697,6 +727,250 @@ const deleteUser = async (req, res) => {
   } catch (error) {
     console.error('Erro ao excluir usuário:', error);
     res.status(500).json({ error: 'Erro ao excluir usuário' });
+  }
+};
+
+// ── Primeiro acesso: troca a senha recebida de quem cadastrou ────────────────
+// Corpo: { senhaAtual, novaSenha }. Devolve um token novo, já sem a marca de troca.
+const trocarSenhaPrimeiroAcesso = async (req, res) => {
+  try {
+    const { senhaAtual, novaSenha } = req.body || {};
+    if (!senhaAtual || !novaSenha) return res.status(400).json({ error: 'Informe a senha atual e a nova senha' });
+    const nova = String(novaSenha).trim();
+    if (!SENHA_RE.test(nova)) {
+      return res.status(400).json({ error: 'A nova senha deve ter pelo menos 8 caracteres, incluindo uma letra e um número' });
+    }
+
+    const { User, Secretaria } = req.models;
+    const user = await User.findByPk(req.user.id, { include: [{ model: Secretaria, as: 'secretaria', attributes: ['nome'] }] });
+    if (!user || user.ativo === false || user.excluido_em) return res.status(401).json({ error: 'Usuário sem acesso ao sistema' });
+
+    if (!(await bcrypt.compare(String(senhaAtual), user.senha))) {
+      return res.status(400).json({ error: 'Senha atual incorreta', codigo: 'SENHA_ATUAL' });
+    }
+    if (await bcrypt.compare(nova, user.senha)) {
+      return res.status(400).json({ error: 'A nova senha precisa ser diferente da atual' });
+    }
+
+    await user.update({ senha: await bcrypt.hash(nova, 10) });
+    await marcarTrocarSenha(req.tenantDb, req.tenant.schema, user.id, false);
+
+    const { iat, exp, trocarSenha: _t, ...payload } = req.user;
+    const token = generateAccessToken({ ...payload, secretariaNome: user.secretaria?.nome || payload.secretariaNome || null });
+
+    if (req.models.Log) {
+      req.models.Log.create({
+        usuario_id: user.id, acao: 'trocar_senha', modulo: 'sessao',
+        descricao: `${user.nome} trocou a senha no primeiro acesso`, created_at: new Date(),
+      }).catch(() => {});
+    }
+    res.json({ message: 'Senha alterada com sucesso', token });
+  } catch (error) {
+    console.error('Erro ao trocar senha do primeiro acesso:', error);
+    res.status(500).json({ error: 'Erro ao trocar a senha' });
+  }
+};
+
+// ── Convites de cadastro (link / QR Code) ────────────────────────────────────
+// O gestor (ou administrador) gera um link com o tipo de usuário e a validade e
+// manda ao grupo dos colaboradores; cada um cria o próprio usuário pelo link.
+// Gestor: só operacionais da própria secretaria. Administrador: gestor ou operacional.
+const VALIDADE_MAX_DIAS = 90;
+const TIPOS_CONVITE_ADMIN = ['gestor', 'operacional'];
+
+const conviteValido = (c) => c && c.ativo && new Date(c.expira_em) > new Date();
+
+const criarConvite = async (req, res) => {
+  try {
+    const { tipo = 'operacional', setorId = null, expiraEm } = req.body || {};
+    let { secretariaId } = req.body || {};
+    const { User, Setor } = req.models;
+    const ehGestor = req.user.tipo === 'gestor';
+
+    if (ehGestor) {
+      if (!TIPOS_DO_GESTOR.includes(tipo)) return res.status(403).json({ error: 'Gestor só convida operacionais' });
+      const eu = await User.findByPk(req.user.id, { attributes: ['secretariaId'] });
+      if (!eu?.secretariaId) return res.status(403).json({ error: 'Gestor sem secretaria não pode gerar convites' });
+      if (secretariaId && String(secretariaId) !== String(eu.secretariaId)) {
+        return res.status(403).json({ error: 'Gestor só convida para a própria secretaria' });
+      }
+      secretariaId = eu.secretariaId;
+    } else if (!TIPOS_CONVITE_ADMIN.includes(tipo)) {
+      return res.status(400).json({ error: 'Tipo de usuário inválido para convite' });
+    }
+    if (!secretariaId) return res.status(400).json({ error: 'Informe a secretaria' });
+
+    if (setorId) {
+      const setor = await Setor.findByPk(setorId, { attributes: ['secretariaId'] });
+      if (!setor || String(setor.secretariaId) !== String(secretariaId)) {
+        return res.status(400).json({ error: 'Setor não pertence à secretaria escolhida' });
+      }
+    }
+
+    const expira = new Date(expiraEm);
+    const agora = Date.now();
+    if (!expiraEm || Number.isNaN(expira.getTime()) || expira.getTime() <= agora) {
+      return res.status(400).json({ error: 'Informe uma validade no futuro' });
+    }
+    if (expira.getTime() - agora > VALIDADE_MAX_DIAS * 86400000) {
+      return res.status(400).json({ error: `A validade máxima é de ${VALIDADE_MAX_DIAS} dias` });
+    }
+
+    const token = crypto.randomBytes(24).toString('base64url');
+    const [rows] = await req.tenantDb.query(
+      `INSERT INTO "${req.tenant.schema}".convites_usuario (token, tipo, secretaria_id, setor_id, criado_por_id, expira_em)
+       VALUES (:token, :tipo, :secretariaId, :setorId, :criadoPor, :expira) RETURNING id, token, tipo, expira_em`,
+      { replacements: { token, tipo, secretariaId, setorId: setorId || null, criadoPor: req.user.id, expira } }
+    );
+    await registrarLog(req, {
+      acao: 'criar_convite', modulo: 'usuarios',
+      descricao: `Link de cadastro (${tipo}) válido até ${expira.toLocaleString('pt-BR')}`,
+      referencia_id: rows[0].id,
+    });
+    res.status(201).json({ convite: rows[0] });
+  } catch (error) {
+    console.error('Erro ao criar convite:', error);
+    res.status(500).json({ error: 'Erro ao gerar o link de cadastro' });
+  }
+};
+
+// Administrador vê todos; gestor, os que ele gerou
+const listarConvites = async (req, res) => {
+  try {
+    const s = req.tenant.schema;
+    const soMeus = req.user.tipo === 'gestor';
+    const [rows] = await req.tenantDb.query(
+      `SELECT c.id, c.token, c.tipo, c.expira_em, c.usos, c.ativo, c.created_at,
+              sec.nome AS secretaria_nome, sec.sigla AS secretaria_sigla, st.nome AS setor_nome, u.nome AS criado_por_nome
+         FROM "${s}".convites_usuario c
+         LEFT JOIN "${s}".secretarias sec ON sec.id = c.secretaria_id
+         LEFT JOIN "${s}".setores st ON st.id = c.setor_id
+         LEFT JOIN "${s}".usuarios u ON u.id = c.criado_por_id
+        WHERE c.created_at > NOW() - INTERVAL '120 days' ${soMeus ? 'AND c.criado_por_id = :eu' : ''}
+        ORDER BY c.created_at DESC LIMIT 100`,
+      { replacements: { eu: req.user.id } }
+    );
+    res.json({ convites: rows });
+  } catch (error) {
+    console.error('Erro ao listar convites:', error);
+    res.status(500).json({ error: 'Erro ao listar os links de cadastro' });
+  }
+};
+
+const desativarConvite = async (req, res) => {
+  try {
+    const s = req.tenant.schema;
+    const [rows] = await req.tenantDb.query(`SELECT criado_por_id FROM "${s}".convites_usuario WHERE id = :id`, { replacements: { id: req.params.id } });
+    if (!rows[0]) return res.status(404).json({ error: 'Link não encontrado' });
+    if (req.user.tipo === 'gestor' && String(rows[0].criado_por_id) !== String(req.user.id)) {
+      return res.status(403).json({ error: 'Gestor só desativa os links que ele gerou' });
+    }
+    await req.tenantDb.query(`UPDATE "${s}".convites_usuario SET ativo = false WHERE id = :id`, { replacements: { id: req.params.id } });
+    res.json({ message: 'Link desativado' });
+  } catch (error) {
+    console.error('Erro ao desativar convite:', error);
+    res.status(500).json({ error: 'Erro ao desativar o link' });
+  }
+};
+
+const buscarConvitePorToken = async (req) => {
+  const s = req.tenant.schema;
+  const [rows] = await req.tenantDb.query(
+    `SELECT c.*, sec.nome AS secretaria_nome, sec.sigla AS secretaria_sigla, st.nome AS setor_nome
+       FROM "${s}".convites_usuario c
+       LEFT JOIN "${s}".secretarias sec ON sec.id = c.secretaria_id
+       LEFT JOIN "${s}".setores st ON st.id = c.setor_id
+      WHERE c.token = :token LIMIT 1`,
+    { replacements: { token: String(req.params.token || '') } }
+  );
+  return rows[0] || null;
+};
+
+// Público: dados do convite para a página de cadastro
+const verConvite = async (req, res) => {
+  try {
+    const c = await buscarConvitePorToken(req);
+    if (!conviteValido(c)) return res.status(410).json({ error: 'Este link de cadastro expirou ou foi desativado. Peça um novo ao seu gestor.' });
+    const setores = c.setor_id ? [] : await req.models.Setor.findAll({
+      where: { secretariaId: c.secretaria_id, ativo: true }, attributes: ['id', 'nome'], order: [['nome', 'ASC']],
+    }).catch(() => []);
+    res.json({
+      convite: {
+        tipo: c.tipo, expiraEm: c.expira_em,
+        secretaria: { nome: c.secretaria_nome, sigla: c.secretaria_sigla },
+        setor: c.setor_id ? { id: c.setor_id, nome: c.setor_nome } : null,
+        setores,
+        municipio: req.tenant.nome_municipio,
+      },
+    });
+  } catch (error) {
+    console.error('Erro ao abrir convite:', error);
+    res.status(500).json({ error: 'Erro ao abrir o link de cadastro' });
+  }
+};
+
+// Público: o colaborador cria o próprio usuário. Ele escolhe a senha, então não
+// precisa trocá-la no primeiro acesso.
+const cadastrarPorConvite = async (req, res) => {
+  try {
+    const c = await buscarConvitePorToken(req);
+    if (!conviteValido(c)) return res.status(410).json({ error: 'Este link de cadastro expirou ou foi desativado. Peça um novo ao seu gestor.' });
+
+    const { nome, nomeReduzido, email, telefone, senha } = req.body || {};
+    const cpf = String(req.body?.cpf || '').replace(/\D/g, '');
+    const setorId = c.setor_id || req.body?.setorId;
+    if (!nome || !String(nome).trim()) return res.status(400).json({ error: 'Informe o nome completo' });
+    if (cpf.length !== 11) return res.status(400).json({ error: 'CPF deve ter 11 dígitos' });
+    if (!email || !/^\S+@\S+\.\S+$/.test(String(email).trim())) return res.status(400).json({ error: 'Informe um e-mail válido' });
+    if (!senha || !SENHA_RE.test(String(senha))) {
+      return res.status(400).json({ error: 'A senha deve ter pelo menos 8 caracteres, incluindo uma letra e um número' });
+    }
+
+    const { User, Setor } = req.models;
+    const { Op } = require('sequelize');
+    const setor = setorId ? await Setor.findByPk(setorId, { attributes: ['id', 'secretariaId'] }) : null;
+    if (!setor || String(setor.secretariaId) !== String(c.secretaria_id)) return res.status(400).json({ error: 'Escolha o seu setor' });
+
+    const emailNorm = String(email).trim().toLowerCase();
+    const jaExiste = await User.findOne({ where: { [Op.or]: [{ cpf }, { email: emailNorm }] }, attributes: ['cpf', 'excluido_em'] });
+    if (jaExiste) {
+      return res.status(400).json({
+        error: jaExiste.cpf === cpf ? 'Já existe um usuário com este CPF. Fale com o seu gestor.' : 'Já existe um usuário com este e-mail.',
+      });
+    }
+
+    // Permissões: o padrão, limitado às de quem gerou o link quando foi um gestor
+    let permissoes = PERMISSOES_PADRAO();
+    const criador = await User.findByPk(c.criado_por_id, { attributes: ['tipo', 'permissoes'] });
+    if (criador?.tipo === 'gestor') permissoes = limitarPermissoes(permissoes, criador.permissoes || {});
+
+    const user = await User.create({
+      nome: String(nome).trim(),
+      nomeReduzido: nomeReduzido ? String(nomeReduzido).trim().slice(0, 60) : null,
+      email: emailNorm,
+      senha: await bcrypt.hash(String(senha), 10),
+      cpf,
+      telefone: telefone ? String(telefone).replace(/\D/g, '').slice(0, 11) : null,
+      tipo: c.tipo,
+      secretariaId: c.secretaria_id,
+      setorId: setor.id,
+      permissoes,
+    });
+    await req.tenantDb.query(`UPDATE "${req.tenant.schema}".convites_usuario SET usos = usos + 1 WHERE id = :id`, { replacements: { id: c.id } });
+
+    if (req.models.Log) {
+      req.models.Log.create({
+        usuario_id: user.id, acao: 'cadastro_por_convite', modulo: 'usuarios',
+        descricao: `${user.nome} criou o próprio usuário (${c.tipo}) pelo link de cadastro`, created_at: new Date(),
+      }).catch(() => {});
+    }
+    res.status(201).json({ message: 'Usuário criado! Entre com o seu CPF e a senha que você escolheu.' });
+  } catch (error) {
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return res.status(400).json({ error: 'CPF ou e-mail já cadastrado. Fale com o seu gestor.' });
+    }
+    console.error('Erro no cadastro por convite:', error);
+    res.status(500).json({ error: 'Erro ao criar o usuário' });
   }
 };
 
@@ -776,6 +1050,8 @@ const refreshToken = async (req, res) => {
               ? await modelsForRefresh.Secretaria.findByPk(freshUser.secretariaId, { attributes: ['nome'] })
               : null;
             freshPayload.secretariaNome = sec?.nome || null;
+            delete freshPayload.trocarSenha;
+            if (await lerTrocarSenha(tenantDbForRefresh, tenantForRefresh.schema, decoded.id)) freshPayload.trocarSenha = true;
           }
         }
       } catch { /* mantém cleanPayload se falhar */ }
@@ -849,4 +1125,10 @@ module.exports = {
   deleteUser,
   refreshToken,
   logoutUser,
+  trocarSenhaPrimeiroAcesso,
+  criarConvite,
+  listarConvites,
+  desativarConvite,
+  verConvite,
+  cadastrarPorConvite,
 };

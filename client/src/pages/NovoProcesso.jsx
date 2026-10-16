@@ -94,20 +94,21 @@ export default function NovoProcesso() {
         payload.despachoEncaminhamento = data.despachoEncaminhamento || ''
       }
 
-      // Abertura é ato assinado eletronicamente (senha + código do app)
-      const res = await assinar({
-        titulo: tipoSelecionado === 'Protocolo' && payload.destinoSetorId
-          ? 'Registrar e encaminhar protocolo'
-          : 'Abrir processo',
-        resumo: (
-          <>
-            <p><strong>Tipo:</strong> {tipoSelecionado}</p>
-            <p><strong>Assunto:</strong> {data.assunto}</p>
-            {data.interessado_nome && <p><strong>Interessado:</strong> {data.interessado_nome}</p>}
-          </>
-        ),
-        executar: (cred) => api.post('/processos', { ...payload, ...cred }),
-      })
+      // Abrir processo não pede assinatura; só a tramitação. O Protocolo que já sai
+      // encaminhado é uma tramitação, então esse pede senha + código.
+      const res = tipoSelecionado === 'Protocolo' && payload.destinoSetorId
+        ? await assinar({
+            titulo: 'Registrar e encaminhar protocolo',
+            resumo: (
+              <>
+                <p><strong>Tipo:</strong> {tipoSelecionado}</p>
+                <p><strong>Assunto:</strong> {data.assunto}</p>
+                {data.interessado_nome && <p><strong>Interessado:</strong> {data.interessado_nome}</p>}
+              </>
+            ),
+            executar: (cred) => api.post('/processos', { ...payload, ...cred }),
+          })
+        : await api.post('/processos', payload)
       if (!res) return // cancelou a assinatura
       const processoId = res.data?.processo?.id || res.data?.id
       if (processoId) {

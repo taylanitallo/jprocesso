@@ -12,6 +12,7 @@ import { useQueryClient } from 'react-query'
 import JAI from './JAI'
 import api, { apiUrl } from '../services/api'
 import AvisoAssinatura from './assinatura/AvisoAssinatura'
+import TrocarSenhaPrimeiroAcesso from './TrocarSenhaPrimeiroAcesso'
 
 export default function Layout() {
   const { user, tenant, logout } = useAuth()
@@ -26,7 +27,13 @@ export default function Layout() {
   const [nomeEntidade, setNomeEntidade] = useState('')
   const [moduloBloqueado, setModuloBloqueado] = useState(null)
   const [profileOpen, setProfileOpen] = useState(false)
-  const [showJAI, setShowJAI] = useState(true)
+  // Ayla IA começa desligada; quem ligar no menu do perfil fica com ela ligada (por navegador)
+  const [showJAI, setShowJAI] = useState(() => {
+    try { return localStorage.getItem('aylaAtiva') === 'true' } catch { return false }
+  })
+  useEffect(() => {
+    try { localStorage.setItem('aylaAtiva', String(showJAI)) } catch { /* sem storage: só nesta sessão */ }
+  }, [showJAI])
   const [geoLocation, setGeoLocation] = useState('')
   const [meuIp, setMeuIp] = useState('')
   const [atualizando, setAtualizando] = useState(false)
@@ -445,14 +452,19 @@ export default function Layout() {
         {/* Conteúdo */}
         <main className="flex-1 overflow-auto">
           <div className="px-3 py-4 sm:px-4 lg:px-6 max-w-[1600px] mx-auto animate-fade-in">
-            <AvisoAssinatura />
-            {/* key: o botão Atualizar remonta a tela para buscar os dados de novo */}
-            <Outlet key={versaoTela} />
+            {/* Primeiro acesso: só a troca de senha até ela ser feita */}
+            {user?.trocarSenha ? <TrocarSenhaPrimeiroAcesso /> : (
+              <>
+                <AvisoAssinatura />
+                {/* key: o botão Atualizar remonta a tela para buscar os dados de novo */}
+                <Outlet key={versaoTela} />
+              </>
+            )}
           </div>
         </main>
 
         {/* Assistente JAI */}
-        {showJAI && <JAI />}
+        {showJAI && !user?.trocarSenha && <JAI />}
 
       </div>
 

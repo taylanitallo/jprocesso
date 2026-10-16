@@ -418,21 +418,15 @@ export default function FormularioDid() {
 
   const criarProcessoSeNovo = async () => {
     if (processoId !== 'novo') return processoId
-    // Abertura do processo é ato assinado eletronicamente (senha + código do app)
-    const resP = await assinar({
-      titulo: 'Abrir processo de DID',
-      resumo: <p><strong>Objeto:</strong> {form.objeto}</p>,
-      executar: (cred) => api.post('/processos', {
-        assunto: form.objeto,
-        descricao: form.objeto,
-        interessado_nome: form.credor_sec1 || 'DID - Instrução de Despesa',
-        interessado_cpf_cnpj: (form.cnpj_cpf_credor_sec1 || '').replace(/\D/g, '') || '00000000000000',
-        tipo_processo: 'Did',
-        prioridade: 'normal',
-        ...cred,
-      }),
+    // Abrir processo não pede assinatura eletrônica (só a tramitação pede)
+    const resP = await api.post('/processos', {
+      assunto: form.objeto,
+      descricao: form.objeto,
+      interessado_nome: form.credor_sec1 || 'DID - Instrução de Despesa',
+      interessado_cpf_cnpj: (form.cnpj_cpf_credor_sec1 || '').replace(/\D/g, '') || '00000000000000',
+      tipo_processo: 'Did',
+      prioridade: 'normal',
     })
-    if (!resP) throw new Error('Assinatura cancelada — o processo não foi aberto.')
     return resP.data?.processo?.id || resP.data?.id
   }
 
@@ -645,7 +639,7 @@ export default function FormularioDid() {
         )}
         {editavel && n === 1 && !did && (
           <p className="-mt-2 mb-2 rounded-b-xl border border-t-0 border-ink-200 bg-ink-50 px-4 py-2.5 text-xs text-ink-600">
-            Salve a Seção I para abrir o processo (assinatura da abertura). Depois use <strong>Concluir e assinar</strong> para liberar a Seção II.
+            Salve a Seção I para abrir o processo. Depois use <strong>Concluir e assinar</strong> para liberar a Seção II.
           </p>
         )}
       </div>
