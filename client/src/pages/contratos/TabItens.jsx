@@ -69,13 +69,19 @@ function ItemModal({ modo, item, onSave, onClose }) {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              {form.status && (
-                <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
-                  form.status === 'ATIVO'
-                    ? 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400'
-                    : 'bg-ink-100 text-ink-600'
-                }`}>{form.status}</span>
-              )}
+              {/* Status automático: ATIVO só com categoria e especificação (servidor: calcStatusItem).
+                  Item INATIVO não pode ser vinculado a contrato. */}
+              {(() => {
+                const ativo = String(form.categoria || '').trim() && String(form.especificacao || '').trim()
+                return (
+                  <span title="Fica ATIVO com categoria e especificação preenchidas. Item inativo não pode ser vinculado a contrato."
+                    className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
+                    ativo
+                      ? 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400'
+                      : 'bg-ink-100 text-ink-600'
+                  }`}>{ativo ? 'ATIVO' : 'INATIVO — falta ' + (!String(form.especificacao || '').trim() ? 'especificação' : 'categoria')}</span>
+                )
+              })()}
               {form.validado && (
                 <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-info-100 text-brand-700 dark:bg-info-900/30 dark:text-info-400">
                   ✓ Validado

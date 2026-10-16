@@ -4,7 +4,7 @@ const {
   login, register, getProfile, getUsersBySecretaria, listUsers, updateUser, deleteUser, refreshToken, logoutUser, buscarMunicipiosPorEmail,
   trocarSenhaPrimeiroAcesso, criarConvite, listarConvites, desativarConvite, verConvite, cadastrarPorConvite,
 } = require('../controllers/authController');
-const { authenticate, tenantMiddleware, requireTenant, authorize, requirePermission } = require('../middleware/auth');
+const { authenticate, tenantMiddleware, requireTenant, authorize, requirePermission, requireAbaOrganizacao } = require('../middleware/auth');
 
 // M-4: em produção, valida Origin nos endpoints que recebem o cookie cross-site
 // (refresh e logout). Previne CSRF: sem Origin válido → 403.
@@ -41,10 +41,8 @@ router.post('/logout',  validateRefreshOrigin, logoutUser);    // revoga refresh
 // ── Usuários (protegidos) ─────────────────────────────────────────────────────
 // A-5: register/updateUser/deleteUser: admin, ou gestor só na própria secretaria e sem criar/promover
 // administradores (regras em authController › conferirGestor)
-// Administrador precisa de Administração › Usuários; o gestor administra a própria secretaria pelo papel.
-const acessoUsuarios = (req, res, next) => req.user?.tipo === 'gestor'
-  ? next()
-  : requirePermission('administracao', 'gerenciar_usuarios')(req, res, next);
+// Acesso a Organização › Usuários (o gestor entra pelo papel; ver middleware/auth › acessoOrganizacao)
+const acessoUsuarios = requireAbaOrganizacao('usuarios');
 router.post('/register',       tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), acessoUsuarios, requirePermission('organizacao', 'usuarios', 'criar'), register);
 router.get('/profile',                 tenantMiddleware, requireTenant, authenticate, getProfile);
 router.get('/users/por-secretaria',    tenantMiddleware, requireTenant, authenticate, getUsersBySecretaria);

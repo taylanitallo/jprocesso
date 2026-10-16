@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { authenticate, tenantMiddleware, requireTenant, requirePermission } = require('../middleware/auth');
+const { authenticate, tenantMiddleware, requireTenant, requirePermission, requireAcessoConfiguracoes } = require('../middleware/auth');
 
-// Configurações › Import / Export (o acesso à tela vem de Administração › Configurações)
-const telaConfiguracoes = requirePermission('administracao', 'gerenciar_configuracoes');
+// Configurações › Import / Export (acesso ao módulo Configurações + ação da aba)
+const telaConfiguracoes = requireAcessoConfiguracoes;
 const podeExportar = [telaConfiguracoes, requirePermission('configuracoes', 'importexport', 'exportar')];
 const podeImportar = [telaConfiguracoes, requirePermission('configuracoes', 'importexport', 'importar')];
 const { getCachedModels } = require('../config/database');
@@ -297,7 +297,8 @@ router.post('/', tenantMiddleware, requireTenant, authenticate, ...podeImportar,
             classificacao: r.classificacao || null,
             especificacao: r.especificacao || null,
             catmat_serv: r.catmat_serv || null,
-            status: r.status || 'ATIVO',
+            // Mesma regra do cadastro: ATIVO só com categoria e especificação
+            status: (r.categoria || '').trim() && (r.especificacao || '').trim() ? 'ATIVO' : 'INATIVO',
           },
         });
         created ? importados++ : ignorados++;

@@ -1,10 +1,8 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
-import { hasPerm, podeAdministrarUsuarios } from './utils/permissions'
+import { hasPerm, podeAbrirOrganizacao, podeAbrirConfiguracoes } from './utils/permissions'
 
-// Organização: Gerenciar Organização, ou Usuários (o gestor entra pelo papel, para a própria secretaria)
-const podeAbrirOrganizacao = (u) => hasPerm(u, 'administracao', 'gerenciar_secretarias') || podeAdministrarUsuarios(u)
 import AuthProvider from './context/AuthContext'
 import ThemeProvider from './context/ThemeContext'
 import { setTimbrado } from './utils/timbradoStore'
@@ -239,8 +237,8 @@ function App() {
 
                 {/* Admin */}
                 <Route path="relatorios"          element={<PermissionRoute permissao="administracao.visualizar_relatorios"><Relatorios /></PermissionRoute>} />
-                <Route path="configuracoes"       element={<PermissionRoute permissao="administracao.gerenciar_configuracoes"><Configuracoes /></PermissionRoute>} />
-                <Route path="configuracoes/:tab"  element={<PermissionRoute permissao="administracao.gerenciar_configuracoes"><Configuracoes /></PermissionRoute>} />
+                <Route path="configuracoes"       element={<PermissionRoute permitido={podeAbrirConfiguracoes}><Configuracoes /></PermissionRoute>} />
+                <Route path="configuracoes/:tab"  element={<PermissionRoute permitido={podeAbrirConfiguracoes}><Configuracoes /></PermissionRoute>} />
                 <Route path="registros"           element={<PermissionRoute permissao="administracao.visualizar_registros"><Registros /></PermissionRoute>} />
               </Route>
             </Route>

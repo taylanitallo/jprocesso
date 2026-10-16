@@ -2,7 +2,7 @@ import { useState, useEffect, lazy, Suspense, Fragment } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { hasPerm, usePode, podeAdministrarUsuarios } from '../utils/permissions';
+import { usePode, podeAbaOrganizacao } from '../utils/permissions';
 import { conferirAbasDoModulo } from '../utils/permissoesSchema';
 import PageHeader from '../components/ui/PageHeader';
 import SectionTitle from '../components/ui/SectionTitle';
@@ -159,19 +159,17 @@ export default function Secretarias() {
   const pResp = usePode('organizacao', 'responsaveis')
   const pEnt  = usePode('organizacao', 'entidade')
 
-  const podeSecretarias = hasPerm(user, 'administracao', 'gerenciar_secretarias')
-  const podeUsuarios     = podeAdministrarUsuarios(user) // gestor: só a própria secretaria
-
-  // Abas — visíveis conforme Administração (acesso) + Organização (aba a aba)
+  // Abas — acesso ao módulo Organização + "Ver" de cada aba (editor de permissões);
+  // permissões antigas usam Administração (ver utils/permissions › podeAbaOrganizacao)
   const abasOrganizacao = [
-    { key: 'entidade',     label: 'Entidade',              Icon: Building2, acesso: podeSecretarias },
-    { key: 'secretarias',  label: 'Secretarias e Setores', Icon: Network,   acesso: podeSecretarias },
-    { key: 'agentes',      label: 'Cadastro de Agentes',   Icon: Users,     acesso: podeSecretarias },
-    { key: 'responsaveis', label: 'Responsáveis',          Icon: UserCheck, acesso: podeSecretarias },
-    { key: 'usuarios',     label: 'Usuários',              Icon: UserCog,   acesso: podeUsuarios    },
+    { key: 'entidade',     label: 'Entidade',              Icon: Building2 },
+    { key: 'secretarias',  label: 'Secretarias e Setores', Icon: Network   },
+    { key: 'agentes',      label: 'Cadastro de Agentes',   Icon: Users     },
+    { key: 'responsaveis', label: 'Responsáveis',          Icon: UserCheck },
+    { key: 'usuarios',     label: 'Usuários',              Icon: UserCog   }, // gestor: só a própria secretaria
   ]
   conferirAbasDoModulo('organizacao', abasOrganizacao.map(t => t.key))
-  const abasVisiveis = abasOrganizacao.filter(t => t.acesso && hasPerm(user, 'organizacao', t.key, 'ver'))
+  const abasVisiveis = abasOrganizacao.filter(t => podeAbaOrganizacao(user, t.key))
   const abaPermitida = (key) => abasVisiveis.some(t => t.key === key)
 
   const [activeTab, setActiveTab] = useState(abaPermitida(tabParam) ? tabParam : (abasVisiveis[0]?.key || 'entidade'))
@@ -760,7 +758,9 @@ export default function Secretarias() {
       const sec = secretarias.find(s => s.id === formResp.secretaria_id);
       if (!sec) return;
       const responsaveis = [...(sec.responsaveis || [])];
-      const novoResp = { agente_id: formResp.agente_id, nome: formResp.nome, cargo: formResp.cargo, data_inicio: formResp.data_inicio, data_fim: formResp.data_fim, amparo: formResp.amparo };
+      // Grava sempre o nome (o contrato monta a lista de fiscais por ele)
+      const ag = formResp.agente_id ? agentes.find(a => String(a.id) === String(formResp.agente_id)) : null;
+      const novoResp = { agente_id: formResp.agente_id, nome: formResp.nome || ag?.nome || '', cargo: formResp.cargo, data_inicio: formResp.data_inicio, data_fim: formResp.data_fim, amparo: formResp.amparo };
       if (editingResp) {
         responsaveis[editingResp.index] = novoResp;
       } else {
@@ -1697,7 +1697,7 @@ export default function Secretarias() {
       )}
 
       {/* ── Tab: Usuários ── */}
-      {activeTab === 'usuarios' && podeUsuarios && (
+      {activeTab === 'usuarios' && abaPermitida('usuarios') && (
         <Suspense fallback={<LoadingBar label="Carregando usuários..." />}>
           <Usuarios />
         </Suspense>
@@ -2181,7 +2181,8 @@ export default function Secretarias() {
                 <select
                   value={formResp.agente_id}
                   onChange={e => {
-                    const ag = agentes.find(a => a.id === e.target.value);
+                    // id do agente é número; o valor do <select> é texto
+                    const ag = agentes.find(a => String(a.id) === String(e.target.value));
                     setFormResp(p => ({ ...p, agente_id: e.target.value, nome: ag ? ag.nome : p.nome }));
                   }}
                   className="input-field"

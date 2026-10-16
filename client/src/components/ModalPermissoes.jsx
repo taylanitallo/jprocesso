@@ -3,6 +3,7 @@ import { Shield, X } from 'lucide-react'
 import api from '../services/api'
 import PermissoesEditor from './PermissoesEditor'
 import { VERSAO_PERMISSOES } from '../utils/permissions'
+import { migrarPermissoesAntigas } from '../utils/permissoesSchema'
 
 const TIPOS = { admin: 'Administrador', gestor: 'Gestor', operacional: 'Operacional', jeos: 'Administrador Jeos' }
 
@@ -11,7 +12,8 @@ const TIPOS = { admin: 'Administrador', gestor: 'Gestor', operacional: 'Operacio
  * Salva só as permissões (o servidor grava apenas o que foi enviado).
  */
 export default function ModalPermissoes({ usuario, permissoesIniciais, secretarias, onFechar, onSalvo }) {
-  const [permissoes, setPermissoes] = useState(permissoesIniciais)
+  // Formato antigo (acesso a Organização/Configurações em Administração) aparece já convertido
+  const [permissoes, setPermissoes] = useState(() => migrarPermissoesAntigas(permissoesIniciais, usuario.tipo))
   const [salvando, setSalvando] = useState(false)
 
   const salvar = async () => {

@@ -4,6 +4,7 @@ import JSZip from 'jszip';
 import { useNavigate } from 'react-router-dom';
 import api, { apiUrl } from '../services/api';
 import PermissoesEditor from '../components/PermissoesEditor';
+import { migrarPermissoesAntigas } from '../utils/permissoesSchema';
 import { ConfirmModal, Paginacao, usePorPagina } from '../components/ui';
 import {
   Plus, Building, Edit2, Trash2, Globe, MapPin, CheckCircle, XCircle,
@@ -1125,7 +1126,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                             tipo: u.tipo, ativo: u.ativo,
                             secretaria_id: u.secretaria_id || '',
                             setor_id:      u.setor_id      || '',
-                            permissoes:    { ...DEFAULT_PERMS, ...(u.permissoes || {}) },
+                            permissoes:    migrarPermissoesAntigas({ ...DEFAULT_PERMS, ...(u.permissoes || {}) }, u.tipo),
                           });
                           setTimeout(() => editFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
                         }}

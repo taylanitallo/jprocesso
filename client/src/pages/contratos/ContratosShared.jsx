@@ -16,6 +16,14 @@ export const TABS = [
 export const UNIDADES      = ['UNIDADE','MÊS','SERVIÇO','SERVIÇOS','CONJUNTO','KG','LITRO','METRO','HORA','DIA','PACOTE','RESMA','CAIXA','PAR','AMPOLA','COMPRIMIDO','FRASCO']
 export const CATEGORIAS    = ['COMPRAS','SERVIÇOS']
 export const STATUS_ITEM   = ['ATIVO','INATIVO']
+
+// Item do catálogo vinculado (contrato, ordens, DID): descrição e especificação num campo só
+export function descricaoComEspecificacao(item) {
+  const desc = String(item?.descricao || '').trim()
+  const esp  = String(item?.especificacao || '').trim()
+  if (!esp || desc.toLowerCase().includes(esp.toLowerCase())) return desc
+  return desc ? `${desc} - ${esp}` : esp
+}
 export const ESTADOS_BR    = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
 export const MODALIDADES   = ['Pregão Eletrônico','Pregão Presencial','Concorrência','Tomada de Preços','Convite','Dispensa','Inexigibilidade','RDC','Concurso','Leilão']
 export const TIPOS_OBJETO  = ['Material','Serviço','Obra','Locação de Imóveis','Locação de Veículos','Consultoria','Tecnologia da Informação','Manutenção','Outros']

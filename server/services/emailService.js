@@ -85,9 +85,21 @@ const enviar = async (masterDb, { para, assunto, texto, html }) => {
       html,
     });
   } catch (err) {
-    console.error('[email] falha no envio:', err.message);
-    throw Object.assign(new Error(`Não foi possível enviar o e-mail (${err.code || err.message}).`), { status: 502, codigo: 'SMTP_FALHOU' });
+    console.error('[email] falha no envio:', err.code, err.message);
+    throw Object.assign(new Error(`Não foi possível enviar o e-mail (${err.code || err.message}). ${dicaErroSmtp(err, c)}`.trim()), { status: 502, codigo: 'SMTP_FALHOU' });
   }
+};
+
+// Explica as falhas mais comuns em vez de só o código técnico
+const dicaErroSmtp = (err, c) => {
+  const cod = err.code || '';
+  if (['ETIMEDOUT', 'ECONNREFUSED', 'ESOCKET', 'ECONNECTION'].includes(cod)) {
+    return `O servidor ${c.host}:${c.porta} não respondeu. Se o domínio usa Cloudflare, o registro "${String(c.host).split('.')[0]}" precisa estar como "Somente DNS" (nuvem cinza) — o proxy da Cloudflare não repassa e-mail. Confira também o host e a porta (465 = SSL/TLS, 587 = STARTTLS).`;
+  }
+  if (cod === 'EAUTH') return 'Usuário ou senha do e-mail recusados pelo servidor.';
+  if (cod === 'ENOTFOUND') return `O endereço ${c.host} não existe (DNS).`;
+  if (/certificate|self signed|altname/i.test(err.message || '')) return `O certificado do servidor não vale para ${c.host}.`;
+  return '';
 };
 
 module.exports = { obterConfigPublica, salvarConfig, smtpConfigurado, enviar };

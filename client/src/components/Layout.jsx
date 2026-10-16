@@ -1,7 +1,7 @@
 ﻿import { Outlet, Link, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
-import { hasPerm, moduloHabilitado, podeAdministrarUsuarios } from '../utils/permissions'
+import { hasPerm, moduloHabilitado, podeAbrirOrganizacao, podeAbrirConfiguracoes } from '../utils/permissions'
 import {
   Home, Building2, LogOut, Menu, X, Inbox, BarChart3, Settings,
   Users, Package, Sun, Moon, ChevronRight, ChevronLeft, DollarSign, ScrollText,
@@ -168,9 +168,9 @@ export default function Layout() {
   ]
 
   const adminMenuItems = [
-    { path: `/${subdomain}/organizacao`,   icon: Building2,    label: 'Organização',   permitido: () => hasPerm(user, 'administracao', 'gerenciar_secretarias') || podeAdministrarUsuarios(user) },
+    { path: `/${subdomain}/organizacao`,   icon: Building2,    label: 'Organização',   permitido: () => podeAbrirOrganizacao(user) },
     { path: `/${subdomain}/relatorios`,    icon: BarChart3,    label: 'Relatórios',    permissao: 'administracao.visualizar_relatorios' },
-    { path: `/${subdomain}/configuracoes`, icon: Settings,     label: 'Configurações', permissao: 'administracao.gerenciar_configuracoes' },
+    { path: `/${subdomain}/configuracoes`, icon: Settings,     label: 'Configurações', permitido: () => podeAbrirConfiguracoes(user) },
     { path: `/${subdomain}/registros`,     icon: ClipboardList, label: 'Registros',   permissao: 'administracao.visualizar_registros' },
   ]
 

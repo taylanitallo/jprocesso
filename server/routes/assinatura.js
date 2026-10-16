@@ -4,7 +4,7 @@ const QRCode = require('qrcode');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const { masterDb } = require('../config/database');
-const { authenticate, tenantMiddleware, requireTenant, ignoraPermissoes } = require('../middleware/auth');
+const { authenticate, tenantMiddleware, requireTenant, ignoraPermissoes, acessoOrganizacao } = require('../middleware/auth');
 const { registrarLog } = require('../middleware/activityLogger');
 const assinatura = require('../services/assinaturaService');
 const { AssinaturaError } = assinatura;
@@ -89,7 +89,10 @@ const podeGerenciarAutenticador = async (req) => {
   const eu = await req.models.User.findByPk(req.user.id, { attributes: ['tipo', 'permissoes'] });
   if (ignoraPermissoes(eu)) return true;
   if (eu?.permissoes?.organizacao?.usuarios?.autenticador === false) return false;
-  return eu?.tipo === 'admin' || eu?.permissoes?.administracao?.gerenciar_usuarios === true;
+  if (eu?.tipo === 'admin') return true;
+  // Organização › Usuários ligado explicitamente (formato novo) ou Administração › Usuários (antigo)
+  if (eu?.permissoes?.organizacao?.acessar === true) return acessoOrganizacao(eu, 'usuarios');
+  return eu?.permissoes?.administracao?.gerenciar_usuarios === true;
 };
 
 // ── Configuração assistida pelo administrador ─────────────────────────────────
