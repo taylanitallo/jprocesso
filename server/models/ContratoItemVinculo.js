@@ -13,6 +13,10 @@ module.exports = (sequelize) => {
     valor_unitario: { type: DataTypes.DECIMAL(15, 2) },
     // Coluna GENERATED ALWAYS no banco (quantidade * valor_unitario) — não inserir manualmente
     valor_total:    { type: DataTypes.DECIMAL(15, 2) },
+    // Item distribuído por setor: [{ local, quantidade }]. Com distribuição,
+    // valor_unitario = valor_unitario_base × soma das quantidades (média mensal)
+    distribuicao:        { type: DataTypes.JSONB },
+    valor_unitario_base: { type: DataTypes.DECIMAL(15, 2) },
     ordem:          { type: DataTypes.INTEGER, defaultValue: 0 },
   }, {
     tableName: 'contratos_itens_vinculo',

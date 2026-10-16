@@ -228,7 +228,26 @@ const TIPOS_CONTRATO   = ['CONTRATO','ATA DE REGISTRO DE PREÇO','TERMO ADITIVO'
 // ══════════════════════════════════════════════════════════════════════════════
 //  MODAL: ITEM DO CONTRATO
 // ══════════════════════════════════════════════════════════════════════════════
+// Item distribuído por setor/local (ex.: locação de 4 impressoras — 3 na Secretaria e 1
+// na Biblioteca — por 12 meses): Quantidade = meses (a unidade do contrato), "Valor de
+// cada" = preço de uma impressora/mês. Média mensal = valor de cada × total distribuído
+// e vira o V. Unitário do contrato; V. Total = quantidade × média mensal. Assim o saldo
+// das ordens continua contado na unidade do contrato (mês).
+const numBR = (v) => parseFloat(String(v ?? '').replace(',', '.')) || 0
+const brl = (n) => (Number(n) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+const totalDistribuido = (dist) => (Array.isArray(dist) ? dist : []).reduce((s, d) => s + numBR(d.quantidade), 0)
+const calcularItem = (f) => {
+  const qtd = numBR(f.quantidade)
+  if (f.distribuido) {
+    const media = numBR(f.valor_unitario_base) * totalDistribuido(f.distribuicao)
+    return { valor_unitario: media ? media.toFixed(2) : '', valor_total: qtd && media ? (qtd * media).toFixed(2) : '' }
+  }
+  const vun = numBR(f.valor_unitario)
+  return { valor_unitario: f.valor_unitario, valor_total: qtd && vun ? (qtd * vun).toFixed(2) : '' }
+}
+
 function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
+  const jaDistribuido = Array.isArray(item?.distribuicao) && item.distribuicao.length > 0
   const [form, setForm] = useState({
     lote:           item?.lote           || '',
     codigo_item:    item?.codigo_item    || '',
@@ -238,19 +257,24 @@ function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
     quantidade:     item?.quantidade     || '',
     valor_unitario: item?.valor_unitario || '',
     valor_total:    item?.valor_total    || '',
+    distribuido:    jaDistribuido,
+    distribuicao:   jaDistribuido ? item.distribuicao.map(d => ({ ...d })) : [{ local: '', quantidade: '' }],
+    valor_unitario_base: item?.valor_unitario_base || '',
   })
   const [busca, setBusca] = useState(item?.descricao || '')
   const [drop, setDrop] = useState(false)
   const [dropRef, setDropRef] = useState(null)
-  const set = (k, v) => setForm(p => {
-    const next = { ...p, [k]: v }
-    if (k === 'quantidade' || k === 'valor_unitario') {
-      const qtd = parseFloat(String(k === 'quantidade' ? v : next.quantidade).replace(',', '.')) || 0
-      const vun = parseFloat(String(k === 'valor_unitario' ? v : next.valor_unitario).replace(',', '.')) || 0
-      next.valor_total = qtd && vun ? (qtd * vun).toFixed(2) : ''
-    }
-    return next
-  })
+  // Sugestões de local: setores cadastrados (o campo aceita texto livre, ex.: "BIBLI.")
+  const [setoresSug, setSetoresSug] = useState([])
+  useEffect(() => {
+    api.get('/organizacao/setores').then(r => setSetoresSug((r.data?.setores || r.data || []).map(s => s.nome).filter(Boolean))).catch(() => {})
+  }, [])
+  const atualizar = (fn) => setForm(p => { const next = fn(p); return { ...next, ...calcularItem(next) } })
+  const set = (k, v) => atualizar(p => ({ ...p, [k]: v }))
+  const setDist = (i, k, v) => atualizar(p => ({ ...p, distribuicao: p.distribuicao.map((d, j) => j === i ? { ...d, [k]: v } : d) }))
+  const addDist = () => atualizar(p => ({ ...p, distribuicao: [...p.distribuicao, { local: '', quantidade: '' }] }))
+  const delDist = (i) => atualizar(p => ({ ...p, distribuicao: p.distribuicao.filter((_, j) => j !== i) }))
+  const qtdDistribuida = totalDistribuido(form.distribuicao)
 
   const itensFiltrados = catalogoItens.filter(i => {
     if (i.status !== 'ATIVO') return false
@@ -266,7 +290,15 @@ function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
 
   const salvar = () => {
     if (!form.descricao.trim()) { alert('Informe a descrição do item.'); return }
-    onSave({ ...form, _id: item?._id || (Date.now() + Math.random()) })
+    const { distribuido, ...resto } = form
+    if (distribuido) {
+      const linhas = form.distribuicao.filter(d => String(d.local || '').trim() && numBR(d.quantidade) > 0)
+      if (!linhas.length) { alert('Informe ao menos um setor/local com a quantidade.'); return }
+      if (!numBR(form.valor_unitario_base)) { alert('Informe o valor de cada unidade.'); return }
+      onSave({ ...resto, distribuicao: linhas.map(d => ({ local: d.local.trim(), quantidade: numBR(d.quantidade) })), _id: item?._id || (Date.now() + Math.random()) })
+      return
+    }
+    onSave({ ...resto, distribuicao: null, valor_unitario_base: null, _id: item?._id || (Date.now() + Math.random()) })
   }
 
   return (
@@ -329,23 +361,69 @@ function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
             </div>
           </div>
 
-          {/* Unidade + Qtd + V. Unit */}
+          {/* Distribuído por setor/local */}
+          <label className="flex items-start gap-2 text-sm text-ink-700 cursor-pointer select-none">
+            <input type="checkbox" checked={form.distribuido} onChange={e => set('distribuido', e.target.checked)} className="mt-0.5 accent-brand-600" />
+            <span>
+              <span className="font-semibold">Distribuído por setor/local</span>
+              <span className="block text-xs text-ink-400">Ex.: locação de 4 impressoras — 3 na Secretaria e 1 na Biblioteca. A quantidade continua sendo a do contrato (ex.: 12 meses).</span>
+            </span>
+          </label>
+
+          {/* Unidade + Qtd + V. Unit (ou Valor de cada) */}
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-semibold text-ink-500 mb-1.5">Unidade</label>
-              <PremiumInput value={form.unidade} onChange={e => set('unidade', e.target.value)} placeholder="UNID, KG..." />
+              <PremiumInput value={form.unidade} onChange={e => set('unidade', e.target.value)} placeholder={form.distribuido ? 'MÊS' : 'UNID, KG...'} />
             </div>
             <div>
               <label className="block text-xs font-semibold text-ink-500 mb-1.5">Quantidade *</label>
               <PremiumInput type="number" min={0} value={form.quantidade} onChange={e => set('quantidade', e.target.value)} placeholder="0" className="text-right font-mono" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-ink-500 mb-1.5">V. Unitário *</label>
-              <PremiumInput type="number" min={0} step="0.01" value={form.valor_unitario} onChange={e => set('valor_unitario', e.target.value)} placeholder="0,00" className="text-right font-mono" />
+              <label className="block text-xs font-semibold text-ink-500 mb-1.5">{form.distribuido ? 'Valor de cada *' : 'V. Unitário *'}</label>
+              {form.distribuido
+                ? <PremiumInput type="number" min={0} step="0.01" value={form.valor_unitario_base} onChange={e => set('valor_unitario_base', e.target.value)} placeholder="0,00" className="text-right font-mono" />
+                : <PremiumInput type="number" min={0} step="0.01" value={form.valor_unitario} onChange={e => set('valor_unitario', e.target.value)} placeholder="0,00" className="text-right font-mono" />}
             </div>
           </div>
 
-          {/* V. Total */}
+          {form.distribuido && (
+            <div className="rounded-xl border border-ink-200 p-3 space-y-2">
+              <div className="grid grid-cols-[1fr_96px_28px] gap-2 text-[11px] font-semibold text-ink-500 uppercase tracking-wide">
+                <span>Setor / local</span><span className="text-right">Quantidade</span><span />
+              </div>
+              {form.distribuicao.map((d, i) => (
+                <div key={i} className="grid grid-cols-[1fr_96px_28px] gap-2 items-center">
+                  <input list="sugestoes-local-item" value={d.local} onChange={e => setDist(i, 'local', e.target.value)}
+                    placeholder="Ex.: SECRETARIA, BIBLIOTECA" className="input-field text-sm h-9" />
+                  <input type="number" min={0} value={d.quantidade} onChange={e => setDist(i, 'quantidade', e.target.value)}
+                    placeholder="0" className="input-field text-sm h-9 text-right font-mono" />
+                  <button type="button" onClick={() => delDist(i)} disabled={form.distribuicao.length === 1}
+                    className="p-1 rounded-sm text-danger-400 hover:text-danger-600 disabled:opacity-30" title="Remover">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+              <datalist id="sugestoes-local-item">{setoresSug.map(n => <option key={n} value={n} />)}</datalist>
+              <div className="flex items-center justify-between pt-1">
+                <button type="button" onClick={addDist} className="text-xs font-semibold text-brand-600 dark:text-info-400 flex items-center gap-1">
+                  <Plus className="w-3.5 h-3.5" /> Adicionar setor/local
+                </button>
+                <span className="text-xs text-ink-500">Total: <strong className="text-ink-800 font-mono">{qtdDistribuida}</strong></span>
+              </div>
+            </div>
+          )}
+
+          {/* Média mensal (distribuído) + V. Total */}
+          {form.distribuido && form.valor_unitario && (
+            <div className="flex items-center justify-end gap-2 text-sm font-semibold text-ink-700">
+              <span className="text-xs font-medium text-ink-500">
+                Média ({form.unidade || 'unidade'}): {brl(numBR(form.valor_unitario_base))} × {qtdDistribuida} =
+              </span>
+              {brl(numBR(form.valor_unitario))}
+            </div>
+          )}
           {form.valor_total && (
             <div className="flex items-center justify-end gap-2 text-sm font-bold text-brand-700 dark:text-info-400">
               <span className="text-xs font-medium text-ink-500">Valor total:</span>
@@ -632,6 +710,9 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
     setItemBusca(p => ({ ...p, [idx]: item.descricao }))
     setItemDrop(null)
   }
+
+  // Algum item distribuído por setor: a tabela ganha a coluna V. Mensal
+  const temDistribuido = itensContrato.some(it => Array.isArray(it.distribuicao) && it.distribuicao.length > 0)
 
   // ── Valor total automático ────────────────────────────────────────────────
   const valorTotalItens = itensContrato.reduce((acc, it) => {
@@ -986,6 +1067,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                             <th className="px-3 py-2 text-left font-semibold">Unid.</th>
                             <th className="px-3 py-2 text-right font-semibold">Qtd.</th>
                             <th className="px-3 py-2 text-right font-semibold">V. Unit.</th>
+                            {temDistribuido && <th className="px-3 py-2 text-right font-semibold" title="Itens distribuídos por setor: valor de cada × total distribuído">V. Mensal</th>}
                             <th className="px-3 py-2 text-right font-semibold">V. Total</th>
                             <th className="px-3 py-2 w-20" />
                           </tr>
@@ -998,12 +1080,26 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                               <td className="px-3 py-2 font-mono text-ink-500">{it.codigo_item || '—'}</td>
                               <td className="px-3 py-2 max-w-xs">
                                 <p className="truncate text-ink-800 font-medium">{it.descricao || '—'}</p>
+                                {Array.isArray(it.distribuicao) && it.distribuicao.length > 0 && (
+                                  <p className="text-[11px] text-ink-500 mt-0.5">
+                                    {it.distribuicao.map(d => `: `).join(' · ')} <span className="text-ink-400">(total {totalDistribuido(it.distribuicao)})</span>
+                                  </p>
+                                )}
                               </td>
                               <td className="px-3 py-2 text-ink-500">{it.unidade || '—'}</td>
                               <td className="px-3 py-2 text-right font-mono">{it.quantidade || '—'}</td>
                               <td className="px-3 py-2 text-right font-mono">
-                                {it.valor_unitario ? `R$ ${parseFloat(it.valor_unitario).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}
+                                {(() => {
+                                  // Distribuído: V. Unit. = valor de cada; o do contrato (média) vai em V. Mensal
+                                  const v = it.distribuicao?.length ? it.valor_unitario_base : it.valor_unitario
+                                  return v ? `R$ ${parseFloat(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'
+                                })()}
                               </td>
+                              {temDistribuido && (
+                                <td className="px-3 py-2 text-right font-mono whitespace-nowrap">
+                                  {it.distribuicao?.length && it.valor_unitario ? `R$ ${parseFloat(it.valor_unitario).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}
+                                </td>
+                              )}
                               <td className="px-3 py-2 text-right font-mono font-semibold text-brand-700 dark:text-info-400 whitespace-nowrap">
                                 {it.valor_total ? `R$ ${parseFloat(it.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '—'}
                               </td>
@@ -1037,7 +1133,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                         </tbody>
                         <tfoot className="bg-ink-100 border-t-2 border-ink-200">
                           <tr>
-                            <td colSpan={7} className="px-3 py-2 text-right text-xs font-bold text-ink-600 uppercase tracking-wide">Total do Contrato:</td>
+                            <td colSpan={temDistribuido ? 8 : 7} className="px-3 py-2 text-right text-xs font-bold text-ink-600 uppercase tracking-wide">Total do Contrato:</td>
                             <td className="px-3 py-2 text-right font-bold text-brand-700 dark:text-info-400 font-mono whitespace-nowrap">{fmtBRL(valorTotalItens) || '—'}</td>
                             <td />
                           </tr>
@@ -1083,7 +1179,9 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                       ['Descrição', itemContratoModal.data.descricao],
                       ['Unidade', itemContratoModal.data.unidade],
                       ['Quantidade', itemContratoModal.data.quantidade],
-                      ['Valor Unitário', itemContratoModal.data.valor_unitario ? `R$ ${parseFloat(itemContratoModal.data.valor_unitario).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : null],
+                      ['Distribuição', itemContratoModal.data.distribuicao?.length ? itemContratoModal.data.distribuicao.map(d => `: `).join(' · ') : null],
+                      ['Valor de cada', itemContratoModal.data.distribuicao?.length && itemContratoModal.data.valor_unitario_base ? `R$ ${parseFloat(itemContratoModal.data.valor_unitario_base).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : null],
+                      [itemContratoModal.data.distribuicao?.length ? 'Média mensal' : 'Valor Unitário', itemContratoModal.data.valor_unitario ? `R$ ${parseFloat(itemContratoModal.data.valor_unitario).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : null],
                       ['Valor Total', itemContratoModal.data.valor_total ? `R$ ${parseFloat(itemContratoModal.data.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : null],
                     ].map(([label, val]) => val ? (
                       <div key={label} className="flex justify-between text-sm border-b border-ink-100 pb-2">

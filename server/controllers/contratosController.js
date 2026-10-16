@@ -283,20 +283,36 @@ const listContratos = async (req, res) => {
 const syncItens = async (ContratoItemVinculo, contratoId, itens) => {
   await ContratoItemVinculo.destroy({ where: { contrato_id: contratoId } });
   if (!Array.isArray(itens) || itens.length === 0) return;
+  const num = (v) => (v === undefined || v === null || v === '') ? null : parseFloat(String(v).replace(',', '.'));
   const rows = itens
     .filter(it => it.descricao && String(it.descricao).trim())
-    .map((it, idx) => ({
-      contrato_id:    contratoId,
-      item_id:        it.item_id || null,
-      lote:           it.lote || null,
-      codigo_item:    it.codigo_item || null,
-      descricao:      String(it.descricao).trim(),
-      unidade:        it.unidade || null,
-      quantidade:     it.quantidade ? parseFloat(String(it.quantidade).replace(',', '.')) : null,
-      valor_unitario: it.valor_unitario ? parseFloat(String(it.valor_unitario).replace(',', '.')) : null,
-      // valor_total Ã© GENERATED ALWAYS (quantidade * valor_unitario) â€” nÃ£o incluir no INSERT
-      ordem:          idx,
-    }));
+    .map((it, idx) => {
+      // Distribuição por setor: só linhas com local e quantidade > 0
+      const distribuicao = Array.isArray(it.distribuicao)
+        ? it.distribuicao
+            .map(d => ({ local: String(d?.local || '').trim().slice(0, 120), quantidade: num(d?.quantidade) || 0 }))
+            .filter(d => d.local && d.quantidade > 0)
+        : [];
+      const base = num(it.valor_unitario_base);
+      const totalDistribuido = distribuicao.reduce((s, d) => s + d.quantidade, 0);
+      const comDistribuicao = distribuicao.length > 0 && base != null;
+      return {
+        contrato_id:    contratoId,
+        item_id:        it.item_id || null,
+        lote:           it.lote || null,
+        codigo_item:    it.codigo_item || null,
+        descricao:      String(it.descricao).trim(),
+        unidade:        it.unidade || null,
+        quantidade:     num(it.quantidade),
+        // Com distribuição, o valor unitário do contrato é a média mensal (base × total
+        // distribuído): o total do item e o saldo das ordens seguem por mês
+        valor_unitario: comDistribuicao ? Math.round(base * totalDistribuido * 100) / 100 : num(it.valor_unitario),
+        distribuicao:        comDistribuicao ? distribuicao : null,
+        valor_unitario_base: comDistribuicao ? base : null,
+        // valor_total é GENERATED ALWAYS (quantidade * valor_unitario) — não incluir no INSERT
+        ordem:          idx,
+      };
+    });
   if (rows.length) await ContratoItemVinculo.bulkCreate(rows);
 };
 
