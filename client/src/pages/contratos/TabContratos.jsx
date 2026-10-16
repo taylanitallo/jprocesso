@@ -759,9 +759,9 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-ink-50 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-        style={{ width: '1000px', maxWidth: '96vw', maxHeight: '92vh' }}>
+    // Incluir / Alterar / Ver contrato: tela cheia (toda a área disponível)
+    <div className="fixed inset-0 z-50 flex bg-black/50 p-2 sm:p-3">
+      <div className="bg-ink-50 rounded-2xl shadow-2xl flex flex-col overflow-hidden w-full h-full">
 
         {/* ── Header ───────────────────────────────────────────────────── */}
         <div className="bg-surface border-b border-ink-200 px-4 py-3 flex items-center gap-4 shrink-0">
