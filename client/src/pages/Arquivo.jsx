@@ -11,6 +11,13 @@ import { PageHeader, ConfirmModal } from '../components/ui'
 import { useAuth } from '../context/AuthContext'
 import LoadingBar from '../components/LoadingBar'
 import BotaoExcluidos from '../components/lixeira/BotaoExcluidos'
+import { usePode } from '../utils/permissions'
+import { conferirAbasDoModulo } from '../utils/permissoesSchema'
+
+const ABAS = [
+  { id: 'processos', label: 'Processos Concluídos', icon: Archive },
+  { id: 'gerados',   label: 'Documentos Gerados',  icon: Zap     },
+]
 
 const TIPO_LABEL = {
   did:        { label: 'DID',           cor: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300' },
@@ -363,14 +370,16 @@ function FileNode({ doc, currentProcessoId, depth, onView, onMove }) {
         <span className="shrink-0 text-ink-400 tabular-nums">{(doc.tamanho_bytes / 1024).toFixed(0)} KB</span>
         <ExternalLink className="h-3 w-3 shrink-0 opacity-0 group-hover:opacity-60 text-info-500 transition-opacity" />
       </button>
-      <button
-        onClick={() => onMove({ type: 'file', docId: doc.id, docName: doc.nome_arquivo, currentProcessoId })}
-        className="shrink-0 p-1 rounded-sm opacity-0 group-hover:opacity-70 hover:!opacity-100
-                   hover:bg-ink-200 transition-all"
-        title="Mover para outra pasta"
-      >
-        <FolderInput className="h-3.5 w-3.5 text-ink-500" />
-      </button>
+      {onMove && (
+        <button
+          onClick={() => onMove({ type: 'file', docId: doc.id, docName: doc.nome_arquivo, currentProcessoId })}
+          className="shrink-0 p-1 rounded-sm opacity-0 group-hover:opacity-70 hover:!opacity-100
+                     hover:bg-ink-200 transition-all"
+          title="Mover para outra pasta"
+        >
+          <FolderInput className="h-3.5 w-3.5 text-ink-500" />
+        </button>
+      )}
     </div>
   )
 }
@@ -398,7 +407,7 @@ function ProcessoNode({ processo, depth, onView, onDownloadZip, onMove }) {
           <span className="shrink-0 text-[11px] text-ink-400 tabular-nums">{processo.documentos?.length || 0} arq.</span>
         </button>
         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all ml-1">
-          {hasDocs && (
+          {hasDocs && onDownloadZip && (
             <button
               onClick={() => onDownloadZip(processo.id, processo.numero)}
               className="p-1 rounded-sm hover:bg-ink-200 transition-colors"
@@ -407,13 +416,15 @@ function ProcessoNode({ processo, depth, onView, onDownloadZip, onMove }) {
               <Download className="h-3.5 w-3.5 text-ink-500" />
             </button>
           )}
-          <button
-            onClick={() => onMove({ type: 'processo', processoId: processo.id, processoNumero: processo.numero, currentTipo: processo.tipo_processo })}
-            className="p-1 rounded-sm hover:bg-ink-200 transition-colors"
-            title="Mover para outra pasta"
-          >
-            <FolderInput className="h-3.5 w-3.5 text-ink-500" />
-          </button>
+          {onMove && (
+            <button
+              onClick={() => onMove({ type: 'processo', processoId: processo.id, processoNumero: processo.numero, currentTipo: processo.tipo_processo })}
+              className="p-1 rounded-sm hover:bg-ink-200 transition-colors"
+              title="Mover para outra pasta"
+            >
+              <FolderInput className="h-3.5 w-3.5 text-ink-500" />
+            </button>
+          )}
         </div>
       </div>
       {open && (
@@ -442,11 +453,18 @@ function ProcessoNode({ processo, depth, onView, onDownloadZip, onMove }) {
 export default function Arquivo() {
   const { user } = useAuth()
   const isAdmin = user?.tipo === 'admin' || user?.tipo === 'jeos'
+  const pode = usePode('arquivo')
+  conferirAbasDoModulo('arquivo', ABAS.map(a => a.id))
+  const abasVisiveis = ABAS.filter(a => pode(a.id, 'ver'))
+  const podeMover   = pode('processos', 'mover')
+  const podeBaixar  = pode('processos', 'baixar')
+  const podeExcluirGerado = isAdmin && pode('gerados', 'excluir')
   const queryClient   = useQueryClient()
   const [moveModal,   setMoveModal]   = useState(null)
   const [moveLoading, setMoveLoading] = useState(false)
   const [feedback,    setFeedback]    = useState('')
-  const [aba,         setAba]         = useState('processos') // 'processos' | 'gerados'
+  const [abaEscolhida, setAba]        = useState(null) // 'processos' | 'gerados'
+  const aba = abasVisiveis.some(a => a.id === abaEscolhida) ? abaEscolhida : abasVisiveis[0]?.id
   const [confirmarExcluirDoc, setConfirmarExcluirDoc] = useState(null)
 
   const { data, isLoading } = useQuery(
@@ -554,10 +572,7 @@ export default function Arquivo() {
 
       {/* Abas */}
       <div className="flex gap-1 bg-ink-100 p-1 rounded-xl w-fit">
-        {[
-          { id: 'processos', label: 'Processos Concluídos', icon: Archive },
-          { id: 'gerados',   label: 'Documentos Gerados',  icon: Zap     },
-        ].map(({ id, label, icon: Icon }) => (
+        {abasVisiveis.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setAba(id)}
@@ -622,7 +637,7 @@ export default function Arquivo() {
                       className="h-3.5 w-3.5 text-ink-400 group-hover:text-info-400 transition-colors cursor-pointer shrink-0"
                       onClick={() => handleViewDoc(doc)}
                     />
-                    {isAdmin && (
+                    {podeExcluirGerado && (
                       <Trash2
                         className="h-3.5 w-3.5 text-ink-400 hover:text-danger-500 transition-colors cursor-pointer shrink-0"
                         title="Excluir documento"
@@ -663,9 +678,11 @@ export default function Arquivo() {
             <span className="flex items-center gap-1"><Folder className="h-3.5 w-3.5 text-emerald-400" /> Secretaria</span>
             <span className="flex items-center gap-1"><Folder className="h-3.5 w-3.5 text-indigo-400" /> Processo</span>
             <span className="flex items-center gap-1"><FileText className="h-3.5 w-3.5 text-danger-400" /> Arquivo</span>
-            <span className="flex items-center gap-1 ml-auto text-ink-400">
-              <FolderInput className="h-3.5 w-3.5" /> hover para mover
-            </span>
+            {podeMover && (
+              <span className="flex items-center gap-1 ml-auto text-ink-400">
+                <FolderInput className="h-3.5 w-3.5" /> hover para mover
+              </span>
+            )}
           </div>
 
           <div className="space-y-0.5">
@@ -687,8 +704,8 @@ export default function Arquivo() {
                                   processo={processo}
                                   depth={3}
                                   onView={handleViewDoc}
-                                  onDownloadZip={handleDownloadZip}
-                                  onMove={setMoveModal}
+                                  onDownloadZip={podeBaixar ? handleDownloadZip : undefined}
+                                  onMove={podeMover ? setMoveModal : undefined}
                                 />
                               ))}
                             </FolderNode>

@@ -11,6 +11,7 @@ import {
   Bell, BarChart3, CircleDot, MapPin,
 } from 'lucide-react'
 import { PageHeader, StatCard, SectionTitle, EmptyState } from '../components/ui'
+import { hasPerm, moduloHabilitado } from '../utils/permissions'
 
 const REFRESH_INTERVAL = 60000 // 60s
 
@@ -62,28 +63,39 @@ function AlertItem({ icon: Icon, title, desc, tone, link }) {
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const { user } = useAuth()
+  const { user, tenant } = useAuth()
   const { subdomain } = useParams()
   const queryClient = useQueryClient()
   const [lastUpdated, setLastUpdated] = useState(null)
   const [secondsAgo, setSecondsAgo] = useState(0)
 
-  const { data: procData, isLoading, isError, isFetching } = useQuery(
+  // O dashboard mostra só o que o usuário pode ver: módulo contratado + permissão
+  const podeModulo = (modulo, ...perm) => moduloHabilitado(tenant, modulo) && hasPerm(user, ...perm)
+  const podeProcessos    = podeModulo('processos', 'processos', 'ver')
+  const podeNovoProcesso = podeProcessos && hasPerm(user, 'processos', 'criar')
+  const podeAlmox        = podeModulo('almoxarifado', 'almoxarifado', 'acessar')
+  const podeEstoque      = podeAlmox && hasPerm(user, 'almoxarifado', 'estoque', 'ver')
+  const podeRequisicoes  = podeAlmox && hasPerm(user, 'almoxarifado', 'requisicoes', 'ver')
+  const podeFinanceiro   = podeModulo('financeiro', 'financeiro', 'acessar') && hasPerm(user, 'financeiro', 'painel', 'ver')
+  const podeContratos    = podeModulo('contratos', 'contratos', 'acessar')
+
+  const { data: procData, isLoading: procLoading, isError } = useQuery(
     'dashboard-stats',
     () => api.get('/processos/dashboard').then(r => r.data),
-    { refetchInterval: REFRESH_INTERVAL, staleTime: 30000, onSuccess: () => setLastUpdated(Date.now()) }
+    { enabled: podeProcessos, refetchInterval: REFRESH_INTERVAL, staleTime: 30000, onSuccess: () => setLastUpdated(Date.now()) }
   )
+  const isLoading = podeProcessos && procLoading
 
   const { data: almoxData, isLoading: almoxLoading } = useQuery(
     'dashboard-almox',
     () => api.get('/almoxarifado/dashboard').then(r => r.data),
-    { refetchInterval: REFRESH_INTERVAL, staleTime: 30000, retry: 1 }
+    { enabled: podeAlmox, refetchInterval: REFRESH_INTERVAL, staleTime: 30000, retry: 1 }
   )
 
   const { data: finData, isLoading: finLoading } = useQuery(
     'dashboard-fin',
     () => api.get('/financeiro/dashboard').then(r => r.data),
-    { refetchInterval: REFRESH_INTERVAL, staleTime: 30000, retry: 1 }
+    { enabled: podeFinanceiro, refetchInterval: REFRESH_INTERVAL, staleTime: 30000, retry: 1 }
   )
 
   const refetchAll = useCallback(() => {
@@ -107,15 +119,16 @@ export default function Dashboard() {
     : `há ${Math.floor(secondsAgo / 60)}min`
     : null
 
-  const stats           = procData?.stats           || {}
-  const minhaCaixaLista = procData?.minhaCaixaLista || []
-  const urgentesLista   = procData?.urgentesLista   || []
+  // Os flags também filtram aqui: o cache do react-query pode guardar dados de outro login
+  const stats           = (podeProcessos && procData?.stats)           || {}
+  const minhaCaixaLista = (podeProcessos && procData?.minhaCaixaLista) || []
+  const urgentesLista   = (podeProcessos && procData?.urgentesLista)   || []
 
-  const itensCriticos = almoxData?.itensCriticos       || []
-  const reqPendentes  = almoxData?.requisicoesPendentes ?? null
+  const itensCriticos = (podeEstoque && almoxData?.itensCriticos) || []
+  const reqPendentes  = podeRequisicoes ? (almoxData?.requisicoesPendentes ?? null) : null
 
   // Saída real das contas no ano (líquido dos DIDs + retenções recolhidas) — mesma fonte do extrato
-  const valorPago = finData?.tesouraria?.valorPago != null ? parseFloat(finData.tesouraria.valorPago) : null
+  const valorPago = podeFinanceiro && finData?.tesouraria?.valorPago != null ? parseFloat(finData.tesouraria.valorPago) : null
 
   // ── Alertas executivos ────────────────────────────────────────────────────
   const alertas = [
@@ -149,11 +162,35 @@ export default function Dashboard() {
 
   // ── Ações rápidas ─────────────────────────────────────────────────────────
   const acoes = [
-    { to: `/${subdomain}/processos/novo`,             icon: FilePlus2,   label: 'Novo Processo',   color: 'text-brand-600 dark:text-info-400 bg-info-50 dark:bg-info-900/20 hover:bg-info-100 dark:hover:bg-info-900/40 border-info-100 dark:border-info-900/30' },
-    { to: `/${subdomain}/contratos`,                  icon: FileText,    label: 'Contratos',        color: 'text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/20 hover:bg-violet-100 dark:hover:bg-violet-900/40 border-violet-100 dark:border-violet-900/30' },
-    { to: `/${subdomain}/financeiro`,                 icon: TrendingUp,  label: 'Financeiro',       color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border-emerald-100 dark:border-emerald-900/30' },
-    { to: `/${subdomain}/almoxarifado/requisicoes`,   icon: ClipboardList, label: 'Requisição',    color: 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/40 border-orange-100 dark:border-orange-900/30' },
-  ]
+    podeNovoProcesso && { to: `/${subdomain}/processos/novo`,           icon: FilePlus2,   label: 'Novo Processo',   color: 'text-brand-600 dark:text-info-400 bg-info-50 dark:bg-info-900/20 hover:bg-info-100 dark:hover:bg-info-900/40 border-info-100 dark:border-info-900/30' },
+    podeContratos    && { to: `/${subdomain}/contratos`,                icon: FileText,    label: 'Contratos',        color: 'text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/20 hover:bg-violet-100 dark:hover:bg-violet-900/40 border-violet-100 dark:border-violet-900/30' },
+    podeModulo('financeiro', 'financeiro', 'acessar') && { to: `/${subdomain}/financeiro`, icon: TrendingUp, label: 'Financeiro', color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border-emerald-100 dark:border-emerald-900/30' },
+    podeRequisicoes  && { to: `/${subdomain}/almoxarifado/requisicoes`, icon: ClipboardList, label: 'Requisição',    color: 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/40 border-orange-100 dark:border-orange-900/30' },
+  ].filter(Boolean)
+
+  // Linha "Operações": cada cartão só com a permissão do seu módulo
+  const cardsOperacoes = [
+    podeFinanceiro && (
+      <StatCard key="pago" icon={TrendingUp} label="Valor Pago"
+        value={finLoading && valorPago === null ? '—' : valorPago !== null ? fmtMoney(valorPago) : '—'}
+        hint={`Empenhos pagos em ${new Date().getFullYear()}`} tone="violet" />
+    ),
+    podeEstoque && (
+      <StatCard key="critico" icon={Package} label="Estoque Crítico"
+        value={almoxLoading && !almoxData ? '—' : itensCriticos.length}
+        hint="Itens abaixo do mínimo" tone="red" />
+    ),
+    podeRequisicoes && (
+      <StatCard key="req" icon={ClipboardList} label="Req. Pendentes"
+        value={almoxLoading && !almoxData ? '—' : (reqPendentes ?? 0)}
+        hint="Aguardando autorização" tone="cyan" />
+    ),
+    podeProcessos && (
+      <StatCard key="concluidos" icon={CheckCircle2} label="Concluídos"
+        value={isLoading ? '—' : (stats.concluidos ?? 0)}
+        hint="Processos finalizados" tone="green" />
+    ),
+  ].filter(Boolean)
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -179,10 +216,12 @@ export default function Dashboard() {
                 </span>
               )}
             </div>
-            <Link to={`/${subdomain}/processos/novo`} className="btn-primary">
-              <Plus className="h-4 w-4" />
-              Novo Processo
-            </Link>
+            {podeNovoProcesso && (
+              <Link to={`/${subdomain}/processos/novo`} className="btn-primary">
+                <Plus className="h-4 w-4" />
+                Novo Processo
+              </Link>
+            )}
           </>
         }
       />
@@ -192,14 +231,14 @@ export default function Dashboard() {
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-danger-200 dark:border-danger-800 bg-danger-50 dark:bg-danger-900/20 text-danger-700 dark:text-danger-300 text-sm">
           <AlertTriangle className="h-4 w-4 shrink-0" />
           <span>Erro ao carregar dados do dashboard.</span>
-          <button onClick={() => refetch()} className="underline ml-1 font-medium hover:no-underline">
+          <button onClick={refetchAll} className="underline ml-1 font-medium hover:no-underline">
             Tentar novamente
           </button>
         </div>
       )}
 
       {/* ── KPI Row 1 — Processos ───────────────────────────────────────── */}
-      <div>
+      {podeProcessos && <div>
         <p className="text-[11px] font-bold text-ink-400 uppercase tracking-widest mb-3 px-0.5">
           Processos
         </p>
@@ -233,50 +272,26 @@ export default function Dashboard() {
             tone="amber"
           />
         </div>
-      </div>
+      </div>}
 
       {/* ── KPI Row 2 — Operações ───────────────────────────────────────── */}
-      <div>
-        <p className="text-[11px] font-bold text-ink-400 uppercase tracking-widest mb-3 px-0.5">
-          Operações
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          <StatCard
-            icon={TrendingUp}
-            label="Valor Pago"
-            value={finLoading && valorPago === null ? '—' : valorPago !== null ? fmtMoney(valorPago) : '—'}
-            hint={`Empenhos pagos em ${new Date().getFullYear()}`}
-            tone="violet"
-          />
-          <StatCard
-            icon={Package}
-            label="Estoque Crítico"
-            value={almoxLoading && !almoxData ? '—' : itensCriticos.length}
-            hint="Itens abaixo do mínimo"
-            tone="red"
-          />
-          <StatCard
-            icon={ClipboardList}
-            label="Req. Pendentes"
-            value={almoxLoading && !almoxData ? '—' : (reqPendentes ?? 0)}
-            hint="Aguardando autorização"
-            tone="cyan"
-          />
-          <StatCard
-            icon={CheckCircle2}
-            label="Concluídos"
-            value={isLoading ? '—' : (stats.concluidos ?? 0)}
-            hint="Processos finalizados"
-            tone="green"
-          />
+      {cardsOperacoes.length > 0 && (
+        <div>
+          <p className="text-[11px] font-bold text-ink-400 uppercase tracking-widest mb-3 px-0.5">
+            Operações
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            {cardsOperacoes}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ── Main Grid ──────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Sem Processos, a coluna lateral se espalha pela grade (contents) */}
+      <div className={`grid grid-cols-1 gap-6 ${podeProcessos ? 'lg:grid-cols-3' : 'lg:grid-cols-2'}`}>
 
         {/* ── Col 1-2 ─────────────────────────────────────────────────── */}
-        <div className="lg:col-span-2 space-y-4">
+        {podeProcessos && <div className="lg:col-span-2 space-y-4">
 
           {/* Gráfico de status */}
           <div className="card overflow-hidden">
@@ -340,10 +355,10 @@ export default function Dashboard() {
             </div>
           </div>
 
-        </div>
+        </div>}
 
         {/* ── Col 3 — Alertas + Urgentes + Ações ──────────────────────── */}
-        <div className="space-y-4">
+        <div className={podeProcessos ? 'space-y-4' : 'contents'}>
 
           {/* Alertas executivos */}
           <div className="card overflow-hidden">
@@ -407,7 +422,7 @@ export default function Dashboard() {
           )}
 
           {/* Ações rápidas */}
-          <div className="card overflow-hidden">
+          {acoes.length > 0 && <div className="card overflow-hidden">
             <div className="px-5 py-4 border-b border-ink-100">
               <SectionTitle icon={Activity} title="Ações Rápidas" />
             </div>
@@ -423,7 +438,7 @@ export default function Dashboard() {
                 </Link>
               ))}
             </div>
-          </div>
+          </div>}
 
         </div>
       </div>

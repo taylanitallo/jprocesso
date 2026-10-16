@@ -1,7 +1,7 @@
 ﻿import { Outlet, Link, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
-import { hasPerm } from '../utils/permissions'
+import { hasPerm, moduloHabilitado } from '../utils/permissions'
 import {
   Home, Building2, LogOut, Menu, X, Inbox, BarChart3, Settings,
   Users, Package, Sun, Moon, ChevronRight, ChevronLeft, DollarSign, ScrollText,
@@ -129,11 +129,10 @@ export default function Layout() {
     logout()
   }
 
-  const modHabilitados = tenant?.configuracoes?.modulos_habilitados
-  const isModuloHabilitado = (modulo) => {
-    if (modHabilitados === undefined) return true
-    return Array.isArray(modHabilitados) && modHabilitados.includes(modulo)
-  }
+  const isModuloHabilitado = (modulo) => moduloHabilitado(tenant, modulo)
+  // Módulo bloqueado (não contratado ou sem permissão) aparece cinza só para administradores;
+  // gestores e operacionais nem veem o item no menu.
+  const ehAdministrador = user?.tipo === 'admin' || user?.tipo === 'jeos'
 
   // Cores do menu lateral vêm dos tokens --color-sidebar-* (o tema do município
   // decide se o menu é claro ou colorido — ver utils/tema.js)
@@ -152,7 +151,7 @@ export default function Layout() {
 
   const menuItems = [
     { path: `/${subdomain}`,              icon: Home,        label: 'Dashboard',        exact: true },
-    { path: `/${subdomain}/processos`,    icon: Inbox,       label: 'Processos',        modulo: 'processos' },
+    { path: `/${subdomain}/processos`,    icon: Inbox,       label: 'Processos',        modulo: 'processos',    permissao: 'processos.ver' },
     { path: `/${subdomain}/arquivo`,      icon: Archive,     label: 'Ger. de Arquivos', modulo: 'processos',    permissao: 'arquivo.acessar' },
     { path: `/${subdomain}/almoxarifado`, icon: Package,     label: 'Almoxarifado',     modulo: 'almoxarifado', permissao: 'almoxarifado.acessar' },
     { path: `/${subdomain}/patrimonio`,   icon: Landmark,    label: 'Patrimônio',       modulo: 'patrimonio',   permissao: 'patrimonio.acessar' },
@@ -245,12 +244,13 @@ export default function Layout() {
               const permitido = temPermissao(item.permissao)
 
               if (!habilitado || !permitido) {
+                if (!ehAdministrador) return null
                 return (
                   <button
                     key={item.path}
                     type="button"
                     title={sidebarCollapsed ? item.label : undefined}
-                    onClick={() => { setSidebarOpen(false); setModuloBloqueado({ label: item.label }) }}
+                    onClick={() => { setSidebarOpen(false); setModuloBloqueado({ label: item.label, semPermissao: habilitado }) }}
                     className={`w-full flex items-center px-3 py-2.5 rounded-[10px] text-sm font-semibold text-sidebar-fraco hover:bg-sidebar-hover ${sidebarCollapsed ? 'lg:justify-center' : 'justify-between'}`}
                   >
                     <div className="flex items-center gap-3">
@@ -496,6 +496,22 @@ export default function Layout() {
               <p className="text-danger-100 text-sm mt-1">{moduloBloqueado.label}</p>
             </div>
 
+            {moduloBloqueado.semPermissao ? (
+            <div className="p-6 text-center space-y-4">
+              <p className="text-ink-700 text-sm leading-relaxed">
+                O módulo <strong className="text-ink-900 dark:text-white">{moduloBloqueado.label}</strong> está desligado nas suas permissões de usuário.
+              </p>
+              <p className="text-ink-500 text-sm">
+                Para liberar, peça a um administrador que ligue o acesso em Organização › Usuários › Permissões.
+              </p>
+              <button
+                onClick={() => setModuloBloqueado(null)}
+                className="w-full px-4 py-2.5 bg-ink-100 hover:bg-ink-200 text-ink-700 rounded-xl font-medium text-sm transition-colors"
+              >
+                Fechar
+              </button>
+            </div>
+            ) : (
             <div className="p-6 text-center space-y-4">
               <p className="text-ink-700 text-sm leading-relaxed">
                 O módulo <strong className="text-ink-900 dark:text-white">{moduloBloqueado.label}</strong> não está habilitado para o seu município.
@@ -521,6 +537,7 @@ export default function Layout() {
                 Fechar
               </button>
             </div>
+            )}
           </div>
         </div>
       )}

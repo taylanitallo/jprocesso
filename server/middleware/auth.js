@@ -132,26 +132,57 @@ const requireTenant = (req, res, next) => {
 // os "desligados" antigos vieram do modelo de cadastro, não de uma decisão).
 const ignoraPermissoes = (u) => u?.tipo === 'jeos' || (u?.tipo === 'admin' && u?.permissoes?._v !== 2);
 
-// Verifica permissão nested no JSONB do usuário. Ex: requirePermission('almoxarifado','estoque','criar')
-// Só o jeos passa direto; o admin segue o que estiver desligado. undefined = permitido; false = negado.
-const requirePermission = (...path) => async (req, res, next) => {
+// Mesma regra do client (utils/permissions.js › hasPerm): undefined = permitido; false = negado.
+const temPermissao = (u, path) => {
+  if (ignoraPermissoes(u)) return true;
+  let obj = u?.permissoes;
+  for (const key of path) {
+    if (obj == null || typeof obj !== 'object') return true;
+    obj = obj[key];
+  }
+  return obj !== false;
+};
+
+// Permissões vêm do banco (o JWT não as carrega) — uma consulta por requisição
+const carregarUsuarioPerms = async (req) => {
+  if (req._usuarioPerms !== undefined) return req._usuarioPerms;
+  const u = await req.models.User.findByPk(req.user.id, { attributes: ['permissoes', 'tipo'] });
+  req._usuarioPerms = u ? { tipo: u.tipo, permissoes: u.permissoes || {} } : null;
+  return req._usuarioPerms;
+};
+
+// Passa se QUALQUER um dos caminhos for permitido.
+// Ex: requireAlgumaPermissao(['financeiro','painel','ver'], ['financeiro','relatorio','ver'])
+// Só o jeos passa direto; o admin segue o que estiver desligado.
+const requireAlgumaPermissao = (...paths) => async (req, res, next) => {
   if (!req.user) return res.status(401).json({ error: 'Não autenticado' });
   if (req.user.tipo === 'jeos') return next();
   try {
-    const { User } = req.models;
-    const u = await User.findByPk(req.user.id, { attributes: ['permissoes', 'tipo'] });
+    const u = await carregarUsuarioPerms(req);
     if (!u) return res.status(401).json({ error: 'Usuário não encontrado' });
-    if (ignoraPermissoes(u)) return next();
-    let obj = u.permissoes;
-    for (const key of path) {
-      if (obj == null || typeof obj !== 'object') { obj = undefined; break; }
-      obj = obj[key];
-    }
-    if (obj === false) return res.status(403).json({ error: 'Sem permissão para esta ação' });
-    next();
+    if (paths.some(p => temPermissao(u, p))) return next();
+    return res.status(403).json({ error: 'Sem permissão para esta ação' });
   } catch (err) {
     return res.status(500).json({ error: 'Erro ao verificar permissão' });
   }
+};
+
+// Verifica permissão nested no JSONB do usuário. Ex: requirePermission('almoxarifado','estoque','criar')
+const requirePermission = (...path) => requireAlgumaPermissao(path);
+
+// Para controllers que decidem a permissão pelo registro (ex.: tipo do documento)
+const usuarioTemPermissao = async (req, ...path) => {
+  if (req.user?.tipo === 'jeos') return true;
+  const u = await carregarUsuarioPerms(req);
+  return !!u && temPermissao(u, path);
+};
+
+// Módulo contratado pelo município (configuracoes.modulos_habilitados; sem a lista = todos).
+// Mesma regra do menu lateral. Deve ser usado APÓS tenantMiddleware.
+const requireModulo = (modulo) => (req, res, next) => {
+  const lista = req.tenant?.configuracoes?.modulos_habilitados;
+  if (lista === undefined || (Array.isArray(lista) && lista.includes(modulo))) return next();
+  return res.status(403).json({ error: 'Módulo não habilitado para o município' });
 };
 
 module.exports = {
@@ -161,5 +192,8 @@ module.exports = {
   authorize,
   requireSuperAdmin,
   requirePermission,
+  requireAlgumaPermissao,
+  requireModulo,
+  usuarioTemPermissao,
   ignoraPermissoes,
 };

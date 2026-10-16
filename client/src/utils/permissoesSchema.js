@@ -36,12 +36,10 @@ export const MODULOS = [
     acoes: [
       VER,
       INCLUIR,
-      ALTERAR,
       EXCLUIR,
       { key: 'tramitar',          label: 'Tramitar' },
       { key: 'devolver',          label: 'Devolver' },
       { key: 'concluir',          label: 'Concluir' },
-      { key: 'arquivar',          label: 'Arquivar' },
       { key: 'anexar_documento',  label: 'Anexar doc.' },
       { key: 'excluir_documento', label: 'Excluir doc.' },
       ...LIXEIRA, // excluídos de processos e de documentos
@@ -49,6 +47,15 @@ export const MODULOS = [
   },
   {
     key: 'arquivo', label: 'Ger. de Arquivos', comAcesso: true,
+    abas: [
+      { key: 'processos', label: 'Processos Concluídos', escopo: false, acoes: [
+        VER,
+        { key: 'mover',  label: 'Mover' },
+        { key: 'baixar', label: 'Baixar ZIP' },
+      ] },
+      // Excluir documento gerado: só administradores, com a ação ligada
+      { key: 'gerados',   label: 'Documentos Gerados',   escopo: false, acoes: [VER, EXCLUIR] },
+    ],
   },
   {
     key: 'almoxarifado', label: 'Almoxarifado', comAcesso: true,
@@ -121,6 +128,22 @@ export const MODULOS = [
         { key: 'autenticador', label: 'Autenticador (configurar/revogar)' },
         ...LIXEIRA,
       ] },
+    ],
+  },
+  {
+    // Acesso ao módulo vem de Administração › Configurações; aqui se restringe aba a aba.
+    key: 'configuracoes', label: 'Configurações',
+    abas: [
+      { key: 'gerais',       label: 'Gerais',             acoes: [VER, ALTERAR], escopo: false },
+      { key: 'notificacoes', label: 'Notificações',       acoes: [VER], escopo: false },
+      { key: 'tema',         label: 'Tema',               acoes: [VER], escopo: false },
+      { key: 'importexport', label: 'Import / Export',    escopo: false, acoes: [
+        VER,
+        { key: 'exportar', label: 'Exportar' },
+        { key: 'importar', label: 'Importar' },
+      ] },
+      // Só administradores veem a aba, mesmo com "Ver" ligado
+      { key: 'fluxos',       label: 'Fluxos de Processo', acoes: [VER], escopo: false },
     ],
   },
   {

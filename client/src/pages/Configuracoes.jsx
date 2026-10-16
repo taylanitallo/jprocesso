@@ -7,6 +7,8 @@ import { Save, Upload, X, ImageIcon, Download, FileDown, FileUp, Database, Key, 
 import PageHeader from '../components/ui/PageHeader';
 import SectionTitle from '../components/ui/SectionTitle';
 import FluxosProcesso from './configuracoes/FluxosProcesso';
+import { hasPerm } from '../utils/permissions';
+import { conferirAbasDoModulo } from '../utils/permissoesSchema';
 
 // Versão do build (vite.config.mjs): ano.mês.dia.hora → "14/10/2026 às 07h"
 const dataDaVersao = (v) => {
@@ -83,13 +85,28 @@ export default function Configuracoes() {
   const navigate = useNavigate();
   // Fluxo do DID: quem preenche cada etapa — só administradores
   const ehAdmin = user?.tipo === 'admin' || user?.tipo === 'jeos';
-  const VALID_TABS_CONF = ['gerais', 'notificacoes', 'tema', 'importexport', ...(ehAdmin ? ['fluxos'] : [])];
-  const activeTab = VALID_TABS_CONF.includes(tabParam) ? tabParam : 'gerais';
+  const pode = (...p) => hasPerm(user, 'configuracoes', ...p);
+  const podeAlterarGerais = pode('gerais', 'editar');
+  const podeExportar = pode('importexport', 'exportar');
+  const podeImportar = pode('importexport', 'importar');
+  const tabs = [
+    { id: 'gerais',       icon: Building2,      label: 'Gerais' },
+    { id: 'notificacoes', icon: Bell,            label: 'Notificações' },
+    { id: 'tema',         icon: Palette,         label: 'Tema' },
+    { id: 'importexport', icon: ArrowLeftRight,  label: 'Import / Export' },
+    { id: 'fluxos',       icon: Workflow,        label: 'Fluxos de Processo', soAdmin: true },
+  ];
+  conferirAbasDoModulo('configuracoes', tabs.map(t => t.id));
+  const visibleTabs = tabs.filter(t => (!t.soAdmin || ehAdmin) && pode(t.id, 'ver'));
+  const VALID_TABS_CONF = visibleTabs.map(t => t.id);
+  const activeTab = VALID_TABS_CONF.includes(tabParam) ? tabParam : VALID_TABS_CONF[0];
   const setActiveTab = (key) => navigate(`/${subdomain}/configuracoes/${key}`);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [editandoGerais, setEditandoGerais] = useState(true);
+  // Sem "Alterar" a aba Gerais abre só para consulta
+  const editavelGerais = editandoGerais && podeAlterarGerais;
   const [geraisOriginal, setGeraisOriginal] = useState(null);
 
   // Estado da aba Gerais — configurações GLOBAIS do tenant (sem logo_secretaria)
@@ -218,14 +235,6 @@ export default function Configuracoes() {
       feedback(err.response?.data?.error || 'Erro ao salvar configurações', true);
     } finally { setLoading(false); }
   };
-
-  const tabs = [
-    { id: 'gerais',       icon: Building2,      label: 'Gerais' },
-    { id: 'notificacoes', icon: Bell,            label: 'Notificações' },
-    { id: 'tema',         icon: Palette,         label: 'Tema' },
-    { id: 'importexport', icon: ArrowLeftRight,  label: 'Import / Export' },
-    ...(ehAdmin ? [{ id: 'fluxos', icon: Workflow, label: 'Fluxos de Processo' }] : []),
-  ];
 
   // ── estados Importações/Exportações
   const [importFile, setImportFile] = useState(null);
@@ -377,7 +386,7 @@ export default function Configuracoes() {
           style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
         >
           <nav className="flex min-w-max">
-            {tabs.map((tab) => {
+            {visibleTabs.map((tab) => {
               const Icon = tab.icon;
               return (
               <button
@@ -413,7 +422,7 @@ export default function Configuracoes() {
                       value={logoSecretaria}
                       onChange={handleLogoSecretaria}
                       hint="PNG/SVG recomendado. Salvo automaticamente ao selecionar."
-                      disabled={savingSecretariaLogo}
+                      disabled={savingSecretariaLogo || !podeAlterarGerais}
                     />
                     {savingSecretariaLogo && (
                       <div className="flex items-center gap-2 text-sm text-brand-600 dark:text-info-400 mt-8">
@@ -434,7 +443,7 @@ export default function Configuracoes() {
                     value={geraisData.logo_prefeitura}
                     onChange={(v) => handleLogoChange('logo_prefeitura', v)}
                     hint="Aparece no cabeçalho principal dos relatórios e documentos oficiais."
-                    disabled={!editandoGerais}
+                    disabled={!editavelGerais}
                   />
                 </div>
               </div>
@@ -450,7 +459,7 @@ export default function Configuracoes() {
                       value={geraisData.timbrado}
                       onChange={(v) => handleLogoChange('timbrado', v)}
                       hint="Use PNG com fundo transparente para melhor resultado."
-                      disabled={!editandoGerais}
+                      disabled={!editavelGerais}
                     />
                     {geraisData.timbrado && (
                       <div className="max-w-[260px]">
@@ -465,7 +474,7 @@ export default function Configuracoes() {
                           step={1}
                           value={geraisData.timbrado_opacity}
                           onChange={e => setGeraisData(p => ({ ...p, timbrado_opacity: Number(e.target.value) }))}
-                          disabled={!editandoGerais}
+                          disabled={!editavelGerais}
                           className="w-full accent-info-600 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                         />
                         <p className="text-[11px] text-ink-400 mt-1">Controla a transparência da marca d'água nos relatórios (0% = invisível, 100% = opaco).</p>
@@ -521,7 +530,7 @@ export default function Configuracoes() {
                           type="color"
                           value={geraisData[key]}
                           onChange={e => setGeraisData(p => ({ ...p, [key]: e.target.value }))}
-                          disabled={!editandoGerais}
+                          disabled={!editavelGerais}
                           className="h-9 w-14 rounded-lg border border-ink-300 cursor-pointer p-0.5 bg-surface disabled:opacity-60 disabled:cursor-not-allowed"
                         />
                         <span className="text-xs font-mono text-ink-600 uppercase">{geraisData[key]}</span>
@@ -562,7 +571,7 @@ export default function Configuracoes() {
                     <button
                       key={label}
                       type="button"
-                      disabled={!editandoGerais}
+                      disabled={!editavelGerais}
                       onClick={() => setGeraisData(p => ({ ...p, margens: mg }))}
                       className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-ink-300
                                  bg-ink-50 text-ink-700
@@ -592,7 +601,7 @@ export default function Configuracoes() {
                             max="50"
                             step="1"
                             value={geraisData.margens[key]}
-                            disabled={!editandoGerais}
+                            disabled={!editavelGerais}
                             onChange={e => {
                               const v = Math.min(50, Math.max(5, Number(e.target.value) || 5))
                               setGeraisData(p => ({ ...p, margens: { ...p.margens, [key]: v } }))
@@ -647,7 +656,7 @@ export default function Configuracoes() {
                 </div>
               </div>
 
-              <div className="flex justify-end pt-2 gap-3">
+              {podeAlterarGerais && <div className="flex justify-end pt-2 gap-3">
                 {editandoGerais ? (
                   <button
                     type="button"
@@ -672,7 +681,7 @@ export default function Configuracoes() {
                   <Save className="h-4 w-4" />
                   {loading ? 'Salvando...' : 'Salvar Configurações'}
                 </button>
-              </div>
+              </div>}
             </form>
           )}
 
@@ -739,6 +748,7 @@ export default function Configuracoes() {
             <div className="space-y-8">
 
               {/* EXPORTAÇÃO */}
+              {podeExportar && <>
               <div>
                 <SectionTitle icon={FileDown} title="Exportação de Dados" />
                 <p className="text-xs text-ink-400 mb-5">
@@ -775,8 +785,10 @@ export default function Configuracoes() {
               </div>
 
               <hr className="border-ink-200" />
+              </>}
 
               {/* IMPORTAÇÃO */}
+              {podeImportar && <>
               <div>
                 <SectionTitle icon={FileUp} title="Importação de Dados" />
                 <p className="text-xs text-ink-400 mb-5">
@@ -888,6 +900,7 @@ export default function Configuracoes() {
               </div>
 
               <hr className="border-ink-200" />
+              </>}
 
               {/* APIs / INTEGRAÇÕES */}
               <div>
