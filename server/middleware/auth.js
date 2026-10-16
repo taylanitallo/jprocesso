@@ -178,6 +178,52 @@ const requireAlgumaPermissao = (...paths) => async (req, res, next) => {
 // Verifica permissão nested no JSONB do usuário. Ex: requirePermission('almoxarifado','estoque','criar')
 const requirePermission = (...path) => requireAlgumaPermissao(path);
 
+// ── Organização e Configurações: acesso ao módulo + abas ─────────────────────
+// Desde que os módulos ganharam o próprio "Acesso" no editor (organizacao.acessar,
+// configuracoes.acessar), valem essas chaves. Permissões salvas antes disso usam as
+// antigas de Administração (gerenciar_secretarias / gerenciar_usuarios /
+// gerenciar_configuracoes). Mesma regra em client/src/utils/permissions.js.
+const ABAS_ORG_SECRETARIAS = ['entidade', 'secretarias', 'agentes', 'responsaveis'];
+
+const acessoOrganizacao = (u, aba) => {
+  if (ignoraPermissoes(u)) return true;
+  const p = u?.permissoes || {};
+  const acessar = p.organizacao?.acessar;
+  // Gestor administra os usuários da própria secretaria pelo papel
+  if (aba === 'usuarios' && u?.tipo === 'gestor') {
+    return acessar !== false && temPermissao(u, ['organizacao', 'usuarios', 'ver']);
+  }
+  if (acessar === undefined) {
+    const chave = aba === 'usuarios' ? 'gerenciar_usuarios' : 'gerenciar_secretarias';
+    if (p.administracao?.[chave] === false) return false;
+  } else if (acessar === false) return false;
+  return temPermissao(u, ['organizacao', aba, 'ver']);
+};
+
+const acessoConfiguracoes = (u) => {
+  if (ignoraPermissoes(u)) return true;
+  const p = u?.permissoes || {};
+  const acessar = p.configuracoes?.acessar;
+  if (acessar !== undefined) return acessar !== false;
+  return p.administracao?.gerenciar_configuracoes !== false;
+};
+
+const requireAcesso = (decide, msg) => async (req, res, next) => {
+  if (!req.user) return res.status(401).json({ error: 'Não autenticado' });
+  if (req.user.tipo === 'jeos') return next();
+  try {
+    const u = await carregarUsuarioPerms(req);
+    if (!u) return res.status(401).json({ error: 'Usuário não encontrado' });
+    return decide(u) ? next() : res.status(403).json({ error: msg });
+  } catch (err) {
+    return res.status(500).json({ error: 'Erro ao verificar permissão' });
+  }
+};
+// Passa se o usuário tem QUALQUER uma das abas de Organização
+const requireAbaOrganizacao = (...abas) =>
+  requireAcesso(u => abas.some(a => acessoOrganizacao(u, a)), 'Sem acesso a esta área de Organização');
+const requireAcessoConfiguracoes = requireAcesso(acessoConfiguracoes, 'Sem acesso às Configurações');
+
 // Para controllers que decidem a permissão pelo registro (ex.: tipo do documento)
 const usuarioTemPermissao = async (req, ...path) => {
   if (req.user?.tipo === 'jeos') return true;
@@ -203,5 +249,10 @@ module.exports = {
   requireAlgumaPermissao,
   requireModulo,
   usuarioTemPermissao,
+  requireAbaOrganizacao,
+  requireAcessoConfiguracoes,
+  acessoOrganizacao,
+  acessoConfiguracoes,
+  ABAS_ORG_SECRETARIAS,
   ignoraPermissoes,
 };

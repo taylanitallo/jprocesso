@@ -11,7 +11,7 @@ const {
   deleteTenant,
   getStatistics
 } = require('../controllers/tenantController');
-const { authenticate, requireSuperAdmin, tenantMiddleware, requireTenant, authorize, requirePermission, requireAlgumaPermissao } = require('../middleware/auth');
+const { authenticate, requireSuperAdmin, tenantMiddleware, requireTenant, authorize, requireAlgumaPermissao, requireAcessoConfiguracoes } = require('../middleware/auth');
 
 // Atalho: garante que o caller é SuperAdmin autenticado
 const superAdmin = [authenticate, requireSuperAdmin];
@@ -50,10 +50,10 @@ router.get('/statistics', ...superAdmin, getStatistics);
 // A-3: tenantMiddleware resolve req.tenant; requireTenant bloqueia admin global;
 // authenticate verifica JWT (inclui binding JWT↔tenant da SEC-01A);
 // authorize restringe a admin e gestor — operacional recebe 403
-// Permissões: Administração › Configurações + Gerais › Alterar (ou Import/Export › Importar,
+// Permissões: acesso a Configurações + Gerais › Alterar (ou Import/Export › Importar,
 // que salva a URL de importação de itens)
 router.put('/configuracoes', tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'),
-  requirePermission('administracao', 'gerenciar_configuracoes'),
+  requireAcessoConfiguracoes,
   requireAlgumaPermissao(['configuracoes', 'gerais', 'editar'], ['configuracoes', 'importexport', 'importar']),
   updateTenantConfiguracoes);
 

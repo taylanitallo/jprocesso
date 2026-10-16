@@ -114,9 +114,10 @@ export const MODULOS = [
     ],
   },
   {
-    // Acesso ao módulo vem de Administração › Gerenciar Organização / Usuários;
-    // aqui se restringe aba a aba.
-    key: 'organizacao', label: 'Organização',
+    // Acesso ao módulo (organizacao.acessar) + aba a aba. Permissões salvas antes
+    // usavam Administração › Gerenciar Organização / Usuários (ver migrarPermissoesAntigas).
+    // Gestor: a aba Usuários vale pelo papel, só na própria secretaria.
+    key: 'organizacao', label: 'Organização', comAcesso: true,
     abas: [
       { key: 'entidade',     label: 'Entidade',              acoes: [VER, ALTERAR], escopo: false },
       { key: 'secretarias',  label: 'Secretarias e Setores', acoes: [...CRUD_LIXEIRA], escopo: false },
@@ -134,8 +135,9 @@ export const MODULOS = [
     ],
   },
   {
-    // Acesso ao módulo vem de Administração › Configurações; aqui se restringe aba a aba.
-    key: 'configuracoes', label: 'Configurações',
+    // Acesso ao módulo (configuracoes.acessar) + aba a aba. Permissões salvas antes
+    // usavam Administração › Gerenciar Configurações (ver migrarPermissoesAntigas).
+    key: 'configuracoes', label: 'Configurações', comAcesso: true,
     abas: [
       { key: 'gerais',       label: 'Gerais',             acoes: [VER, ALTERAR], escopo: false },
       { key: 'notificacoes', label: 'Notificações',       acoes: [VER], escopo: false },
@@ -150,16 +152,38 @@ export const MODULOS = [
     ],
   },
   {
+    // Telas do menu Administração que não são módulos com abas (Organização e
+    // Configurações têm o próprio acesso acima)
     key: 'administracao', label: 'Administração',
     acoes: [
-      { key: 'gerenciar_secretarias',   label: 'Organização (entidade, secretarias, agentes, responsáveis)' },
-      { key: 'gerenciar_usuarios',      label: 'Organização › Usuários' },
       { key: 'visualizar_relatorios',   label: 'Relatórios' },
-      { key: 'gerenciar_configuracoes', label: 'Configurações' },
       { key: 'visualizar_registros',    label: 'Registros' },
     ],
   },
 ]
+
+/**
+ * Converte as permissões do formato antigo antes de abrir no editor: o acesso a
+ * Organização/Configurações vinha de Administração (gerenciar_secretarias,
+ * gerenciar_usuarios, gerenciar_configuracoes). O editor mostra o equivalente no
+ * formato novo (organizacao.acessar, abas, configuracoes.acessar) e é isso que se salva.
+ * Sem configuração = liberado (mesma regra de hasPerm).
+ */
+export function migrarPermissoesAntigas(permissoes, tipoAlvo) {
+  const p = JSON.parse(JSON.stringify(permissoes || {}))
+  const adm = p.administracao || {}
+  if (p.organizacao?.acessar === undefined) {
+    const sec = adm.gerenciar_secretarias !== false
+    const usu = adm.gerenciar_usuarios !== false || tipoAlvo === 'gestor' // gestor: Usuários pelo papel
+    p.organizacao = { ...(p.organizacao || {}), acessar: sec || usu }
+    if (!sec) ['entidade', 'secretarias', 'agentes', 'responsaveis'].forEach(a => { p.organizacao[a] = { ...(p.organizacao[a] || {}), ver: false } })
+    if (!usu) p.organizacao.usuarios = { ...(p.organizacao.usuarios || {}), ver: false }
+  }
+  if (p.configuracoes?.acessar === undefined) {
+    p.configuracoes = { ...(p.configuracoes || {}), acessar: adm.gerenciar_configuracoes !== false }
+  }
+  return p
+}
 
 /**
  * Em desenvolvimento, avisa no console quando as abas de uma página e o schema divergem.

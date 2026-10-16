@@ -19,10 +19,38 @@ export const hasPerm = (user, ...path) => {
   return obj !== false
 }
 
-// Organização › Usuários: o administrador precisa de Administração › Usuários; o gestor
-// administra os usuários da própria secretaria pelo papel (servidor: authController › conferirGestor)
-export const podeAdministrarUsuarios = (user) =>
-  user?.tipo === 'gestor' || hasPerm(user, 'administracao', 'gerenciar_usuarios')
+// ── Organização e Configurações: acesso ao módulo + abas ─────────────────────
+// Desde que os módulos ganharam o próprio "Acesso" no editor (organizacao.acessar,
+// configuracoes.acessar), valem essas chaves. Permissões salvas antes disso usam as
+// antigas de Administração (gerenciar_secretarias / gerenciar_usuarios /
+// gerenciar_configuracoes). Mesma regra no servidor (middleware/auth.js).
+export const ABAS_ORGANIZACAO = ['entidade', 'secretarias', 'agentes', 'responsaveis', 'usuarios']
+
+export const podeAbaOrganizacao = (user, aba) => {
+  if (!user) return false
+  if (ignoraPermissoes(user)) return true
+  const p = user.permissoes || {}
+  const acessar = p.organizacao?.acessar
+  // Gestor administra os usuários da própria secretaria pelo papel
+  if (aba === 'usuarios' && user.tipo === 'gestor') return acessar !== false && hasPerm(user, 'organizacao', 'usuarios', 'ver')
+  if (acessar === undefined) {
+    const chave = aba === 'usuarios' ? 'gerenciar_usuarios' : 'gerenciar_secretarias'
+    if (p.administracao?.[chave] === false) return false
+  } else if (acessar === false) return false
+  return hasPerm(user, 'organizacao', aba, 'ver')
+}
+export const podeAbrirOrganizacao = (user) => ABAS_ORGANIZACAO.some(a => podeAbaOrganizacao(user, a))
+
+export const podeAbrirConfiguracoes = (user) => {
+  if (!user) return false
+  if (ignoraPermissoes(user)) return true
+  const p = user.permissoes || {}
+  if (p.configuracoes?.acessar !== undefined) return p.configuracoes.acessar !== false
+  return p.administracao?.gerenciar_configuracoes !== false
+}
+
+// Organização › Usuários (gestor: a própria secretaria; servidor: authController › conferirGestor)
+export const podeAdministrarUsuarios = (user) => podeAbaOrganizacao(user, 'usuarios')
 
 // Módulo contratado pelo município (configuracoes.modulos_habilitados; sem a lista = todos)
 export const moduloHabilitado = (tenant, modulo) => {

@@ -2,7 +2,7 @@ import { useState, useEffect, lazy, Suspense, Fragment } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { hasPerm, usePode, podeAdministrarUsuarios } from '../utils/permissions';
+import { usePode, podeAbaOrganizacao } from '../utils/permissions';
 import { conferirAbasDoModulo } from '../utils/permissoesSchema';
 import PageHeader from '../components/ui/PageHeader';
 import SectionTitle from '../components/ui/SectionTitle';
@@ -159,19 +159,17 @@ export default function Secretarias() {
   const pResp = usePode('organizacao', 'responsaveis')
   const pEnt  = usePode('organizacao', 'entidade')
 
-  const podeSecretarias = hasPerm(user, 'administracao', 'gerenciar_secretarias')
-  const podeUsuarios     = podeAdministrarUsuarios(user) // gestor: só a própria secretaria
-
-  // Abas — visíveis conforme Administração (acesso) + Organização (aba a aba)
+  // Abas — acesso ao módulo Organização + "Ver" de cada aba (editor de permissões);
+  // permissões antigas usam Administração (ver utils/permissions › podeAbaOrganizacao)
   const abasOrganizacao = [
-    { key: 'entidade',     label: 'Entidade',              Icon: Building2, acesso: podeSecretarias },
-    { key: 'secretarias',  label: 'Secretarias e Setores', Icon: Network,   acesso: podeSecretarias },
-    { key: 'agentes',      label: 'Cadastro de Agentes',   Icon: Users,     acesso: podeSecretarias },
-    { key: 'responsaveis', label: 'Responsáveis',          Icon: UserCheck, acesso: podeSecretarias },
-    { key: 'usuarios',     label: 'Usuários',              Icon: UserCog,   acesso: podeUsuarios    },
+    { key: 'entidade',     label: 'Entidade',              Icon: Building2 },
+    { key: 'secretarias',  label: 'Secretarias e Setores', Icon: Network   },
+    { key: 'agentes',      label: 'Cadastro de Agentes',   Icon: Users     },
+    { key: 'responsaveis', label: 'Responsáveis',          Icon: UserCheck },
+    { key: 'usuarios',     label: 'Usuários',              Icon: UserCog   }, // gestor: só a própria secretaria
   ]
   conferirAbasDoModulo('organizacao', abasOrganizacao.map(t => t.key))
-  const abasVisiveis = abasOrganizacao.filter(t => t.acesso && hasPerm(user, 'organizacao', t.key, 'ver'))
+  const abasVisiveis = abasOrganizacao.filter(t => podeAbaOrganizacao(user, t.key))
   const abaPermitida = (key) => abasVisiveis.some(t => t.key === key)
 
   const [activeTab, setActiveTab] = useState(abaPermitida(tabParam) ? tabParam : (abasVisiveis[0]?.key || 'entidade'))
@@ -1697,7 +1695,7 @@ export default function Secretarias() {
       )}
 
       {/* ── Tab: Usuários ── */}
-      {activeTab === 'usuarios' && podeUsuarios && (
+      {activeTab === 'usuarios' && abaPermitida('usuarios') && (
         <Suspense fallback={<LoadingBar label="Carregando usuários..." />}>
           <Usuarios />
         </Suspense>
