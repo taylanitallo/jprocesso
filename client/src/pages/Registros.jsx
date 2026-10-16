@@ -132,7 +132,8 @@ export default function Registros() {
     }
   }, [filtros, limitesPorPagina])
 
-  useEffect(() => { buscarLogs(1) }, [limitesPorPagina]) // eslint-disable-line
+  // Busca enquanto digita: recarrega ao mudar filtros ou itens por página
+  useEffect(() => { const t = setTimeout(() => buscarLogs(1), 300); return () => clearTimeout(t) }, [buscarLogs])
 
   const handleFiltrar = (e) => {
     e.preventDefault()

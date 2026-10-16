@@ -1540,8 +1540,10 @@ function TabOrdens() {
     setLoading(false)
   }, [filtros])
 
+  // Busca enquanto digita: recarrega ao mudar qualquer filtro (inclusive na abertura)
+  useEffect(() => { const t = setTimeout(carregar, 300); return () => clearTimeout(t) }, [carregar])
+
   useEffect(() => {
-    carregar()
     api.get('/contratos', { params: { status: 'ATIVO' } }).then(r => setContratos(r.data)).catch(() => {})
     api.get('/contratos/itens', { params: { status: 'ATIVO' } }).then(r => setCatalogoItens(r.data)).catch(() => {})
   }, [])

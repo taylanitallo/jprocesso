@@ -526,17 +526,26 @@ function TabCredor() {
 
   const setF = (k, v) => setFiltros(p => ({ ...p, [k]: v }))
   const pesquisar = () => { setFiltrosAtivos({ ...filtros }); setPagina(1) }
+  // Busca enquanto digita (o botão continua funcionando)
+  useEffect(() => { const t = setTimeout(pesquisar, 250); return () => clearTimeout(t) }, [filtros]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const limparFiltros = () => { setFiltros(FILTROS_VAZIOS); setFiltrosAtivos(FILTROS_VAZIOS); setPagina(1) }
 
   useEffect(() => {
     api.get('/contratos/credores').then(r => setCredores(r.data)).catch(() => {})
   }, [])
 
+  const semAcento = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
   const f = filtrosAtivos
   const credoresFiltrados = credores
     .filter(c => {
-      if (f.razao_social && !c.razao_social.toLowerCase().includes(f.razao_social.toLowerCase())) return false
-      if (f.cnpj_cpf && !String(c.cnpj_cpf || '').includes(f.cnpj_cpf)) return false
+      // Nome sem maiúscula/acento; CNPJ/CPF pelos dígitos ("12345678" acha "12.345.678/0001-90")
+      if (f.razao_social && !semAcento(c.razao_social).includes(semAcento(f.razao_social))) return false
+      if (f.cnpj_cpf) {
+        const dig = f.cnpj_cpf.replace(/\D/g, '')
+        const doc = String(c.cnpj_cpf || '')
+        if (dig ? !doc.replace(/\D/g, '').includes(dig) : !doc.toLowerCase().includes(f.cnpj_cpf.toLowerCase())) return false
+      }
       if (f.tipo && c.tipo !== f.tipo) return false
       if (f.status && c.status !== f.status) return false
       return true

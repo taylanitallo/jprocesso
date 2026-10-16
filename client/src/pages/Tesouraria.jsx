@@ -620,6 +620,8 @@ function TabReceitas() {
   };
 
   const filtrar = () => load(filtros);
+  // Busca enquanto digita (o botão continua funcionando)
+  useEffect(() => { const t = setTimeout(() => load(filtros), 300); return () => clearTimeout(t); }, [filtros]); // eslint-disable-line react-hooks/exhaustive-deps
   const limparFiltros = () => {
     const f = { conta_id: '', data_de: '', data_ate: '', busca: '', banco: '', num_conta: '' };
     setFiltros(f);
@@ -1066,7 +1068,8 @@ function OrdensDespesas() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Busca enquanto digita: recarrega ao mudar qualquer filtro (inclusive na abertura)
+  useEffect(() => { const t = setTimeout(() => load(filtros), 300); return () => clearTimeout(t); }, [filtros]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const FILTROS_VAZIOS = { tipo: 'TODOS', pago: 'TODOS', data_de: '', data_ate: '', busca: '', secretaria: '', processo: '' };
   const temFiltroOrdens = Object.keys(FILTROS_VAZIOS).some(k => filtros[k] !== FILTROS_VAZIOS[k]);
