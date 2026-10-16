@@ -432,6 +432,9 @@ function TabLicitacoes() {
 
   const setF = (k, v) => setFiltros(p => ({ ...p, [k]: v }))
   const pesquisar = () => { setFiltrosAtivos({ ...filtros }); setPagina(1) }
+  // Busca enquanto digita (o botão continua funcionando)
+  useEffect(() => { const t = setTimeout(pesquisar, 250); return () => clearTimeout(t) }, [filtros]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const limparFiltros = () => { setFiltros(FILTROS_VAZIOS); setFiltrosAtivos(FILTROS_VAZIOS); setPagina(1) }
 
   useEffect(() => {

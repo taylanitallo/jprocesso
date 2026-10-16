@@ -29,14 +29,31 @@ const listCredores = async (req, res) => {
   }
 };
 
+// CNPJ/CPF já usado por outro credor NÃO excluído (compara só os dígitos, para
+// "12.345.678/0001-90" e "12345678000190" contarem como o mesmo). Devolve o credor ou null.
+const credorComMesmoDocumento = async (req, cnpjCpf, ignorarId = null) => {
+  const digitos = String(cnpjCpf || '').replace(/\D/g, '');
+  if (digitos.length !== 11 && digitos.length !== 14) return null; // mascarado/incompleto: só o índice confere
+  const [rows] = await req.tenantDb.query(
+    `SELECT id, razao_social FROM "${req.tenant.schema}".credores
+      WHERE status <> 'EXCLUÍDO' AND regexp_replace(cnpj_cpf, '[^0-9]', '', 'g') = :digitos
+        ${ignorarId ? 'AND id <> :ignorarId' : ''} LIMIT 1`,
+    { replacements: { digitos, ignorarId } }
+  );
+  return rows[0] || null;
+};
+const msgDocumentoRepetido = (c) => `CNPJ/CPF já cadastrado para ${c.razao_social}.`;
+
 const createCredor = async (req, res) => {
   try {
     const { Credor } = req.models;
+    const existente = await credorComMesmoDocumento(req, req.body?.cnpj_cpf);
+    if (existente) return res.status(409).json({ error: msgDocumentoRepetido(existente) });
     const credor = await Credor.create(req.body);
     res.status(201).json(credor);
   } catch (err) {
     if (err.name === 'SequelizeUniqueConstraintError') {
-      return res.status(409).json({ error: 'CNPJ/CPF jÃ¡ cadastrado' });
+      return res.status(409).json({ error: 'CNPJ/CPF já cadastrado em outro credor ativo.' });
     }
     console.error('createCredor:', err);
     res.status(500).json({ error: 'Erro ao criar credor' });
@@ -48,9 +65,16 @@ const updateCredor = async (req, res) => {
     const { Credor } = req.models;
     const credor = await Credor.findByPk(req.params.id);
     if (!credor) return notFound(res, 'Credor');
+    if (req.body?.cnpj_cpf !== undefined) {
+      const existente = await credorComMesmoDocumento(req, req.body.cnpj_cpf, credor.id);
+      if (existente) return res.status(409).json({ error: msgDocumentoRepetido(existente) });
+    }
     await credor.update(req.body);
     res.json(credor);
   } catch (err) {
+    if (err.name === 'SequelizeUniqueConstraintError') {
+      return res.status(409).json({ error: 'CNPJ/CPF já cadastrado em outro credor ativo.' });
+    }
     console.error('updateCredor:', err);
     res.status(500).json({ error: 'Erro ao atualizar credor' });
   }

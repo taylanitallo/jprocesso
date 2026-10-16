@@ -423,6 +423,9 @@ export default function ContratosDashboard() {
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
   const aplicarFiltros = () => { setFiltrosAtivos({ ...filtros }); setCredoresPage(1); setContratosPage(1) }
+  // Busca enquanto digita (o botão continua funcionando)
+  useEffect(() => { const t = setTimeout(aplicarFiltros, 250); return () => clearTimeout(t) }, [filtros]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const limparFiltros = () => {
     const vazio = { periodo_ini: '', periodo_fim: '', modalidade: '', status: '', secretaria: '', credor: '' }
     setFiltros(vazio); setFiltrosAtivos(vazio); setCredoresPage(1); setContratosPage(1)

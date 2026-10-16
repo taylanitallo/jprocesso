@@ -1461,6 +1461,9 @@ function TabContratos() {
 
   const setF = (k, v) => setFiltros(p => ({ ...p, [k]: v }))
   const pesquisar  = () => { setFiltrosAtivos({ ...filtros }); setPaginaCtr(1) }
+  // Busca enquanto digita (o botão continua funcionando)
+  useEffect(() => { const t = setTimeout(pesquisar, 250); return () => clearTimeout(t) }, [filtros]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const limpar     = () => { setFiltros(FILTROS_VAZIOS); setFiltrosAtivos(FILTROS_VAZIOS); setPaginaCtr(1) }
 
   const nomeCredor = (id) => credores.find(c => c.id === id)?.razao_social || '—'

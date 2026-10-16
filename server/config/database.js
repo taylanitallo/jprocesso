@@ -349,7 +349,8 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
         created_at    TIMESTAMP    NOT NULL DEFAULT NOW(),
         updated_at    TIMESTAMP    NOT NULL DEFAULT NOW()
       );
-      CREATE UNIQUE INDEX IF NOT EXISTS credores_cnpj_cpf_uq ON credores (cnpj_cpf);
+      -- CNPJ/CPF único só entre os não excluídos (credor excluído não bloqueia novo cadastro)
+      CREATE UNIQUE INDEX IF NOT EXISTS credores_cnpj_cpf_ativo_uq ON credores (cnpj_cpf) WHERE status <> 'EXCLUÍDO';
 
       CREATE TABLE IF NOT EXISTS contratos_itens (
         id               SERIAL       PRIMARY KEY,
@@ -924,6 +925,12 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
       ADD COLUMN IF NOT EXISTS distribuicao        JSONB,
       ADD COLUMN IF NOT EXISTS valor_unitario_base NUMERIC(15,2)
   `);
+  // Credores: o índice único antigo valia também para os excluídos ("CNPJ já cadastrado"
+  // sem nenhum credor visível). Fica só o parcial, entre os não excluídos.
+  await run(`ALTER TABLE credores DROP CONSTRAINT IF EXISTS credores_cnpj_cpf_key`);
+  await run(`DROP INDEX IF EXISTS credores_cnpj_cpf_key`);
+  await run(`DROP INDEX IF EXISTS credores_cnpj_cpf_uq`);
+  await run(`CREATE UNIQUE INDEX IF NOT EXISTS credores_cnpj_cpf_ativo_uq ON credores (cnpj_cpf) WHERE status <> 'EXCLUÍDO'`);
   // Item vinculado leva "descrição - especificação" num campo só (contrato, ordens e DID):
   // pode passar de 500 caracteres
   await run(`ALTER TABLE contratos_itens_vinculo ALTER COLUMN descricao TYPE TEXT`);
