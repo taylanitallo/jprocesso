@@ -1171,8 +1171,9 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                 />
               )}
               {itemContratoModal?.readonly && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
-                  <div className="bg-surface rounded-2xl shadow-2xl w-full p-6 space-y-3" style={{ maxWidth: '480px' }}>
+                // Ver item do contrato: tela cheia (toda a área disponível)
+                <div className="fixed inset-0 z-[60] flex bg-black/60 p-2 sm:p-3">
+                  <div className="bg-surface rounded-2xl shadow-2xl w-full h-full p-6 space-y-3 overflow-y-auto">
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="text-sm font-bold text-ink-900 dark:text-white">Detalhes do Item</h3>
                       <button onClick={() => setItemContratoModal(null)} className="p-1.5 rounded-lg hover:bg-ink-100 text-ink-400"><X className="w-4 h-4" /></button>
