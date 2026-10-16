@@ -770,6 +770,12 @@ const refreshToken = async (req, res) => {
             freshPayload.email       = freshUser.email || cleanPayload.email;
             freshPayload.secretariaId = freshUser.secretariaId || null;
             freshPayload.setorId     = freshUser.setorId || null;
+            // O filtro "só a própria secretaria" de Contratos/Ordens/DIDs compara pelo nome:
+            // sem ele no token renovado, o usuário passava a ver os de todas as secretarias
+            const sec = freshUser.secretariaId && modelsForRefresh.Secretaria
+              ? await modelsForRefresh.Secretaria.findByPk(freshUser.secretariaId, { attributes: ['nome'] })
+              : null;
+            freshPayload.secretariaNome = sec?.nome || null;
           }
         }
       } catch { /* mantém cleanPayload se falhar */ }

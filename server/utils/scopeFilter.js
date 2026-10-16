@@ -68,6 +68,23 @@ const applyScopeToWhere = async (where, req, secretariaField, ...permPath) => {
 }
 
 /**
+ * Nome da secretaria do usuário, buscado no banco pelo secretariaId (não confia no
+ * token: o token renovado já veio sem o nome e o filtro deixava de valer).
+ */
+const ensureSecretariaNome = async (req) => {
+  const user = req.user
+  if (user._secretariaNomeConferido) return user.secretariaNome || null
+  user._secretariaNomeConferido = true
+  if (user.secretariaId && req.models?.Secretaria) {
+    try {
+      const sec = await req.models.Secretaria.findByPk(user.secretariaId, { attributes: ['nome'] })
+      user.secretariaNome = sec?.nome || null
+    } catch { /* mantém o do token */ }
+  }
+  return user.secretariaNome || null
+}
+
+/**
  * For modules where secretaria is stored as a name text field (contratos, despesas).
  * nameField: e.g. 'secretaria'
  */
@@ -82,7 +99,9 @@ const applyScopeToWhereByName = async (where, req, nameField, ...permPath) => {
   if (scope === 'none') {
     where[nameField] = { [Op.in]: [] }
   } else if (scope === 'propria') {
-    if (user.secretariaNome) where[nameField] = { [Op.iLike]: user.secretariaNome }
+    // Sem secretaria não há o que mostrar (antes ficava sem filtro e mostrava todas)
+    const nome = await ensureSecretariaNome(req)
+    where[nameField] = nome ? { [Op.iLike]: nome } : { [Op.in]: [] }
   } else if (scope === 'algumas') {
     if (secretarias.length > 0 && req.models?.Secretaria) {
       try {
@@ -159,4 +178,4 @@ const getScopeSecretariaInclude = async (req, ...permPath) => {
   return {} // 'todas'
 }
 
-module.exports = { getScope, ensurePermissoes, applyScopeToWhere, applyScopeToWhereByName, getScopeSetorInclude, getScopeSecretariaInclude }
+module.exports = { getScope, ensurePermissoes, ensureSecretariaNome, applyScopeToWhere, applyScopeToWhereByName, getScopeSetorInclude, getScopeSecretariaInclude }

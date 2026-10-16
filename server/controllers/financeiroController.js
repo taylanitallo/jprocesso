@@ -1,5 +1,6 @@
 const { Op, fn, col, literal } = require('sequelize');
 const caixa = require('../services/caixaService');
+const { ensureSecretariaNome } = require('../utils/scopeFilter');
 
 const initializedSchemas = new Set();
 
@@ -135,8 +136,10 @@ const getDashboard = async (req, res) => {
     }
 
     // Restringe ao usuário não-admin a apenas sua secretaria
-    if (req.user.tipo !== 'admin' && req.user.secretariaId) {
-      if (req.user.secretariaNome) didFiltro.secretaria_sec1 = req.user.secretariaNome;
+    // (nome buscado no banco: o token renovado vinha sem ele e o filtro sumia)
+    if (req.user.tipo !== 'admin' && req.user.tipo !== 'jeos' && req.user.secretariaId) {
+      const nome = await ensureSecretariaNome(req);
+      if (nome) didFiltro.secretaria_sec1 = nome;
     }
 
     // Contagem de processos DID vinculados no período
