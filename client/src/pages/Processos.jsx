@@ -4,6 +4,7 @@ import BotaoExcluidos from '../components/lixeira/BotaoExcluidos'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useState, useCallback } from 'react'
 import api from '../services/api'
+import { useAuth } from '../context/AuthContext'
 import NumeroProcesso from '../components/NumeroProcesso'
 import {
   Plus, ChevronLeft, ChevronRight, ArrowRight,
@@ -43,6 +44,8 @@ const PRIO_INFO = {
 export default function Processos() {
   // Ações conforme o editor de permissões. Só "Ver" = sem botões de ação.
   const pode = usePode('processos')
+  const { user } = useAuth()
+  const podeVerTodos = ['admin', 'gestor', 'jeos'].includes(user?.tipo)
   const { subdomain } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const aba = searchParams.get('aba') || 'entrada'
@@ -58,6 +61,8 @@ export default function Processos() {
   const [secretariaId,   setSecretariaId]   = useState('')
   const [setorId,        setSetorId]        = useState('')
   const [usuarioId,      setUsuarioId]      = useState('')
+  // Caixa de entrada mostra só o que está com o usuário; admin/gestor podem ver todos da sua área
+  const [verTodos,       setVerTodos]       = useState(false)
   const [mostrarFiltros, setMostrarFiltros] = useState(false)
 
   // ── Filtros Aba Enviados ─────────────────────────────────────────────────
@@ -134,7 +139,7 @@ export default function Processos() {
 
   // ── Query principal: Caixa de Entrada ────────────────────────────────────
   const { data, isLoading } = useQuery(
-    ['processos', page, porPagina, search, status, prioridade, tipo, secretariaId, setorId, usuarioId],
+    ['processos', page, porPagina, search, status, prioridade, tipo, secretariaId, setorId, usuarioId, verTodos],
     async () => {
       const params = new URLSearchParams({ page, limit: porPagina })
       if (search)       params.append('search',       search)
@@ -144,6 +149,7 @@ export default function Processos() {
       if (secretariaId) params.append('secretariaId', secretariaId)
       if (setorId)      params.append('setorId',      setorId)
       if (usuarioId)    params.append('usuarioId',    usuarioId)
+      if (verTodos)     params.append('todos',        '1')
       const { data } = await api.get(`/processos?${params}`)
       return data
     }
@@ -251,6 +257,13 @@ export default function Processos() {
                 />
               </div>
 
+              {podeVerTodos && (
+                <label className="flex items-center gap-2 text-xs text-ink-600 whitespace-nowrap cursor-pointer select-none"
+                  title="Sem marcar, a caixa mostra só os processos que estão com você ou no seu setor sem responsável">
+                  <input type="checkbox" checked={verTodos} onChange={e => { setVerTodos(e.target.checked); reset() }} className="accent-brand-600" />
+                  Ver todos da minha área
+                </label>
+              )}
               <select
                 value={status}
                 onChange={(e) => { setStatus(e.target.value); reset() }}
@@ -570,9 +583,14 @@ export default function Processos() {
                         {(isUrgente || isAlta) && (
                           <span className={p.cls}>{p.label}</span>
                         )}
+                        {processo.aguardandoRecebimento && (
+                          <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-sm ring-1 ring-inset bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 ring-amber-200 dark:ring-amber-800/40">
+                            Aguardando recebimento
+                          </span>
+                        )}
                       </div>
 
-                      {/* Destinatário */}
+                      {/* Onde está agora */}
                       <div className="flex items-center flex-wrap gap-x-3 gap-y-0.5">
                         {processo.destinatario && (
                           <span className="flex items-center gap-1 text-[11px] text-ink-400">
@@ -657,6 +675,12 @@ function ProcessoCard({ processo, subdomain, onClickSecretaria, onClickSetor, on
             {processo.tipo_processo && (
               <span className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-sm ring-1 ring-inset ${TIPO_CLS[processo.tipo_processo] || 'bg-ink-50 text-ink-500 ring-ink-200'}`}>
                 {processo.tipo_processo}
+              </span>
+            )}
+            {/* Tramitado/devolvido e ainda não recebido: abrir e clicar "Receber processo" */}
+            {processo.status !== 'concluido' && ['tramite', 'devolucao'].includes(processo.ultimaTramitacao?.tipo) && (
+              <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-sm ring-1 ring-inset bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 ring-amber-200 dark:ring-amber-800/40">
+                Aguardando receber
               </span>
             )}
             {(isUrgente || isAlta) && (

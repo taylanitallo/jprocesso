@@ -633,13 +633,16 @@ const listProcessos = async (req, res) => {
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const tipoUsuario = req.user.tipo;
 
-    // Visibilidade por perfil (combinada com search via Op.and)
+    // Caixa de entrada: só o que está com o usuário — atribuído a ele, ou no setor dele
+    // sem pessoa definida. Quem tramitou deixa de ver (fica em Enviados, se criou).
+    // Administrador/gestor podem pedir a visão ampla (?todos=1), limitada pelo escopo.
+    const visaoAmpla = ['admin', 'gestor', 'jeos'].includes(tipoUsuario) && ['1', 'true'].includes(String(req.query.todos));
     let accessCond = null;
-    if (tipoUsuario === 'operacional') {
+    if (!visaoAmpla) {
       const userInfo = await User.findByPk(req.user.id, { attributes: ['id', 'setorId'] });
       const sId = userInfo?.setorId || null;
       const orCond = [{ usuario_atual_id: req.user.id }];
-      if (sId) orCond.push({ setor_atual_id: sId });
+      if (sId) orCond.push({ setor_atual_id: sId, usuario_atual_id: null });
       accessCond = { [Op.or]: orCond };
     }
 
@@ -656,8 +659,8 @@ const listProcessos = async (req, res) => {
     let scopeInclude = {}
     if (secretariaId) {
       scopeInclude = { where: { secretariaId }, required: true }
-    } else if (tipoUsuario !== 'operacional') {
-      // Operacional já tem filtro pessoal por setor/usuário; scope de secretaria se aplica a gestor e acima
+    } else if (visaoAmpla) {
+      // Caixa pessoal já é restrita; na visão ampla vale o escopo de secretaria da permissão
       scopeInclude = await getScopeSetorInclude(req, 'processos', 'ver')
     }
 
@@ -783,7 +786,8 @@ const getDashboardStats = async (req, res) => {
     // admin: todos os processos
 
     const orConditions = [{ usuario_atual_id: userId }];
-    if (setorId) orConditions.push({ setor_atual_id: setorId });
+    // Mesma regra da caixa de entrada: no setor só o que não está atribuído a outra pessoa
+    if (setorId) orConditions.push({ setor_atual_id: setorId, usuario_atual_id: null });
 
     const whereMinhasCaixa = {
       status: { [Op.notIn]: ['concluido', 'arquivado'] },
@@ -971,8 +975,16 @@ const listProcessosEnviados = async (req, res) => {
     } = req.query;
     const { Processo, Tramitacao, User, Setor, Secretaria } = req.models;
 
-    // Filtros aplicados ao processo
-    const processoWhere = {};
+    // Enviados: só processos que o usuário INICIOU e que agora estão com outra pessoa/setor
+    // (quem só participou vê o processo na caixa de entrada enquanto estiver com ele)
+    const eu = await User.findByPk(req.user.id, { attributes: ['setorId'] });
+    const processoWhere = {
+      criado_por_id: req.user.id,
+      [Op.not]: [{ [Op.or]: [
+        { usuario_atual_id: req.user.id },
+        ...(eu?.setorId ? [{ setor_atual_id: eu.setorId, usuario_atual_id: null }] : []),
+      ] }],
+    };
     if (status)     processoWhere.status          = status;
     if (tipo)       processoWhere.tipo_processo    = tipo;
     if (prioridade) processoWhere.prioridade       = prioridade;
@@ -1025,15 +1037,32 @@ const listProcessosEnviados = async (req, res) => {
       }
     });
 
+    // Destino = onde o processo está agora (pode já ter passado por outros setores)
     const processos = Array.from(processosMap.values()).map(item => ({
       ...item.processo.toJSON(),
-      destinatario: item.ultimaTramitacao.destinoSetor?.secretaria?.nome ||
+      destinatario: item.processo.setorAtual?.secretaria?.nome || item.processo.setorAtual?.nome ||
+                    item.ultimaTramitacao.destinoSetor?.secretaria?.nome ||
                     item.ultimaTramitacao.destinoSetor?.nome || 'Destino não identificado',
-      destinatarioSetor:   item.ultimaTramitacao.destinoSetor?.nome,
-      destinatarioUsuario: item.ultimaTramitacao.destinoUsuario?.nome,
+      destinatarioSetor:   item.processo.setorAtual?.nome || item.ultimaTramitacao.destinoSetor?.nome,
+      destinatarioUsuario: item.processo.usuarioAtual?.nome || item.ultimaTramitacao.destinoUsuario?.nome,
       dataEnvio:           item.ultimaTramitacao.data_hora,
       tipoTramitacao:      item.ultimaTramitacao.tipo_acao,
     })).sort((a, b) => new Date(b.dataEnvio) - new Date(a.dataEnvio));
+
+    // Ainda não recebido pelo destino (última movimentação do processo é trâmite/devolução)
+    if (processos.length) {
+      const ultimas = await Tramitacao.findAll({
+        where: { processo_id: { [Op.in]: processos.map(p => p.id) } },
+        attributes: ['processo_id', 'tipo_acao', 'data_hora'],
+        order: [['data_hora', 'DESC']],
+        raw: true,
+      });
+      const ultimaPor = {};
+      ultimas.forEach(t => { if (!ultimaPor[t.processo_id]) ultimaPor[t.processo_id] = t.tipo_acao; });
+      processos.forEach(p => {
+        p.aguardandoRecebimento = p.status !== 'concluido' && ['tramite', 'devolucao'].includes(ultimaPor[p.id]);
+      });
+    }
 
     res.json({ processos, total: processos.length, page: parseInt(page), limit: parseInt(limit) });
   } catch (error) {

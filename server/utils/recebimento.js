@@ -1,6 +1,8 @@
 // Processo tramitado/devolvido fica bloqueado para o destino até ser recebido:
-// quem está no setor (ou é o usuário) de destino só vê o conteúdo depois de clicar
-// "Receber processo". Admin e gestor não passam por essa trava.
+// quem está no setor (ou é o usuário) de destino só vê o conteúdo e só age (tramitar,
+// devolver, concluir, anexar) depois de clicar "Receber processo". Vale para todos,
+// inclusive administrador e gestor quando são o destino. Quem não é o destino (ex.:
+// administrador acompanhando outro setor) não é afetado.
 
 const TIPOS_PENDENTES = ['tramite', 'devolucao'];
 
@@ -12,7 +14,6 @@ const TIPOS_PENDENTES = ['tramite', 'devolucao'];
 async function situacaoRecebimento(req, processo) {
   const livre = { bloqueado: false, podeReceber: false, ultima: null };
   if (!processo || ['concluido', 'arquivado'].includes(processo.status)) return livre;
-  if (['admin', 'gestor'].includes(req.user?.tipo)) return livre;
 
   const { Tramitacao, User } = req.models;
   const eu = await User.findByPk(req.user.id, { attributes: ['id', 'setorId'] });
