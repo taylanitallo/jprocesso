@@ -174,10 +174,60 @@ const buscarMunicipiosPorEmail = async (req, res) => {
   }
 };
 
+// ── Gestor: administra só os usuários da própria secretaria ──────────────────
+// Não cria nem promove administradores e não concede permissão que ele mesmo não tem.
+const TIPOS_DO_GESTOR = ['gestor', 'operacional'];
+
+const ESCOPO_VER = { todas: 3, algumas: 2 }; // demais valores = só a própria secretaria
+const tudoDesligado = (v) => (v && typeof v === 'object' && !Array.isArray(v))
+  ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, Array.isArray(x) ? x : tudoDesligado(x)]))
+  : false;
+const limitarPermissoes = (novas, minhas) => {
+  if (!novas || typeof novas !== 'object' || Array.isArray(novas)) return novas;
+  const out = {};
+  for (const [k, v] of Object.entries(novas)) {
+    const meu = minhas && typeof minhas === 'object' ? minhas[k] : undefined;
+    if (Array.isArray(v) || k === '_v') out[k] = v;
+    else if (meu === false) out[k] = tudoDesligado(v);
+    else if (v && typeof v === 'object') out[k] = limitarPermissoes(v, meu);
+    else if (k === 'ver' && v !== false && (ESCOPO_VER[v] || 1) > (ESCOPO_VER[meu] || 1)) out[k] = 'propria';
+    else out[k] = v;
+  }
+  return out;
+};
+
+// Confere o pedido do gestor; devolve a mensagem de erro (ou null) e as permissões limitadas
+const conferirGestor = async (req, { alvo, tipo, secretariaId, setorId, permissoes }) => {
+  const { User, Setor } = req.models;
+  const eu = await User.findByPk(req.user.id, { attributes: ['secretariaId', 'permissoes'] });
+  const minhaSec = eu?.secretariaId ? String(eu.secretariaId) : null;
+  if (!minhaSec) return { erro: 'Gestor sem secretaria não pode administrar usuários' };
+  if (alvo) {
+    if (['admin', 'jeos'].includes(alvo.tipo)) return { erro: 'Gestor não altera administradores' };
+    if (String(alvo.secretariaId || '') !== minhaSec) return { erro: 'Gestor só administra usuários da própria secretaria' };
+  }
+  if (secretariaId !== undefined && String(secretariaId || '') !== minhaSec) {
+    return { erro: 'Gestor só cadastra usuários na própria secretaria' };
+  }
+  if (tipo !== undefined && !TIPOS_DO_GESTOR.includes(tipo)) return { erro: 'Gestor só cadastra gestores e operacionais' };
+  if (setorId) {
+    const setor = await Setor.findByPk(setorId, { attributes: ['secretariaId'] });
+    if (!setor || String(setor.secretariaId) !== minhaSec) return { erro: 'Setor não pertence à sua secretaria' };
+  }
+  return { erro: null, permissoes: permissoes === undefined ? undefined : limitarPermissoes(permissoes, eu.permissoes || {}) };
+};
+
 const register = async (req, res) => {
   try {
-    const { nome, nomeReduzido, email, senha, cpf, telefone, tipo, secretariaId, setorId, permissoes } = req.body;
+    const { nome, nomeReduzido, email, senha, cpf, telefone, tipo, secretariaId, setorId } = req.body;
+    let { permissoes } = req.body;
     const { User } = req.models;
+
+    if (req.user?.tipo === 'gestor') {
+      const r = await conferirGestor(req, { tipo: tipo || 'operacional', secretariaId: secretariaId ?? null, setorId, permissoes });
+      if (r.erro) return res.status(403).json({ error: r.erro });
+      permissoes = r.permissoes;
+    }
 
     // B-2: mínimo 8 chars, ao menos uma letra e um número
     const senhaRe = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
@@ -537,7 +587,8 @@ const listUsers = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { nome, nomeReduzido, email, cpf, telefone, tipo, secretariaId, setorId, permissoes, ativo, novaSenha } = req.body;
+    const { nome, nomeReduzido, email, cpf, telefone, tipo, secretariaId, setorId, ativo, novaSenha } = req.body;
+    let { permissoes } = req.body;
     const { User } = req.models;
     const { Op } = require('sequelize');
 
@@ -561,6 +612,12 @@ const updateUser = async (req, res) => {
     const user = await User.findByPk(id);
     if (!user) {
       return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    if (req.user?.tipo === 'gestor') {
+      const r = await conferirGestor(req, { alvo: user, tipo, secretariaId, setorId, permissoes });
+      if (r.erro) return res.status(403).json({ error: r.erro });
+      permissoes = r.permissoes;
     }
 
     // Validar unicidade de email (excluindo o próprio usuário)
@@ -621,6 +678,10 @@ const deleteUser = async (req, res) => {
     }
     if (user.id === req.user.id) {
       return res.status(400).json({ error: 'Você não pode excluir o próprio usuário.' });
+    }
+    if (req.user?.tipo === 'gestor') {
+      const r = await conferirGestor(req, { alvo: user });
+      if (r.erro) return res.status(403).json({ error: r.erro });
     }
 
     // Vai para os Excluídos: perde o acesso (ativo=false), mas o nome segue no

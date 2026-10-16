@@ -1,7 +1,7 @@
 ﻿import { Outlet, Link, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
-import { hasPerm, moduloHabilitado } from '../utils/permissions'
+import { hasPerm, moduloHabilitado, podeAdministrarUsuarios } from '../utils/permissions'
 import {
   Home, Building2, LogOut, Menu, X, Inbox, BarChart3, Settings,
   Users, Package, Sun, Moon, ChevronRight, ChevronLeft, DollarSign, ScrollText,
@@ -161,14 +161,14 @@ export default function Layout() {
   ]
 
   const adminMenuItems = [
-    { path: `/${subdomain}/organizacao`,   icon: Building2,    label: 'Organização',   permissaoAny: ['administracao.gerenciar_secretarias', 'administracao.gerenciar_usuarios'] },
+    { path: `/${subdomain}/organizacao`,   icon: Building2,    label: 'Organização',   permitido: () => hasPerm(user, 'administracao', 'gerenciar_secretarias') || podeAdministrarUsuarios(user) },
     { path: `/${subdomain}/relatorios`,    icon: BarChart3,    label: 'Relatórios',    permissao: 'administracao.visualizar_relatorios' },
     { path: `/${subdomain}/configuracoes`, icon: Settings,     label: 'Configurações', permissao: 'administracao.gerenciar_configuracoes' },
     { path: `/${subdomain}/registros`,     icon: ClipboardList, label: 'Registros',   permissao: 'administracao.visualizar_registros' },
   ]
 
   const visibleAdminMenuItems = adminMenuItems.filter((item) => (
-    item.permissaoAny ? temAlgumaPermissao(item.permissaoAny) : temPermissao(item.permissao)
+    item.permitido ? item.permitido() : item.permissaoAny ? temAlgumaPermissao(item.permissaoAny) : temPermissao(item.permissao)
   ))
 
   const isActive = (path, exact = false) => {

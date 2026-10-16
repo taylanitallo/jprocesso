@@ -19,6 +19,11 @@ export const hasPerm = (user, ...path) => {
   return obj !== false
 }
 
+// Organização › Usuários: o administrador precisa de Administração › Usuários; o gestor
+// administra os usuários da própria secretaria pelo papel (servidor: authController › conferirGestor)
+export const podeAdministrarUsuarios = (user) =>
+  user?.tipo === 'gestor' || hasPerm(user, 'administracao', 'gerenciar_usuarios')
+
 // Módulo contratado pelo município (configuracoes.modulos_habilitados; sem a lista = todos)
 export const moduloHabilitado = (tenant, modulo) => {
   const lista = tenant?.configuracoes?.modulos_habilitados

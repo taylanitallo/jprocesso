@@ -1,7 +1,10 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
-import { hasPerm } from './utils/permissions'
+import { hasPerm, podeAdministrarUsuarios } from './utils/permissions'
+
+// Organização: Gerenciar Organização, ou Usuários (o gestor entra pelo papel, para a própria secretaria)
+const podeAbrirOrganizacao = (u) => hasPerm(u, 'administracao', 'gerenciar_secretarias') || podeAdministrarUsuarios(u)
 import AuthProvider from './context/AuthContext'
 import ThemeProvider from './context/ThemeContext'
 import { setTimbrado } from './utils/timbradoStore'
@@ -101,9 +104,13 @@ function PrivateRoute({ children, requireAdmin = false }) {
   return children
 }
 
-function PermissionRoute({ children, permissao, anyOf }) {
+function PermissionRoute({ children, permissao, anyOf, permitido }) {
   const { user } = useAuth()
   const subdomain = window.location.pathname.split('/')[1]
+  if (permitido) {
+    if (!permitido(user)) return <Navigate to={`/${subdomain}`} replace />
+    return children
+  }
   if (anyOf) {
     const permitido = anyOf.some(p => hasPerm(user, ...p.split('.')))
     if (!permitido) return <Navigate to={`/${subdomain}`} replace />
@@ -199,8 +206,8 @@ function App() {
                 <Route path="arquivo" element={<PermissionRoute permissao="arquivo.acessar"><Arquivo /></PermissionRoute>} />
 
                 {/* Organização */}
-                <Route path="organizacao"      element={<PermissionRoute anyOf={['administracao.gerenciar_secretarias', 'administracao.gerenciar_usuarios']}><Secretarias /></PermissionRoute>} />
-                <Route path="organizacao/:tab" element={<PermissionRoute anyOf={['administracao.gerenciar_secretarias', 'administracao.gerenciar_usuarios']}><Secretarias /></PermissionRoute>} />
+                <Route path="organizacao"      element={<PermissionRoute permitido={podeAbrirOrganizacao}><Secretarias /></PermissionRoute>} />
+                <Route path="organizacao/:tab" element={<PermissionRoute permitido={podeAbrirOrganizacao}><Secretarias /></PermissionRoute>} />
                 <Route path="secretarias"      element={<OrganizacaoRedirect />} />
 
                 {/* Tesouraria */}

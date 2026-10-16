@@ -56,6 +56,11 @@ export default function Usuarios() {
   const pode = usePode('organizacao', 'usuarios');
   // CPF só muda pelas mãos do Administrador Jeos ou de Administrador com "Alterar" em Usuários
   const podeAlterarCpf = ['jeos', 'admin'].includes(user?.tipo) && pode('editar');
+  // Gestor: só usuários da própria secretaria, sem criar nem mexer em administradores
+  // (o servidor confere o mesmo em authController › conferirGestor)
+  const ehGestor = user?.tipo === 'gestor';
+  const minhaSecretariaId = user?.secretaria?.id || user?.secretariaId || '';
+  const podeMexer = (u) => !ehGestor || !['admin', 'jeos'].includes(u.tipo);
   const [permUsuario, setPermUsuario] = useState(null);   // janela de Permissões
   const [autUsuario, setAutUsuario] = useState(null);     // janela de configurar autenticador
   const [showModal, setShowModal] = useState(false);
@@ -154,7 +159,7 @@ export default function Usuarios() {
             email,
             senha,
             tipo,
-            secretariaId: secretaria?.id || null,
+            secretariaId: ehGestor ? minhaSecretariaId : (secretaria?.id || null),
             setorId: setor?.id || null,
             permissoes: DEFAULT_PERMISSOES(),
           });
@@ -225,7 +230,7 @@ export default function Usuarios() {
     telefone: '',
     senha: '',
     tipo: 'operacional',
-    secretariaId: '',
+    secretariaId: ehGestor ? minhaSecretariaId : '',
     setorId: '',
     permissoes: DEFAULT_PERMISSOES(),
   });
@@ -242,7 +247,7 @@ export default function Usuarios() {
       cpf: String(ag.cpf || '').replace(/\D/g, '') || prev.cpf,
       email: ag.email || prev.email,
       telefone: ag.telefone || prev.telefone,
-      ...(ag.secretaria_id ? { secretariaId: ag.secretaria_id, setorId: '' } : {}),
+      ...(ag.secretaria_id && !ehGestor ? { secretariaId: ag.secretaria_id, setorId: '' } : {}),
     }));
   };
   const cpfsUsuarios = new Set(usuarios.map(u => String(u.cpf || '').replace(/\D/g, '')).filter(Boolean));
@@ -268,7 +273,7 @@ export default function Usuarios() {
         email: '',
         senha: '',
         tipo: 'operacional',
-        secretariaId: '',
+        secretariaId: ehGestor ? minhaSecretariaId : '',
         setorId: '',
         permissoes: DEFAULT_PERMISSOES(),
       });
@@ -405,6 +410,8 @@ export default function Usuarios() {
     { value: 'gestor', label: 'Gestor', color: 'blue' },
     { value: 'operacional', label: 'Operacional', color: 'green' },
   ];
+  const tiposCadastro = ehGestor ? tiposUsuario.filter(t => t.value !== 'admin') : tiposUsuario;
+  const secretariasCadastro = ehGestor ? secretarias.filter(s => String(s.id) === String(minhaSecretariaId)) : secretarias;
 
 
   return (
@@ -561,8 +568,8 @@ export default function Usuarios() {
                 <td className="px-4 py-2 whitespace-nowrap">
                   <button
                     type="button"
-                    onClick={() => pode('editar') && handleToggleStatus(usuario)}
-                    disabled={!pode('editar')}
+                    onClick={() => pode('editar') && podeMexer(usuario) && handleToggleStatus(usuario)}
+                    disabled={!pode('editar') || !podeMexer(usuario)}
                     title={pode('editar') ? 'Clique para ativar/inativar' : undefined}
                     className="flex items-center gap-1 disabled:cursor-default"
                   >
@@ -581,12 +588,12 @@ export default function Usuarios() {
                 </td>
                 <td className="px-4 py-2 whitespace-nowrap text-right text-sm font-medium">
                   <div className="inline-flex items-center gap-3">
-                    {pode('editar') && (
+                    {pode('editar') && podeMexer(usuario) && (
                       <button onClick={() => handleEdit(usuario)} title="Alterar dados" className="text-brand-600 hover:text-info-900">
                         <Edit2 className="h-4 w-4" />
                       </button>
                     )}
-                    {pode('permissoes') && usuario.id !== user?.id && (
+                    {pode('permissoes') && usuario.id !== user?.id && podeMexer(usuario) && (
                       <button
                         onClick={() => setPermUsuario({
                           usuario,
@@ -613,7 +620,7 @@ export default function Usuarios() {
                         <QrCode className="h-4 w-4" />
                       </button>
                     ))}
-                    {pode('excluir') && (
+                    {pode('excluir') && podeMexer(usuario) && (
                       <button onClick={() => handleDelete(usuario)} title="Excluir" className="text-danger-600 hover:text-danger-900">
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -729,14 +736,14 @@ export default function Usuarios() {
                   <div>
                     <label className="block text-sm font-medium text-ink-700 mb-1">Tipo de Usuário *</label>
                     <select value={formData.tipo} onChange={(e) => setFormData({ ...formData, tipo: e.target.value })} className="input-field">
-                      {tiposUsuario.map(tipo => (<option key={tipo.value} value={tipo.value}>{tipo.label}</option>))}
+                      {tiposCadastro.map(tipo => (<option key={tipo.value} value={tipo.value}>{tipo.label}</option>))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-ink-700 mb-1">Secretaria *</label>
                     <select value={formData.secretariaId} onChange={(e) => setFormData({ ...formData, secretariaId: e.target.value, setorId: '' })} required className="input-field">
                       <option value="">Selecione...</option>
-                      {secretarias.map(sec => (<option key={sec.id} value={sec.id}>{sec.sigla} - {sec.nome}</option>))}
+                      {secretariasCadastro.map(sec => (<option key={sec.id} value={sec.id}>{sec.sigla} - {sec.nome}</option>))}
                     </select>
                   </div>
                   <div>
@@ -820,14 +827,14 @@ export default function Usuarios() {
                   <div>
                     <label className="block text-sm font-medium text-ink-700 mb-1">Tipo de Usuário *</label>
                     <select value={editData.tipo} onChange={(e) => setEditData({ ...editData, tipo: e.target.value })} className="input-field">
-                      {tiposUsuario.map(tipo => (<option key={tipo.value} value={tipo.value}>{tipo.label}</option>))}
+                      {tiposCadastro.map(tipo => (<option key={tipo.value} value={tipo.value}>{tipo.label}</option>))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-ink-700 mb-1">Secretaria</label>
                     <select value={editData.secretariaId} onChange={(e) => setEditData({ ...editData, secretariaId: e.target.value, setorId: '' })} className="input-field">
                       <option value="">Selecione...</option>
-                      {secretarias.map(sec => (<option key={sec.id} value={sec.id}>{sec.sigla} - {sec.nome}</option>))}
+                      {secretariasCadastro.map(sec => (<option key={sec.id} value={sec.id}>{sec.sigla} - {sec.nome}</option>))}
                     </select>
                   </div>
                   <div>
