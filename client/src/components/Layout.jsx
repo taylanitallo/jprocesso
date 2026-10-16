@@ -26,7 +26,13 @@ export default function Layout() {
   const [nomeEntidade, setNomeEntidade] = useState('')
   const [moduloBloqueado, setModuloBloqueado] = useState(null)
   const [profileOpen, setProfileOpen] = useState(false)
-  const [showJAI, setShowJAI] = useState(true)
+  // Ayla IA começa desligada; quem ligar no menu do perfil fica com ela ligada (por navegador)
+  const [showJAI, setShowJAI] = useState(() => {
+    try { return localStorage.getItem('aylaAtiva') === 'true' } catch { return false }
+  })
+  useEffect(() => {
+    try { localStorage.setItem('aylaAtiva', String(showJAI)) } catch { /* sem storage: só nesta sessão */ }
+  }, [showJAI])
   const [geoLocation, setGeoLocation] = useState('')
   const [meuIp, setMeuIp] = useState('')
   const [atualizando, setAtualizando] = useState(false)
