@@ -17,6 +17,7 @@ const {
   updateEntidade,
   listAgentes,
   createAgente,
+  importarAgentes,
   updateAgente,
   deleteAgente,
 } = require('../controllers/organizacaoController');
@@ -64,6 +65,8 @@ router.put('/entidade', tenantMiddleware, requireTenant, authenticate, authorize
 
 router.get('/agentes', tenantMiddleware, requireTenant, authenticate, listAgentes);
 router.post('/agentes', tenantMiddleware, requireTenant, authenticate, adminOrg, perm('agentes', 'criar'), createAgente);
+// Importação por planilha: só administradores e gestores
+router.post('/agentes/importar', tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), adminOrg, perm('agentes', 'criar'), perm('agentes', 'importar'), importarAgentes);
 router.put('/agentes/:id', tenantMiddleware, requireTenant, authenticate, adminOrg, perm('agentes', 'editar'), updateAgente);
 router.delete('/agentes/:id', tenantMiddleware, requireTenant, authenticate, adminOrg, perm('agentes', 'excluir'), deleteAgente);
 

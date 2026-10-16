@@ -383,6 +383,111 @@ const createAgente = async (req, res) => {
   }
 };
 
+// ── Importar agentes (planilha do modelo) ────────────────────────────────────
+// Corpo: { agentes: [{ nome, nome_reduzido, cpf, nascimento, telefone, email,
+// matricula, cargo, secretaria }] } — secretaria = sigla ou nome. Responde linha a
+// linha. Gestor só importa na própria secretaria (vazio = a dele).
+const dataDaPlanilha = (v) => {
+  if (v === undefined || v === null || String(v).trim() === '') return { ok: true, valor: null };
+  if (typeof v === 'number') { // data serial do Excel
+    const d = new Date(Math.round((v - 25569) * 86400000));
+    return { ok: true, valor: d.toISOString().slice(0, 10) };
+  }
+  const t = String(v).trim();
+  let m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return { ok: true, valor: `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` };
+  m = t.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return { ok: true, valor: `${m[1]}-${m[2]}-${m[3]}` };
+  return { ok: false };
+};
+
+const importarAgentes = async (req, res) => {
+  try {
+    const linhas = Array.isArray(req.body?.agentes) ? req.body.agentes : null;
+    if (!linhas || !linhas.length) return res.status(400).json({ error: 'Planilha sem agentes' });
+    if (linhas.length > 2000) return res.status(400).json({ error: 'Máximo de 2000 agentes por planilha' });
+
+    const schema = req.tenant.schema;
+    const db = req.tenantDb;
+    const [secretarias] = await db.query(`SELECT id, nome, sigla FROM "${schema}".secretarias`);
+    const acharSecretaria = (txt) => {
+      const t = String(txt || '').trim().toLowerCase();
+      if (!t) return null;
+      return secretarias.find(s => (s.sigla || '').toLowerCase() === t || (s.nome || '').toLowerCase() === t) || undefined;
+    };
+
+    let minhaSec = null;
+    if (req.user?.tipo === 'gestor') {
+      const eu = await req.models.User.findByPk(req.user.id, { attributes: ['secretariaId'] });
+      minhaSec = eu?.secretariaId ? String(eu.secretariaId) : null;
+      if (!minhaSec) return res.status(403).json({ error: 'Gestor sem secretaria não pode importar agentes' });
+    }
+
+    const [existentes] = await db.query(`SELECT cpf FROM "${schema}".agentes WHERE excluido_em IS NULL AND cpf IS NOT NULL`);
+    const cpfsUsados = new Set(existentes.map(r => String(r.cpf).replace(/\D/g, '')).filter(Boolean));
+
+    const resultados = [];
+    for (let i = 0; i < linhas.length; i++) {
+      const l = linhas[i] || {};
+      const linha = i + 2; // linha 1 = cabeçalho
+      const nome = valorAgente('nome', l.nome);
+      const falha = (msg) => resultados.push({ linha, nome: nome || '—', status: 'erro', msg });
+      if (!nome) { falha('Nome obrigatório'); continue; }
+
+      const cpf = l.cpf ? String(l.cpf).replace(/\D/g, '').padStart(11, '0') : null;
+      if (cpf && cpf.length !== 11) { falha('CPF deve ter 11 dígitos'); continue; }
+      if (cpf && cpfsUsados.has(cpf)) { falha('CPF já cadastrado'); continue; }
+
+      const nasc = dataDaPlanilha(l.nascimento);
+      if (!nasc.ok) { falha('Nascimento inválido (use dd/mm/aaaa)'); continue; }
+
+      let secId = null;
+      if (String(l.secretaria || '').trim()) {
+        const sec = acharSecretaria(l.secretaria);
+        if (!sec) { falha(`Secretaria "${l.secretaria}" não encontrada`); continue; }
+        secId = String(sec.id);
+      }
+      if (minhaSec) {
+        if (secId && secId !== minhaSec) { falha('Gestor só importa agentes da própria secretaria'); continue; }
+        secId = minhaSec;
+      }
+
+      const dados = {
+        nome,
+        nome_reduzido: valorAgente('nome_reduzido', l.nome_reduzido),
+        cpf,
+        nascimento: nasc.valor,
+        telefone: valorAgente('telefone', l.telefone),
+        email: valorAgente('email', l.email),
+        matricula: valorAgente('matricula', l.matricula),
+        cargo: valorAgente('cargo', l.cargo),
+        secretaria_id: secId,
+      };
+      try {
+        await db.query(
+          `INSERT INTO "${schema}".agentes (${Object.keys(dados).join(', ')}, ativo, created_at, updated_at)
+           VALUES (${Object.keys(dados).map(c => `:${c}`).join(', ')}, true, NOW(), NOW())`,
+          { replacements: dados }
+        );
+        if (cpf) cpfsUsados.add(cpf);
+        resultados.push({ linha, nome, status: 'ok', msg: 'Importado' });
+      } catch (err) {
+        console.error('importarAgentes linha', linha, err.message);
+        falha('Erro ao gravar');
+      }
+    }
+
+    res.json({
+      importados: resultados.filter(r => r.status === 'ok').length,
+      erros: resultados.filter(r => r.status === 'erro').length,
+      resultados,
+    });
+  } catch (err) {
+    console.error('importarAgentes:', err);
+    res.status(500).json({ error: 'Erro ao importar agentes' });
+  }
+};
+
 // ── Atualizar agente ─────────────────────────────────────────────────────────
 // Só altera os campos enviados: um campo fora do formulário (ex.: secretaria)
 // não é apagado ao salvar.
@@ -476,6 +581,7 @@ module.exports = {
   updateEntidade,
   listAgentes,
   createAgente,
+  importarAgentes,
   updateAgente,
   deleteAgente,
   listSecretariasPublico,

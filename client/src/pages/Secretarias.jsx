@@ -11,6 +11,7 @@ import FilterBar from '../components/ui/FilterBar';
 import ConfirmModal from '../components/ui/ConfirmModal';
 import LoadingBar from '../components/LoadingBar';
 import BotaoExcluidos from '../components/lixeira/BotaoExcluidos';
+import ImportarAgentes from '../components/agentes/ImportarAgentes';
 import { Paginacao, usePorPagina } from '../components/ui';
 
 const Usuarios = lazy(() => import('./Usuarios'));
@@ -1153,6 +1154,10 @@ export default function Secretarias() {
             <div className="mr-auto">
               <BotaoExcluidos entidade="agentes" rotulo="Agentes excluídos" onAlterado={fetchSecretarias} />
             </div>
+            {/* Importar por planilha: só administradores e gestores */}
+            {pAg('criar') && pAg('importar') && ['admin', 'gestor', 'jeos'].includes(user?.tipo) && (
+              <ImportarAgentes secretarias={secretarias} onImportado={fetchSecretarias} />
+            )}
             {pAg('criar') && (
               <button
                 onClick={() => { setSelectedAgente(null); openModalAgente(); }}

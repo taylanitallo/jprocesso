@@ -120,7 +120,8 @@ export const MODULOS = [
     abas: [
       { key: 'entidade',     label: 'Entidade',              acoes: [VER, ALTERAR], escopo: false },
       { key: 'secretarias',  label: 'Secretarias e Setores', acoes: [...CRUD_LIXEIRA], escopo: false },
-      { key: 'agentes',      label: 'Cadastro de Agentes',   acoes: [...CRUD_LIXEIRA], escopo: false },
+      // Importar planilha: só administradores e gestores (e precisa de Incluir)
+      { key: 'agentes',      label: 'Cadastro de Agentes',   acoes: [...CRUD, { key: 'importar', label: 'Importar planilha' }, ...LIXEIRA], escopo: false },
       { key: 'responsaveis', label: 'Responsáveis',          acoes: CRUD, escopo: false },
       { key: 'usuarios',     label: 'Usuários',              escopo: false, acoes: [
         ...CRUD,
