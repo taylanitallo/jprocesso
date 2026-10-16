@@ -51,8 +51,9 @@ function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
   })
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-surface rounded-2xl shadow-2xl w-full flex flex-col" style={{ maxWidth: '1100px', maxHeight: '90vh' }}>
+    // Tela cheia (toda a área disponível)
+    <div className="fixed inset-0 z-[60] flex bg-black/60 p-2 sm:p-3">
+      <div className="bg-surface rounded-2xl shadow-2xl w-full h-full flex flex-col overflow-hidden">
 
         {/* Cabeçalho */}
         <div className="flex items-center justify-between bg-ink-900 px-5 py-3.5 rounded-t-2xl shrink-0">
@@ -318,8 +319,9 @@ function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-surface rounded-2xl shadow-2xl w-full flex flex-col" style={{ maxWidth: '560px' }}>
+    // Tela cheia (toda a área disponível); o conteúdo rola se não couber
+    <div className="fixed inset-0 z-[60] flex bg-black/60 p-2 sm:p-3">
+      <div className="bg-surface rounded-2xl shadow-2xl w-full h-full flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between bg-ink-900 px-5 py-3.5 rounded-t-2xl">
           <div className="flex items-center gap-3">
@@ -333,7 +335,7 @@ function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
           </button>
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="p-5 space-y-4 flex-1 overflow-y-auto">
           {/* Lote + Nº Item */}
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -449,7 +451,7 @@ function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
         </div>
 
         {/* Footer */}
-        <div className="px-5 pb-5 flex items-center justify-between gap-3">
+        <div className="px-5 py-4 flex items-center justify-between gap-3 shrink-0 border-t border-ink-100">
           <button onClick={onClose}
             className="px-4 py-2 text-sm rounded-xl border border-ink-200 text-ink-600 hover:bg-ink-50 transition-colors">
             Cancelar
