@@ -758,7 +758,9 @@ export default function Secretarias() {
       const sec = secretarias.find(s => s.id === formResp.secretaria_id);
       if (!sec) return;
       const responsaveis = [...(sec.responsaveis || [])];
-      const novoResp = { agente_id: formResp.agente_id, nome: formResp.nome, cargo: formResp.cargo, data_inicio: formResp.data_inicio, data_fim: formResp.data_fim, amparo: formResp.amparo };
+      // Grava sempre o nome (o contrato monta a lista de fiscais por ele)
+      const ag = formResp.agente_id ? agentes.find(a => String(a.id) === String(formResp.agente_id)) : null;
+      const novoResp = { agente_id: formResp.agente_id, nome: formResp.nome || ag?.nome || '', cargo: formResp.cargo, data_inicio: formResp.data_inicio, data_fim: formResp.data_fim, amparo: formResp.amparo };
       if (editingResp) {
         responsaveis[editingResp.index] = novoResp;
       } else {
@@ -2179,7 +2181,8 @@ export default function Secretarias() {
                 <select
                   value={formResp.agente_id}
                   onChange={e => {
-                    const ag = agentes.find(a => a.id === e.target.value);
+                    // id do agente é número; o valor do <select> é texto
+                    const ag = agentes.find(a => String(a.id) === String(e.target.value));
                     setFormResp(p => ({ ...p, agente_id: e.target.value, nome: ag ? ag.nome : p.nome }));
                   }}
                   className="input-field"

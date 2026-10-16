@@ -17,7 +17,7 @@ import { setPDFLoading } from '../../utils/pdfLoadingStore'
 import { applyTimbradoToPage } from '../../utils/timbradoStore'
 import { getMargens } from '../../utils/margensStore'
 import {
-  SectionCard, PremiumInput, PremiumTextarea,
+  SectionCard, PremiumInput, PremiumTextarea, descricaoComEspecificacao,
 } from './ContratosShared'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -596,7 +596,7 @@ function ItemRow({ item, idx, onChange, onRemove, onConfirm, onEdit, editing, re
             />
             <datalist id={`catalogo-list-${idx}`}>
               {catalogoItens.map(c => (
-                <option key={c.id} value={c.descricao} data-id={c.id} />
+                <option key={c.id} value={descricaoComEspecificacao(c)} data-id={c.id} />
               ))}
             </datalist>
           </>
@@ -782,7 +782,8 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
       arr[idx] = { ...arr[idx], [k]: v }
       // Autocomplete do catálogo
       if (k === 'descricao') {
-        const found = catalogoItens.find(c => c.descricao === v)
+        // Catálogo: descrição + especificação num campo só (igual ao contrato)
+        const found = catalogoItens.find(c => descricaoComEspecificacao(c) === v || c.descricao === v)
         if (found) {
           arr[idx].item_id = found.id
           arr[idx].unidade = found.unidade_medida || ''

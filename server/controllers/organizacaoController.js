@@ -63,6 +63,19 @@ const listSecretarias = async (req, res) => {
   }
 };
 
+// Responsável vinculado a um agente grava também o nome (o contrato monta a lista de
+// fiscais pelo nome; antes ele podia ficar em branco)
+const completarNomesResponsaveis = async (req, responsaveis) => {
+  if (!Array.isArray(responsaveis)) return responsaveis;
+  const ids = responsaveis.filter(r => r && !String(r.nome || '').trim() && r.agente_id).map(r => String(r.agente_id));
+  if (!ids.length) return responsaveis;
+  const [rows] = await req.tenantDb.query(
+    `SELECT id, nome FROM "${req.tenant.schema}".agentes WHERE id::text IN (:ids)`, { replacements: { ids } }
+  ).catch(() => [[]]);
+  const nomes = new Map(rows.map(a => [String(a.id), a.nome]));
+  return responsaveis.map(r => (r && !String(r.nome || '').trim() && nomes.get(String(r.agente_id))) ? { ...r, nome: nomes.get(String(r.agente_id)) } : r);
+};
+
 const updateSecretaria = async (req, res) => {
   try {
     const { id } = req.params;
@@ -80,7 +93,7 @@ const updateSecretaria = async (req, res) => {
     }
 
     const updateData = { nome, sigla, descricao, ativo };
-    if (responsaveis    !== undefined) updateData.responsaveis    = responsaveis;
+    if (responsaveis    !== undefined) updateData.responsaveis    = await completarNomesResponsaveis(req, responsaveis);
     if (data_inicio     !== undefined) updateData.data_inicio     = data_inicio   || null;
     if (data_fim        !== undefined) updateData.data_fim        = data_fim      || null;
     if (email           !== undefined) updateData.email           = email         || null;

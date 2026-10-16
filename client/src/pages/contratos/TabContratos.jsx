@@ -16,7 +16,7 @@ import { retanguloEmCss } from '../../utils/escalaTela'
 import {
   MODALIDADES, TIPOS_OBJETO,
   VigenciaProgress, SectionCard, ModalStepper, PremiumInput,
-  PremiumSelect, PremiumTextarea, ViewField, PortalDropdown
+  PremiumSelect, PremiumTextarea, ViewField, PortalDropdown, descricaoComEspecificacao
 } from './ContratosShared'
 
 
@@ -228,6 +228,20 @@ const TIPOS_CONTRATO   = ['CONTRATO','ATA DE REGISTRO DE PREÇO','TERMO ADITIVO'
 // ══════════════════════════════════════════════════════════════════════════════
 //  MODAL: ITEM DO CONTRATO
 // ══════════════════════════════════════════════════════════════════════════════
+// Compara nomes de secretaria sem maiúscula/acento ("Secretaria de Educação" = "SECRETARIA DE EDUCAÇÃO")
+const chaveTexto = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase()
+
+// Nomeação do responsável (data_inicio..data_fim) cobre algum dia da vigência do contrato.
+// Sem vigência informada, vale a data de assinatura ou hoje.
+const nomeacaoCobreVigencia = (r, f) => {
+  if (!r?.data_inicio) return false
+  const dia = (d) => (d ? new Date(String(d).slice(0, 10) + 'T00:00:00') : null)
+  const ini = dia(r.data_inicio), fim = dia(r.data_fim)
+  const vIni = dia(f.vigencia_inicio || f.data_assinatura) || new Date(new Date().toDateString())
+  const vFim = dia(f.vigencia_fim) || vIni
+  return ini <= vFim && (!fim || fim >= vIni)
+}
+
 // Item distribuído por setor/local (ex.: locação de 4 impressoras — 3 na Secretaria e 1
 // na Biblioteca — por 12 meses): Quantidade = meses (a unidade do contrato), "Valor de
 // cada" = preço de uma impressora/mês. Média mensal = valor de cada × total distribuído
@@ -283,8 +297,10 @@ function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
   }).slice(0, 10)
 
   const selecionarCatalogo = (i) => {
-    setForm(p => ({ ...p, item_id: i.id, descricao: i.descricao, unidade: i.unidade_medida || '' }))
-    setBusca(i.descricao)
+    // Descrição + especificação do catálogo num campo só (segue para ordens e DID)
+    const desc = descricaoComEspecificacao(i)
+    setForm(p => ({ ...p, item_id: i.id, descricao: desc, unidade: i.unidade_medida || '' }))
+    setBusca(desc)
     setDrop(false)
   }
 
@@ -524,9 +540,9 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
         setSecretarias(lista)
         // Se editando, re-selecionar secretaria salva
         if (contrato?.secretaria) {
-          const encontrada = lista.find(s =>
-            s.sigla === contrato.secretaria || s.nome === contrato.secretaria
-          )
+          // Contratos importados gravam "Secretaria de…"; o cadastro, "SECRETARIA DE…"
+          const alvo = chaveTexto(contrato.secretaria)
+          const encontrada = lista.find(s => chaveTexto(s.sigla) === alvo || chaveTexto(s.nome) === alvo)
           if (encontrada) setSecSel(encontrada)
         }
       })
@@ -544,47 +560,33 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
     ).slice(0, 12)
   })()
 
-  // ── Fiscais disponíveis na secretaria selecionada, classificados por vigência ─
+  // ── Fiscais da secretaria (aba Organização › Responsáveis) ──────────────────
+  // Quem tem cargo de fiscal vem primeiro (se houver, só eles). Vale o fiscal cuja
+  // nomeação cobre algum dia da vigência do contrato (pode ter sido nomeado depois
+  // do início). Responsável sem nome não entra.
   const fiscaisClassificados = (() => {
     if (!secSel) return []
-    const d = form.vigencia_inicio || form.data_assinatura || ''
-    const ref = d ? new Date(d + 'T00:00:00') : new Date()
-    return (secSel.responsaveis || []).map(r => {
-      const ini = r.data_inicio ? new Date(r.data_inicio + 'T00:00:00') : null
-      const fim = r.data_fim    ? new Date(r.data_fim    + 'T00:00:00') : null
-      return { ...r, vigente: !!ini && ref >= ini && (!fim || ref <= fim) }
-    })
+    const comNome = (secSel.responsaveis || []).filter(r => String(r.nome || '').trim())
+    const fiscais = comNome.filter(r => /fiscal/i.test(r.cargo || ''))
+    return (fiscais.length ? fiscais : comNome).map(r => ({ ...r, vigente: nomeacaoCobreVigencia(r, form) }))
   })()
 
-  // Limpa o fiscal se a data de vigência mudar e ele sair do período de nomeação
+  // Limpa o fiscal se a vigência mudar e a nomeação dele não cobrir mais o período
   useEffect(() => {
     if (!secSel || !form.fiscal) return
-    const d = form.vigencia_inicio || form.data_assinatura || ''
-    const ref = d ? new Date(d + 'T00:00:00') : new Date()
-    const ainda = (secSel.responsaveis || []).some(r => {
-      const label = r.nome
-      if (label !== form.fiscal) return false
-      const ini = r.data_inicio ? new Date(r.data_inicio + 'T00:00:00') : null
-      const fim = r.data_fim    ? new Date(r.data_fim    + 'T00:00:00') : null
-      return !!ini && ref >= ini && (!fim || ref <= fim)
-    })
+    const ainda = (secSel.responsaveis || []).some(r => r.nome === form.fiscal && nomeacaoCobreVigencia(r, form))
     if (!ainda) set('fiscal', '')
-  }, [form.vigencia_inicio, form.data_assinatura, secSel])
+  }, [form.vigencia_inicio, form.vigencia_fim, form.data_assinatura, secSel])
 
   const selecionarSecretaria = (s) => {
     setSecSel(s)
     setBuscaSec(s.nome)
     set('secretaria', s.nome)
     setDropdownSec(false)
-    // auto-seleciona o primeiro fiscal dentro do período de vigência
-    const d = form.vigencia_inicio || form.data_assinatura || ''
-    const ref = d ? new Date(d + 'T00:00:00') : new Date()
-    const vigentes = (s.responsaveis || []).filter(r => {
-      if (!r.data_inicio) return false
-      const ini = new Date(r.data_inicio + 'T00:00:00')
-      const fim = r.data_fim ? new Date(r.data_fim + 'T00:00:00') : null
-      return ref >= ini && (!fim || ref <= fim)
-    })
+    // auto-seleciona o primeiro fiscal (cargo de fiscal) cuja nomeação cobre a vigência
+    const comNome = (s.responsaveis || []).filter(r => String(r.nome || '').trim())
+    const fiscais = comNome.filter(r => /fiscal/i.test(r.cargo || ''))
+    const vigentes = (fiscais.length ? fiscais : comNome).filter(r => nomeacaoCobreVigencia(r, form))
     set('fiscal', vigentes.length >= 1 ? vigentes[0].nome : '')
   }
 
@@ -666,7 +668,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
       idx: null,
       data: {
         item_id:        item.id,
-        descricao:      item.descricao,
+        descricao:      descricaoComEspecificacao(item),
         unidade:        item.unidade_medida || '',
         lote:           '',
         codigo_item:    '',
@@ -702,12 +704,12 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
       arr[idx] = {
         ...arr[idx],
         item_id:   item.id,
-        descricao: item.descricao,
+        descricao: descricaoComEspecificacao(item),
         unidade:   item.unidade_medida || '',
       }
       return arr
     })
-    setItemBusca(p => ({ ...p, [idx]: item.descricao }))
+    setItemBusca(p => ({ ...p, [idx]: descricaoComEspecificacao(item) }))
     setItemDrop(null)
   }
 
@@ -1022,10 +1024,10 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                       <div className="flex items-center gap-2 min-w-0">
                         <PremiumSelect value={form.fiscal} onChange={e => set('fiscal', e.target.value)} disabled={!secSel}
                           className={!secSel ? 'opacity-50 cursor-not-allowed' : ''}>
-                          <option value="">{!secSel ? 'Selecione a secretaria primeiro' : fiscaisClassificados.length === 0 ? 'Nenhum responsável cadastrado' : 'Selecione o fiscal...'}</option>
+                          <option value="">{!secSel ? 'Selecione a secretaria primeiro' : fiscaisClassificados.length === 0 ? 'Nenhum fiscal em Organização › Responsáveis' : 'Selecione o fiscal...'}</option>
                           {fiscaisClassificados.map((r, idx) => (
                             <option key={idx} value={r.nome} disabled={!r.vigente}>
-                              {r.vigente ? r.nome : `${r.nome} (fora do período)`}
+                              {r.vigente ? r.nome : `${r.nome} (nomeação fora da vigência)`}
                             </option>
                           ))}
                         </PremiumSelect>

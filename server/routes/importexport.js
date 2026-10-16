@@ -297,7 +297,8 @@ router.post('/', tenantMiddleware, requireTenant, authenticate, ...podeImportar,
             classificacao: r.classificacao || null,
             especificacao: r.especificacao || null,
             catmat_serv: r.catmat_serv || null,
-            status: r.status || 'ATIVO',
+            // Mesma regra do cadastro: ATIVO só com categoria e especificação
+            status: (r.categoria || '').trim() && (r.especificacao || '').trim() ? 'ATIVO' : 'INATIVO',
           },
         });
         created ? importados++ : ignorados++;

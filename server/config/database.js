@@ -924,6 +924,26 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
       ADD COLUMN IF NOT EXISTS distribuicao        JSONB,
       ADD COLUMN IF NOT EXISTS valor_unitario_base NUMERIC(15,2)
   `);
+  // Item vinculado leva "descrição - especificação" num campo só (contrato, ordens e DID):
+  // pode passar de 500 caracteres
+  await run(`ALTER TABLE contratos_itens_vinculo ALTER COLUMN descricao TYPE TEXT`);
+  // Responsáveis vinculados a agente que ficaram sem nome (o select comparava id número
+  // com texto): completa com o nome do agente — o contrato lista os fiscais pelo nome
+  await run(`
+    UPDATE secretarias s SET responsaveis = (
+      SELECT jsonb_agg(CASE WHEN COALESCE(t.x->>'nome', '') = '' AND a.nome IS NOT NULL
+                            THEN t.x || jsonb_build_object('nome', a.nome) ELSE t.x END ORDER BY t.ord)
+        FROM jsonb_array_elements(s.responsaveis::jsonb) WITH ORDINALITY AS t(x, ord)
+        LEFT JOIN agentes a ON a.id::text = t.x->>'agente_id')
+     WHERE jsonb_typeof(s.responsaveis::jsonb) = 'array' AND EXISTS (
+       SELECT 1 FROM jsonb_array_elements(s.responsaveis::jsonb) y
+        WHERE COALESCE(y->>'nome', '') = '' AND COALESCE(y->>'agente_id', '') <> '')
+  `);
+  // Catálogo: só fica ATIVO com categoria e especificação (contratosController › calcStatusItem)
+  await run(`
+    UPDATE contratos_itens SET status = 'INATIVO'
+     WHERE status = 'ATIVO' AND (especificacao IS NULL OR btrim(especificacao) = '' OR categoria IS NULL OR btrim(categoria) = '')
+  `);
 
   // ── Ordens de Compra/Serviço ──────────────────────────────────────────────
   await run(`
@@ -965,6 +985,8 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
       updated_at     TIMESTAMPTZ   NOT NULL DEFAULT NOW()
     )
   `);
+  // Descrição do item = "descrição - especificação" do catálogo (pode passar de 500)
+  await run(`ALTER TABLE IF EXISTS contratos_ordens_itens ALTER COLUMN descricao TYPE TEXT`);
   await run(`CREATE INDEX IF NOT EXISTS idx_contratos_ordens_itens_ordem ON contratos_ordens_itens(ordem_id)`);
   await run(`ALTER TABLE contratos_ordens_itens ADD COLUMN IF NOT EXISTS lote VARCHAR(50)`);
   await run(`ALTER TABLE contratos_ordens_itens ADD COLUMN IF NOT EXISTS codigo_item VARCHAR(100)`);

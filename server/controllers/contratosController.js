@@ -98,10 +98,12 @@ const listItens = async (req, res) => {
   }
 };
 
-// Retorna status automático: ativo se categoria estiver preenchida (código é sempre gerado automaticamente)
+// Status automático: só fica ATIVO com categoria e especificação preenchidas (sem
+// especificação o item não pode ser vinculado a contrato — ver conferirItensAtivos)
 const calcStatusItem = (data) => {
-  const categoria = (data.categoria || '').trim();
-  return categoria ? 'ATIVO' : 'INATIVO';
+  const categoria = String(data.categoria || '').trim();
+  const especificacao = String(data.especificacao || '').trim();
+  return categoria && especificacao ? 'ATIVO' : 'INATIVO';
 };
 
 const createItem = async (req, res) => {
@@ -316,6 +318,20 @@ const syncItens = async (ContratoItemVinculo, contratoId, itens) => {
   if (rows.length) await ContratoItemVinculo.bulkCreate(rows);
 };
 
+// Só itens ATIVOS do catálogo podem entrar num contrato. Os que já estavam vinculados
+// (itensJaNoContrato) continuam, para a edição de contratos antigos não travar.
+// Devolve a mensagem de erro, ou null.
+const conferirItensAtivos = async (models, itens, itensJaNoContrato = []) => {
+  const ids = [...new Set((Array.isArray(itens) ? itens : []).map(it => it?.item_id).filter(Boolean).map(Number))]
+    .filter(id => !itensJaNoContrato.includes(id));
+  if (!ids.length) return null;
+  const inativos = await models.ContratoItem.findAll({
+    where: { id: { [Op.in]: ids }, status: { [Op.ne]: 'ATIVO' } }, attributes: ['descricao'], raw: true,
+  });
+  if (!inativos.length) return null;
+  return `Item inativo não pode ser vinculado ao contrato (cadastre a especificação no catálogo): ${inativos.map(i => i.descricao).join('; ')}`;
+};
+
 const createContrato = async (req, res) => {
   try {
     const { Contrato, ContratoItemVinculo } = req.models;
@@ -323,6 +339,8 @@ const createContrato = async (req, res) => {
     if (dados.valor != null && typeof dados.valor === 'string') {
       dados.valor = parseFloat(dados.valor.replace(/[^\d,.]/g, '').replace(',', '.')) || null;
     }
+    const erroItens = await conferirItensAtivos(req.models, itens);
+    if (erroItens) return res.status(400).json({ error: erroItens });
     const contrato = await Contrato.create(dados);
     await syncItens(ContratoItemVinculo, contrato.id, itens);
     const itensDoContrato = ContratoItemVinculo ? await ContratoItemVinculo.findAll({ where: { contrato_id: contrato.id }, order: [['ordem', 'ASC']] }) : [];
@@ -351,6 +369,12 @@ const updateContrato = async (req, res) => {
     const { itens, ...dados } = req.body;
     if (dados.valor != null && typeof dados.valor === 'string') {
       dados.valor = parseFloat(dados.valor.replace(/[^\d,.]/g, '').replace(',', '.')) || null;
+    }
+    if (itens !== undefined) {
+      const jaVinculados = (await ContratoItemVinculo.findAll({ where: { contrato_id: contrato.id }, attributes: ['item_id'], raw: true }))
+        .map(v => Number(v.item_id)).filter(Boolean);
+      const erroItens = await conferirItensAtivos(req.models, itens, jaVinculados);
+      if (erroItens) return res.status(400).json({ error: erroItens });
     }
     await contrato.update(dados);
     if (itens !== undefined) await syncItens(ContratoItemVinculo, contrato.id, itens);

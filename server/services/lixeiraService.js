@@ -76,7 +76,7 @@ const ENTIDADES = {
     titulo: 'Itens', perm: ['contratos', 'itens'],
     model: 'ContratoItem', modo: 'status', statusExcluido: ['EXCLUÍDO'],
     // Status do item é derivado da categoria (mesma regra de contratosController)
-    statusPadrao: (r) => ((r.categoria || '').trim() ? 'ATIVO' : 'INATIVO'),
+    statusPadrao: (r) => ((r.categoria || '').trim() && String(r.especificacao || '').trim() ? 'ATIVO' : 'INATIVO'),
     colunas: [
       { campo: 'codigo',         rotulo: 'Código' },
       { campo: 'descricao',      rotulo: 'Descrição', largo: true },
