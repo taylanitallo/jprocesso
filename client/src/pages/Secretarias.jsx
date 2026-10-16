@@ -2,7 +2,7 @@ import { useState, useEffect, lazy, Suspense, Fragment } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { hasPerm, usePode } from '../utils/permissions';
+import { hasPerm, usePode, podeAdministrarUsuarios } from '../utils/permissions';
 import { conferirAbasDoModulo } from '../utils/permissoesSchema';
 import PageHeader from '../components/ui/PageHeader';
 import SectionTitle from '../components/ui/SectionTitle';
@@ -159,7 +159,7 @@ export default function Secretarias() {
   const pEnt  = usePode('organizacao', 'entidade')
 
   const podeSecretarias = hasPerm(user, 'administracao', 'gerenciar_secretarias')
-  const podeUsuarios     = hasPerm(user, 'administracao', 'gerenciar_usuarios')
+  const podeUsuarios     = podeAdministrarUsuarios(user) // gestor: só a própria secretaria
 
   // Abas — visíveis conforme Administração (acesso) + Organização (aba a aba)
   const abasOrganizacao = [
