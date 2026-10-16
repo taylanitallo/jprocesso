@@ -10,7 +10,7 @@ import {
   Plus, ChevronLeft, ChevronRight, ArrowRight,
   Inbox, Send, ClipboardList, Search, FileText,
   User, MapPin, Building2, Layers, SlidersHorizontal,
-  X, ChevronDown, ChevronUp,
+  X, ChevronDown, ChevronUp, CheckCircle2,
 } from 'lucide-react'
 import { PageHeader, EmptyState, Paginacao as PaginacaoPadrao, usePaginacao, usePorPagina } from '../components/ui'
 import LoadingBar from '../components/LoadingBar'
@@ -49,7 +49,9 @@ export default function Processos() {
   const { subdomain } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const aba = searchParams.get('aba') || 'entrada'
-  const setAba = (v) => setSearchParams(v === 'entrada' ? {} : { aba: v }, { replace: true })
+  const setAba = (v) => { setSearchParams(v === 'entrada' ? {} : { aba: v }, { replace: true }); setStatus(''); setPage(1) }
+  // Concluídos usa a mesma lista da Caixa de Entrada, só com os encerrados
+  const abaLista = aba === 'concluidos' ? 'concluidos' : 'entrada'
 
   // ── Filtros Caixa de Entrada ─────────────────────────────────────────────
   const [page,           setPage]           = useState(1)
@@ -139,7 +141,7 @@ export default function Processos() {
 
   // ── Query principal: Caixa de Entrada ────────────────────────────────────
   const { data, isLoading } = useQuery(
-    ['processos', page, porPagina, search, status, prioridade, tipo, secretariaId, setorId, usuarioId, verTodos],
+    ['processos', abaLista, page, porPagina, search, status, prioridade, tipo, secretariaId, setorId, usuarioId, verTodos],
     async () => {
       const params = new URLSearchParams({ page, limit: porPagina })
       if (search)       params.append('search',       search)
@@ -150,6 +152,7 @@ export default function Processos() {
       if (setorId)      params.append('setorId',      setorId)
       if (usuarioId)    params.append('usuarioId',    usuarioId)
       if (verTodos)     params.append('todos',        '1')
+      if (abaLista === 'concluidos') params.append('concluidos', '1')
       const { data } = await api.get(`/processos?${params}`)
       return data
     }
@@ -220,8 +223,9 @@ export default function Processos() {
       {/* ── Abas ── */}
       <div className="flex border-b border-ink-200">
         {[
-          { id: 'entrada',  label: 'Caixa de Entrada', icon: Inbox },
-          { id: 'enviados', label: 'Enviados',          icon: Send  },
+          { id: 'entrada',    label: 'Caixa de Entrada', icon: Inbox },
+          { id: 'enviados',   label: 'Enviados',          icon: Send  },
+          { id: 'concluidos', label: 'Concluídos',        icon: CheckCircle2 },
         ].map(({ id, icon: TabIcon, label }) => (
           <button
             key={id}
@@ -239,7 +243,7 @@ export default function Processos() {
       </div>
 
       {/* ══ ABA: Caixa de Entrada ══ */}
-      {aba === 'entrada' && (
+      {(aba === 'entrada' || aba === 'concluidos') && (
         <>
           {/* ── Painel de Filtros ── */}
           <div className="bg-surface border border-ink-200 rounded-2xl overflow-hidden">
@@ -270,11 +274,19 @@ export default function Processos() {
                 className="input-field sm:w-44 text-sm"
               >
                 <option value="">Todos os Status</option>
-                <option value="aberto">Aberto</option>
-                <option value="em_analise">Em Análise</option>
-                <option value="pendente">Pendente</option>
-                <option value="devolvido">Devolvido</option>
-                <option value="concluido">Concluído</option>
+                {abaLista === 'concluidos' ? (
+                  <>
+                    <option value="concluido">Concluído</option>
+                    <option value="arquivado">Arquivado</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="aberto">Aberto</option>
+                    <option value="em_analise">Em Análise</option>
+                    <option value="pendente">Pendente</option>
+                    <option value="devolvido">Devolvido</option>
+                  </>
+                )}
               </select>
 
               <button
@@ -445,7 +457,6 @@ export default function Processos() {
                 <option value="em_analise">Em Análise</option>
                 <option value="pendente">Pendente</option>
                 <option value="devolvido">Devolvido</option>
-                <option value="concluido">Concluído</option>
               </select>
 
               <button

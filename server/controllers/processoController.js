@@ -613,7 +613,11 @@ const listProcessos = async (req, res) => {
 
     const where = {};
 
-    if (status)         where.status          = status;
+    // Aba Concluídos (?concluidos=1): só encerrados. Caixa de entrada: nunca encerrados.
+    const ENCERRADOS = ['concluido', 'arquivado'];
+    const abaConcluidos = ['1', 'true'].includes(String(req.query.concluidos));
+    if (abaConcluidos) where.status = status && ENCERRADOS.includes(status) ? status : { [Op.in]: ENCERRADOS };
+    else               where.status = status && !ENCERRADOS.includes(status) ? status : { [Op.notIn]: ENCERRADOS };
     if (prioridade)     where.prioridade       = prioridade;
     if (tipo)           where.tipo_processo    = tipo;
     if (setorIdFiltro)  where.setor_atual_id   = setorIdFiltro;
@@ -643,6 +647,14 @@ const listProcessos = async (req, res) => {
       const sId = userInfo?.setorId || null;
       const orCond = [{ usuario_atual_id: req.user.id }];
       if (sId) orCond.push({ setor_atual_id: sId, usuario_atual_id: null });
+      if (abaConcluidos) {
+        // Concluídos: os de que o usuário participou — criou, estava com ele ou passou por ele
+        orCond.push({ criado_por_id: req.user.id });
+        if (sId) orCond.push({ setor_atual_id: sId });
+        orCond.push({ id: { [Op.in]: req.tenantDb.literal(
+          `(SELECT processo_id FROM tramitacoes WHERE origem_usuario_id = ${req.tenantDb.escape(req.user.id)} OR destino_usuario_id = ${req.tenantDb.escape(req.user.id)})`
+        ) } });
+      }
       accessCond = { [Op.or]: orCond };
     }
 
@@ -980,12 +992,13 @@ const listProcessosEnviados = async (req, res) => {
     const eu = await User.findByPk(req.user.id, { attributes: ['setorId'] });
     const processoWhere = {
       criado_por_id: req.user.id,
+      // Encerrados ficam na aba Concluídos
+      status: status && !['concluido', 'arquivado'].includes(status) ? status : { [Op.notIn]: ['concluido', 'arquivado'] },
       [Op.not]: [{ [Op.or]: [
         { usuario_atual_id: req.user.id },
         ...(eu?.setorId ? [{ setor_atual_id: eu.setorId, usuario_atual_id: null }] : []),
       ] }],
     };
-    if (status)     processoWhere.status          = status;
     if (tipo)       processoWhere.tipo_processo    = tipo;
     if (prioridade) processoWhere.prioridade       = prioridade;
     if (setorId)    processoWhere.setor_atual_id   = setorId;
