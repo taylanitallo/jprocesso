@@ -1530,14 +1530,14 @@ const receberProcesso = async (req, res) => {
       return res.status(400).json({ error: 'Este processo não requer recebimento no momento.' });
     }
 
-    await validarAssinante(req, user, transaction);
-
+    // Recebimento é só a confirmação (sem senha nem assinatura eletrônica); fica no
+    // histórico com quem recebeu, quando e de onde. Assinatura só na tramitação.
     const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
     const assinaturaDigital = crypto.createHash('sha256')
       .update(`${processo.numero}-recebimento-${usuarioId}-${Date.now()}`)
       .digest('hex');
 
-    const tramitacao = await Tramitacao.create({
+    await Tramitacao.create({
       processo_id: id,
       tipo_acao: 'recebimento',
       origem_usuario_id: usuarioId,
@@ -1549,7 +1549,6 @@ const receberProcesso = async (req, res) => {
       ip_origem: ip,
       assinatura_digital: assinaturaDigital,
     }, { transaction });
-    const assinatura = await assinarTramitacao(req, transaction, processo, tramitacao, user);
 
     // Se o processo estava apenas no setor (sem usuário), atribui ao receptor
     if (!processo.usuario_atual_id) {
@@ -1558,10 +1557,9 @@ const receberProcesso = async (req, res) => {
     }
 
     await transaction.commit();
-    res.json({ message: 'Processo recebido com sucesso!', assinatura });
+    res.json({ message: 'Processo recebido com sucesso!' });
   } catch (err) {
     await transaction.rollback();
-    if (err instanceof AssinaturaError) return responderErroAssinatura(res, err);
     console.error('Erro ao receber processo:', err);
     res.status(500).json({ error: 'Erro ao receber processo' });
   }

@@ -141,16 +141,16 @@ export default function DetalhesProcesso() {
   const podeAgir      = isResponsavel && !precisaReceber
   const podeDevolver  = podeAgir && processo?.status !== 'aberto' && pode('devolver')
 
-  const handleReceber = async () => {
+  // Receber: só a confirmação (sem senha nem assinatura eletrônica — essas ficam
+  // para a tramitação). O recebimento entra no histórico com quem recebeu e quando.
+  const [confirmarRecebimento, setConfirmarRecebimento] = useState(false)
+  const handleReceber = () => setConfirmarRecebimento(true)
+  const confirmarReceber = async () => {
     setRecebendo(true)
     try {
-      const r = await assinar({
-        titulo: `Receber o processo ${processo?.numero || ''}`,
-        resumo: <p>Confirmo o recebimento deste processo no meu setor.</p>,
-        executar: (cred) => api.post(`/processos/${id}/receber`, cred),
-      })
-      if (!r) return // cancelou a assinatura
-      setSuccessMessage('Processo recebido e assinado eletronicamente! Agora você pode tramitar ou concluir.')
+      await api.post(`/processos/${id}/receber`)
+      setConfirmarRecebimento(false)
+      setSuccessMessage('Processo recebido! Agora você pode tramitar ou concluir.')
       setTimeout(() => setSuccessMessage(''), 6000)
       refetch()
     } catch (err) {
@@ -159,6 +159,17 @@ export default function DetalhesProcesso() {
       setRecebendo(false)
     }
   }
+  const modalReceber = confirmarRecebimento && (
+    <ConfirmModal
+      title={`Receber o processo ${processo?.numero || ''}?`}
+      message="Confirmo o recebimento deste processo. O recebimento fica registrado no histórico, com o seu nome e a data/hora."
+      confirmLabel="Confirmar recebimento"
+      danger={false}
+      loading={recebendo}
+      onConfirm={confirmarReceber}
+      onClose={() => !recebendo && setConfirmarRecebimento(false)}
+    />
+  )
 
   const ultimaTramitacaoValida = processo?.tramitacoes
     ?.filter(t => t.tipo_acao === 'tramite' || t.tipo_acao === 'devolucao')
@@ -379,6 +390,7 @@ export default function DetalhesProcesso() {
     const devolvido = envio?.tipo_acao === 'devolucao'
     return (
       <div className="space-y-4 animate-fade-in">
+        {modalReceber}
         <PageHeader
           icon={Inbox}
           eyebrow="Processo aguardando recebimento"
@@ -403,7 +415,7 @@ export default function DetalhesProcesso() {
               </p>
               <p className="text-sm text-ink-600 mt-0.5">
                 Os documentos, o histórico e as ações ficam disponíveis depois que o processo for recebido.
-                O recebimento é assinado eletronicamente e fica registrado no histórico.
+                O recebimento é só uma confirmação e fica registrado no histórico.
               </p>
             </div>
           </div>
@@ -1299,6 +1311,8 @@ export default function DetalhesProcesso() {
           </div>
         </div>
       )}
+
+      {modalReceber}
 
       {confirmarExcluirDoc && (
         <ConfirmModal
