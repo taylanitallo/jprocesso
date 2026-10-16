@@ -186,10 +186,11 @@ function App() {
                 <Route index element={<Dashboard />} />
 
                 {/* Processos */}
-                <Route path="processos"          element={<Processos />} />
-                <Route path="processos/entrada"  element={<Processos />} />
-                <Route path="processos/enviados" element={<Processos />} />
-                <Route path="processos/novo"     element={<NovoProcesso />} />
+                {/* Detalhe e DID ficam fora do guarda: outros módulos (ex.: Financeiro) abrem o processo por link */}
+                <Route path="processos"          element={<PermissionRoute permissao="processos.ver"><Processos /></PermissionRoute>} />
+                <Route path="processos/entrada"  element={<PermissionRoute permissao="processos.ver"><Processos /></PermissionRoute>} />
+                <Route path="processos/enviados" element={<PermissionRoute permissao="processos.ver"><Processos /></PermissionRoute>} />
+                <Route path="processos/novo"     element={<PermissionRoute permissao="processos.criar"><NovoProcesso /></PermissionRoute>} />
                 <Route path="processos/:id"      element={<DetalhesProcesso />} />
                 <Route path="processos/:id/did"  element={<FormularioDid />} />
                 <Route path="enviados"           element={<EnviadosRedirect />} />

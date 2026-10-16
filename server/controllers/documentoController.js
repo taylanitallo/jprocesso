@@ -6,6 +6,7 @@ const { PDFDocument } = require('pdf-lib');
 const storage = require('../services/storageService');
 const { situacaoRecebimento, MSG_BLOQUEADO } = require('../utils/recebimento');
 const { excluir } = require('../services/lixeiraService');
+const { usuarioTemPermissao } = require('../middleware/auth');
 
 // Documentos de processo ainda não recebido pelo destino ficam inacessíveis a ele
 const bloqueadoAteReceber = async (req, processo) =>
@@ -176,7 +177,15 @@ const deleteDocumento = async (req, res) => {
       if (papel !== 'admin') {
         return res.status(403).json({ error: 'Apenas administradores podem excluir documentos gerados' });
       }
+      // Ger. de Arquivos › Documentos Gerados › Excluir
+      if (!(await usuarioTemPermissao(req, 'arquivo', 'gerados', 'excluir'))) {
+        return res.status(403).json({ error: 'Sem permissão para excluir documentos gerados' });
+      }
     } else {
+      // Processos › Excluir doc.
+      if (!(await usuarioTemPermissao(req, 'processos', 'excluir_documento'))) {
+        return res.status(403).json({ error: 'Sem permissão para excluir documentos' });
+      }
       // Anexo comum de processo: admin, gestor ou o próprio uploader podem excluir
       const isUploader = documento.upload_por_id === req.user?.id;
       if (papel !== 'admin' && papel !== 'gestor' && !isUploader) {

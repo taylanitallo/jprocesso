@@ -19,6 +19,13 @@ export const hasPerm = (user, ...path) => {
   return obj !== false
 }
 
+// Módulo contratado pelo município (configuracoes.modulos_habilitados; sem a lista = todos)
+export const moduloHabilitado = (tenant, modulo) => {
+  const lista = tenant?.configuracoes?.modulos_habilitados
+  if (lista === undefined) return true
+  return Array.isArray(lista) && lista.includes(modulo)
+}
+
 /**
  * Atalho para as telas: const pode = usePode('contratos', 'licitacoes')
  * pode('criar') · pode('editar') · pode('excluir'). Sem a ação, os botões

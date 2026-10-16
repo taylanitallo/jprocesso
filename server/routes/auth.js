@@ -37,11 +37,11 @@ router.post('/logout',  validateRefreshOrigin, logoutUser);    // revoga refresh
 
 // ── Usuários (protegidos) ─────────────────────────────────────────────────────
 // A-5: register/updateUser/deleteUser requerem papel admin para evitar privilege escalation
-router.post('/register',       tenantMiddleware, requireTenant, authenticate, authorize('admin'), requirePermission('organizacao', 'usuarios', 'criar'), register);
+router.post('/register',       tenantMiddleware, requireTenant, authenticate, authorize('admin'), requirePermission('administracao', 'gerenciar_usuarios'), requirePermission('organizacao', 'usuarios', 'criar'), register);
 router.get('/profile',                 tenantMiddleware, requireTenant, authenticate, getProfile);
 router.get('/users/por-secretaria',    tenantMiddleware, requireTenant, authenticate, getUsersBySecretaria);
 router.get('/users',                   tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), listUsers);
-router.put('/users/:id',       tenantMiddleware, requireTenant, authenticate, authorize('admin'), requirePermission('organizacao', 'usuarios', 'editar'), updateUser);
-router.delete('/users/:id',    tenantMiddleware, requireTenant, authenticate, authorize('admin'), requirePermission('organizacao', 'usuarios', 'excluir'), deleteUser);
+router.put('/users/:id',       tenantMiddleware, requireTenant, authenticate, authorize('admin'), requirePermission('administracao', 'gerenciar_usuarios'), requirePermission('organizacao', 'usuarios', 'editar'), updateUser);
+router.delete('/users/:id',    tenantMiddleware, requireTenant, authenticate, authorize('admin'), requirePermission('administracao', 'gerenciar_usuarios'), requirePermission('organizacao', 'usuarios', 'excluir'), deleteUser);
 
 module.exports = router;

@@ -4,32 +4,39 @@ const { listReceitas, createReceita, updateReceita, deleteReceita } = require('.
 const { listDespesas, listRetencoes, recolherRetencoes, desfazerRecolhimento } = require('../controllers/despesasController');
 const { saldoContas, fluxoMensal, extratoConta, disponivelConta } = require('../controllers/relatoriosController');
 const { listGrupos, createGrupo, updateGrupo, deleteGrupo } = require('../controllers/gruposContasController');
-const { authenticate, tenantMiddleware, requireTenant, authorize } = require('../middleware/auth');
+const { authenticate, tenantMiddleware, requireTenant, authorize, requirePermission, requireModulo } = require('../middleware/auth');
+
+// Saldo disponível da conta — usado no DID (Processos), fica fora do acesso à Tesouraria
+router.get('/contas/:id/disponivel',   tenantMiddleware, requireTenant, authenticate, disponivelConta);
+
+// Daqui em diante: módulo contratado + Tesouraria › acesso; gravações conferem a ação da aba
+router.use(tenantMiddleware, requireTenant, authenticate, requireModulo('tesouraria'), requirePermission('tesouraria', 'acessar'));
+const perm = (aba, acao) => requirePermission('tesouraria', aba, acao);
 
 // ── Receitas ──────────────────────────────────────────────────────────────────
-router.get('/receitas',        tenantMiddleware, requireTenant, authenticate, listReceitas);
-router.post('/receitas',       tenantMiddleware, requireTenant, authenticate, createReceita);
-router.put('/receitas/:id',    tenantMiddleware, requireTenant, authenticate, updateReceita);
-router.delete('/receitas/:id', tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), deleteReceita);
+router.get('/receitas',        perm('receitas', 'ver'), listReceitas);
+router.post('/receitas',       perm('receitas', 'criar'), createReceita);
+router.put('/receitas/:id',    perm('receitas', 'editar'), updateReceita);
+router.delete('/receitas/:id', authorize('admin', 'gestor'), perm('receitas', 'excluir'), deleteReceita);
 
 // ── Despesas (ordens de compra/serviço — o pagamento é feito no DID) ──────────
-router.get('/despesas', tenantMiddleware, requireTenant, authenticate, listDespesas);
+router.get('/despesas', perm('despesas', 'ver'), listDespesas);
 
 // ── Retenções dos DIDs pagos (INSS, ISS, IRRF…) a recolher ────────────────────
-router.get('/retencoes',           tenantMiddleware, requireTenant, authenticate, listRetencoes);
-router.post('/retencoes/recolher', tenantMiddleware, requireTenant, authenticate, recolherRetencoes);
-router.post('/retencoes/desfazer', tenantMiddleware, requireTenant, authenticate, desfazerRecolhimento);
+router.get('/retencoes',           perm('despesas', 'ver'), listRetencoes);
+router.post('/retencoes/recolher', perm('despesas', 'editar'), recolherRetencoes);
+router.post('/retencoes/desfazer', perm('despesas', 'editar'), desfazerRecolhimento);
 
 // ── Relatórios ────────────────────────────────────────────────────────────────
-router.get('/contas/:id/disponivel',   tenantMiddleware, requireTenant, authenticate, disponivelConta);
-router.get('/relatorios/saldo-contas', tenantMiddleware, requireTenant, authenticate, saldoContas);
-router.get('/relatorios/fluxo-mensal', tenantMiddleware, requireTenant, authenticate, fluxoMensal);
-router.get('/relatorios/extrato',      tenantMiddleware, requireTenant, authenticate, extratoConta);
+router.get('/relatorios/saldo-contas', perm('relatorios', 'ver'), saldoContas);
+router.get('/relatorios/fluxo-mensal', perm('relatorios', 'ver'), fluxoMensal);
+// Extrato também abre pelo link da conta nas outras abas — só exige o acesso ao módulo
+router.get('/relatorios/extrato',      extratoConta);
 
 // ── Grupos de contas do "Saldo por Conta" (privados por usuário) ──────────────
-router.get('/grupos-contas',        tenantMiddleware, requireTenant, authenticate, listGrupos);
-router.post('/grupos-contas',       tenantMiddleware, requireTenant, authenticate, createGrupo);
-router.put('/grupos-contas/:id',    tenantMiddleware, requireTenant, authenticate, updateGrupo);
-router.delete('/grupos-contas/:id', tenantMiddleware, requireTenant, authenticate, deleteGrupo);
+router.get('/grupos-contas',        perm('relatorios', 'ver'), listGrupos);
+router.post('/grupos-contas',       perm('relatorios', 'ver'), createGrupo);
+router.put('/grupos-contas/:id',    perm('relatorios', 'ver'), updateGrupo);
+router.delete('/grupos-contas/:id', perm('relatorios', 'ver'), deleteGrupo);
 
 module.exports = router;

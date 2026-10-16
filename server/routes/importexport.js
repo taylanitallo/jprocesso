@@ -1,7 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { authenticate, tenantMiddleware, requireTenant } = require('../middleware/auth');
+const { authenticate, tenantMiddleware, requireTenant, requirePermission } = require('../middleware/auth');
+
+// Configurações › Import / Export (o acesso à tela vem de Administração › Configurações)
+const telaConfiguracoes = requirePermission('administracao', 'gerenciar_configuracoes');
+const podeExportar = [telaConfiguracoes, requirePermission('configuracoes', 'importexport', 'exportar')];
+const podeImportar = [telaConfiguracoes, requirePermission('configuracoes', 'importexport', 'importar')];
 const { getCachedModels } = require('../config/database');
 const { importarContratos } = require('../services/importContratosService');
 
@@ -57,7 +62,7 @@ const sendFile = (res, data, filename, formato) => {
 // ─── EXPORTAÇÃO ──────────────────────────────────────────────────────────────
 
 // GET /api/export/processos?formato=json|csv
-router.get('/processos', tenantMiddleware, requireTenant, authenticate, async (req, res) => {
+router.get('/processos', tenantMiddleware, requireTenant, authenticate, ...podeExportar, async (req, res) => {
   try {
     const { Processo, Tramitacao, Setor, Secretaria } = getCachedModels(req.tenant.subdominio);
     const processos = await Processo.findAll({
@@ -84,7 +89,7 @@ router.get('/processos', tenantMiddleware, requireTenant, authenticate, async (r
 });
 
 // GET /api/export/usuarios?formato=json|csv
-router.get('/usuarios', tenantMiddleware, requireTenant, authenticate, async (req, res) => {
+router.get('/usuarios', tenantMiddleware, requireTenant, authenticate, ...podeExportar, async (req, res) => {
   try {
     const { Usuario } = getCachedModels(req.tenant.subdominio);
     const usuarios = await Usuario.findAll({
@@ -100,7 +105,7 @@ router.get('/usuarios', tenantMiddleware, requireTenant, authenticate, async (re
 });
 
 // GET /api/export/setores?formato=json|csv
-router.get('/setores', tenantMiddleware, requireTenant, authenticate, async (req, res) => {
+router.get('/setores', tenantMiddleware, requireTenant, authenticate, ...podeExportar, async (req, res) => {
   try {
     const { Setor, Secretaria } = getCachedModels(req.tenant.subdominio);
     const setores = await Setor.findAll({
@@ -116,7 +121,7 @@ router.get('/setores', tenantMiddleware, requireTenant, authenticate, async (req
 });
 
 // GET /api/export/documentos?formato=json|csv
-router.get('/documentos', tenantMiddleware, requireTenant, authenticate, async (req, res) => {
+router.get('/documentos', tenantMiddleware, requireTenant, authenticate, ...podeExportar, async (req, res) => {
   try {
     const { Documento, Processo } = getCachedModels(req.tenant.subdominio);
     const docs = await Documento.findAll({
@@ -132,7 +137,7 @@ router.get('/documentos', tenantMiddleware, requireTenant, authenticate, async (
 });
 
 // GET /api/export/itens?formato=json|csv
-router.get('/itens', tenantMiddleware, requireTenant, authenticate, async (req, res) => {
+router.get('/itens', tenantMiddleware, requireTenant, authenticate, ...podeExportar, async (req, res) => {
   try {
     const { ContratoItem } = getCachedModels(req.tenant.subdominio);
     const itens = await ContratoItem.findAll({ order: [['descricao', 'ASC']] });
@@ -145,7 +150,7 @@ router.get('/itens', tenantMiddleware, requireTenant, authenticate, async (req, 
 });
 
 // GET /api/export/contratos?formato=json|csv
-router.get('/contratos', tenantMiddleware, requireTenant, authenticate, async (req, res) => {
+router.get('/contratos', tenantMiddleware, requireTenant, authenticate, ...podeExportar, async (req, res) => {
   try {
     const { Contrato, Credor } = getCachedModels(req.tenant.subdominio);
     const contratos = await Contrato.findAll({
@@ -161,7 +166,7 @@ router.get('/contratos', tenantMiddleware, requireTenant, authenticate, async (r
 });
 
 // GET /api/export/credores?formato=json|csv
-router.get('/credores', tenantMiddleware, requireTenant, authenticate, async (req, res) => {
+router.get('/credores', tenantMiddleware, requireTenant, authenticate, ...podeExportar, async (req, res) => {
   try {
     const { Credor } = getCachedModels(req.tenant.subdominio);
     const credores = await Credor.findAll({ order: [['razao_social', 'ASC']] });
@@ -220,7 +225,7 @@ router.get('/modelo/:tipo', tenantMiddleware, authenticate, (req, res) => {
 
 
 // POST /api/import  (multipart/form-data: file + tipo)
-router.post('/', tenantMiddleware, requireTenant, authenticate, upload.single('file'), async (req, res) => {
+router.post('/', tenantMiddleware, requireTenant, authenticate, ...podeImportar, upload.single('file'), async (req, res) => {
   try {
     const { tipo } = req.body;
     if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado.' });

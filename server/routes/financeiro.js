@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticate, tenantMiddleware, requireTenant } = require('../middleware/auth');
+const { authenticate, tenantMiddleware, requireTenant, requirePermission, requireAlgumaPermissao, requireModulo } = require('../middleware/auth');
 const {
   getDashboard,
   getDashboardOptions,
@@ -8,16 +8,18 @@ const {
   getRelatorio
 } = require('../controllers/financeiroController');
 
-const mid = [tenantMiddleware, requireTenant, authenticate];
+// Módulo contratado + Financeiro › acesso; cada aba confere o seu "Ver"
+router.use(tenantMiddleware, requireTenant, authenticate, requireModulo('financeiro'), requirePermission('financeiro', 'acessar'));
+const aba = (...abas) => requireAlgumaPermissao(...abas.map(a => ['financeiro', a, 'ver']));
 
-// Painel
-router.get('/dashboard', mid, getDashboard);
-router.get('/dashboard/options', mid, getDashboardOptions);
+// Painel (as opções de filtro também servem ao Relatório)
+router.get('/dashboard', aba('painel'), getDashboard);
+router.get('/dashboard/options', aba('painel', 'relatorio'), getDashboardOptions);
 
-// Processos DID
-router.get('/processos-did', mid, getProcessosDid);
+// Processos DID (o Relatório também lista os DIDs)
+router.get('/processos-did', aba('processos_did', 'relatorio'), getProcessosDid);
 
 // Relatório
-router.get('/relatorio', mid, getRelatorio);
+router.get('/relatorio', aba('relatorio'), getRelatorio);
 
 module.exports = router;
