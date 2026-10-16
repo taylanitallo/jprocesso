@@ -56,11 +56,11 @@ export default function Usuarios() {
   const pode = usePode('organizacao', 'usuarios');
   // CPF só muda pelas mãos do Administrador Jeos ou de Administrador com "Alterar" em Usuários
   const podeAlterarCpf = ['jeos', 'admin'].includes(user?.tipo) && pode('editar');
-  // Gestor: só usuários da própria secretaria, sem criar nem mexer em administradores
-  // (o servidor confere o mesmo em authController › conferirGestor)
+  // Regras: administrador cria gestor; gestor cria e administra só operacionais da
+  // própria secretaria (o servidor confere o mesmo em authController › conferirGestor)
   const ehGestor = user?.tipo === 'gestor';
   const minhaSecretariaId = user?.secretaria?.id || user?.secretariaId || '';
-  const podeMexer = (u) => !ehGestor || !['admin', 'jeos'].includes(u.tipo);
+  const podeMexer = (u) => !ehGestor || u.tipo === 'operacional';
   const [permUsuario, setPermUsuario] = useState(null);   // janela de Permissões
   const [autUsuario, setAutUsuario] = useState(null);     // janela de configurar autenticador
   const [showModal, setShowModal] = useState(false);
@@ -410,7 +410,7 @@ export default function Usuarios() {
     { value: 'gestor', label: 'Gestor', color: 'blue' },
     { value: 'operacional', label: 'Operacional', color: 'green' },
   ];
-  const tiposCadastro = ehGestor ? tiposUsuario.filter(t => t.value !== 'admin') : tiposUsuario;
+  const tiposCadastro = ehGestor ? tiposUsuario.filter(t => t.value === 'operacional') : tiposUsuario;
   const secretariasCadastro = ehGestor ? secretarias.filter(s => String(s.id) === String(minhaSecretariaId)) : secretarias;
 
 
