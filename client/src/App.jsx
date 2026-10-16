@@ -43,6 +43,7 @@ const AdminTenants       = lazy(() => import('./pages/AdminTenants'))
 const Arquivo            = lazy(() => import('./pages/Arquivo'))
 const Tesouraria         = lazy(() => import('./pages/Tesouraria'))
 const VerificarDocumento = lazy(() => import('./pages/VerificarDocumento'))
+const CadastroConvite = lazy(() => import('./pages/CadastroConvite'))
 const Legislacao         = lazy(() => import('./pages/Legislacao'))
 
 // ── PageLoader — fallback enquanto chunk carrega ──────────────────────────────
@@ -187,6 +188,8 @@ function App() {
               <Route path="login" element={<LoginRoute />} />
               <Route path="consulta/:numero?" element={<ConsultaPublica />} />
               <Route path="verificar"  element={<VerificarDocumento />} />
+              {/* Link de cadastro gerado pelo gestor (público) */}
+              <Route path="cadastro/:token" element={<CadastroConvite />} />
               <Route path="legislacao" element={<Legislacao />} />
 
               <Route element={<PrivateRoute><Layout /></PrivateRoute>}>

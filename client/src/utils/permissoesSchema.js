@@ -127,6 +127,8 @@ export const MODULOS = [
         ...CRUD,
         { key: 'permissoes',   label: 'Permissões' },
         { key: 'autenticador', label: 'Autenticador (configurar/revogar)' },
+        // Link/QR Code de cadastro: só administradores e gestores (e precisa de Incluir)
+        { key: 'convite',      label: 'Link de cadastro (QR Code)' },
         ...LIXEIRA,
       ] },
     ],

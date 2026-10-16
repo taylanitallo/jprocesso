@@ -12,6 +12,7 @@ import EmptyState from '../components/ui/EmptyState';
 import FilterBar from '../components/ui/FilterBar';
 import ActionBar from '../components/ui/ActionBar';
 import BotaoExcluidos from '../components/lixeira/BotaoExcluidos';
+import ModalConvites from '../components/usuarios/ModalConvites';
 import { Paginacao, usePorPagina } from '../components/ui';
 import {
   Smartphone,
@@ -36,7 +37,8 @@ import {
   Upload,
   Download,
   FileSpreadsheet,
-  ChevronDown
+  ChevronDown,
+  Link2
 } from 'lucide-react';
 
 const DEFAULT_PERMISSOES = () => ({
@@ -84,6 +86,7 @@ export default function Usuarios() {
   const [importLoading, setImportLoading] = useState(false);
   const [importResults, setImportResults] = useState([]);
   const [showIoMenu, setShowIoMenu] = useState(false);
+  const [showConvites, setShowConvites] = useState(false); // links de cadastro (QR Code)
 
   const handleDownloadModelo = () => {
     const headers = ['nome', 'nome_reduzido', 'cpf', 'email', 'senha', 'tipo', 'secretaria_sigla', 'setor_nome'];
@@ -489,6 +492,12 @@ export default function Usuarios() {
               onChange={handleImportFile}
             />
             <BotaoExcluidos entidade="usuarios" rotulo="Usuários excluídos" onAlterado={fetchUsuarios} />
+            {/* Link/QR Code para os colaboradores criarem o próprio usuário: administradores e gestores */}
+            {pode('criar') && pode('convite') && ['admin', 'gestor', 'jeos'].includes(user?.tipo) && (
+              <button onClick={() => setShowConvites(true)} className="btn-secondary flex items-center gap-1.5 text-xs px-3 h-7">
+                <Link2 className="h-3.5 w-3.5" /> Link de cadastro
+              </button>
+            )}
             {pode('criar') && <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1 h-7">
               <UserPlus className="h-3.5 w-3.5" />
               Novo Usuário
@@ -971,6 +980,10 @@ export default function Usuarios() {
             </div>
           </div>
         </div>
+      )}
+
+      {showConvites && (
+        <ModalConvites secretarias={secretarias} setores={setores} onClose={() => setShowConvites(false)} />
       )}
     </div>
   );

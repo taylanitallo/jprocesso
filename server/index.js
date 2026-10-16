@@ -161,8 +161,28 @@ const refreshLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Cadastro pelo link de convite (público) e troca de senha do primeiro acesso:
+// tetos por IP contra abuso e tentativa de senha
+const conviteLimiter = rateLimit({
+  windowMs: JANELA,
+  max: 30,
+  message: { error: 'Muitas tentativas de cadastro a partir desta rede. Tente novamente em alguns minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+const primeiroAcessoLimiter = rateLimit({
+  windowMs: JANELA,
+  max: 10,
+  message: { error: 'Muitas tentativas. Tente novamente em alguns minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+});
+
 app.use('/api/', limiter);
 app.use('/api/auth/login', authLimiterIp, authLimiterConta);
+app.use('/api/auth/convite/', (req, res, next) => (req.method === 'POST' ? conviteLimiter(req, res, next) : next()));
+app.use('/api/auth/primeiro-acesso/', primeiroAcessoLimiter);
 app.use('/api/auth/refresh', refreshLimiter);
 
 routes(app);

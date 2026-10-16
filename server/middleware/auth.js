@@ -43,12 +43,20 @@ const authenticate = async (req, res, next) => {
       }
     }
 
+    // Primeiro acesso: enquanto não trocar a senha recebida de quem o cadastrou,
+    // o usuário só consegue trocar a senha, ver o próprio perfil e sair
+    if (decoded.trocarSenha && !ROTAS_LIBERADAS_TROCA_SENHA.some(r => req.originalUrl.split('?')[0].startsWith(r))) {
+      return res.status(403).json({ error: 'Troque a sua senha para continuar', codigo: 'TROCAR_SENHA' });
+    }
+
     req.user = decoded;
     next();
   } catch (error) {
     return res.status(401).json({ error: 'Token inválido' });
   }
 };
+
+const ROTAS_LIBERADAS_TROCA_SENHA = ['/api/auth/primeiro-acesso/senha', '/api/auth/profile', '/api/auth/logout', '/api/auth/meu-ip'];
 
 const tenantMiddleware = async (req, res, next) => {
   try {
