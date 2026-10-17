@@ -1,7 +1,11 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
-import { hasPerm, podeAbrirOrganizacao, podeAbrirConfiguracoes } from './utils/permissions'
+import { hasPerm, podeAbrirOrganizacao, podeAbrirConfiguracoes, podeAbrirProcessos, podeAdministracao } from './utils/permissions'
+
+const podeRelatorios = (u) => podeAdministracao(u, 'visualizar_relatorios')
+const podeRegistros  = (u) => podeAdministracao(u, 'visualizar_registros')
+const podeNovoProcesso = (u) => podeAbrirProcessos(u) && hasPerm(u, 'processos', 'criar')
 
 import AuthProvider from './context/AuthContext'
 import ThemeProvider from './context/ThemeContext'
@@ -195,10 +199,10 @@ function App() {
 
                 {/* Processos */}
                 {/* Detalhe e DID ficam fora do guarda: outros módulos (ex.: Financeiro) abrem o processo por link */}
-                <Route path="processos"          element={<PermissionRoute permissao="processos.ver"><Processos /></PermissionRoute>} />
-                <Route path="processos/entrada"  element={<PermissionRoute permissao="processos.ver"><Processos /></PermissionRoute>} />
-                <Route path="processos/enviados" element={<PermissionRoute permissao="processos.ver"><Processos /></PermissionRoute>} />
-                <Route path="processos/novo"     element={<PermissionRoute permissao="processos.criar"><NovoProcesso /></PermissionRoute>} />
+                <Route path="processos"          element={<PermissionRoute permitido={podeAbrirProcessos}><Processos /></PermissionRoute>} />
+                <Route path="processos/entrada"  element={<PermissionRoute permitido={podeAbrirProcessos}><Processos /></PermissionRoute>} />
+                <Route path="processos/enviados" element={<PermissionRoute permitido={podeAbrirProcessos}><Processos /></PermissionRoute>} />
+                <Route path="processos/novo"     element={<PermissionRoute permitido={podeNovoProcesso}><NovoProcesso /></PermissionRoute>} />
                 <Route path="processos/:id"      element={<DetalhesProcesso />} />
                 <Route path="processos/:id/did"  element={<FormularioDid />} />
                 <Route path="enviados"           element={<EnviadosRedirect />} />
@@ -236,10 +240,10 @@ function App() {
                 <Route path="contratos/:tab"      element={<PermissionRoute permissao="contratos.acessar"><Contratos /></PermissionRoute>} />
 
                 {/* Admin */}
-                <Route path="relatorios"          element={<PermissionRoute permissao="administracao.visualizar_relatorios"><Relatorios /></PermissionRoute>} />
+                <Route path="relatorios"          element={<PermissionRoute permitido={podeRelatorios}><Relatorios /></PermissionRoute>} />
                 <Route path="configuracoes"       element={<PermissionRoute permitido={podeAbrirConfiguracoes}><Configuracoes /></PermissionRoute>} />
                 <Route path="configuracoes/:tab"  element={<PermissionRoute permitido={podeAbrirConfiguracoes}><Configuracoes /></PermissionRoute>} />
-                <Route path="registros"           element={<PermissionRoute permissao="administracao.visualizar_registros"><Registros /></PermissionRoute>} />
+                <Route path="registros"           element={<PermissionRoute permitido={podeRegistros}><Registros /></PermissionRoute>} />
               </Route>
             </Route>
 

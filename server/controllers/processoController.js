@@ -298,7 +298,7 @@ const tramitarProcesso = async (req, res) => {
     // Verificar permissão - APENAS o usuário atual pode tramitar
     if (processo.usuario_atual_id && processo.usuario_atual_id !== req.user.id) {
       // Exceção para admin e gestor
-      if (req.user.tipo !== 'admin' && req.user.tipo !== 'gestor') {
+      if (!['admin', 'gestor', 'jeos'].includes(req.user.tipo)) {
         await transaction.rollback();
         return res.status(403).json({ 
           error: 'Somente o usuário responsável atual pelo processo pode tramitá-lo. Este processo está com outro usuário.' 
@@ -308,7 +308,7 @@ const tramitarProcesso = async (req, res) => {
 
     // Se processo está em setor diferente do usuário
     if (processo.setor_atual_id !== user.setorId) {
-      if (req.user.tipo !== 'admin' && req.user.tipo !== 'gestor') {
+      if (!['admin', 'gestor', 'jeos'].includes(req.user.tipo)) {
         await transaction.rollback();
         return res.status(403).json({ 
           error: 'Este processo não está no seu setor atual.' 
@@ -442,7 +442,7 @@ const devolverProcesso = async (req, res) => {
 
     // Verificar permissão - APENAS o usuário atual pode devolver
     if (processo.usuario_atual_id && processo.usuario_atual_id !== req.user.id) {
-      if (req.user.tipo !== 'admin' && req.user.tipo !== 'gestor') {
+      if (!['admin', 'gestor', 'jeos'].includes(req.user.tipo)) {
         await transaction.rollback();
         return res.status(403).json({ 
           error: 'Somente o usuário responsável atual pode devolver este processo.'
@@ -543,7 +543,7 @@ const concluirProcesso = async (req, res) => {
 
     // Verificar permissão - APENAS o usuário atual pode concluir
     if (processo.usuario_atual_id && processo.usuario_atual_id !== req.user.id) {
-      if (req.user.tipo !== 'admin' && req.user.tipo !== 'gestor') {
+      if (!['admin', 'gestor', 'jeos'].includes(req.user.tipo)) {
         await transaction.rollback();
         return res.status(403).json({ 
           error: 'Somente o usuário responsável atual pode concluir este processo.'
@@ -621,6 +621,12 @@ const listProcessos = async (req, res) => {
     if (prioridade)     where.prioridade       = prioridade;
     if (tipo)           where.tipo_processo    = tipo;
     if (setorIdFiltro)  where.setor_atual_id   = setorIdFiltro;
+    // Atalhos dos cartões do Dashboard (mesmas regras dos números de lá)
+    if (req.query.periodo === 'hoje') {
+      const inicioDia = new Date(); inicioDia.setHours(0, 0, 0, 0);
+      where.created_at = { [Op.gte]: inicioDia };
+    }
+    if (req.query.parados === '48h') where.data_abertura = { [Op.lte]: new Date(Date.now() - 48 * 60 * 60 * 1000) };
     if (usuarioId)      where.usuario_atual_id = usuarioId;
 
     // Busca textual: número, assunto, interessado, tipo_processo
@@ -640,7 +646,9 @@ const listProcessos = async (req, res) => {
     // Caixa de entrada: só o que está com o usuário — atribuído a ele, ou no setor dele
     // sem pessoa definida. Quem tramitou deixa de ver (fica em Enviados, se criou).
     // Administrador/gestor podem pedir a visão ampla (?todos=1), limitada pelo escopo.
-    const visaoAmpla = ['admin', 'gestor', 'jeos'].includes(tipoUsuario) && ['1', 'true'].includes(String(req.query.todos));
+    // Administrador Jeos vê todos os processos do município, sempre
+    const visaoAmpla = tipoUsuario === 'jeos' ||
+      (['admin', 'gestor'].includes(tipoUsuario) && ['1', 'true'].includes(String(req.query.todos)));
     let accessCond = null;
     if (!visaoAmpla) {
       const userInfo = await User.findByPk(req.user.id, { attributes: ['id', 'setorId'] });
@@ -866,9 +874,9 @@ const getDashboardStats = async (req, res) => {
           : []
       }),
 
-      // 5. concluídos — respeitando visibilidade do usuário
+      // 5. concluídos (finalizados: concluído ou arquivado, como a aba Concluídos)
       Processo.count({
-        where: { ...whereVisivel, status: 'concluido' },
+        where: { ...whereVisivel, status: { [Op.in]: ['concluido', 'arquivado'] } },
         include: userInfo?.tipo === 'gestor' && userInfo?.secretariaId
           ? [{ model: Setor, as: 'setorAtual', where: { secretariaId: userInfo.secretariaId }, required: true }]
           : []
@@ -1353,7 +1361,7 @@ const getArquivoProcessos = async (req, res) => {
 // ── DELETE PROCESSO (somente admin) ─────────────────────────────────────────
 const deleteProcesso = async (req, res) => {
   // Verificação já feita na rota via authorize(), mas checamos novamente por segurança
-  if (req.user?.tipo !== 'admin') {
+  if (!['admin', 'jeos'].includes(req.user?.tipo)) {
     return res.status(403).json({ error: 'Apenas administradores podem excluir processos' });
   }
 

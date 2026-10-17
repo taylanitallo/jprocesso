@@ -45,7 +45,8 @@ export default function Processos() {
   // Ações conforme o editor de permissões. Só "Ver" = sem botões de ação.
   const pode = usePode('processos')
   const { user } = useAuth()
-  const podeVerTodos = ['admin', 'gestor', 'jeos'].includes(user?.tipo)
+  // Admin/gestor escolhem ver todos da área; o Administrador Jeos vê sempre todos (servidor)
+  const podeVerTodos = ['admin', 'gestor'].includes(user?.tipo)
   const { subdomain } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const aba = searchParams.get('aba') || 'entrada'
@@ -58,13 +59,16 @@ export default function Processos() {
   const [porPagina,      setPorPagina]      = usePorPagina('processos-caixa', 10)
   const [search,         setSearch]         = useState('')
   const [status,         setStatus]         = useState('')
-  const [prioridade,     setPrioridade]     = useState('')
+  // Filtros iniciais podem vir da URL (cartões do Dashboard: ?prioridade=urgente, ?periodo=hoje, ?parados=48h, ?todos=1)
+  const [prioridade,     setPrioridade]     = useState(() => searchParams.get('prioridade') || '')
+  const [periodo,        setPeriodo]        = useState(() => searchParams.get('periodo') === 'hoje' ? 'hoje' : '')
+  const [parados,        setParados]        = useState(() => searchParams.get('parados') === '48h' ? '48h' : '')
   const [tipo,           setTipo]           = useState('')
   const [secretariaId,   setSecretariaId]   = useState('')
   const [setorId,        setSetorId]        = useState('')
   const [usuarioId,      setUsuarioId]      = useState('')
   // Caixa de entrada mostra só o que está com o usuário; admin/gestor podem ver todos da sua área
-  const [verTodos,       setVerTodos]       = useState(false)
+  const [verTodos,       setVerTodos]       = useState(() => searchParams.get('todos') === '1')
   const [mostrarFiltros, setMostrarFiltros] = useState(false)
 
   // ── Filtros Aba Enviados ─────────────────────────────────────────────────
@@ -141,7 +145,7 @@ export default function Processos() {
 
   // ── Query principal: Caixa de Entrada ────────────────────────────────────
   const { data, isLoading } = useQuery(
-    ['processos', abaLista, page, porPagina, search, status, prioridade, tipo, secretariaId, setorId, usuarioId, verTodos],
+    ['processos', abaLista, page, porPagina, search, status, prioridade, tipo, secretariaId, setorId, usuarioId, verTodos, periodo, parados],
     async () => {
       const params = new URLSearchParams({ page, limit: porPagina })
       if (search)       params.append('search',       search)
@@ -153,6 +157,8 @@ export default function Processos() {
       if (usuarioId)    params.append('usuarioId',    usuarioId)
       if (verTodos)     params.append('todos',        '1')
       if (abaLista === 'concluidos') params.append('concluidos', '1')
+      if (periodo)      params.append('periodo',      periodo)
+      if (parados)      params.append('parados',      parados)
       const { data } = await api.get(`/processos?${params}`)
       return data
     }
@@ -180,7 +186,7 @@ export default function Processos() {
 
   // ── Limpar filtros ────────────────────────────────────────────────────────
   const limparFiltros = () => {
-    setStatus(''); setPrioridade(''); setTipo('')
+    setStatus(''); setPrioridade(''); setTipo(''); setPeriodo(''); setParados('')
     setSecretariaId(''); setSetorId(''); setUsuarioId('')
     setSearch(''); setPage(1)
   }
@@ -243,6 +249,23 @@ export default function Processos() {
       </div>
 
       {/* ══ ABA: Caixa de Entrada ══ */}
+      {(aba === 'entrada' || aba === 'concluidos') && (periodo || parados || prioridade === 'urgente') && (
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-ink-500">Filtro do Dashboard:</span>
+          {[
+            periodo === 'hoje'      && { rotulo: 'Abertos hoje',                 limpar: () => setPeriodo('') },
+            parados === '48h'       && { rotulo: 'Abertos há mais de 48h',       limpar: () => setParados('') },
+            prioridade === 'urgente' && { rotulo: 'Urgentes',                    limpar: () => setPrioridade('') },
+          ].filter(Boolean).map(f => (
+            <button key={f.rotulo} type="button" onClick={() => { f.limpar(); reset() }}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-info-50 dark:bg-info-900/30 text-brand-700 dark:text-info-300 border border-info-200 dark:border-info-800/40 font-medium"
+              title="Remover filtro">
+              {f.rotulo} <X className="h-3 w-3" />
+            </button>
+          ))}
+        </div>
+      )}
+
       {(aba === 'entrada' || aba === 'concluidos') && (
         <>
           {/* ── Painel de Filtros ── */}

@@ -41,7 +41,7 @@ function formatMoeda(valor) {
 export default function ModalDid({ processo, onClose }) {
   const userStr = localStorage.getItem('user')
   const currentUser = userStr ? JSON.parse(userStr) : null
-  const isAdminOuGestor = ['admin', 'gestor'].includes(currentUser?.tipo)
+  const isAdminOuGestor = ['admin', 'gestor', 'jeos'].includes(currentUser?.tipo)
 
   const [did, setDid] = useState(null)
   const [loading, setLoading] = useState(true)

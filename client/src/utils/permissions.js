@@ -49,6 +49,12 @@ export const podeAbrirConfiguracoes = (user) => {
   return p.administracao?.gerenciar_configuracoes !== false
 }
 
+// Processos: acesso ao módulo + "Ver" (sem configuração = liberado)
+export const podeAbrirProcessos = (user) => hasPerm(user, 'processos', 'acessar') && hasPerm(user, 'processos', 'ver')
+
+// Administração › Relatórios / Registros: acesso ao grupo + a tela
+export const podeAdministracao = (user, tela) => hasPerm(user, 'administracao', 'acessar') && hasPerm(user, 'administracao', tela)
+
 // Organização › Usuários (gestor: a própria secretaria; servidor: authController › conferirGestor)
 export const podeAdministrarUsuarios = (user) => podeAbaOrganizacao(user, 'usuarios')
 

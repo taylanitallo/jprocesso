@@ -114,7 +114,7 @@ export default function DetalhesProcesso() {
   const isResponsavel = !!(currentUser && processo && processo.status !== 'concluido' && (
     processo.usuario_atual_id === currentUser.id ||
     (processo.usuario_atual_id === null && processo.setor_atual_id === currentUser.setor?.id) ||
-    currentUser.tipo === 'admin' ||
+    currentUser.tipo === 'admin' || currentUser.tipo === 'jeos' ||
     (currentUser.tipo === 'gestor' && processo.setorAtual?.secretariaId === currentUser.secretariaId)
   ))
 
@@ -1101,7 +1101,7 @@ export default function DetalhesProcesso() {
               )}
 
               {/* Sem ações */}
-              {processo.status === 'concluido' && currentUser?.tipo !== 'admin'
+              {processo.status === 'concluido' && !['admin', 'jeos'].includes(currentUser?.tipo)
                 && processo.tipo_processo !== 'Did'
                 && processo.tipo_processo !== 'Despacho'
                 && processo.tipo_processo !== 'Pauta'
