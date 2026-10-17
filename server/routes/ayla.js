@@ -1,7 +1,7 @@
 const express    = require('express');
 const rateLimit  = require('express-rate-limit');
 const router     = express.Router();
-const { chat, sugerir, registrarTextoUsado } = require('../controllers/aylaController');
+const { chat, sugerir, registrarTextoUsado, textosFrequentes } = require('../controllers/aylaController');
 const { authenticate, tenantMiddleware, requireTenant } = require('../middleware/auth');
 
 // Rate limit específico para IA: mais generoso que login, mas controlado
@@ -41,5 +41,8 @@ router.post('/sugerir', tenantMiddleware, requireTenant, authenticate, sugestaoL
 
 // POST /api/ayla/texto-usado — { campo, texto, contexto } (texto final enviado pelo usuário)
 router.post('/texto-usado', tenantMiddleware, requireTenant, authenticate, registrarTextoUsado);
+
+// GET /api/ayla/textos-frequentes?campo= — textos mais usados pelo usuário no campo
+router.get('/textos-frequentes', tenantMiddleware, requireTenant, authenticate, textosFrequentes);
 
 module.exports = router;

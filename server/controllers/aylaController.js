@@ -247,7 +247,7 @@ const sugerir = async (req, res) => {
   }
 };
 
-// Guarda o texto que o usuário de fato enviou (mantém os 30 mais recentes por campo)
+// Guarda o texto que o usuário de fato enviou (mantém os 200 mais recentes por campo)
 const registrarTextoUsado = async (req, res) => {
   try {
     const { campo, texto, contexto } = req.body || {};
@@ -261,7 +261,7 @@ const registrarTextoUsado = async (req, res) => {
     );
     await db.query(
       `DELETE FROM textos_usados WHERE usuario_id = :uid AND campo = :campo AND id NOT IN (
-         SELECT id FROM textos_usados WHERE usuario_id = :uid AND campo = :campo ORDER BY created_at DESC LIMIT 30)`,
+         SELECT id FROM textos_usados WHERE usuario_id = :uid AND campo = :campo ORDER BY created_at DESC LIMIT 200)`,
       { replacements: { uid, campo } }
     );
     res.json({ ok: true });
@@ -271,4 +271,34 @@ const registrarTextoUsado = async (req, res) => {
   }
 };
 
-module.exports = { chat, sugerir, registrarTextoUsado };
+// Textos mais usados pelo usuário num campo (lista "seus textos mais usados", como o
+// autocompletar do navegador no assunto do processo). Junta o histórico dos campos com
+// sugestão e, nos despachos de processo, as tramitações que ele já fez.
+const textosFrequentes = async (req, res) => {
+  try {
+    const campo = String(req.query.campo || '');
+    if (!CAMPO_RE.test(campo)) return res.json({ textos: [] });
+    const { QueryTypes } = require('sequelize');
+    const db = req.tenantDb;
+    const uid = req.user?.id;
+    const partes = [`SELECT texto, created_at AS quando FROM textos_usados WHERE usuario_id = :uid AND campo = :campo`];
+    if (SEMENTE_TRAMITACOES[campo]) {
+      const col = campo === 'processo.devolver.motivo' ? 'justificativa_devolucao' : 'despacho';
+      partes.push(`SELECT ${col} AS texto, data_hora AS quando FROM tramitacoes WHERE origem_usuario_id = :uid AND ${SEMENTE_TRAMITACOES[campo]}`);
+    }
+    const rows = await db.query(
+      `SELECT min(trim(texto)) AS texto, count(*)::int AS vezes, max(quando) AS ultimo
+         FROM (${partes.join(' UNION ALL ')}) t
+        WHERE length(trim(texto)) >= 5
+        GROUP BY lower(regexp_replace(trim(texto), '\\s+', ' ', 'g'))
+        ORDER BY count(*) DESC, max(quando) DESC
+        LIMIT 8`,
+      { replacements: { uid, campo }, type: QueryTypes.SELECT }
+    ).catch(() => []);
+    res.json({ textos: rows.map(r => ({ texto: r.texto, vezes: r.vezes })) });
+  } catch (error) {
+    res.json({ textos: [] });
+  }
+};
+
+module.exports = { chat, sugerir, registrarTextoUsado, textosFrequentes };
