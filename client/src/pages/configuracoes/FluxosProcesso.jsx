@@ -400,6 +400,7 @@ export default function FluxosProcesso() {
                     return (
                       <div className="space-y-2">
                         <p className="text-xs font-medium text-ink-600">Tramitação — para onde o processo pode ser enviado ao sair desta etapa</p>
+                        <p className="text-[11px] text-ink-400">Dentro da própria secretaria de quem tramita é sempre permitido (análises e conferências antes de seguir).</p>
                         <div className="flex flex-wrap gap-x-5 gap-y-1">
                           <label className="flex items-center gap-2 text-sm text-ink-700">
                             <input type="radio" name={`tram-${e.id}`} checked={tram.todas !== false} onChange={() => setTram({ todas: true })} className="accent-brand-600" />

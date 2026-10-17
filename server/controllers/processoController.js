@@ -326,12 +326,15 @@ const tramitarProcesso = async (req, res) => {
       if (did) {
         const regra = await didEtapasSvc.tramitacaoPermitida(req, did, processo);
         if (!regra.todas) {
+          // Além dos destinos da etapa, sempre pode tramitar dentro da própria secretaria
+          // (análises, conferências etc. antes de ir para outra secretaria)
           const dest = await req.models.Setor.findByPk(destinoSetorId, { attributes: ['secretariaId'], transaction });
-          if (!dest || !regra.secretarias.includes(String(dest.secretariaId))) {
+          const mesmaSecretaria = !!dest && !!user?.secretariaId && String(dest.secretariaId) === String(user.secretariaId);
+          if (!dest || (!mesmaSecretaria && !regra.secretarias.includes(String(dest.secretariaId)))) {
             const nomes = await req.models.Secretaria.findAll({ where: { id: { [Op.in]: regra.secretarias } }, attributes: ['nome', 'sigla'], transaction });
             await transaction.rollback();
             return res.status(403).json({
-              error: `${regra.etapa?.titulo || 'Nesta etapa'}: o processo só pode ser tramitado para ${nomes.map(n => n.sigla || n.nome).join(', ') || 'as secretarias definidas no fluxo'}.`,
+              error: `${regra.etapa?.titulo || 'Nesta etapa'}: o processo só pode ser tramitado dentro da sua secretaria ou para ${nomes.map(n => n.sigla || n.nome).join(', ') || 'as secretarias definidas no fluxo'}.`,
             });
           }
           destinoDefinidoNoFluxo = true; // destino permitido pelo fluxo vale também para o operador

@@ -17,8 +17,12 @@ export default function ModalTramitacao({ processo, tramitacaoDid, onClose, onSu
   // Operador só pode tramitar dentro da própria secretaria,
   // a menos que tenha sido designado por um gestor neste processo
   const foiDesignadoPorGestor = processo?.usuario_atual_id === user?.id
-  // DID com destinos definidos na etapa: só eles, e valem também para o operador
-  const destinosDoFluxo = tramitacaoDid && tramitacaoDid.todas === false ? (tramitacaoDid.secretarias || []).map(String) : null
+  // DID com destinos definidos na etapa: eles + sempre a própria secretaria do usuário
+  // (análises/conferências internas antes de ir adiante); valem também para o operador
+  const minhaSecretariaId = user?.secretaria?.id || user?.secretariaId || null
+  const destinosDoFluxo = tramitacaoDid && tramitacaoDid.todas === false
+    ? [...new Set([...(tramitacaoDid.secretarias || []).map(String), ...(minhaSecretariaId ? [String(minhaSecretariaId)] : [])])]
+    : null
   const isOperadorRestrito = user?.tipo === 'operacional' && !foiDesignadoPorGestor && !destinosDoFluxo
 
   const [formData, setFormData] = useState({
@@ -172,8 +176,9 @@ export default function ModalTramitacao({ processo, tramitacaoDid, onClose, onSu
               <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-lg p-3 flex items-start space-x-2">
                 <AlertTriangle className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
                 <p className="text-xs text-emerald-800 dark:text-emerald-300">
-                  {tramitacaoDid?.etapa?.titulo ? `${tramitacaoDid.etapa.titulo}: ` : ''}pelo fluxo do DID, este processo só pode ser tramitado para{' '}
-                  <strong>{secretarias.map(s => s.sigla || s.nome).join(', ') || 'as secretarias definidas'}</strong>.
+                  {tramitacaoDid?.etapa?.titulo ? `${tramitacaoDid.etapa.titulo}: ` : ''}pelo fluxo do DID, este processo pode ser tramitado
+                  dentro da sua secretaria ou para{' '}
+                  <strong>{secretarias.filter(s => String(s.id) !== String(minhaSecretariaId)).map(s => s.sigla || s.nome).join(', ') || 'as secretarias definidas'}</strong>.
                 </p>
               </div>
             )}
