@@ -5,6 +5,7 @@ import api from '../services/api';
 import ModalPermissoes from '../components/ModalPermissoes';
 import ModalConfigurarAutenticador from '../components/ModalConfigurarAutenticador';
 import { usePode, VERSAO_PERMISSOES } from '../utils/permissions';
+import { PERMISSOES_PADRAO, permissoesPadraoDoTipo } from '../utils/permissoesPadrao';
 import LoadingBar from '../components/LoadingBar';
 import StatCard from '../components/ui/StatCard';
 import SectionTitle from '../components/ui/SectionTitle';
@@ -41,16 +42,8 @@ import {
   Link2
 } from 'lucide-react';
 
-const DEFAULT_PERMISSOES = () => ({
-  processos:     { ver: true, criar: true, editar: true, excluir: false, tramitar: true, devolver: true, concluir: true, arquivar: false, anexar_documento: true, excluir_documento: false },
-  arquivo:       { acessar: false },
-  almoxarifado:  { acessar: false, painel: { ver: true }, estoque: { ver: true, editar: true }, entradas: { ver: true, registrar: true }, saidas: { ver: true, registrar: true }, requisicoes: { ver: true, criar: true, aprovar: false, cancelar: false }, cotas: { ver: true, gerenciar: false }, inventario: { ver: true, realizar: false }, auditoria: { ver: false } },
-  patrimonio:    { acessar: false, painel: { ver: true }, bens: { ver: true, criar: false, editar: false, excluir: false }, tombamento: { ver: true, realizar: false }, transferencia: { ver: true, realizar: false }, baixa: { ver: true, realizar: false }, inventario: { ver: true, realizar: false }, grupos: { ver: false, gerenciar: false } },
-  financeiro:    { acessar: false, painel: { ver: true }, processos_did: { ver: true }, relatorio: { ver: false } },
-  contratos:     { acessar: false, itens: { ver: true, criar: false, editar: false, excluir: false }, credores: { ver: true, criar: false, editar: false, excluir: false }, contratos: { ver: true, criar: false, editar: false, excluir: false }, ordens: { ver: true, criar: false, editar: false, excluir: false }, relatorios: { ver: true } },
-  tesouraria:    { acessar: false, contas: { ver: true, criar: false, editar: false, excluir: false }, receitas: { ver: true, criar: false, editar: false, excluir: false }, despesas: { ver: true, criar: false, editar: false, excluir: false }, relatorios: { ver: true } },
-  administracao: { gerenciar_usuarios: false, gerenciar_secretarias: false, gerenciar_configuracoes: false, visualizar_relatorios: false, visualizar_registros: false },
-})
+// Padrões por perfil (operacional / gestor) — utils/permissoesPadrao.js
+const DEFAULT_PERMISSOES = PERMISSOES_PADRAO
 
 export default function Usuarios() {
   const { user, refreshUser } = useAuth();
@@ -164,7 +157,7 @@ export default function Usuarios() {
             tipo,
             secretariaId: ehGestor ? minhaSecretariaId : (secretaria?.id || null),
             setorId: setor?.id || null,
-            permissoes: DEFAULT_PERMISSOES(),
+            permissoes: permissoesPadraoDoTipo(tipo),
           });
           results.push({ nome, status: 'ok', msg: 'Importado com sucesso' });
         } catch (err) {
@@ -260,7 +253,8 @@ export default function Usuarios() {
     
     setLoading(true);
     try {
-      await api.post('/auth/register', formData);
+      // Permissões iniciais do perfil escolhido (gestor tem o próprio padrão)
+      await api.post('/auth/register', { ...formData, permissoes: permissoesPadraoDoTipo(formData.tipo) });
       
       // Recarregar lista de usuários
       await fetchUsuarios();
@@ -610,7 +604,7 @@ export default function Usuarios() {
                           // antigos vieram do modelo de cadastro e nunca valeram para ele)
                           permissoes: usuario.tipo === 'admin' && usuario.permissoes?._v !== VERSAO_PERMISSOES
                             ? {}
-                            : { ...DEFAULT_PERMISSOES(), ...(usuario.permissoes || {}) },
+                            : { ...permissoesPadraoDoTipo(usuario.tipo), ...(usuario.permissoes || {}) },
                         })}
                         title="Permissões"
                         className="text-violet-600 hover:text-violet-800"
