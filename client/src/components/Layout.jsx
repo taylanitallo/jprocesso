@@ -1,7 +1,7 @@
 ﻿import { Outlet, Link, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
-import { hasPerm, moduloHabilitado, podeAbrirOrganizacao, podeAbrirConfiguracoes } from '../utils/permissions'
+import { hasPerm, moduloHabilitado, podeAbrirOrganizacao, podeAbrirConfiguracoes, podeAbrirProcessos, podeAdministracao } from '../utils/permissions'
 import {
   Home, Building2, LogOut, Menu, X, Inbox, BarChart3, Settings,
   Users, Package, Sun, Moon, ChevronRight, ChevronLeft, DollarSign, ScrollText,
@@ -158,7 +158,7 @@ export default function Layout() {
 
   const menuItems = [
     { path: `/${subdomain}`,              icon: Home,        label: 'Dashboard',        exact: true },
-    { path: `/${subdomain}/processos`,    icon: Inbox,       label: 'Processos',        modulo: 'processos',    permissao: 'processos.ver' },
+    { path: `/${subdomain}/processos`,    icon: Inbox,       label: 'Processos',        modulo: 'processos',    permitido: () => podeAbrirProcessos(user) },
     { path: `/${subdomain}/arquivo`,      icon: Archive,     label: 'Ger. de Arquivos', modulo: 'processos',    permissao: 'arquivo.acessar' },
     { path: `/${subdomain}/almoxarifado`, icon: Package,     label: 'Almoxarifado',     modulo: 'almoxarifado', permissao: 'almoxarifado.acessar' },
     { path: `/${subdomain}/patrimonio`,   icon: Landmark,    label: 'Patrimônio',       modulo: 'patrimonio',   permissao: 'patrimonio.acessar' },
@@ -169,9 +169,9 @@ export default function Layout() {
 
   const adminMenuItems = [
     { path: `/${subdomain}/organizacao`,   icon: Building2,    label: 'Organização',   permitido: () => podeAbrirOrganizacao(user) },
-    { path: `/${subdomain}/relatorios`,    icon: BarChart3,    label: 'Relatórios',    permissao: 'administracao.visualizar_relatorios' },
+    { path: `/${subdomain}/relatorios`,    icon: BarChart3,    label: 'Relatórios',    permitido: () => podeAdministracao(user, 'visualizar_relatorios') },
     { path: `/${subdomain}/configuracoes`, icon: Settings,     label: 'Configurações', permitido: () => podeAbrirConfiguracoes(user) },
-    { path: `/${subdomain}/registros`,     icon: ClipboardList, label: 'Registros',   permissao: 'administracao.visualizar_registros' },
+    { path: `/${subdomain}/registros`,     icon: ClipboardList, label: 'Registros',   permitido: () => podeAdministracao(user, 'visualizar_registros') },
   ]
 
   const visibleAdminMenuItems = adminMenuItems.filter((item) => (
@@ -248,7 +248,7 @@ export default function Layout() {
               const active = isActive(item.path, item.exact)
               const Icon = item.icon
               const habilitado = item.modulo ? isModuloHabilitado(item.modulo) : true
-              const permitido = temPermissao(item.permissao)
+              const permitido = item.permitido ? item.permitido() : temPermissao(item.permissao)
 
               if (!habilitado || !permitido) {
                 if (!ehAdministrador) return null

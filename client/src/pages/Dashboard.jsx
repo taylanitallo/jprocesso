@@ -71,7 +71,7 @@ export default function Dashboard() {
 
   // O dashboard mostra só o que o usuário pode ver: módulo contratado + permissão
   const podeModulo = (modulo, ...perm) => moduloHabilitado(tenant, modulo) && hasPerm(user, ...perm)
-  const podeProcessos    = podeModulo('processos', 'processos', 'ver')
+  const podeProcessos    = podeModulo('processos', 'processos', 'acessar') && hasPerm(user, 'processos', 'ver')
   const podeNovoProcesso = podeProcessos && hasPerm(user, 'processos', 'criar')
   const podeAlmox        = podeModulo('almoxarifado', 'almoxarifado', 'acessar')
   const podeEstoque      = podeAlmox && hasPerm(user, 'almoxarifado', 'estoque', 'ver')

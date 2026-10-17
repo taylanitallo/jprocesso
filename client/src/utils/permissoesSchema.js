@@ -32,7 +32,9 @@ const CRUD_LIXEIRA = [...CRUD, ...LIXEIRA]
 
 export const MODULOS = [
   {
-    key: 'processos', label: 'Processos',
+    // Acesso ao módulo (processos.acessar): desligado, some do menu/Dashboard e a lista é
+    // bloqueada; o detalhe continua abrindo por link (ex.: vindo do Financeiro)
+    key: 'processos', label: 'Processos', comAcesso: true,
     acoes: [
       VER,
       INCLUIR,
@@ -154,7 +156,8 @@ export const MODULOS = [
   {
     // Telas do menu Administração que não são módulos com abas (Organização e
     // Configurações têm o próprio acesso acima)
-    key: 'administracao', label: 'Administração',
+    // Acesso ao grupo (administracao.acessar): desligado, Relatórios e Registros somem
+    key: 'administracao', label: 'Administração', comAcesso: true,
     acoes: [
       { key: 'visualizar_relatorios',   label: 'Relatórios' },
       { key: 'visualizar_registros',    label: 'Registros' },

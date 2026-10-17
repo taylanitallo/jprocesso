@@ -23,6 +23,8 @@ const checkRegistrosPermissao = async (req, res, next) => {
     if (ignoraPermissoes({ tipo: req.user.tipo, permissoes: p })) return next();
     // Permissão aninhada (padrão atual) com fallback para o formato plano legado.
     // undefined = permitido (backward compat); false = negado.
+    // Acesso ao grupo Administração desligado: sem Registros
+    if (p.administracao?.acessar === false) return res.status(403).json({ error: 'Acesso negado ao módulo de Registros' });
     const val = p.administracao?.visualizar_registros ?? p.visualizar_registros;
     if (val !== false) return next();
     return res.status(403).json({ error: 'Acesso negado ao módulo de Registros' });
