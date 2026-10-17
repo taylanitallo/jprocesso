@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api, { apiUrl } from '../services/api';
 import PermissoesEditor from '../components/PermissoesEditor';
 import { migrarPermissoesAntigas } from '../utils/permissoesSchema';
+import { permissoesPadraoDoTipo } from '../utils/permissoesPadrao';
 import { ConfirmModal, Paginacao, usePorPagina } from '../components/ui';
 import {
   Plus, Building, Edit2, Trash2, Globe, MapPin, CheckCircle, XCircle,
@@ -1008,7 +1009,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                           </div>
                           <div>
                             <label className="block text-xs font-medium text-ink-600 mb-1">Tipo</label>
-                            <select value={userForm.tipo} onChange={e => setUserForm(f => ({ ...f, tipo: e.target.value }))}
+                            <select value={userForm.tipo} onChange={e => { const tipo = e.target.value; setUserForm(f => ({ ...f, tipo, ...(newUser ? { permissoes: permissoesPadraoDoTipo(tipo) } : {}) })) }}
                               className="w-full px-3 py-1.5 border border-ink-300 rounded-lg text-sm bg-surface dark:text-white">
                               <option value="operacional">Operacional</option>
                               <option value="gestor">Gestor</option>

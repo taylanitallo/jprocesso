@@ -16,17 +16,8 @@ const { excluir } = require('../services/lixeiraService');
 
 const REFRESH_EXPIRE_MS = 30 * 24 * 60 * 60 * 1000; // 30 dias
 
-// Permissões de um usuário novo (cadastro pela tela ou pelo link de convite)
-const PERMISSOES_PADRAO = () => ({
-  processos:     { ver: true, criar: true, editar: true, excluir: false, tramitar: true, devolver: true, concluir: true, arquivar: false, anexar_documento: true, excluir_documento: false },
-  arquivo:       { acessar: false },
-  almoxarifado:  { acessar: false, painel: { ver: true }, estoque: { ver: true, editar: true }, entradas: { ver: true, registrar: true }, saidas: { ver: true, registrar: true }, requisicoes: { ver: true, criar: true, aprovar: false, cancelar: false }, cotas: { ver: true, gerenciar: false }, inventario: { ver: true, realizar: false }, auditoria: { ver: false } },
-  patrimonio:    { acessar: false, painel: { ver: true }, bens: { ver: true, criar: false, editar: false, excluir: false }, tombamento: { ver: true, realizar: false }, transferencia: { ver: true, realizar: false }, baixa: { ver: true, realizar: false }, inventario: { ver: true, realizar: false }, grupos: { ver: false, gerenciar: false } },
-  financeiro:    { acessar: false, painel: { ver: true }, processos_did: { ver: true }, relatorio: { ver: false } },
-  contratos:     { acessar: false, itens: { ver: true, criar: false, editar: false, excluir: false }, credores: { ver: true, criar: false, editar: false, excluir: false }, contratos: { ver: true, criar: false, editar: false, excluir: false }, ordens: { ver: true, criar: false, editar: false, excluir: false }, relatorios: { ver: true } },
-  tesouraria:    { acessar: false, contas: { ver: true, criar: false, editar: false, excluir: false }, receitas: { ver: true, criar: false, editar: false, excluir: false }, despesas: { ver: true, criar: false, editar: false, excluir: false }, relatorios: { ver: true } },
-  administracao: { gerenciar_usuarios: false, gerenciar_secretarias: false, gerenciar_configuracoes: false, visualizar_relatorios: false, visualizar_registros: false },
-});
+// Permissões iniciais por perfil (operacional / gestor)
+const { permissoesPadraoDoTipo } = require('../config/permissoesPadrao');
 
 // B-2: mínimo 8 chars, ao menos uma letra e um número
 const SENHA_RE = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
@@ -292,7 +283,7 @@ const register = async (req, res) => {
       tipo: tipo || 'operacional',
       secretariaId,
       setorId,
-      permissoes: permissoes || PERMISSOES_PADRAO()
+      permissoes: permissoes || permissoesPadraoDoTipo(tipo || 'operacional')
     });
 
     // Senha definida por quem cadastrou: o usuário troca no primeiro acesso
@@ -653,6 +644,11 @@ const updateUser = async (req, res) => {
       permissoes = r.permissoes;
     }
 
+    // Promovido a gestor: começa no padrão do perfil gestor (depois ajusta no editor)
+    if (tipo === 'gestor' && user.tipo !== 'gestor' && permissoes === undefined) {
+      permissoes = permissoesPadraoDoTipo('gestor');
+    }
+
     // Validar unicidade de email (excluindo o próprio usuário)
     if (email && email !== user.email) {
       const emailExists = await User.findOne({ where: { email, id: { [Op.ne]: id }, excluido_em: null } });
@@ -940,7 +936,7 @@ const cadastrarPorConvite = async (req, res) => {
     }
 
     // Permissões: o padrão, limitado às de quem gerou o link quando foi um gestor
-    let permissoes = PERMISSOES_PADRAO();
+    let permissoes = permissoesPadraoDoTipo(c.tipo);
     const criador = await User.findByPk(c.criado_por_id, { attributes: ['tipo', 'permissoes'] });
     if (criador?.tipo === 'gestor') permissoes = limitarPermissoes(permissoes, criador.permissoes || {});
 
