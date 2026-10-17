@@ -124,6 +124,7 @@ export default function FluxosProcesso() {
   const [aberta, setAberta] = useState(null)      // índice da etapa expandida
   // Rascunho não salvo em algum dos tipos: avisa antes de sair da tela
   const temAlteracao = Object.values(alterado).some(Boolean)
+  const [confirmarDescartar, setConfirmarDescartar] = useState(false)
   useAvisoSairSemSalvar(temAlteracao, 'Há alterações não salvas nos fluxos do DID. Deseja sair sem salvar?')
   const [adicionando, setAdicionando] = useState(false)
   const [validacao, setValidacao] = useState({ erros: [], avisos: [], carregando: false })
@@ -539,7 +540,7 @@ export default function FluxosProcesso() {
             <span className="text-sm text-amber-900 dark:text-amber-200 flex-1 min-w-[180px]">
               Alterações não salvas em <strong>{TIPOS.find(t => t.id === tipo)?.label}</strong>
             </span>
-            <button type="button" onClick={() => { if (window.confirm('Descartar as alterações não salvas?')) carregar() }}
+            <button type="button" onClick={() => setConfirmarDescartar(true)}
               className="btn-secondary text-xs px-3 py-1.5">Descartar</button>
             <button type="button" onClick={salvar} disabled={salvando || temErros || validacao.carregando}
               title={temErros ? 'Corrija os erros indicados no fim da página' : undefined}
@@ -588,6 +589,17 @@ export default function FluxosProcesso() {
           confirmLabel="Restaurar padrão"
           onConfirm={restaurarPadrao}
           onClose={() => setConfirmarPadrao(false)}
+        />
+      )}
+
+      {confirmarDescartar && (
+        <ConfirmModal
+          title="Descartar as alterações?"
+          message="As alterações não salvas nos fluxos voltam para a última versão salva."
+          confirmLabel="Descartar"
+          cancelLabel="Continuar editando"
+          onConfirm={() => { setConfirmarDescartar(false); carregar() }}
+          onClose={() => setConfirmarDescartar(false)}
         />
       )}
     </div>

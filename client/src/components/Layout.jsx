@@ -13,6 +13,7 @@ import JAI from './JAI'
 import api, { apiUrl } from '../services/api'
 import AvisoAssinatura from './assinatura/AvisoAssinatura'
 import { confirmarSaida } from '../utils/alteracoesPendentes'
+import AvisoSairHost from './AvisoSairHost'
 import TrocarSenhaPrimeiroAcesso from './TrocarSenhaPrimeiroAcesso'
 
 export default function Layout() {
@@ -62,7 +63,7 @@ export default function Layout() {
     }
   }
   const atualizarSistema = async () => {
-    if (!confirmarSaida()) return // rascunho não salvo na tela atual
+    if (!(await confirmarSaida())) return // rascunho não salvo na tela atual
     setAtualizando(true)
     if (await temVersaoNova()) {
       if ('caches' in window) {
@@ -134,8 +135,8 @@ export default function Layout() {
   const fmtHora = (d) => d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
   const fmtData = (d) => d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })
 
-  const handleLogout = () => {
-    if (!confirmarSaida()) return
+  const handleLogout = async () => {
+    if (!(await confirmarSaida())) return
     logout()
   }
 
@@ -458,7 +459,8 @@ export default function Layout() {
             {/* Primeiro acesso: só a troca de senha até ela ser feita */}
             {user?.trocarSenha ? <TrocarSenhaPrimeiroAcesso /> : (
               <>
-                <AvisoAssinatura />
+                <AvisoSairHost />
+            <AvisoAssinatura />
                 {/* key: o botão Atualizar remonta a tela para buscar os dados de novo */}
                 <Outlet key={versaoTela} />
               </>

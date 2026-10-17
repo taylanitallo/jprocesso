@@ -102,7 +102,7 @@ export default function Configuracoes() {
   const VALID_TABS_CONF = visibleTabs.map(t => t.id);
   const activeTab = VALID_TABS_CONF.includes(tabParam) ? tabParam : VALID_TABS_CONF[0];
   // Rascunho não salvo (ex.: Fluxos do DID) pergunta antes de trocar de aba
-  const setActiveTab = (key) => { if (key !== activeTab && confirmarSaida()) navigate(`/${subdomain}/configuracoes/${key}`); };
+  const setActiveTab = async (key) => { if (key !== activeTab && await confirmarSaida()) navigate(`/${subdomain}/configuracoes/${key}`); };
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
