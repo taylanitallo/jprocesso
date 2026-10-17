@@ -1259,6 +1259,15 @@ async function gerarPdf(ordemRaw, contratos = []) {
   const CINZA = [120, 120, 120]
   const CLARO = [245, 247, 250]
 
+  // Rótulo antes dos dois pontos ("Objeto:", "Secretaria:"...) com destaque extra:
+  // negrito + contorno fino da própria letra, bem mais forte que o valor ao lado
+  const rotuloForte = (texto, x, yy, opcoes = {}) => {
+    doc.setFont('helvetica', 'bold')
+    doc.setLineWidth(0.18)
+    doc.text(texto, x, yy, { ...opcoes, renderingMode: 'fillThenStroke' })
+    doc.setLineWidth(0.2)
+  }
+
   // Timbrado de fundo (marca d'água por página)
   applyTimbradoToPage(doc)
 
@@ -1305,7 +1314,7 @@ async function gerarPdf(ordemRaw, contratos = []) {
       // Rótulo (antes dos dois pontos) em negrito, valor normal
       doc.setFontSize(11)
       doc.setFont('helvetica', 'bold')
-      doc.text('Contratado:', M, y)
+      rotuloForte('Contratado:', M, y)
       const wContratado = doc.getTextWidth('Contratado: ')
       doc.setFont('helvetica', 'normal')
       doc.text(contrato.credor.razao_social, M + wContratado, y)
@@ -1314,7 +1323,7 @@ async function gerarPdf(ordemRaw, contratos = []) {
         const wValor = doc.getTextWidth(valorDoc)
         doc.text(valorDoc, W - MR, y, { align: 'right' })
         doc.setFont('helvetica', 'bold')
-        doc.text('CNPJ/CPF:', W - MR - wValor - doc.getTextWidth(' '), y, { align: 'right' })
+        rotuloForte('CNPJ/CPF:', W - MR - wValor - doc.getTextWidth(' '), y, { align: 'right' })
         doc.setFont('helvetica', 'normal')
       }
       y += 5.5
@@ -1331,7 +1340,7 @@ async function gerarPdf(ordemRaw, contratos = []) {
     doc.setFontSize(11)
     doc.setFont('helvetica', 'bold')
     const rotulo = `${label}:`
-    doc.text(rotulo, x, yy)
+    rotuloForte(rotulo, x, yy)
     const recuo = doc.getTextWidth(`${rotulo} `) // um espaço depois dos dois pontos
     doc.setFont('helvetica', 'normal')
     const linhas = doc.splitTextToSize(String(valor || '—'), Math.max(12, largura - recuo))
