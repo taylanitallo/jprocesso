@@ -1269,7 +1269,7 @@ async function gerarPdf(ordemRaw, contratos = []) {
   const titulo = ordem.tipo === 'COMPRA' ? 'ORDEM DE COMPRA' : 'ORDEM DE SERVIÇO'
   // T\u00edtulo e n\u00famero centralizados; o status (Emitida, etc.) n\u00e3o sai no documento
   doc.text(titulo, W / 2, mTop + 2, { align: 'center' })
-  doc.setFontSize(12)
+  doc.setFontSize(13)
   doc.setFont('helvetica', 'bold')
   if (ordem.numero) doc.text(`N\u00ba ${ordem.numero}`, W / 2, mTop + 8, { align: 'center' })
   doc.setDrawColor(...AZUL)
@@ -1279,7 +1279,7 @@ async function gerarPdf(ordemRaw, contratos = []) {
   let y = mTop + 18
   const secTitle = (label) => {
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(10)
+    doc.setFontSize(11)
     doc.setTextColor(...AZUL)
     doc.text(label, M, y)
     doc.setDrawColor(...AZUL)
@@ -1289,7 +1289,7 @@ async function gerarPdf(ordemRaw, contratos = []) {
 
   secTitle('CONTRATO')
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(10)
+  doc.setFontSize(11)
   doc.setTextColor(30, 30, 30)
   const contrato = ordem.contrato
   if (contrato) {
@@ -1303,10 +1303,10 @@ async function gerarPdf(ordemRaw, contratos = []) {
     y += Math.max(5.5, objLines.length * 5)
     if (contrato.credor?.razao_social) {
       // Rótulo (antes dos dois pontos) em negrito, valor normal
-      doc.setFontSize(10)
+      doc.setFontSize(11)
       doc.setFont('helvetica', 'bold')
       doc.text('Contratado:', M, y)
-      const wContratado = doc.getTextWidth('Contratado:') + 2.5
+      const wContratado = doc.getTextWidth('Contratado: ')
       doc.setFont('helvetica', 'normal')
       doc.text(contrato.credor.razao_social, M + wContratado, y)
       if (contrato.credor.cnpj_cpf) {
@@ -1314,10 +1314,10 @@ async function gerarPdf(ordemRaw, contratos = []) {
         const wValor = doc.getTextWidth(valorDoc)
         doc.text(valorDoc, W - MR, y, { align: 'right' })
         doc.setFont('helvetica', 'bold')
-        doc.text('CNPJ/CPF:', W - MR - wValor - 2.5, y, { align: 'right' })
+        doc.text('CNPJ/CPF:', W - MR - wValor - doc.getTextWidth(' '), y, { align: 'right' })
         doc.setFont('helvetica', 'normal')
       }
-      y += 5
+      y += 5.5
     }
   }
 
@@ -1328,21 +1328,21 @@ async function gerarPdf(ordemRaw, contratos = []) {
   // "Rótulo: valor" — o valor começa logo depois dos dois pontos; se quebrar, as
   // linhas seguintes alinham com o início do valor. Devolve a altura usada.
   const campo = (label, valor, x, largura, yy) => {
-    doc.setFontSize(10)
+    doc.setFontSize(11)
     doc.setFont('helvetica', 'bold')
     const rotulo = `${label}:`
     doc.text(rotulo, x, yy)
-    const recuo = doc.getTextWidth(rotulo) + 2.5
+    const recuo = doc.getTextWidth(`${rotulo} `) // um espaço depois dos dois pontos
     doc.setFont('helvetica', 'normal')
     const linhas = doc.splitTextToSize(String(valor || '—'), Math.max(12, largura - recuo))
     doc.text(linhas, x + recuo, yy)
-    return linhas.length * 4.4
+    return linhas.length * 4.8
   }
   const larguraUtil = W - M - MR
   const metade = (larguraUtil - 8) / 2
   const linhaDupla = (a, b) => {
     const h = Math.max(campo(a[0], a[1], M, metade, y), campo(b[0], b[1], M + metade + 8, metade, y))
-    y += Math.max(5.6, h + 1.4)
+    y += Math.max(6, h + 1.4)
   }
   y += 1
   linhaDupla(['Data de Emissão', fmtD(ordem.data_emissao)], ['Data Entrega/Conclusão', fmtD(ordem.data_entrega_prevista)])
@@ -1351,7 +1351,7 @@ async function gerarPdf(ordemRaw, contratos = []) {
 
   const textField = (label, value) => {
     if (!value) return
-    y += Math.max(5.6, campo(label, value, M, larguraUtil, y) + 1.4)
+    y += Math.max(6, campo(label, value, M, larguraUtil, y) + 1.4)
   }
 
   textField('Objeto', ordem.objeto || '—')
@@ -1388,7 +1388,7 @@ async function gerarPdf(ordemRaw, contratos = []) {
     if (usarTablasSeparadas) {
       // Sub-título do lote
       doc.setFont('helvetica', 'bold')
-      doc.setFontSize(10)
+      doc.setFontSize(11)
       doc.setTextColor(...AZUL)
       const loteLabel = lote ? `LOTE ${lote}` : 'SEM LOTE'
       doc.text(loteLabel, M, y)
@@ -1404,10 +1404,10 @@ async function gerarPdf(ordemRaw, contratos = []) {
         return [it.codigo_item || itemGlobalIdx, it.descricao || '\u2014', it.unidade || '\u2014', fmtN(it.quantidade), fmtV(it.valor_unitario), fmtV(tot)]
       }),
       theme: 'striped',
-      headStyles: { fillColor: AZUL, textColor: [255, 255, 255], fontSize: 10, fontStyle: 'bold', halign: 'center' },
+      headStyles: { fillColor: AZUL, textColor: [255, 255, 255], fontSize: 11, fontStyle: 'bold', halign: 'center' },
       // Tudo centralizado e no meio da célula; a descrição fica alinhada à esquerda (no meio da altura)
       styles: { valign: 'middle', halign: 'center' },
-      bodyStyles: { fontSize: 10 },
+      bodyStyles: { fontSize: 11 },
       columnStyles: {
         0: { cellWidth: 12, halign: 'center' },
         1: { cellWidth: 'auto', halign: 'left' },
@@ -1421,7 +1421,7 @@ async function gerarPdf(ordemRaw, contratos = []) {
     // Total por fora da tabela, logo abaixo, alinhado à direita
     y = doc.lastAutoTable.finalY + 5
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(10)
+    doc.setFontSize(11)
     doc.text(usarTablasSeparadas ? `Total do lote ${lote || (loteIdx + 1)}: ${fmtV(totalLote)}` : `TOTAL: ${fmtV(totalGeral)}`, W - MR, y, { align: 'right' })
     y += usarTablasSeparadas ? 6 : 7
   })
@@ -1429,7 +1429,7 @@ async function gerarPdf(ordemRaw, contratos = []) {
   // Total geral quando há múltiplos lotes
   if (usarTablasSeparadas) {
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(10)
+    doc.setFontSize(11)
     doc.setTextColor(30, 30, 30)
     doc.text(`TOTAL GERAL: ${fmtV(totalGeral)}`, W - MR, y, { align: 'right' })
     y += 6
@@ -1439,7 +1439,7 @@ async function gerarPdf(ordemRaw, contratos = []) {
   if (ordem.observacoes) {
     secTitle('OBSERVA\u00c7\u00d5ES')
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(10)
+    doc.setFontSize(11)
     doc.setTextColor(30, 30, 30)
     const obsLines = doc.splitTextToSize(ordem.observacoes, W - M - MR)
     doc.text(obsLines, M, y)
@@ -1465,13 +1465,13 @@ async function gerarPdf(ordemRaw, contratos = []) {
   const assinante = (x, nome, complemento) => {
     const cx = x + lineW / 2
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(10)
+    doc.setFontSize(11)
     const linhasNome = doc.splitTextToSize(nome, lineW)
     doc.text(linhasNome, cx, sigY + 5, { align: 'center' })
     if (complemento) {
       doc.setFont('helvetica', 'normal')
-      doc.setFontSize(10)
-      doc.text(doc.splitTextToSize(complemento, lineW), cx, sigY + 5 + linhasNome.length * 4.4, { align: 'center' })
+      doc.setFontSize(11)
+      doc.text(doc.splitTextToSize(complemento, lineW), cx, sigY + 5 + linhasNome.length * 4.8, { align: 'center' })
     }
   }
 

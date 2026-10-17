@@ -1,7 +1,7 @@
 // Padrão visual dos documentos oficiais (todo PDF gerado pelo sistema: ordens de
 // compra/serviço, despachos, ofícios, relatórios, DIDs, exportações).
 // Carregado uma vez em main.jsx; vale para todo `new jsPDF()`:
-//  - fonte Times New Roman (no lugar de Helvetica/Arial);
+//  - fonte Calibri (Carlito embutida) no lugar de Helvetica/Arial/Times;
 //  - texto e linhas sempre pretos;
 //  - fundos coloridos viram cinza claro (o branco continua branco);
 //  - molduras (retângulos com contorno) com cantos arredondados;
@@ -11,12 +11,21 @@
 // Tabelas sem cabeçalho (usadas só para alinhar texto) mantêm o desenho delas.
 import { jsPDF } from 'jspdf'
 import { applyPlugin } from 'jspdf-autotable'
+import * as Calibri from './fonteCalibri.js'
 
 export const ESPESSURA_LINHA = 0.2 // mm
 export const RAIO = 1.3            // mm — cantos arredondados
 export const CINZA_CABECALHO = 228 // cinza claro do cabeçalho das tabelas
-export const FONTE = 'times'       // Times New Roman (fonte padrão dos documentos)
-const FONTES_TROCADAS = /^(helvetica|arial|sans-serif)$/i
+export const FONTE = 'calibri'     // Calibri (fonte padrão dos documentos)
+const FONTES_TROCADAS = /^(helvetica|arial|sans-serif|times|times new roman|serif)$/i
+
+// Registra a Calibri (Carlito) em todo documento novo
+jsPDF.API.events.push(['addFonts', function registrarCalibri() {
+  for (const [estilo, arquivo] of [['normal', 'Regular'], ['bold', 'Bold'], ['italic', 'Italic'], ['bolditalic', 'BoldItalic']]) {
+    this.addFileToVFS(`Calibri-${arquivo}.ttf`, Calibri[arquivo])
+    this.addFont(`Calibri-${arquivo}.ttf`, FONTE, estilo)
+  }
+}])
 
 // ── Cores ────────────────────────────────────────────────────────────────────
 function luminancia(args) {
@@ -55,7 +64,7 @@ jsPDF.API.events.push(['initialized', function aplicarPadrao() {
   const rect = doc.rect
   const setFont = doc.setFont
 
-  // Helvetica/Arial (padrão do jsPDF e do autotable) → Times New Roman
+  // Helvetica/Arial/Times (padrão do jsPDF e do autotable) → Calibri
   doc.setFont = function (nome, ...resto) { return setFont.call(doc, FONTES_TROCADAS.test(String(nome || '')) ? FONTE : nome, ...resto) }
   doc.setTextColor = function () { return setTextColor.call(doc, 0) }
   doc.setDrawColor = function () { return setDrawColor.call(doc, 0) }

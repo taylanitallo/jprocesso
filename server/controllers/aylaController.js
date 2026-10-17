@@ -135,9 +135,9 @@ const chat = async (req, res) => {
       }
     } catch (_) { /* fallback também falhou */ }
 
-    // Erros conhecidos da NVIDIA
-    if (error.message === 'NVIDIA_API_KEY_NOT_CONFIGURED') {
-      return res.status(503).json({ error: 'Assistente de IA não configurado. Configure NVIDIA_API_KEY no servidor.' });
+    // Erros conhecidos do provedor de IA
+    if (error.message === 'IA_API_KEY_NOT_CONFIGURED') {
+      return res.status(503).json({ error: 'Assistente de IA não configurado. Configure GEMINI_API_KEY no servidor.' });
     }
     if (error.response?.status === 401 || error.response?.status === 403) {
       return res.status(503).json({ error: 'Serviço de IA temporariamente indisponível.' });
