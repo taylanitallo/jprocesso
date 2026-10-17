@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import api from '../../services/api'
 import { ConfirmModal } from '../../components/ui'
+import { useAvisoSairSemSalvar } from '../../utils/alteracoesPendentes'
 
 const TIPOS = [
   { id: 'fixas', label: 'DID Contas Fixas' },
@@ -121,6 +122,9 @@ export default function FluxosProcesso() {
   const [rascunho, setRascunho] = useState({})    // { fixas: etapas[], variaveis: etapas[] }
   const [alterado, setAlterado] = useState({})    // { fixas: bool, variaveis: bool }
   const [aberta, setAberta] = useState(null)      // índice da etapa expandida
+  // Rascunho não salvo em algum dos tipos: avisa antes de sair da tela
+  const temAlteracao = Object.values(alterado).some(Boolean)
+  useAvisoSairSemSalvar(temAlteracao, 'Há alterações não salvas nos fluxos do DID. Deseja sair sem salvar?')
   const [adicionando, setAdicionando] = useState(false)
   const [validacao, setValidacao] = useState({ erros: [], avisos: [], carregando: false })
   const [salvando, setSalvando] = useState(false)
@@ -365,6 +369,13 @@ export default function FluxosProcesso() {
                         className="p-1.5 rounded-md hover:bg-ink-100 disabled:opacity-30" aria-label={`Descer ${e.nome}`}><ChevronDown className="h-4 w-4" /></button>
                     </>
                   )}
+                  {expandida && (
+                    <button type="button" onClick={salvar} disabled={salvando || temErros || validacao.carregando || !alterado[tipo]}
+                      title={!alterado[tipo] ? 'Nenhuma alteração para salvar' : temErros ? 'Corrija os erros indicados no fim da página' : 'Salvar o fluxo'}
+                      className="btn-primary text-xs px-2.5 py-1.5 flex items-center gap-1 disabled:opacity-40">
+                      {salvando ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />} Salvar
+                    </button>
+                  )}
                   <button type="button" onClick={() => setAberta(expandida ? null : i)} aria-expanded={expandida}
                     className="btn-secondary text-xs px-2.5 py-1.5 flex items-center gap-1">
                     <Pencil className="h-3 w-3" /> {expandida ? 'Fechar' : 'Editar'}
@@ -522,6 +533,21 @@ export default function FluxosProcesso() {
           className="btn-secondary text-sm px-3 py-2 flex items-center gap-1.5 disabled:opacity-40" title="Voltar à sequência padrão do sistema">
           <RotateCcw className="h-4 w-4" /> Restaurar padrão
         </button>
+        {alterado[tipo] && (
+          <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-40 w-[min(680px,calc(100vw-2rem))] rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/40 shadow-lg px-4 py-2.5 flex flex-wrap items-center gap-3">
+            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+            <span className="text-sm text-amber-900 dark:text-amber-200 flex-1 min-w-[180px]">
+              Alterações não salvas em <strong>{TIPOS.find(t => t.id === tipo)?.label}</strong>
+            </span>
+            <button type="button" onClick={() => { if (window.confirm('Descartar as alterações não salvas?')) carregar() }}
+              className="btn-secondary text-xs px-3 py-1.5">Descartar</button>
+            <button type="button" onClick={salvar} disabled={salvando || temErros || validacao.carregando}
+              title={temErros ? 'Corrija os erros indicados no fim da página' : undefined}
+              className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1 disabled:opacity-40">
+              {salvando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />} Salvar fluxo
+            </button>
+          </div>
+        )}
         {historico.length > 0 && (
           <button type="button" onClick={() => setVerHistorico(v => !v)} aria-expanded={verHistorico}
             className="btn-secondary text-sm px-3 py-2 flex items-center gap-1.5">

@@ -12,6 +12,7 @@ import { useQueryClient } from 'react-query'
 import JAI from './JAI'
 import api, { apiUrl } from '../services/api'
 import AvisoAssinatura from './assinatura/AvisoAssinatura'
+import { confirmarSaida } from '../utils/alteracoesPendentes'
 import TrocarSenhaPrimeiroAcesso from './TrocarSenhaPrimeiroAcesso'
 
 export default function Layout() {
@@ -61,6 +62,7 @@ export default function Layout() {
     }
   }
   const atualizarSistema = async () => {
+    if (!confirmarSaida()) return // rascunho não salvo na tela atual
     setAtualizando(true)
     if (await temVersaoNova()) {
       if ('caches' in window) {
@@ -133,6 +135,7 @@ export default function Layout() {
   const fmtData = (d) => d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })
 
   const handleLogout = () => {
+    if (!confirmarSaida()) return
     logout()
   }
 
