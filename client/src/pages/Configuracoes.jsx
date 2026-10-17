@@ -7,6 +7,7 @@ import { Save, Upload, X, ImageIcon, Download, FileDown, FileUp, Database, Key, 
 import PageHeader from '../components/ui/PageHeader';
 import SectionTitle from '../components/ui/SectionTitle';
 import FluxosProcesso from './configuracoes/FluxosProcesso';
+import { confirmarSaida } from '../utils/alteracoesPendentes';
 import { hasPerm } from '../utils/permissions';
 import { conferirAbasDoModulo } from '../utils/permissoesSchema';
 
@@ -100,7 +101,8 @@ export default function Configuracoes() {
   const visibleTabs = tabs.filter(t => (!t.soAdmin || ehAdmin) && pode(t.id, 'ver'));
   const VALID_TABS_CONF = visibleTabs.map(t => t.id);
   const activeTab = VALID_TABS_CONF.includes(tabParam) ? tabParam : VALID_TABS_CONF[0];
-  const setActiveTab = (key) => navigate(`/${subdomain}/configuracoes/${key}`);
+  // Rascunho não salvo (ex.: Fluxos do DID) pergunta antes de trocar de aba
+  const setActiveTab = (key) => { if (key !== activeTab && confirmarSaida()) navigate(`/${subdomain}/configuracoes/${key}`); };
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
