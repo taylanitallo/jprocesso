@@ -515,46 +515,8 @@ export default function Configuracoes() {
                 </div>
               </div>
 
-              {/* Cores dos relatórios */}
-              <div>
-                <SectionTitle title="Cores dos Relatórios / Documentos" />
-                <p className="text-xs text-ink-400 mb-5">Definam as cores institucionais usadas nos PDFs gerados pelo sistema.</p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-xl">
-                  {[
-                    { key: 'cor_relatorio_primaria',   label: 'Cor Primária',   hint: 'Cabeçalho, títulos' },
-                    { key: 'cor_relatorio_secundaria', label: 'Cor Secundária', hint: 'Barras, separadores' },
-                    { key: 'cor_relatorio_texto',      label: 'Cor do Texto',   hint: 'Texto principal' },
-                  ].map(({ key, label, hint }) => (
-                    <div key={key}>
-                      <label className="block text-sm font-medium text-ink-700 mb-1">{label}</label>
-                      <p className="text-xs text-ink-400 mb-2">{hint}</p>
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="color"
-                          value={geraisData[key]}
-                          onChange={e => setGeraisData(p => ({ ...p, [key]: e.target.value }))}
-                          disabled={!editavelGerais}
-                          className="h-9 w-14 rounded-lg border border-ink-300 cursor-pointer p-0.5 bg-surface disabled:opacity-60 disabled:cursor-not-allowed"
-                        />
-                        <span className="text-xs font-mono text-ink-600 uppercase">{geraisData[key]}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Preview das cores */}
-                <div className="mt-5 rounded-lg overflow-hidden border border-ink-200 max-w-sm">
-                  <div className="px-4 py-2.5 text-white text-xs font-bold" style={{ backgroundColor: geraisData.cor_relatorio_primaria }}>
-                    Prefeitura Municipal — Preview
-                  </div>
-                  <div className="h-1" style={{ backgroundColor: geraisData.cor_relatorio_secundaria }} />
-                  <div className="px-4 py-3 bg-surface">
-                    <p className="text-xs font-semibold" style={{ color: geraisData.cor_relatorio_texto }}>Conteúdo do relatório aqui</p>
-                    <p className="text-[11px] mt-1" style={{ color: geraisData.cor_relatorio_texto, opacity: 0.7 }}>Processo nº 001/2026 · Secretaria de Administração</p>
-                  </div>
-                  <div className="h-1" style={{ backgroundColor: geraisData.cor_relatorio_secundaria }} />
-                </div>
-              </div>
+              {/* Cores dos documentos: não há mais — documentos oficiais saem sempre em preto
+                  (utils/padraoDocumentoOficial.js) */}
 
               {/* Margens dos Documentos */}
               <div>

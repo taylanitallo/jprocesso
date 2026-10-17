@@ -1,4 +1,5 @@
 import { getMargens } from './margensStore'
+import { CSS_DOCUMENTO_OFICIAL } from './cssDocumentoOficial'
 
 // Dois timbrados:
 //  - município  (superadmin / Configurações › Gerais) — usado nos DIDs e quando a
@@ -74,11 +75,11 @@ export function applyTimbradoToPage(doc) { desenhar(doc, fonteGeral()) }
 /** DIDs (contas fixas e variáveis): sempre o timbrado do município (superadmin) */
 export function applyTimbradoMunicipio(doc) { desenhar(doc, fontes.municipio) }
 
-/** Só o fundo (body::before) para impressões HTML que montam o próprio @page */
+/** Padrão de documento oficial + fundo (body::before) para impressões HTML que montam o próprio @page */
 export function timbradoFundoCSS() {
   const f = fonteGeral()
-  if (!f.img) return ''
-  return `body::before{content:'';position:fixed;top:0;left:0;width:210mm;height:297mm;background-image:url("${f.img}");background-size:210mm 297mm;background-repeat:no-repeat;background-position:top left;opacity:${f.opacity};z-index:-1;pointer-events:none;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}`
+  if (!f.img) return CSS_DOCUMENTO_OFICIAL
+  return CSS_DOCUMENTO_OFICIAL + `body::before{content:'';position:fixed;top:0;left:0;width:210mm;height:297mm;background-image:url("${f.img}");background-size:210mm 297mm;background-repeat:no-repeat;background-position:top left;opacity:${f.opacity};z-index:-1;pointer-events:none;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}`
 }
 
 // Retorna bloco CSS completo para prints HTML (timbrado da secretaria, senão do município)
@@ -87,7 +88,7 @@ export function timbradoPrintCSS() {
   const f = fonteGeral()
   // @page define tamanho A4 sem margem própria; padding no body cria as margens
   const page = `@page{size:A4 portrait;margin:0}body{padding:${top}mm ${right}mm ${bottom}mm ${left}mm;margin:0;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}`
-  if (!f.img) return page
+  if (!f.img) return page + CSS_DOCUMENTO_OFICIAL
   // Usa dimensões absolutas A4 (210×297mm) para evitar corte em browsers mobile
   return `${page}
     body::before{content:'';display:block;position:fixed;top:0;left:0;
@@ -95,5 +96,5 @@ export function timbradoPrintCSS() {
       background-image:url("${f.img}");
       background-size:210mm 297mm;background-repeat:no-repeat;background-position:top left;
       opacity:${f.opacity};z-index:-1;pointer-events:none;
-      -webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}`
+      -webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}${CSS_DOCUMENTO_OFICIAL}`
 }

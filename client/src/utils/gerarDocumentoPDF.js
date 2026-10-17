@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf'
+import './padraoDocumentoOficial' // padrão de documento oficial (preto, grade, cantos arredondados)
 import autoTable from 'jspdf-autotable'
 import { salvarDocumentoGerado } from './salvarDocumentoGerado'
 import { applyTimbradoToPage } from './timbradoStore'

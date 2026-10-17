@@ -5,6 +5,7 @@ import {
   ClipboardList, ShoppingCart, Wrench, FileDown, Loader2,
 } from 'lucide-react'
 import { jsPDF } from 'jspdf'
+import '../../utils/padraoDocumentoOficial' // padrão de documento oficial (preto, grade, cantos arredondados)
 import autoTable from 'jspdf-autotable'
 import api from '../../services/api'
 import LoadingBar from '../../components/LoadingBar'

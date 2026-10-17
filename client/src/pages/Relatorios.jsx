@@ -5,6 +5,7 @@ import api from '../services/api'
 import { PageHeader, SectionTitle } from '../components/ui'
 import LoadingBar from '../components/LoadingBar'
 import { jsPDF } from 'jspdf'
+import '../utils/padraoDocumentoOficial' // padrão de documento oficial (preto, grade, cantos arredondados)
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
 import { format } from 'date-fns'
