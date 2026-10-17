@@ -1267,14 +1267,11 @@ async function gerarPdf(ordemRaw, contratos = []) {
   doc.setFontSize(16)
   doc.setTextColor(...AZUL)
   const titulo = ordem.tipo === 'COMPRA' ? 'ORDEM DE COMPRA' : 'ORDEM DE SERVIÇO'
-  doc.text(titulo, M, mTop + 2)
-  doc.setFontSize(9)
-  doc.setFont('helvetica', 'normal')
-  doc.setTextColor(60, 70, 90)
-  if (ordem.numero) doc.text(`N\u00ba ${ordem.numero}`, M, mTop + 9)
-  doc.setFontSize(8)
+  // T\u00edtulo e n\u00famero centralizados; o status (Emitida, etc.) n\u00e3o sai no documento
+  doc.text(titulo, W / 2, mTop + 2, { align: 'center' })
+  doc.setFontSize(10)
   doc.setFont('helvetica', 'bold')
-  doc.text(ordem.status || '', W - MR, mTop + 9, { align: 'right' })
+  if (ordem.numero) doc.text(`N\u00ba ${ordem.numero}`, W / 2, mTop + 8, { align: 'center' })
   doc.setDrawColor(...AZUL)
   doc.line(M, mTop + 12, W - MR, mTop + 12)
 
@@ -1305,10 +1302,21 @@ async function gerarPdf(ordemRaw, contratos = []) {
     doc.text(objLines, M, y)
     y += Math.max(5, objLines.length * 4.5)
     if (contrato.credor?.razao_social) {
-      doc.setTextColor(...CINZA)
+      // Rótulo (antes dos dois pontos) em negrito, valor normal
       doc.setFontSize(8)
-      doc.text(`Contratado: ${contrato.credor.razao_social}`, M, y)
-      if (contrato.credor.cnpj_cpf) doc.text(`CNPJ/CPF: ${contrato.credor.cnpj_cpf}`, W - MR, y, { align: 'right' })
+      doc.setFont('helvetica', 'bold')
+      doc.text('Contratado:', M, y)
+      const wContratado = doc.getTextWidth('Contratado:') + 1.5
+      doc.setFont('helvetica', 'normal')
+      doc.text(contrato.credor.razao_social, M + wContratado, y)
+      if (contrato.credor.cnpj_cpf) {
+        const valorDoc = String(contrato.credor.cnpj_cpf)
+        const wValor = doc.getTextWidth(valorDoc)
+        doc.text(valorDoc, W - MR, y, { align: 'right' })
+        doc.setFont('helvetica', 'bold')
+        doc.text('CNPJ/CPF:', W - MR - wValor - 1.5, y, { align: 'right' })
+        doc.setFont('helvetica', 'normal')
+      }
       y += 5
     }
   }
@@ -1397,14 +1405,16 @@ async function gerarPdf(ordemRaw, contratos = []) {
       }),
       theme: 'striped',
       headStyles: { fillColor: AZUL, textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold' },
+      // Tudo centralizado e no meio da célula; a descrição fica alinhada à esquerda (no meio da altura)
+      styles: { valign: 'middle', halign: 'center' },
       bodyStyles: { fontSize: 8 },
       columnStyles: {
         0: { cellWidth: 12, halign: 'center' },
-        1: { cellWidth: 'auto' },
+        1: { cellWidth: 'auto', halign: 'left' },
         2: { cellWidth: 16, halign: 'center' },
-        3: { cellWidth: 22, halign: 'right' },
-        4: { cellWidth: 30, halign: 'right' },
-        5: { cellWidth: 30, halign: 'right' },
+        3: { cellWidth: 22, halign: 'center' },
+        4: { cellWidth: 30, halign: 'center' },
+        5: { cellWidth: 30, halign: 'center' },
       },
       margin: { left: M, right: MR },
     })
@@ -1436,19 +1446,47 @@ async function gerarPdf(ordemRaw, contratos = []) {
     y += obsLines.length * 4 + 4
   }
 
-  // Assinaturas
+  // Assinaturas — ordenador de despesa = secretário vigente da secretaria da ordem;
+  // fiscal com o amparo legal. Dados de Organização › Responsáveis.
+  const assinantes = await api.get('/organizacao/secretarias/assinantes', { params: { nome: ordem.secretaria || '' }, _silent: true })
+    .then(r => r.data).catch(() => null)
+  const chave = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase()
+
   const pageH = doc.internal.pageSize.getHeight()
-  const sigY = Math.max(y + 10, pageH - 38)
+  const sigY = Math.max(y + 14, pageH - 40)
   const lineW = (W - M - MR) / 2 - 8
   const col2 = W / 2 + 8
-  doc.setDrawColor(80, 80, 80)
+  doc.setDrawColor(0)
+  doc.setLineWidth(0.3)
   doc.line(M, sigY, M + lineW, sigY)
   doc.line(col2, sigY, col2 + lineW, sigY)
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(7)
-  doc.setTextColor(...CINZA)
-  doc.text('Ordenador de Despesa', M, sigY + 4)
-  doc.text(ordem.fiscal_responsavel ? `Fiscal: ${ordem.fiscal_responsavel}` : 'Fiscal / Respons\u00e1vel', col2, sigY + 4)
+
+  // Nome em negrito centralizado no risco; embaixo, texto normal (cargo/amparo)
+  const assinante = (x, nome, complemento) => {
+    const cx = x + lineW / 2
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(8)
+    const linhasNome = doc.splitTextToSize(nome, lineW)
+    doc.text(linhasNome, cx, sigY + 4, { align: 'center' })
+    if (complemento) {
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(7)
+      doc.text(doc.splitTextToSize(complemento, lineW), cx, sigY + 4 + linhasNome.length * 3.6, { align: 'center' })
+    }
+  }
+
+  const secretario = assinantes?.secretario
+  if (secretario) assinante(M, secretario.nome, [secretario.cargo, secretario.amparo].filter(Boolean).join(' - '))
+  else assinante(M, 'Ordenador de Despesa', '')
+
+  const fiscalNome = ordem.fiscal_responsavel
+  if (fiscalNome) {
+    const doFiscal = (assinantes?.responsaveis || []).filter(r => chave(r.nome) === chave(fiscalNome))
+    const fiscal = doFiscal.find(r => /fiscal/i.test(r.funcao || '')) || doFiscal[0]
+    assinante(col2, fiscalNome, fiscal?.amparo || 'Fiscal do Contrato')
+  } else {
+    assinante(col2, 'Fiscal / Responsável', '')
+  }
 
   // Rodapé
   doc.setFontSize(6)

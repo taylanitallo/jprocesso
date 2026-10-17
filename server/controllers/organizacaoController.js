@@ -638,7 +638,48 @@ const salvarTimbradoSecretaria = async (req, res) => {
   }
 };
 
+// ── Assinantes de documentos da secretaria (ordens de compra/serviço) ───────
+// Secretário vigente (ordenador de despesa) e responsáveis vigentes, com cargo e
+// amparo legal (Organização › Responsáveis). Busca a secretaria pelo nome ou sigla,
+// sem diferenciar maiúscula/acento (contratos/ordens guardam o nome em texto).
+const semAcento = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
+
+const assinantesSecretaria = async (req, res) => {
+  try {
+    const alvo = semAcento(req.query.nome);
+    if (!alvo) return res.json({ secretario: null, responsaveis: [] });
+    const secretarias = await req.models.Secretaria.findAll({ attributes: ['id', 'nome', 'sigla', 'responsaveis'] });
+    const sec = secretarias.find(s => semAcento(s.nome) === alvo || semAcento(s.sigla) === alvo);
+    if (!sec) return res.json({ secretario: null, responsaveis: [] });
+
+    const hoje = new Date().toISOString().slice(0, 10);
+    const vigentes = (Array.isArray(sec.responsaveis) ? sec.responsaveis : []).filter(r =>
+      String(r?.nome || '').trim() && (!r.data_inicio || r.data_inicio <= hoje) && (!r.data_fim || r.data_fim >= hoje));
+
+    // Cargo do cadastro do agente (ex.: "Secretário de Educação") tem prioridade sobre o da função
+    const ids = vigentes.map(r => r.agente_id).filter(Boolean).map(String);
+    const [agentes] = ids.length
+      ? await req.tenantDb.query(`SELECT id::text AS id, cargo FROM "${req.tenant.schema}".agentes WHERE id::text IN (:ids)`, { replacements: { ids } }).catch(() => [[]])
+      : [[]];
+    const cargoAgente = new Map(agentes.map(a => [a.id, a.cargo]));
+    const resp = vigentes.map(r => ({
+      nome: String(r.nome).trim(),
+      funcao: r.cargo || null,
+      cargo: cargoAgente.get(String(r.agente_id)) || r.cargo || null,
+      amparo: r.amparo || null,
+    }));
+    // Secretário (ou gestor/ordenador); sem eles, o primeiro responsável vigente que não é fiscal
+    const secretario = resp.find(r => /secret/i.test(r.funcao || '')) || resp.find(r => /gestor|ordenador/i.test(r.funcao || ''))
+      || resp.find(r => !/fiscal/i.test(r.funcao || '')) || null;
+    res.json({ secretaria: { nome: sec.nome, sigla: sec.sigla }, secretario, responsaveis: resp });
+  } catch (error) {
+    console.error('Erro ao buscar assinantes da secretaria:', error);
+    res.status(500).json({ error: 'Erro ao buscar os assinantes' });
+  }
+};
+
 module.exports = {
+  assinantesSecretaria,
   obterTimbradoSecretaria,
   salvarTimbradoSecretaria,
   createSecretaria,
