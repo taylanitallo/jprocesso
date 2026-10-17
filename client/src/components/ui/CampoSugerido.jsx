@@ -30,6 +30,7 @@ const CampoSugerido = forwardRef(function CampoSugerido(
 
   const [carregando, setCarregando] = useState(false)
   const [sugerido, setSugerido] = useState('') // última sugestão aplicada
+  const [falhou, setFalhou] = useState(false)   // a IA não respondeu (mostra "tentar de novo")
   const textareaRef = useRef(null)
   useImperativeHandle(ref, () => textareaRef.current)
 
@@ -50,10 +51,11 @@ const CampoSugerido = forwardRef(function CampoSugerido(
     const id = ++pedidoRef.current
     const antes = atualRef.current
     setCarregando(true)
+    setFalhou(false)
     const texto = await pedirSugestao({ campo, rotulo, extenso, contexto: contextoRef.current, anterior: outra ? antes : undefined })
     if (id !== pedidoRef.current) return
     setCarregando(false)
-    if (!texto) return
+    if (!texto) { setFalhou(true); return }
     // Se o usuário escreveu algo enquanto a IA respondia (ou o campo foi bloqueado), não aplica
     if (atualRef.current !== antes || !ativoRef.current) return
     setSugerido(texto)
@@ -115,12 +117,16 @@ const CampoSugerido = forwardRef(function CampoSugerido(
     setListaFechada(true)
   }
 
+  const limpouAgora = useRef(false) // o foco veio do botão Limpar: deixa o usuário escrever
   const aoFocar = (e) => {
     props.onFocus?.(e)
     setFocado(true)
     setListaFechada(false)
     if (ativo && campo) buscarFrequentes(campo).then(setFrequentes)
-    if (quando !== 'focar' || !ativo || !pronto || jaPediu.current || String(atualRef.current).trim()) return
+    if (!ativo || !pronto || carregando || String(atualRef.current).trim() || limpouAgora.current) return
+    // Entrou num campo vazio: sugere ('abrir' só depois da sugestão automática da abertura;
+    // depois de Limpar, sugere de novo quando o usuário sair e voltar ao campo)
+    if (quando === 'abrir' && !jaPediu.current) return
     jaPediu.current = true
     gerar()
   }
@@ -145,7 +151,7 @@ const CampoSugerido = forwardRef(function CampoSugerido(
         value={atual}
         onChange={digitar}
         onFocus={aoFocar}
-        onBlur={(e) => { props.onBlur?.(e); setFocado(false) }}
+        onBlur={(e) => { props.onBlur?.(e); setFocado(false); limpouAgora.current = false }}
         onKeyDown={(e) => { if (e.key === 'Escape' && abrirLista) { e.stopPropagation(); setListaFechada(true) } props.onKeyDown?.(e) }}
         disabled={disabled}
         readOnly={readOnly}
@@ -180,14 +186,17 @@ const CampoSugerido = forwardRef(function CampoSugerido(
               <button type="button" onClick={() => gerar({ outra: true })} className="flex items-center gap-1 text-ink-500 hover:text-violet-600">
                 <RotateCw className="h-3 w-3" /> Gerar outra
               </button>
-              <button type="button" onClick={() => { pedidoRef.current++; setSugerido(''); aplicar(''); textareaRef.current?.focus() }} className="flex items-center gap-1 text-ink-500 hover:text-danger-600">
+              <button type="button" onClick={() => { pedidoRef.current++; setSugerido(''); aplicar(''); limpouAgora.current = true; textareaRef.current?.focus() }} className="flex items-center gap-1 text-ink-500 hover:text-danger-600">
                 <X className="h-3 w-3" /> Limpar
               </button>
             </>
           ) : !String(atual).trim() ? (
-            <button type="button" onClick={() => gerar()} className="flex items-center gap-1 text-violet-600 hover:text-violet-700 dark:text-violet-300">
-              <Sparkles className="h-3 w-3" /> Sugerir texto com a Ayla
-            </button>
+            <>
+              {falhou && <span className="text-ink-500">A Ayla não conseguiu sugerir agora.</span>}
+              <button type="button" onClick={() => gerar()} className="flex items-center gap-1 font-medium text-violet-600 hover:text-violet-700 dark:text-violet-300">
+                <Sparkles className="h-3 w-3" /> {falhou ? 'Tentar de novo' : 'Sugerir texto com a Ayla'}
+              </button>
+            </>
           ) : null}
         </div>
       )}
