@@ -1,6 +1,6 @@
 /**
  * aylaService.js — Serviço de IA da Ayla
- * Integração com NVIDIA NIM (API compatível com OpenAI).
+ * Integração com Google Gemini ou NVIDIA NIM (API compatível com OpenAI).
  * Inclui detecção de intenção e consultas detalhadas por entidade.
  */
 const axios = require('axios');
@@ -593,17 +593,28 @@ function buildFallbackResponse(intent, detailedData) {
   return null;
 }
 
-// ── Call NVIDIA NIM ───────────────────────────────────────────────────────────
+// ── Chamada à IA ─────────────────────────────────────────────────────────────
+// Google Gemini (GEMINI_API_KEY) tem prioridade; sem ela, usa a NVIDIA NIM
+// (NVIDIA_API_KEY). Os dois pelo formato OpenAI de chat/completions.
 async function callNvidiaNim(messages) {
-  const apiKey  = process.env.NVIDIA_API_KEY;
-  const baseUrl = (process.env.NVIDIA_BASE_URL || 'https://integrate.api.nvidia.com/v1').replace(/\/$/, '');
-  const model   = process.env.NVIDIA_MODEL || 'meta/llama-3.1-70b-instruct';
+  const gemini = process.env.GEMINI_API_KEY;
+  const apiKey = gemini || process.env.NVIDIA_API_KEY;
+  if (!apiKey) throw new Error('IA_API_KEY_NOT_CONFIGURED');
 
-  if (!apiKey) throw new Error('NVIDIA_API_KEY_NOT_CONFIGURED');
+  const baseUrl = gemini
+    ? (process.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta/openai')
+    : (process.env.NVIDIA_BASE_URL || 'https://integrate.api.nvidia.com/v1');
+  const model = gemini
+    ? (process.env.GEMINI_MODEL || 'gemini-flash-latest')
+    : (process.env.NVIDIA_MODEL || 'meta/llama-3.1-70b-instruct');
+  const corpo = gemini
+    // Gemini "pensa" antes de responder: raciocínio curto e folga de tokens para a resposta
+    ? { model, messages, temperature: 0.6, max_tokens: 4096, reasoning_effort: 'low', stream: false }
+    : { model, messages, temperature: 0.6, max_tokens: 1024, top_p: 0.9, stream: false };
 
   const response = await axios.post(
-    `${baseUrl}/chat/completions`,
-    { model, messages, temperature: 0.6, max_tokens: 1024, top_p: 0.9, stream: false },
+    `${baseUrl.replace(/\/$/, '')}/chat/completions`,
+    corpo,
     {
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       timeout: 45000,
