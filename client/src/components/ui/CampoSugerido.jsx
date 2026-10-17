@@ -6,6 +6,7 @@
 //   rotulo   — nome legível para a IA (ex. 'Despacho de tramitação do processo')
 //   contexto — dados da tela que a IA pode usar (assunto, descrição, destino…)
 //   pronto   — false enquanto o contexto ainda está carregando (adia a sugestão)
+// Ao entrar no campo aparece também a lista dos textos que o usuário mais usa nele.
 //   quando   — 'abrir' (padrão): sugere assim que o campo aparece; 'focar': só quando o
 //              usuário entra no campo (telas em que o contexto é digitado logo acima)
 //   extenso  — documento (ofício, portaria…): até alguns parágrafos em vez de 1–4 frases
@@ -16,8 +17,8 @@
 // onChange recebe um evento (real ao digitar; { target: { name, value } } quando a
 // sugestão é aplicada), então funciona com handleChange(e) e e => set(e.target.value).
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
-import { Sparkles, RotateCw, X, Loader2 } from 'lucide-react'
-import { pedirSugestao, registrarTextoUsado } from '../../utils/sugestaoAyla'
+import { Sparkles, RotateCw, X, Loader2, History } from 'lucide-react'
+import { pedirSugestao, registrarTextoUsado, buscarFrequentes } from '../../utils/sugestaoAyla'
 
 const CampoSugerido = forwardRef(function CampoSugerido(
   { campo, rotulo, contexto, quando = 'abrir', extenso = false, pronto = true, sugerir = true, registrarNoEnvio = true, value, defaultValue, onChange, name, disabled, readOnly, className = 'input-field resize-none', ...props },
@@ -93,8 +94,32 @@ const CampoSugerido = forwardRef(function CampoSugerido(
     estavaLivre.current = livre
   }, [disabled, readOnly]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // "Seus textos mais usados": lista ao entrar no campo, filtrada pelo que se digita
+  // (como o autocompletar do navegador no assunto do processo)
+  const [frequentes, setFrequentes] = useState([])
+  const [focado, setFocado] = useState(false)
+  const [listaFechada, setListaFechada] = useState(false)
+  const normal = (t) => String(t || '').toLowerCase().replace(/\s+/g, ' ').trim()
+  const digitado = normal(atual)
+  const mostrarTodos = !digitado || atual === sugerido || frequentes.some(f => normal(f.texto) === digitado)
+  const listaVisivel = (mostrarTodos ? frequentes : frequentes.filter(f => normal(f.texto).includes(digitado)))
+    .filter(f => normal(f.texto) !== digitado)
+    .slice(0, 6)
+  const abrirLista = ativo && focado && !listaFechada && listaVisivel.length > 0
+
+  const escolher = (texto) => {
+    pedidoRef.current++
+    setCarregando(false)
+    setSugerido('')
+    aplicar(texto)
+    setListaFechada(true)
+  }
+
   const aoFocar = (e) => {
     props.onFocus?.(e)
+    setFocado(true)
+    setListaFechada(false)
+    if (ativo && campo) buscarFrequentes(campo).then(setFrequentes)
     if (quando !== 'focar' || !ativo || !pronto || jaPediu.current || String(atualRef.current).trim()) return
     jaPediu.current = true
     gerar()
@@ -105,13 +130,14 @@ const CampoSugerido = forwardRef(function CampoSugerido(
     editadoRef.current = true
     setCarregando(false)
     if (!controlado) setInterno(e.target.value)
+    setListaFechada(false)
     onChange?.(e)
   }
 
   const ehSugestao = !!sugerido && !!String(atual).trim()
 
   return (
-    <div>
+    <div className="relative">
       <textarea
         {...props}
         ref={textareaRef}
@@ -119,10 +145,27 @@ const CampoSugerido = forwardRef(function CampoSugerido(
         value={atual}
         onChange={digitar}
         onFocus={aoFocar}
+        onBlur={(e) => { props.onBlur?.(e); setFocado(false) }}
+        onKeyDown={(e) => { if (e.key === 'Escape' && abrirLista) { e.stopPropagation(); setListaFechada(true) } props.onKeyDown?.(e) }}
         disabled={disabled}
         readOnly={readOnly}
         className={className}
       />
+      {abrirLista && (
+        <div className="absolute left-0 right-0 z-30 mt-1 max-h-60 overflow-auto rounded-lg border border-ink-200 bg-surface shadow-lg" role="listbox">
+          <p className="flex items-center gap-1 px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-ink-400">
+            <History className="h-3 w-3" /> Seus textos mais usados
+          </p>
+          {listaVisivel.map((f, i) => (
+            <button key={i} type="button" role="option" aria-selected="false"
+              onMouseDown={(e) => { e.preventDefault(); escolher(f.texto) }}
+              className="block w-full px-3 py-1.5 text-left text-xs text-ink-700 hover:bg-violet-50 dark:hover:bg-violet-900/20">
+              <span className="line-clamp-2">{f.texto}</span>
+              {f.vezes > 1 && <span className="text-[10px] text-ink-400">usado {f.vezes} vezes</span>}
+            </button>
+          ))}
+        </div>
+      )}
       {ativo && (
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
           {carregando ? (

@@ -51,9 +51,22 @@ export function contextoFormulario(form, extra = {}) {
   return { ...extra, ...out }
 }
 
+// Textos mais usados pelo usuário num campo ("seus textos mais usados"), em cache por campo
+const cacheFrequentes = new Map()
+export function buscarFrequentes(campo) {
+  if (!campo) return Promise.resolve([])
+  if (!cacheFrequentes.has(campo)) {
+    cacheFrequentes.set(campo, api.get('/ayla/textos-frequentes', { params: { campo }, _silent: true })
+      .then(r => (Array.isArray(r.data?.textos) ? r.data.textos : []))
+      .catch(() => { cacheFrequentes.delete(campo); return [] }))
+  }
+  return cacheFrequentes.get(campo)
+}
+
 // Registra o texto que o usuário de fato enviou — as próximas sugestões aprendem com ele
 export function registrarTextoUsado(campo, texto, contexto) {
   const t = String(texto || '').trim()
   if (!campo || t.length < 5) return
+  cacheFrequentes.delete(campo)
   api.post('/ayla/texto-usado', { campo, texto: t, contexto }, { _silent: true }).catch(() => {})
 }
