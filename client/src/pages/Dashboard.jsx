@@ -171,22 +171,22 @@ export default function Dashboard() {
   // Linha "Operações": cada cartão só com a permissão do seu módulo
   const cardsOperacoes = [
     podeFinanceiro && (
-      <StatCard key="pago" icon={TrendingUp} label="Valor Pago"
+      <StatCard key="pago" to={`/${subdomain}/financeiro`} icon={TrendingUp} label="Valor Pago"
         value={finLoading && valorPago === null ? '—' : valorPago !== null ? fmtMoney(valorPago) : '—'}
         hint={`Empenhos pagos em ${new Date().getFullYear()}`} tone="violet" />
     ),
     podeEstoque && (
-      <StatCard key="critico" icon={Package} label="Estoque Crítico"
+      <StatCard key="critico" to={`/${subdomain}/almoxarifado/itens`} icon={Package} label="Estoque Crítico"
         value={almoxLoading && !almoxData ? '—' : itensCriticos.length}
         hint="Itens abaixo do mínimo" tone="red" />
     ),
     podeRequisicoes && (
-      <StatCard key="req" icon={ClipboardList} label="Req. Pendentes"
+      <StatCard key="req" to={`/${subdomain}/almoxarifado/requisicoes`} icon={ClipboardList} label="Req. Pendentes"
         value={almoxLoading && !almoxData ? '—' : (reqPendentes ?? 0)}
         hint="Aguardando autorização" tone="cyan" />
     ),
     podeProcessos && (
-      <StatCard key="concluidos" icon={CheckCircle2} label="Concluídos"
+      <StatCard key="concluidos" to={`/${subdomain}/processos?aba=concluidos&todos=1`} icon={CheckCircle2} label="Concluídos"
         value={isLoading ? '—' : (stats.concluidos ?? 0)}
         hint="Processos finalizados" tone="green" />
     ),
@@ -246,6 +246,7 @@ export default function Dashboard() {
           <StatCard
             icon={Inbox}
             label="Minha Caixa"
+            to={`/${subdomain}/processos`}
             value={isLoading ? '—' : (stats.minhaCaixa ?? 0)}
             hint="Sob sua responsabilidade"
             tone="blue"
@@ -253,6 +254,7 @@ export default function Dashboard() {
           <StatCard
             icon={Zap}
             label="Urgentes"
+            to={`/${subdomain}/processos?prioridade=urgente&todos=1`}
             value={isLoading ? '—' : urgentesLista.length}
             hint="Alta prioridade em andamento"
             tone="red"
@@ -260,6 +262,7 @@ export default function Dashboard() {
           <StatCard
             icon={FilePlus2}
             label="Novos Hoje"
+            to={`/${subdomain}/processos?periodo=hoje&todos=1`}
             value={isLoading ? '—' : (stats.novosHoje ?? 0)}
             hint="Protocolados nas últimas 24h"
             tone="green"
@@ -267,6 +270,7 @@ export default function Dashboard() {
           <StatCard
             icon={Clock}
             label="Alerta 48h"
+            to={`/${subdomain}/processos?parados=48h&todos=1`}
             value={isLoading ? '—' : (stats.pendentes48h ?? 0)}
             hint="Sem movimentação há +2 dias"
             tone="amber"

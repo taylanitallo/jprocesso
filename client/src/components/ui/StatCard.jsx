@@ -8,8 +8,10 @@
  *   hint    – string — texto auxiliar abaixo do valor (opcional)
  *   tone    – 'blue' | 'green' | 'amber' | 'red' | 'violet' | 'cyan'
  *   trend   – { value: string, up: boolean } — indicador de tendência (opcional)
+ *   to      – rota: o card vira link para a lista/tela daquele número (opcional)
  */
 
+import { Link } from 'react-router-dom'
 import AutoFitValue from './AutoFitValue'
 
 const TONES = {
@@ -51,11 +53,14 @@ const TONES = {
   },
 }
 
-export default function StatCard({ icon: Icon, label, value, hint, tone = 'blue', trend }) {
+export default function StatCard({ icon: Icon, label, value, hint, tone = 'blue', trend, to }) {
   const t = TONES[tone] ?? TONES.blue
+  // Com `to`, o card inteiro é um link (mesmo visual, com cursor e foco de teclado)
+  const Raiz = to ? Link : 'div'
 
   return (
-    <div className={`
+    <Raiz {...(to ? { to, title: `Abrir: ${label}` } : {})} className={`
+      ${to ? 'cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500' : ''}
       flex items-center gap-3 px-4 py-3 min-h-[76px] min-w-0 overflow-hidden
       bg-surface
       rounded-xl border ${t.border}
@@ -98,6 +103,6 @@ export default function StatCard({ icon: Icon, label, value, hint, tone = 'blue'
           </div>
         )}
       </div>
-    </div>
+    </Raiz>
   )
 }

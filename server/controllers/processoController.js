@@ -621,6 +621,12 @@ const listProcessos = async (req, res) => {
     if (prioridade)     where.prioridade       = prioridade;
     if (tipo)           where.tipo_processo    = tipo;
     if (setorIdFiltro)  where.setor_atual_id   = setorIdFiltro;
+    // Atalhos dos cartões do Dashboard (mesmas regras dos números de lá)
+    if (req.query.periodo === 'hoje') {
+      const inicioDia = new Date(); inicioDia.setHours(0, 0, 0, 0);
+      where.created_at = { [Op.gte]: inicioDia };
+    }
+    if (req.query.parados === '48h') where.data_abertura = { [Op.lte]: new Date(Date.now() - 48 * 60 * 60 * 1000) };
     if (usuarioId)      where.usuario_atual_id = usuarioId;
 
     // Busca textual: número, assunto, interessado, tipo_processo
@@ -866,9 +872,9 @@ const getDashboardStats = async (req, res) => {
           : []
       }),
 
-      // 5. concluídos — respeitando visibilidade do usuário
+      // 5. concluídos (finalizados: concluído ou arquivado, como a aba Concluídos)
       Processo.count({
-        where: { ...whereVisivel, status: 'concluido' },
+        where: { ...whereVisivel, status: { [Op.in]: ['concluido', 'arquivado'] } },
         include: userInfo?.tipo === 'gestor' && userInfo?.secretariaId
           ? [{ model: Setor, as: 'setorAtual', where: { secretariaId: userInfo.secretariaId }, required: true }]
           : []
