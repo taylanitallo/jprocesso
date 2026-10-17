@@ -96,7 +96,7 @@ function detectIntent(message) {
 // ── Filtro de permissão por usuário ──────────────────────────────────────────
 function getProcessoWhere(req) {
   const user = req.user;
-  if (!user || user.tipo === 'admin') return {};
+  if (!user || ['admin', 'jeos'].includes(user.tipo)) return {};
   if (user.tipo === 'gestor' && user.secretariaId) {
     // Gestor: processos visíveis serão filtrados pelo join com setor/secretaria
     return {}; // filtrado via include abaixo

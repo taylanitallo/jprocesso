@@ -374,7 +374,7 @@ const pode = (user, entidade, acao) => {
   if (!c) return false;
   let obj = user?.permissoes;
   for (const k of c.perm) obj = obj?.[k];
-  return user?.tipo === 'admin' ? obj?.[ACOES[acao]] !== false : obj?.[ACOES[acao]] === true;
+  return ['admin', 'jeos'].includes(user?.tipo) ? obj?.[ACOES[acao]] !== false : obj?.[ACOES[acao]] === true;
 };
 
 const config = (entidade) => {

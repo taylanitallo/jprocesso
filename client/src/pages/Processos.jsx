@@ -45,7 +45,8 @@ export default function Processos() {
   // Ações conforme o editor de permissões. Só "Ver" = sem botões de ação.
   const pode = usePode('processos')
   const { user } = useAuth()
-  const podeVerTodos = ['admin', 'gestor', 'jeos'].includes(user?.tipo)
+  // Admin/gestor escolhem ver todos da área; o Administrador Jeos vê sempre todos (servidor)
+  const podeVerTodos = ['admin', 'gestor'].includes(user?.tipo)
   const { subdomain } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const aba = searchParams.get('aba') || 'entrada'
