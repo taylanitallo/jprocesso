@@ -9,7 +9,8 @@ const podeNovoProcesso = (u) => podeAbrirProcessos(u) && hasPerm(u, 'processos',
 
 import AuthProvider from './context/AuthContext'
 import ThemeProvider from './context/ThemeContext'
-import { setTimbrado } from './utils/timbradoStore'
+import api from './services/api'
+import { setTimbrado, setTimbradoSecretaria } from './utils/timbradoStore'
 import { setMargens } from './utils/margensStore'
 import { subscribePDFLoading } from './utils/pdfLoadingStore'
 
@@ -61,6 +62,21 @@ function TimbradoSync() {
       tenant?.configuracoes?.timbrado_opacity ?? 75
     )
   }, [tenant?.configuracoes?.timbrado, tenant?.configuracoes?.timbrado_opacity])
+
+  // Timbrado da secretaria do usuário (Configurações › Layout) — vale nos PDFs, exceto DIDs.
+  // Recarrega quando a tela de Layout salva (evento 'timbrado-secretaria').
+  const { user } = useAuth()
+  const secretariaId = user?.secretaria?.id || user?.secretariaId || null
+  useEffect(() => {
+    if (!secretariaId) { setTimbradoSecretaria(null); return undefined }
+    let ativo = true
+    const carregar = () => api.get(`/organizacao/secretarias/${secretariaId}/timbrado`, { _silent: true })
+      .then(({ data }) => { if (ativo) setTimbradoSecretaria(data?.timbrado || null, data?.opacity ?? 75) })
+      .catch(() => { if (ativo) setTimbradoSecretaria(null) })
+    carregar()
+    window.addEventListener('timbrado-secretaria', carregar)
+    return () => { ativo = false; window.removeEventListener('timbrado-secretaria', carregar) }
+  }, [secretariaId])
   return null
 }
 

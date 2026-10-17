@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
+import { timbradoFundoCSS } from '../utils/timbradoStore';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { hasPerm, usePode } from '../utils/permissions';
@@ -705,7 +706,7 @@ tfoot .val{font-size:15px;color:#15803d}
   .ghdr td{background:#dcfce7 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   tfoot tr{background:#f0fdf4 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .layout>tfoot>tr{background:transparent !important}
-  ${tenant?.configuracoes?.timbrado ? `body::before{content:'';position:fixed;top:0;left:0;width:210mm;height:297mm;background-image:url("${tenant.configuracoes.timbrado}");background-size:210mm 297mm;background-repeat:no-repeat;background-position:top left;opacity:.75;z-index:-1;pointer-events:none;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}` : ''}
+  ${timbradoFundoCSS()}
 }
 </style></head><body>
 <table class="layout">
@@ -1968,7 +1969,7 @@ function TabRelatorios() {
     .row-r{background:#f0fdf4!important}
     .v-pos{color:#16a34a;font-weight:700}.v-neg{color:#dc2626;font-weight:700}
     .v-g{color:#16a34a}.v-r{color:#dc2626}
-    ${tenant?.configuracoes?.timbrado ? `body::before{content:'';position:fixed;top:0;left:0;width:210mm;height:297mm;background-image:url("${tenant.configuracoes.timbrado}");background-size:210mm 297mm;background-repeat:no-repeat;background-position:top left;opacity:.75;z-index:-1;pointer-events:none;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}` : ''}
+    ${timbradoFundoCSS()}
     @media print{
       .th-blue{background:#1e40af!important;color:#fff!important}
       .th-green{background:#166534!important;color:#fff!important}

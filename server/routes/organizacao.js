@@ -6,6 +6,8 @@ const {
   listSecretariasPublico,
   updateSecretaria,
   updateSecretariaLogo,
+  obterTimbradoSecretaria,
+  salvarTimbradoSecretaria,
   deleteSecretaria,
   createSetor,
   listSetores,
@@ -53,6 +55,9 @@ router.get('/secretarias', tenantMiddleware, requireTenant, authenticate, listSe
 router.get('/secretarias/:secretariaId/setores', tenantMiddleware, requireTenant, authenticate, getSetoresBySecretaria);
 router.put('/secretarias/:id', tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), aba('secretarias', 'responsaveis'), permEdicaoSecretaria, updateSecretaria);
 router.patch('/secretarias/:id/logo', tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), perm('secretarias', 'editar'), updateSecretariaLogo);
+// Timbrado da secretaria (Configurações › Layout): todos leem; gestor (própria), admin e Jeos alteram
+router.get('/secretarias/:id/timbrado', tenantMiddleware, requireTenant, authenticate, obterTimbradoSecretaria);
+router.put('/secretarias/:id/timbrado', tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), requirePermission('configuracoes', 'tema', 'editar'), salvarTimbradoSecretaria);
 router.delete('/secretarias/:id', tenantMiddleware, requireTenant, authenticate, authorize('admin'), aba('secretarias'), perm('secretarias', 'excluir'), deleteSecretaria);
 
 router.post('/setores', tenantMiddleware, requireTenant, authenticate, authorize('admin', 'gestor'), aba('secretarias'), perm('secretarias', 'criar'), createSetor);

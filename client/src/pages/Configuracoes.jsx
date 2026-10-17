@@ -7,6 +7,7 @@ import { Save, Upload, X, ImageIcon, Download, FileDown, FileUp, Database, Key, 
 import PageHeader from '../components/ui/PageHeader';
 import SectionTitle from '../components/ui/SectionTitle';
 import FluxosProcesso from './configuracoes/FluxosProcesso';
+import TimbradoSecretaria from './configuracoes/TimbradoSecretaria';
 import { confirmarSaida } from '../utils/alteracoesPendentes';
 import { hasPerm } from '../utils/permissions';
 import { conferirAbasDoModulo } from '../utils/permissoesSchema';
@@ -93,7 +94,7 @@ export default function Configuracoes() {
   const tabs = [
     { id: 'gerais',       icon: Building2,      label: 'Gerais' },
     { id: 'notificacoes', icon: Bell,            label: 'Notificações' },
-    { id: 'tema',         icon: Palette,         label: 'Tema' },
+    { id: 'tema',         icon: Palette,         label: 'Layout' }, // antiga aba Tema
     { id: 'importexport', icon: ArrowLeftRight,  label: 'Import / Export' },
     { id: 'fluxos',       icon: Workflow,        label: 'Fluxos de Processo', soAdmin: true },
   ];
@@ -718,7 +719,7 @@ export default function Configuracoes() {
           {/* Aba Tema */}
           {activeTab === 'tema' && (
             <div className="space-y-4">
-              <SectionTitle title="Aparência do Sistema" />
+              <SectionTitle title="Tema" />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg">
                 <button
                   onClick={() => isDark && toggleTheme()}
@@ -740,6 +741,9 @@ export default function Configuracoes() {
                 </button>
               </div>
               <p className="text-xs text-ink-400">A preferência de tema é salva automaticamente no seu navegador.</p>
+
+              <hr className="border-ink-200" />
+              <TimbradoSecretaria />
             </div>
           )}
 
