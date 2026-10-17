@@ -1,8 +1,10 @@
+import { contextoProcesso, registrarTextoUsado } from '../utils/sugestaoAyla'
 import { useState, useEffect } from 'react'
 import { FileDown, Pencil, Save, X, FileText, ChevronDown, Printer } from 'lucide-react'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import { gerarOficioPDF, gerarDespachoPDF } from '../utils/gerarDocumentoPDF'
+import CampoSugerido from './ui/CampoSugerido'
 
 /* ── Tipos de Despacho ──────────────────────────────────────────────────────── */
 const TIPOS = [
@@ -87,6 +89,18 @@ export default function ModalDespacho({ processo, onClose, onSaved }) {
   const set = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }))
 
   const cfg = CAMPOS_TIPO[form.tipo_despacho] || null
+  const tipoNome = TIPOS.find(t => t.value === form.tipo_despacho)?.label || ''
+  // Contexto para a sugestão da Ayla no texto do documento
+  const contextoDoc = {
+    ...contextoProcesso(processo),
+    tipo_documento: tipoNome,
+    assunto_documento: form.assunto,
+    destinatario: form.para,
+    cargo_destinatario: form.cargo_destinatario,
+    emissor: form.nome_assinante,
+    cargo_emissor: form.cargo_emissor,
+    setor_emissor: form.setor_emissor,
+  }
 
   const handleSalvar = async () => {
     if (!form.tipo_despacho) { setError('Selecione o tipo de despacho.'); return }
@@ -95,6 +109,7 @@ export default function ModalDespacho({ processo, onClose, onSaved }) {
     setSaving(true)
     try {
       const { data } = await api.patch(`/processos/${processo.id}/despacho-doc`, form)
+      registrarTextoUsado(`processo.documento.${form.tipo_despacho}`, form.texto, contextoDoc)
       onSaved && onSaved(data.despacho_doc)
       setEditing(false)
     } catch (err) {
@@ -199,7 +214,8 @@ export default function ModalDespacho({ processo, onClose, onSaved }) {
               <div>
                 <label className={lbl}>Texto do Ofício <span className="text-danger-500">*</span></label>
                 {editing
-                  ? <textarea className={inp + ' resize-none'} rows={8} value={form.texto} onChange={set('texto')} placeholder="Corpo do ofício..." />
+                  ? <CampoSugerido key="oficio" campo="processo.documento.oficio" rotulo="Corpo do ofício" extenso contexto={contextoDoc}
+                      registrarNoEnvio={false} className={inp + ' resize-none'} rows={8} value={form.texto} onChange={set('texto')} placeholder="Corpo do ofício..." />
                   : <pre className={ro + ' whitespace-pre-wrap leading-relaxed min-h-[80px]'}>{form.texto || '—'}</pre>}
               </div>
 
@@ -312,7 +328,15 @@ export default function ModalDespacho({ processo, onClose, onSaved }) {
                   {' '}<span className="text-danger-500">*</span>
                 </label>
                 {editing
-                  ? <textarea
+                  ? <CampoSugerido
+                      key={form.tipo_despacho}
+                      campo={`processo.documento.${form.tipo_despacho}`}
+                      rotulo={form.tipo_despacho === 'portaria' || form.tipo_despacho === 'decreto'
+                        ? `${tipoNome}: considerandos e dispositivo (artigos)`
+                        : `Texto do documento "${tipoNome}"`}
+                      extenso
+                      contexto={contextoDoc}
+                      registrarNoEnvio={false}
                       className={inp + ' resize-none'}
                       rows={8}
                       value={form.texto}

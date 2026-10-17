@@ -1241,6 +1241,7 @@ export default function DetalhesProcesso() {
       {showDevolver && (
         <ModalDevolver
           processoId={id}
+          processo={processo}
           destinoDevolucao={destinoDevolucao}
           onClose={() => setShowDevolver(false)}
           onSuccess={handleDevolverSuccess}
@@ -1249,6 +1250,7 @@ export default function DetalhesProcesso() {
       {showConcluir && (
         <ModalConcluir
           processoId={id}
+          processo={processo}
           onClose={() => setShowConcluir(false)}
           onSuccess={handleConcluirSuccess}
         />

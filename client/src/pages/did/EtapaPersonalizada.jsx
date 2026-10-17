@@ -1,5 +1,6 @@
 // Etapa personalizada do fluxo do município (Configurações › Fluxos de Processo):
 // campos simples definidos na configuração, gravados em form.etapas_dados[etapaId].
+import { contextoFormulario } from '../../utils/sugestaoAyla'
 import { useContext } from 'react'
 import { ClipboardList } from 'lucide-react'
 import { Field, Input, Textarea, Checkbox, SectionCard } from './didShared'
@@ -28,7 +29,8 @@ export default function EtapaPersonalizada({ etapa, form, set }) {
         if (c.personalizado === 'texto') {
           return (
             <Field key={c.campo} label={rotulo(c)}>
-              <Textarea value={v} onChange={e => mudar(c.campo, e.target.value)} disabled={locked} rows={4} />
+              <Textarea value={v} onChange={e => mudar(c.campo, e.target.value)} disabled={locked} rows={4}
+                sugestao={{ campo: `did.etapa.${String(c.campo).slice(0, 60)}`, rotulo: `${c.rotulo} — etapa "${titulo || etapa.titulo}" do DID`, contexto: contextoFormulario(form) }} />
             </Field>
           )
         }

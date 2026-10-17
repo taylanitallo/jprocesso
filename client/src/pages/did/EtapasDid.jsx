@@ -5,6 +5,8 @@
 //   EtapaAguardando  — etapa atual que o usuário não pode preencher, com o motivo
 //   EtapaAcoes       — salvar rascunho · concluir e assinar · devolver à etapa anterior
 //   ResponsavelEtapa — responsável automático: o usuário logado (não se escolhe)
+import CampoSugerido from '../../components/ui/CampoSugerido'
+import { contextoFormulario, registrarTextoUsado } from '../../utils/sugestaoAyla'
 import { createContext, useContext, useEffect, useState } from 'react'
 import { Check, Clock, Lock, Undo2, Loader2, ShieldCheck, Save, PenLine, UserCheck, AlertTriangle, CornerDownLeft } from 'lucide-react'
 import api from '../../services/api'
@@ -225,13 +227,16 @@ export function EtapaAcoes({ etapa, form, itensDid, salvando, onRascunho, onConc
             <h2 id="devolver-tit" className="text-base font-bold text-ink-900">Devolver à etapa anterior</h2>
             <p className="text-sm text-ink-600">A etapa anterior é reaberta para correção e o processo volta para quem a concluiu. A devolução é assinada e fica no histórico.</p>
             <label htmlFor="devolver-just" className="block text-xs font-semibold text-ink-600">Motivo da devolução (mínimo 20 caracteres)</label>
-            <textarea id="devolver-just" rows={4} value={justificativa} onChange={e => setJustificativa(e.target.value)} autoFocus
+            <CampoSugerido id="devolver-just" rows={4} value={justificativa} onChange={e => setJustificativa(e.target.value)} autoFocus
+              campo="did.etapa.devolver.motivo" registrarNoEnvio={false}
+              rotulo={`Motivo da devolução do DID à etapa anterior (${etapa.titulo}); explicar o que precisa ser corrigido, no mínimo 20 caracteres`}
+              contexto={contextoFormulario(form, { etapa_atual: etapa.titulo, pendencias: faltando.join(', ') })}
               className="input-field text-sm resize-none" placeholder="Explique o que precisa ser corrigido..." />
             <p className="text-[11px] text-ink-500">{justificativa.trim().length}/20</p>
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setDevolvendo(false)} className="btn-secondary text-sm px-3 py-1.5">Cancelar</button>
               <button type="button" disabled={justificativa.trim().length < 20}
-                onClick={() => { setDevolvendo(false); onDevolver(justificativa.trim()); setJustificativa('') }}
+                onClick={() => { setDevolvendo(false); registrarTextoUsado('did.etapa.devolver.motivo', justificativa, contextoFormulario(form)); onDevolver(justificativa.trim()); setJustificativa('') }}
                 className="text-sm px-4 py-1.5 rounded-lg font-semibold text-white bg-orange-600 hover:bg-orange-700 disabled:opacity-40">
                 Devolver e assinar
               </button>

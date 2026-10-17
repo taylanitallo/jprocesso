@@ -1,3 +1,5 @@
+import CampoSugerido from '../components/ui/CampoSugerido'
+import { registrarTextoUsado } from '../utils/sugestaoAyla'
 import React, { useState, useEffect, useCallback } from 'react'
 import { usePode } from '../utils/permissions'
 import {
@@ -206,7 +208,10 @@ function NovoInventarioModal({ onClose, onSave, saving, erro }) {
         </p>
         <div>
           <label className="block text-sm font-medium text-ink-700 mb-1">Observacao</label>
-          <textarea
+          <CampoSugerido
+            campo="almox.inventario.observacao" registrarNoEnvio={false}
+            rotulo="Observação do inventário de estoque do almoxarifado"
+            contexto={{ data: new Date().toLocaleDateString('pt-BR') }}
             value={obs}
             onChange={e => setObs(e.target.value)}
             rows={2}
@@ -217,7 +222,7 @@ function NovoInventarioModal({ onClose, onSave, saving, erro }) {
         <div className="flex justify-end gap-3 pt-2">
           <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
           <button
-            onClick={() => onSave({ observacao: obs })}
+            onClick={() => { registrarTextoUsado('almox.inventario.observacao', obs); onSave({ observacao: obs }) }}
             disabled={saving}
             className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 disabled:opacity-50 transition-colors"
           >
@@ -241,7 +246,10 @@ function EditarInventarioModal({ inventario, onClose, onSave, saving, erro }) {
         )}
         <div>
           <label className="block text-sm font-medium text-ink-700 mb-1">Observação</label>
-          <textarea
+          <CampoSugerido
+            campo="almox.inventario.observacao" registrarNoEnvio={false}
+            rotulo="Observação do inventário de estoque do almoxarifado"
+            contexto={{ data: new Date().toLocaleDateString('pt-BR') }}
             value={obs}
             onChange={e => setObs(e.target.value)}
             rows={3}
@@ -252,7 +260,7 @@ function EditarInventarioModal({ inventario, onClose, onSave, saving, erro }) {
         <div className="flex justify-end gap-3 pt-2">
           <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
           <button
-            onClick={() => onSave({ observacao: obs })}
+            onClick={() => { registrarTextoUsado('almox.inventario.observacao', obs); onSave({ observacao: obs }) }}
             disabled={saving}
             className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 disabled:opacity-50 transition-colors"
           >

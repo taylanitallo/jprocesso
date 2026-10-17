@@ -153,4 +153,122 @@ const chat = async (req, res) => {
   }
 };
 
-module.exports = { chat };
+// ── Sugestão de texto para campos em branco ──────────────────────────────────
+// O cliente manda o campo (chave estável, ex. 'processo.tramitar.despacho'), o
+// rótulo legível e o contexto da tela; a IA devolve um texto pronto no estilo dos
+// últimos textos que o próprio usuário enviou naquele campo.
+const CAMPO_RE = /^[a-z0-9_.-]{3,80}$/i;
+const MAX_CONTEXTO = 4000;
+const MAX_TEXTO_USADO = 4000;
+
+// Primeira vez num campo de processo: aproveita o que o usuário já escreveu nas tramitações
+const SEMENTE_TRAMITACOES = {
+  'processo.tramitar.despacho': `tipo_acao = 'tramite' AND despacho IS NOT NULL AND length(despacho) >= 10`,
+  'processo.devolver.motivo':   `tipo_acao = 'devolucao' AND justificativa_devolucao IS NOT NULL`,
+  'processo.concluir.despacho': `tipo_acao = 'conclusao' AND despacho IS NOT NULL AND length(despacho) >= 10`,
+};
+
+const limparContexto = (ctx) => {
+  if (!ctx || typeof ctx !== 'object') return {};
+  const out = {};
+  for (const [k, v] of Object.entries(ctx).slice(0, 30)) {
+    if (v === null || v === undefined || v === '') continue;
+    const val = typeof v === 'object' ? JSON.stringify(v) : String(v);
+    out[String(k).slice(0, 60)] = val.replace(/\0/g, '').slice(0, 600);
+  }
+  return out;
+};
+
+async function textosAnteriores(req, campo) {
+  const { QueryTypes } = require('sequelize');
+  const db = req.tenantDb;
+  const uid = req.user?.id;
+  let textos = await db.query(
+    `SELECT texto FROM textos_usados WHERE usuario_id = :uid AND campo = :campo ORDER BY created_at DESC LIMIT 5`,
+    { replacements: { uid, campo }, type: QueryTypes.SELECT }
+  ).catch(() => []);
+
+  if (textos.length < 3 && SEMENTE_TRAMITACOES[campo]) {
+    const col = campo === 'processo.devolver.motivo' ? 'justificativa_devolucao' : 'despacho';
+    const antigos = await db.query(
+      `SELECT ${col} AS texto FROM tramitacoes WHERE origem_usuario_id = :uid AND ${SEMENTE_TRAMITACOES[campo]}
+        ORDER BY data_hora DESC LIMIT 5`,
+      { replacements: { uid }, type: QueryTypes.SELECT }
+    ).catch(() => []);
+    textos = textos.concat(antigos);
+  }
+
+  // Sem histórico do usuário: textos do mesmo campo na secretaria dele
+  if (textos.length === 0 && req.user?.secretariaId) {
+    textos = await db.query(
+      `SELECT texto FROM textos_usados WHERE secretaria_id = :sec AND campo = :campo ORDER BY created_at DESC LIMIT 3`,
+      { replacements: { sec: req.user.secretariaId, campo }, type: QueryTypes.SELECT }
+    ).catch(() => []);
+  }
+  const vistos = new Set();
+  return textos.map(t => String(t.texto || '').trim()).filter(t => t && !vistos.has(t) && vistos.add(t)).slice(0, 5);
+}
+
+const sugerir = async (req, res) => {
+  try {
+    const { campo, rotulo, contexto, anterior, extenso } = req.body || {};
+    if (!campo || !CAMPO_RE.test(campo)) return res.status(400).json({ error: 'Campo inválido' });
+
+    const ctx = limparContexto(contexto);
+    let ctxTexto = Object.entries(ctx).map(([k, v]) => `- ${k}: ${v}`).join('\n');
+    if (ctxTexto.length > MAX_CONTEXTO) ctxTexto = ctxTexto.slice(0, MAX_CONTEXTO);
+    const exemplos = await textosAnteriores(req, campo);
+    const nomeCampo = String(rotulo || campo).slice(0, 120);
+
+    const system = [
+      'Você é a Ayla, assistente do jProcesso, sistema de gestão pública municipal.',
+      `Escreva o texto do campo "${nomeCampo}" para o usuário revisar e enviar.`,
+      extenso
+        ? 'Regras: português formal de administração pública (redação oficial); até 3 parágrafos curtos (no máximo 1500 caracteres);'
+        : 'Regras: português formal de administração pública; direto; 1 a 4 frases (no máximo 600 caracteres);',
+      'use somente as informações do contexto — não invente números, valores, datas, nomes ou documentos;',
+      'não use títulos, aspas, markdown, local/data nem assinatura; devolva apenas o texto do campo.',
+      exemplos.length
+        ? 'Siga o estilo, o vocabulário e a estrutura dos textos que o usuário já escreveu neste campo (adapte ao contexto atual, não copie dados antigos).'
+        : '',
+    ].filter(Boolean).join('\n');
+
+    let user = `Contexto da tela:\n${ctxTexto || '- (sem dados adicionais)'}`;
+    if (exemplos.length) user += `\n\nTextos anteriores do usuário neste campo:\n${exemplos.map((t, i) => `${i + 1}. ${t.slice(0, 600)}`).join('\n')}`;
+    if (anterior) user += `\n\nEscreva uma versão diferente desta: ${String(anterior).slice(0, 600)}`;
+
+    const texto = await callNvidiaNim([{ role: 'system', content: system }, { role: 'user', content: user }]);
+    const limpo = texto.replace(/^["“”']+|["“”']+$/g, '').replace(/\*\*/g, '').trim().slice(0, 2000);
+    res.json({ texto: limpo });
+  } catch (error) {
+    // Sem IA o campo só fica em branco, como antes
+    console.warn('[Ayla] sugestão:', error.message);
+    res.json({ texto: '' });
+  }
+};
+
+// Guarda o texto que o usuário de fato enviou (mantém os 30 mais recentes por campo)
+const registrarTextoUsado = async (req, res) => {
+  try {
+    const { campo, texto, contexto } = req.body || {};
+    const t = String(texto || '').replace(/\0/g, '').trim();
+    if (!campo || !CAMPO_RE.test(campo) || t.length < 5) return res.json({ ok: false });
+    const db = req.tenantDb;
+    const uid = req.user?.id;
+    await db.query(
+      `INSERT INTO textos_usados (usuario_id, secretaria_id, campo, texto, contexto) VALUES (:uid, :sec, :campo, :texto, CAST(:ctx AS jsonb))`,
+      { replacements: { uid, sec: req.user?.secretariaId || null, campo, texto: t.slice(0, MAX_TEXTO_USADO), ctx: JSON.stringify(limparContexto(contexto)) } }
+    );
+    await db.query(
+      `DELETE FROM textos_usados WHERE usuario_id = :uid AND campo = :campo AND id NOT IN (
+         SELECT id FROM textos_usados WHERE usuario_id = :uid AND campo = :campo ORDER BY created_at DESC LIMIT 30)`,
+      { replacements: { uid, campo } }
+    );
+    res.json({ ok: true });
+  } catch (error) {
+    console.warn('[Ayla] texto usado:', error.message);
+    res.json({ ok: false });
+  }
+};
+
+module.exports = { chat, sugerir, registrarTextoUsado };

@@ -1069,6 +1069,22 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
   `);
   await run(`CREATE INDEX IF NOT EXISTS idx_tes_grupos_contas_usuario ON tes_grupos_contas(usuario_id)`);
 
+  // Textos que o usuário enviou nos campos com sugestão da Ayla — base para as
+  // próximas sugestões seguirem o estilo dele (ver /api/ayla/sugerir)
+  await run(`
+    CREATE TABLE IF NOT EXISTS textos_usados (
+      id             UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+      usuario_id     UUID         NOT NULL,
+      secretaria_id  UUID,
+      campo          VARCHAR(80)  NOT NULL,
+      texto          TEXT         NOT NULL,
+      contexto       JSONB        NOT NULL DEFAULT '{}'::jsonb,
+      created_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run(`CREATE INDEX IF NOT EXISTS idx_textos_usados_usuario_campo ON textos_usados(usuario_id, campo, created_at DESC)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_textos_usados_secretaria_campo ON textos_usados(secretaria_id, campo, created_at DESC)`);
+
   // ── Lixeira (continuação do bloco 0k — tabelas criadas acima ou sob demanda) ──
   // Tabela ainda inexistente falha em silêncio; o sync do modelo a cria já com a coluna.
   await Promise.allSettled([

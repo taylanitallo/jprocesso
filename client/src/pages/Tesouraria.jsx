@@ -1,3 +1,5 @@
+import CampoSugerido from '../components/ui/CampoSugerido'
+import { contextoFormulario, registrarTextoUsado } from '../utils/sugestaoAyla'
 import { useState, useEffect, useRef, Fragment } from 'react';
 import { timbradoFundoCSS } from '../utils/timbradoStore';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -219,6 +221,7 @@ function TabContas({ secretarias }) {
       } else {
         await api.post('/organizacao/contas-bancarias', form);
       }
+      registrarTextoUsado('tesouraria.conta.observacao', form.observacao, contextoFormulario(form));
       setShowModal(false);
       load();
     } catch (err) {
@@ -489,7 +492,9 @@ function TabContas({ secretarias }) {
               {/* Observação */}
               <div>
                 <label className="block text-xs font-medium text-ink-600 mb-1">Observação</label>
-                <textarea value={form.observacao} onChange={inp('observacao')} rows={2}
+                <CampoSugerido value={form.observacao} onChange={inp('observacao')} rows={2}
+                  campo="tesouraria.conta.observacao" registrarNoEnvio={false} quando="focar"
+                  rotulo="Observação da conta bancária da tesouraria" contexto={contextoFormulario(form)}
                   className="input-field text-sm resize-none" placeholder="Informações adicionais..." />
               </div>
             </div>
@@ -603,6 +608,7 @@ function TabReceitas() {
       } else {
         await api.post('/tesouraria/receitas', body);
       }
+      registrarTextoUsado('tesouraria.receita.observacao', form.observacao, contextoFormulario(form));
       setShowModal(false);
       load();
     } catch (err) {
@@ -979,7 +985,9 @@ tfoot .val{font-size:15px;color:#15803d}
               </div>
               <div>
                 <label className="block text-xs font-medium text-ink-600 mb-1">Observação</label>
-                <textarea
+                <CampoSugerido
+                  campo="tesouraria.receita.observacao" registrarNoEnvio={false} quando="focar"
+                  rotulo="Observação do lançamento de receita da tesouraria" contexto={contextoFormulario(form)}
                   value={form.observacao}
                   onChange={inp('observacao')}
                   rows={2}

@@ -1,3 +1,4 @@
+import { contextoFormulario } from '../../utils/sugestaoAyla'
 import { Shield } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Field, Input, Textarea, UserSelect, SectionCard, SecaoBotoes } from './didShared'
@@ -21,7 +22,8 @@ export default function DidSecaoII({ form, inp, saving, didId, onSave }) {
         <UserSelect value={form.ci_responsavel} onChange={inp('ci_responsavel')} disabled={locked} secretaria="controladoria" />
       </Field>
       <Field label="Despacho via C.I.">
-        <Textarea value={form.despacho_ci} onChange={inp('despacho_ci')} disabled={locked} />
+        <Textarea value={form.despacho_ci} onChange={inp('despacho_ci')} disabled={locked}
+          sugestao={{ campo: 'did.controle_interno.despacho', rotulo: 'Despacho do Controle Interno via C.I. sobre o DID', contexto: contextoFormulario(form) }} />
       </Field>
       <SecaoBotoes locked={locked} onAlterar={() => setLocked(false)} onSalvar={salvar} saving={saving} label="Salvar Seção II" />
     </SectionCard>
