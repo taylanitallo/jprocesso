@@ -1316,36 +1316,34 @@ async function gerarPdf(ordemRaw, contratos = []) {
   // Dados
   y += 2
   secTitle('DADOS DA ORDEM')
-  autoTable(doc, {
-    startY: y,
-    head: [],
-    body: [
-      ['Data de Emiss\u00e3o', fmtD(ordem.data_emissao), 'Data Entrega/Conclus\u00e3o', fmtD(ordem.data_entrega_prevista)],
-      ['Secretaria', ordem.secretaria || '—', 'Fiscal / Respons\u00e1vel', ordem.fiscal_responsavel || '—'],
-    ],
-    theme: 'plain',
-    styles: { fontSize: 8, cellPadding: 1.5, textColor: [30, 30, 30] },
-    columnStyles: {
-      0: { fontStyle: 'bold', textColor: CINZA, cellWidth: 45 },
-      1: { cellWidth: 'auto' },
-      2: { fontStyle: 'bold', textColor: CINZA, cellWidth: 45 },
-      3: { cellWidth: 'auto' },
-    },
-    margin: { left: M, right: MR },
-  })
-  y = doc.lastAutoTable.finalY + 3
+
+  // "Rótulo: valor" — o valor começa logo depois dos dois pontos; se quebrar, as
+  // linhas seguintes alinham com o início do valor. Devolve a altura usada.
+  const campo = (label, valor, x, largura, yy) => {
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'bold')
+    const rotulo = `${label}:`
+    doc.text(rotulo, x, yy)
+    const recuo = doc.getTextWidth(rotulo) + 1.5
+    doc.setFont('helvetica', 'normal')
+    const linhas = doc.splitTextToSize(String(valor || '—'), Math.max(12, largura - recuo))
+    doc.text(linhas, x + recuo, yy)
+    return linhas.length * 3.6
+  }
+  const larguraUtil = W - M - MR
+  const metade = (larguraUtil - 8) / 2
+  const linhaDupla = (a, b) => {
+    const h = Math.max(campo(a[0], a[1], M, metade, y), campo(b[0], b[1], M + metade + 8, metade, y))
+    y += Math.max(4.8, h + 1.2)
+  }
+  y += 1
+  linhaDupla(['Data de Emissão', fmtD(ordem.data_emissao)], ['Data Entrega/Conclusão', fmtD(ordem.data_entrega_prevista)])
+  linhaDupla(['Secretaria', ordem.secretaria], ['Fiscal / Responsável', ordem.fiscal_responsavel])
+  y += 0.5
 
   const textField = (label, value) => {
     if (!value) return
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(8)
-    doc.setTextColor(...CINZA)
-    doc.text(`${label}:`, M, y)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(30, 30, 30)
-    const lines = doc.splitTextToSize(value, W - M - MR - label.length * 2 - 4)
-    doc.text(lines, M + label.length * 2 + 4, y)
-    y += Math.max(5, lines.length * 4)
+    y += Math.max(4.8, campo(label, value, M, larguraUtil, y) + 1.2)
   }
 
   textField('Objeto', ordem.objeto || '—')
@@ -1397,12 +1395,8 @@ async function gerarPdf(ordemRaw, contratos = []) {
         itemGlobalIdx++
         return [it.codigo_item || itemGlobalIdx, it.descricao || '\u2014', it.unidade || '\u2014', fmtN(it.quantidade), fmtV(it.valor_unitario), fmtV(tot)]
       }),
-      foot: usarTablasSeparadas
-        ? [['', '', '', '', `Total Lote ${lote || (loteIdx + 1)}`, fmtV(totalLote)]]
-        : [['', '', '', '', 'TOTAL', fmtV(totalGeral)]],
       theme: 'striped',
       headStyles: { fillColor: AZUL, textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold' },
-      footStyles: { fillColor: CLARO, textColor: [30, 30, 30], fontSize: 9, fontStyle: 'bold' },
       bodyStyles: { fontSize: 8 },
       columnStyles: {
         0: { cellWidth: 12, halign: 'center' },
@@ -1414,7 +1408,12 @@ async function gerarPdf(ordemRaw, contratos = []) {
       },
       margin: { left: M, right: MR },
     })
-    y = doc.lastAutoTable.finalY + (usarTablasSeparadas ? 5 : 6)
+    // Total por fora da tabela, logo abaixo, alinhado à direita
+    y = doc.lastAutoTable.finalY + 5
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    doc.text(usarTablasSeparadas ? `Total do lote ${lote || (loteIdx + 1)}: ${fmtV(totalLote)}` : `TOTAL: ${fmtV(totalGeral)}`, W - MR, y, { align: 'right' })
+    y += usarTablasSeparadas ? 6 : 7
   })
 
   // Total geral quando há múltiplos lotes
