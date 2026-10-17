@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { timbradoFundoCSS } from '../utils/timbradoStore'
 import {
   Shield, RefreshCw, Search, ChevronDown, ChevronRight,
   User, Calendar, Monitor, Package, FileText, AlertTriangle,
@@ -391,7 +392,7 @@ export default function AlmoxAuditLog() {
       .th-indigo{background:#3730a3!important;color:#fff!important}
       .mono{font-family:'Courier New',monospace;font-size:11px}
       table.data tbody tr:nth-child(even){background:#f9fafb!important}
-      ${tenant?.configuracoes?.timbrado ? `body::before{content:'';position:fixed;top:0;left:0;width:210mm;height:297mm;background-image:url("${tenant.configuracoes.timbrado}");background-size:210mm 297mm;background-repeat:no-repeat;background-position:top left;opacity:.75;z-index:-1;pointer-events:none;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}` : ''}
+      ${timbradoFundoCSS()}
       @media print{ .th-indigo{background:#3730a3!important;color:#fff!important} table.data tbody tr:nth-child(even){background:#f9fafb!important} }`
 
     const body = `<table class="layout">

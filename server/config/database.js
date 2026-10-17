@@ -946,6 +946,10 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
        SELECT 1 FROM jsonb_array_elements(s.responsaveis::jsonb) y
         WHERE COALESCE(y->>'nome', '') = '' AND COALESCE(y->>'agente_id', '') <> '')
   `);
+  // Timbrado da secretaria (Configurações › Layout, gestor): vale em todo PDF dos usuários
+  // da secretaria, exceto DIDs (esses usam o timbrado do município, do superadmin)
+  await run(`ALTER TABLE secretarias ADD COLUMN IF NOT EXISTS timbrado TEXT, ADD COLUMN IF NOT EXISTS timbrado_opacity INTEGER NOT NULL DEFAULT 75`);
+
   // Catálogo: só fica ATIVO com categoria e especificação (contratosController › calcStatusItem)
   await run(`
     UPDATE contratos_itens SET status = 'INATIVO'

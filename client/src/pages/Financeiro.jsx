@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { timbradoFundoCSS } from '../utils/timbradoStore'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { hasPerm } from '../utils/permissions'
 import { conferirAbasDoModulo } from '../utils/permissoesSchema'
@@ -2241,7 +2242,7 @@ export default function Financeiro() {
                             table.data td{padding:5px 8px;border-bottom:1px solid #e5e7eb;font-size:10px}
                             table.data tbody tr:nth-child(even) td{background:#f8fafc}
                             .pago{color:#16a34a;font-weight:600}.pend{color:#d97706;font-weight:600}
-                            ${tenant?.configuracoes?.timbrado ? `body::before{content:'';position:fixed;top:0;left:0;width:210mm;height:297mm;background-image:url("${tenant.configuracoes.timbrado}");background-size:210mm 297mm;background-repeat:no-repeat;background-position:top left;opacity:.75;z-index:-1;pointer-events:none;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}` : ''}
+                            ${timbradoFundoCSS()}
                           </style></head><body>
                             <table class="layout">
                             <thead><tr><td><div class="sp-top"></div></td></tr></thead>

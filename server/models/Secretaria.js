@@ -68,8 +68,21 @@ const defineSecretariaModel = (sequelize) => {
       type: DataTypes.TEXT,
       allowNull: true,
       comment: 'Logo da secretaria em base64 — configurada pelo gestor da secretaria'
+    },
+    timbrado: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Timbrado (data URL) da secretaria — Configurações › Layout, pelo gestor'
+    },
+    timbrado_opacity: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 75,
+      comment: 'Opacidade do timbrado da secretaria (0–100)'
     }
   }, {
+    // A imagem do timbrado é grande: só sai na rota própria (GET /secretarias/:id/timbrado)
+    defaultScope: { attributes: { exclude: ['timbrado'] } },
     tableName: 'secretarias',
     timestamps: true,
     underscored: true,

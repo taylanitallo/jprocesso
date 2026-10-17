@@ -143,7 +143,8 @@ export const MODULOS = [
     abas: [
       { key: 'gerais',       label: 'Gerais',             acoes: [VER, ALTERAR], escopo: false },
       { key: 'notificacoes', label: 'Notificações',       acoes: [VER], escopo: false },
-      { key: 'tema',         label: 'Tema',               acoes: [VER], escopo: false },
+      // Layout (antiga aba Tema): tema + timbrado da secretaria — alterar só gestor/admin
+      { key: 'tema',         label: 'Layout',             acoes: [VER, { key: 'editar', label: 'Alterar timbrado da secretaria' }], escopo: false },
       { key: 'importexport', label: 'Import / Export',    escopo: false, acoes: [
         VER,
         { key: 'exportar', label: 'Exportar' },

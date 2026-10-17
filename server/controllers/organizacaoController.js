@@ -1,5 +1,6 @@
 ﻿const { Op } = require('sequelize');
 const { excluir } = require('../services/lixeiraService');
+const { registrarLog } = require('../middleware/activityLogger');
 
 const createSecretaria = async (req, res) => {
   try {
@@ -578,7 +579,68 @@ const updateSecretariaLogo = async (req, res) => {
   }
 };
 
+// ── Timbrado da secretaria (Configurações › Layout) ─────────────────────────
+// Vale em todo PDF gerado pelos usuários da secretaria, exceto os DIDs (esses usam
+// o timbrado do município, cadastrado no superadmin). Sem timbrado próprio, vale o
+// do município.
+const TIMBRADO_MAX = 6 * 1024 * 1024; // ~6 MB em data URL
+
+// Qualquer usuário do município lê (precisa para gerar os PDFs)
+const obterTimbradoSecretaria = async (req, res) => {
+  try {
+    const sec = await req.models.Secretaria.unscoped().findByPk(req.params.id, { attributes: ['id', 'timbrado', 'timbrado_opacity'] });
+    if (!sec) return res.status(404).json({ error: 'Secretaria não encontrada' });
+    res.json({ timbrado: sec.timbrado || null, opacity: sec.timbrado_opacity ?? 75 });
+  } catch (error) {
+    console.error('Erro ao ler timbrado da secretaria:', error);
+    res.status(500).json({ error: 'Erro ao carregar o timbrado' });
+  }
+};
+
+// Gestor da própria secretaria (administrador e Administrador Jeos: qualquer uma)
+const salvarTimbradoSecretaria = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { User, Secretaria } = req.models;
+    if (req.user.tipo === 'gestor') {
+      const eu = await User.findByPk(req.user.id, { attributes: ['secretariaId'] });
+      if (String(eu?.secretariaId || '') !== String(id)) {
+        return res.status(403).json({ error: 'O gestor só altera o timbrado da própria secretaria.' });
+      }
+    }
+    const sec = await Secretaria.unscoped().findByPk(id);
+    if (!sec) return res.status(404).json({ error: 'Secretaria não encontrada' });
+
+    const dados = {};
+    if (req.body?.timbrado !== undefined) {
+      const t = req.body.timbrado;
+      if (t !== null && t !== '' && !/^data:image\/(png|jpe?g|webp);base64,/.test(String(t))) {
+        return res.status(400).json({ error: 'Envie uma imagem PNG, JPG ou WEBP.' });
+      }
+      if (t && String(t).length > TIMBRADO_MAX) return res.status(400).json({ error: 'Imagem muito grande (máximo de ~4,5 MB).' });
+      dados.timbrado = t || null;
+    }
+    if (req.body?.opacity !== undefined) {
+      const o = Math.round(Number(req.body.opacity));
+      if (!Number.isFinite(o) || o < 0 || o > 100) return res.status(400).json({ error: 'Opacidade deve ficar entre 0 e 100.' });
+      dados.timbrado_opacity = o;
+    }
+    await sec.update(dados);
+    await registrarLog(req, {
+      acao: 'timbrado_secretaria', modulo: 'configuracoes',
+      descricao: `Timbrado da secretaria ${sec.sigla || sec.nome} ${dados.timbrado === null ? 'removido' : 'atualizado'}`,
+      referencia_id: sec.id,
+    });
+    res.json({ timbrado: sec.timbrado || null, opacity: sec.timbrado_opacity ?? 75 });
+  } catch (error) {
+    console.error('Erro ao salvar timbrado da secretaria:', error);
+    res.status(500).json({ error: 'Erro ao salvar o timbrado' });
+  }
+};
+
 module.exports = {
+  obterTimbradoSecretaria,
+  salvarTimbradoSecretaria,
   createSecretaria,
   listSecretarias,
   updateSecretaria,
