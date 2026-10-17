@@ -6,6 +6,7 @@ import {
   PackageOpen, RefreshCw, FileText, Printer,
 } from 'lucide-react'
 import jsPDF from 'jspdf'
+import '../../utils/padraoDocumentoOficial' // padrão de documento oficial (preto, grade, cantos arredondados)
 import autoTable from 'jspdf-autotable'
 import api from '../../services/api'
 import BotaoExcluidos from '../../components/lixeira/BotaoExcluidos'
@@ -1295,11 +1296,13 @@ async function gerarPdf(ordemRaw, contratos = []) {
   doc.setTextColor(30, 30, 30)
   const contrato = ordem.contrato
   if (contrato) {
+    // Número numa linha e objeto embaixo, na largura toda (números longos sobrepunham o objeto)
     doc.setFont('helvetica', 'bold')
-    doc.text(contrato.numero_contrato || '—', M, y)
+    doc.text(`Contrato nº ${contrato.numero_contrato || '—'}`, M, y)
+    y += 4.5
     doc.setFont('helvetica', 'normal')
-    const objLines = doc.splitTextToSize(contrato.objeto || '', W - M - MR - 38)
-    doc.text(objLines, M + 36, y)
+    const objLines = doc.splitTextToSize(contrato.objeto || '', W - M - MR)
+    doc.text(objLines, M, y)
     y += Math.max(5, objLines.length * 4.5)
     if (contrato.credor?.razao_social) {
       doc.setTextColor(...CINZA)
@@ -1388,7 +1391,7 @@ async function gerarPdf(ordemRaw, contratos = []) {
 
     autoTable(doc, {
       startY: y,
-      head: [['Nº Item', 'Descri\u00e7\u00e3o', 'Unid.', 'Qtd.', 'V. Unit\u00e1rio', 'V. Total']],
+      head: [['Nº', 'Descri\u00e7\u00e3o', 'Unid.', 'Qtd.', 'V. Unit\u00e1rio', 'V. Total']],
       body: grupo.map((it) => {
         const tot = Math.round(parseFloat(it.valor_unitario || 0) * parseFloat(it.quantidade || 0) * 100) / 100
         itemGlobalIdx++
@@ -1402,7 +1405,7 @@ async function gerarPdf(ordemRaw, contratos = []) {
       footStyles: { fillColor: CLARO, textColor: [30, 30, 30], fontSize: 9, fontStyle: 'bold' },
       bodyStyles: { fontSize: 8 },
       columnStyles: {
-        0: { cellWidth: 8, halign: 'center' },
+        0: { cellWidth: 12, halign: 'center' },
         1: { cellWidth: 'auto' },
         2: { cellWidth: 16, halign: 'center' },
         3: { cellWidth: 22, halign: 'right' },

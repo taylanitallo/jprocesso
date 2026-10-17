@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf'
+import '../../utils/padraoDocumentoOficial' // padrão de documento oficial (preto, grade, cantos arredondados)
 import autoTable from 'jspdf-autotable'
 import { salvarDocumentoGerado } from '../../utils/salvarDocumentoGerado'
 // DIDs usam sempre o timbrado do município (superadmin), não o da secretaria
