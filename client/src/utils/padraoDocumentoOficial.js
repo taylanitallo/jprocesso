@@ -1,6 +1,7 @@
 // Padrão visual dos documentos oficiais (todo PDF gerado pelo sistema: ordens de
 // compra/serviço, despachos, ofícios, relatórios, DIDs, exportações).
 // Carregado uma vez em main.jsx; vale para todo `new jsPDF()`:
+//  - fonte Times New Roman (no lugar de Helvetica/Arial);
 //  - texto e linhas sempre pretos;
 //  - fundos coloridos viram cinza claro (o branco continua branco);
 //  - molduras (retângulos com contorno) com cantos arredondados;
@@ -14,6 +15,8 @@ import { applyPlugin } from 'jspdf-autotable'
 export const ESPESSURA_LINHA = 0.2 // mm
 export const RAIO = 1.3            // mm — cantos arredondados
 export const CINZA_CABECALHO = 228 // cinza claro do cabeçalho das tabelas
+export const FONTE = 'times'       // Times New Roman (fonte padrão dos documentos)
+const FONTES_TROCADAS = /^(helvetica|arial|sans-serif)$/i
 
 // ── Cores ────────────────────────────────────────────────────────────────────
 function luminancia(args) {
@@ -50,7 +53,10 @@ jsPDF.API.events.push(['initialized', function aplicarPadrao() {
   const setDrawColor = doc.setDrawColor
   const setFillColor = doc.setFillColor
   const rect = doc.rect
+  const setFont = doc.setFont
 
+  // Helvetica/Arial (padrão do jsPDF e do autotable) → Times New Roman
+  doc.setFont = function (nome, ...resto) { return setFont.call(doc, FONTES_TROCADAS.test(String(nome || '')) ? FONTE : nome, ...resto) }
   doc.setTextColor = function () { return setTextColor.call(doc, 0) }
   doc.setDrawColor = function () { return setDrawColor.call(doc, 0) }
   doc.setFillColor = function (...args) { return setFillColor.apply(doc, fundoCinza(args)) }
@@ -68,6 +74,7 @@ jsPDF.API.events.push(['initialized', function aplicarPadrao() {
 
   setTextColor.call(doc, 0)
   setDrawColor.call(doc, 0)
+  setFont.call(doc, FONTE, 'normal')
 }])
 
 // ── Tabelas (jspdf-autotable) ────────────────────────────────────────────────
@@ -84,7 +91,8 @@ jsPDF.autoTableSetDefaults({
   didParseCell: (d) => {
     if (d.section !== 'head') return
     const colEstilo = d.table.styles?.columnStyles?.[d.column.dataKey] || d.table.styles?.columnStyles?.[d.column.index]
-    if (colEstilo?.halign && !d.cell.raw?.styles?.halign) d.cell.styles.halign = colEstilo.halign
+    // ...a menos que o documento tenha definido o alinhamento do cabeçalho (headStyles.halign)
+    if (colEstilo?.halign && !d.cell.raw?.styles?.halign && !d.table.styles?.headStyles?.halign) d.cell.styles.halign = colEstilo.halign
     const texto = Array.isArray(d.cell.text) ? d.cell.text.join(' ') : String(d.cell.text || '')
     const maiorPalavra = texto.split(/\s+/).filter(Boolean)
       .reduce((m, p) => Math.max(m, d.doc.getStringUnitWidth(p) * (d.cell.styles.fontSize || 10) / d.doc.internal.scaleFactor), 0)
