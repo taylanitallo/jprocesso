@@ -1,3 +1,5 @@
+import CampoSugerido from '../components/ui/CampoSugerido'
+import { contextoFormulario, registrarTextoUsado } from '../utils/sugestaoAyla'
 import { useState, useEffect, useCallback } from 'react'
 import { usePode } from '../utils/permissions'
 import {
@@ -504,12 +506,15 @@ function CancelarModal({ req, onClose, onSave, saving, erro }) {
         )}
         <div>
           <label className="block text-sm font-medium text-ink-700 mb-1">Justificativa (opcional)</label>
-          <textarea value={justificativa} onChange={e => setJustificativa(e.target.value)} rows={3}
+          <CampoSugerido value={justificativa} onChange={e => setJustificativa(e.target.value)} rows={3}
+            campo="almox.requisicao.cancelar" registrarNoEnvio={false}
+            rotulo={`Justificativa do cancelamento da requisição ${req.numero || ''} de materiais do almoxarifado`}
+            contexto={contextoFormulario(req, { acao: 'Cancelamento de requisição' })}
             className="w-full border border-ink-300 rounded-lg px-3 py-2 text-sm bg-surface text-ink-900 focus:ring-2 focus:ring-danger-500 resize-none" />
         </div>
         <div className="flex justify-end gap-3 pt-2">
           <button onClick={onClose} className="btn-secondary text-sm">Voltar</button>
-          <button onClick={() => onSave(justificativa)} disabled={saving}
+          <button onClick={() => { registrarTextoUsado('almox.requisicao.cancelar', justificativa, contextoFormulario(req)); onSave(justificativa) }} disabled={saving}
             className="px-4 py-2 bg-danger-600 text-white rounded-lg text-sm font-medium hover:bg-danger-700 disabled:opacity-50">
             {saving ? 'Cancelando...' : 'Confirmar Cancelamento'}
           </button>

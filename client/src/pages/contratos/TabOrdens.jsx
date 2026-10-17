@@ -1,3 +1,4 @@
+import { registrarTextoUsado } from '../../utils/sugestaoAyla'
 import { useState, useEffect, useCallback } from 'react'
 import { usePode } from '../../utils/permissions'
 import {
@@ -819,10 +820,27 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
     if (saldo?.sem_saldo)   { alert('Saldo insuficiente no contrato!'); return }
     // OC é sempre conta variável — não carrega destino
     const destino_did = form.tipo === 'SERVICO' ? form.destino_did : null
+    registrarTextoUsado('contratos.ordem.objeto', form.objeto, contextoOrdem)
+    registrarTextoUsado('contratos.ordem.justificativa', form.justificativa, contextoOrdem)
+    registrarTextoUsado('contratos.ordem.observacoes', form.observacoes, contextoOrdem)
     onSave({ ...form, destino_did, itens, valor_total: valorTotal })
   }
 
   const contratoSel = contratos.find(c => String(c.id) === String(form.contrato_id))
+
+  // Contexto das sugestões da Ayla (objeto, justificativa, observações)
+  const contextoOrdem = {
+    tipo_ordem: form.tipo === 'COMPRA' ? 'Ordem de compra' : 'Ordem de serviço',
+    contrato: contratoSel?.numero_contrato,
+    objeto_do_contrato: contratoSel?.objeto,
+    contratado: contratoSel?.credor?.razao_social,
+    secretaria: form.secretaria,
+    objeto_da_ordem: form.objeto,
+    local: form.local_entrega,
+    itens: itens.slice(0, 8).map(it => [it.quantidade, it.unidade, it.descricao].filter(Boolean).join(' ')).join('; '),
+    valor_total: valorTotal ? fmtBRL(valorTotal) : undefined,
+  }
+  const sugestaoOrdem = (campo, rotulo) => ({ campo: `contratos.ordem.${campo}`, rotulo, contexto: contextoOrdem, pronto: !!form.contrato_id, quando: 'focar' })
 
   return (
     // Ver / Incluir / Alterar ordem: tela cheia (toda a área disponível)
@@ -1024,7 +1042,7 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
                   <label className="block text-xs font-semibold text-ink-500 mb-1.5">Objeto / Descrição *</label>
                   {readonly
                     ? <p className="text-sm font-medium text-ink-800">{form.objeto}</p>
-                    : <PremiumTextarea value={form.objeto} onChange={e => set('objeto', e.target.value)} rows={2} placeholder="Descreva o objeto desta ordem..." className={clsErro('objeto')} />
+                    : <PremiumTextarea value={form.objeto} onChange={e => set('objeto', e.target.value)} rows={2} sugestao={sugestaoOrdem('objeto', 'Objeto/descrição da ordem de compra ou serviço')} placeholder="Descreva o objeto desta ordem..." className={clsErro('objeto')} />
                   }
                   {temErro('objeto') && <p className="text-xs text-danger-600 mt-1">Informe o objeto/descrição da ordem.</p>}
                 </div>
@@ -1032,7 +1050,7 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
                   <label className="block text-xs font-semibold text-ink-500 mb-1.5">Justificativa</label>
                   {readonly
                     ? <p className="text-sm text-ink-700 whitespace-pre-wrap">{form.justificativa || '—'}</p>
-                    : <PremiumTextarea value={form.justificativa} onChange={e => set('justificativa', e.target.value)} rows={2} placeholder="Justificativa para a aquisição/contratação..." />
+                    : <PremiumTextarea value={form.justificativa} onChange={e => set('justificativa', e.target.value)} rows={2} sugestao={sugestaoOrdem('justificativa', 'Justificativa da aquisição/contratação desta ordem')} placeholder="Justificativa para a aquisição/contratação..." />
                   }
                 </div>
                 <div>
@@ -1185,7 +1203,7 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
             <SectionCard icon={ClipboardList} title="Observações" subtitle="Informações adicionais">
               {readonly
                 ? <p className="text-sm text-ink-700 whitespace-pre-wrap">{form.observacoes || '—'}</p>
-                : <PremiumTextarea value={form.observacoes} onChange={e => set('observacoes', e.target.value)} rows={2} placeholder="Observações gerais..." />
+                : <PremiumTextarea value={form.observacoes} onChange={e => set('observacoes', e.target.value)} rows={2} sugestao={sugestaoOrdem('observacoes', 'Observações gerais da ordem de compra/serviço')} placeholder="Observações gerais..." />
               }
             </SectionCard>
           )}

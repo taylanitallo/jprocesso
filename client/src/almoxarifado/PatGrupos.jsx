@@ -1,3 +1,5 @@
+import CampoSugerido from '../components/ui/CampoSugerido'
+import { contextoFormulario } from '../utils/sugestaoAyla'
 import { useState, useEffect, useCallback } from 'react'
 import { usePode } from '../utils/permissions'
 import { RefreshCw, Plus, Pencil, Layers } from 'lucide-react'
@@ -183,7 +185,7 @@ export default function PatGrupos() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-ink-700 mb-1">Descrição</label>
-                  <textarea className={`${base} resize-none`} rows={2} value={form.descricao} onChange={e => set('descricao', e.target.value)} />
+                  <CampoSugerido campo="patrimonio.grupo.descricao" rotulo="Descrição do grupo de bens patrimoniais (que tipo de bem entra nele)" contexto={contextoFormulario(form)} pronto={!!form.nome} quando="focar" className={`${base} resize-none`} rows={2} value={form.descricao} onChange={e => set('descricao', e.target.value)} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>

@@ -1,8 +1,10 @@
+import { contextoProcesso, registrarTextoUsado } from '../utils/sugestaoAyla'
 import { useState, useEffect } from 'react'
 import { X, Send, Lock, AlertTriangle } from 'lucide-react'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import { useAssinatura } from './assinatura/AssinaturaProvider'
+import CampoSugerido from './ui/CampoSugerido'
 
 // tramitacaoDid: regra do fluxo do DID para a etapa atual ({ todas, secretarias: [ids], etapa })
 // — vem de GET /did/processo/:id/etapas; o servidor confere de novo ao tramitar
@@ -128,6 +130,7 @@ export default function ModalTramitacao({ processo, tramitacaoDid, onClose, onSu
         }),
       })
       if (!response) return // cancelou a assinatura
+      registrarTextoUsado('processo.tramitar.despacho', formData.despacho, contextoProcesso(processo))
       onSuccess(response.data)
       onClose()
     } catch (err) {
@@ -197,7 +200,11 @@ export default function ModalTramitacao({ processo, tramitacaoDid, onClose, onSu
               <label className="block text-sm font-medium text-ink-700 mb-2">
                 Despacho * <span className="text-ink-500 font-normal">(mínimo 10 caracteres)</span>
               </label>
-              <textarea
+              <CampoSugerido
+                campo="processo.tramitar.despacho"
+                registrarNoEnvio={false}
+                rotulo="Despacho de tramitação do processo (encaminhamento ao próximo setor)"
+                contexto={{ ...contextoProcesso(processo), etapa_did: tramitacaoDid?.etapa }}
                 name="despacho"
                 value={formData.despacho}
                 onChange={handleChange}

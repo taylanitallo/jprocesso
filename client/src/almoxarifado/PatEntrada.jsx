@@ -1,3 +1,5 @@
+import CampoSugerido from '../components/ui/CampoSugerido'
+import { contextoFormulario } from '../utils/sugestaoAyla'
 import { useState, useEffect } from 'react'
 import { usePode } from '../utils/permissions'
 import { RefreshCw, Hash, FileText, DollarSign, TrendingDown, MapPin } from 'lucide-react'
@@ -208,7 +210,11 @@ export default function PatEntrada({ onSuccess, onCancel }) {
           </div>
           <div>
             <Label>Observações</Label>
-            <textarea
+            <CampoSugerido
+              campo="patrimonio.entrada.observacoes"
+              rotulo="Observações da entrada (incorporação) do bem patrimonial"
+              contexto={contextoFormulario(form)}
+              pronto={!!form.descricao} quando="focar"
               className={`${base} resize-none`}
               rows={2}
               value={form.observacoes}

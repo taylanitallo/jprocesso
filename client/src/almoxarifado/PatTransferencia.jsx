@@ -1,3 +1,5 @@
+import CampoSugerido from '../components/ui/CampoSugerido'
+import { contextoFormulario } from '../utils/sugestaoAyla'
 import { useState, useEffect } from 'react'
 import { usePode } from '../utils/permissions'
 import { RefreshCw, ArrowLeftRight, UserCheck } from 'lucide-react'
@@ -150,11 +152,11 @@ export default function PatTransferencia({ bem, onSuccess, onCancel }) {
         </div>
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-ink-700 mb-1">Justificativa</label>
-          <textarea className={`${base} resize-none`} rows={2} value={form.justificativa} onChange={e => set('justificativa', e.target.value)} placeholder="Motivo da transferência" />
+          <CampoSugerido campo="patrimonio.transferencia.justificativa" rotulo="Justificativa (motivo) da transferência do bem patrimonial" contexto={contextoFormulario(form)} quando="focar" className={`${base} resize-none`} rows={2} value={form.justificativa} onChange={e => set('justificativa', e.target.value)} placeholder="Motivo da transferência" />
         </div>
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-ink-700 mb-1">Observações</label>
-          <textarea className={`${base} resize-none`} rows={2} value={form.observacoes} onChange={e => set('observacoes', e.target.value)} />
+          <CampoSugerido campo="patrimonio.transferencia.observacoes" rotulo="Observações da transferência do bem patrimonial" contexto={contextoFormulario(form)} quando="focar" className={`${base} resize-none`} rows={2} value={form.observacoes} onChange={e => set('observacoes', e.target.value)} />
         </div>
       </div>
 

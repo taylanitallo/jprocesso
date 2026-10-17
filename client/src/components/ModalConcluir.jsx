@@ -1,8 +1,10 @@
+import { contextoProcesso, registrarTextoUsado } from '../utils/sugestaoAyla'
 import { CheckCircle } from 'lucide-react'
 import api from '../services/api'
 import { useAssinatura } from './assinatura/AssinaturaProvider'
+import CampoSugerido from './ui/CampoSugerido'
 
-export default function ModalConcluir({ processoId, onClose, onSuccess }) {
+export default function ModalConcluir({ processoId, processo, onClose, onSuccess }) {
   const { assinar } = useAssinatura()
 
   const handleSubmit = async (e) => {
@@ -22,6 +24,7 @@ export default function ModalConcluir({ processoId, onClose, onSuccess }) {
         executar: (cred) => api.post(`/processos/${processoId}/concluir`, { despachoFinal, ...cred }),
       })
       if (!r) return // cancelou a assinatura
+      registrarTextoUsado('processo.concluir.despacho', despachoFinal, contextoProcesso(processo))
       onSuccess('Processo concluído e assinado eletronicamente!')
     } catch (error) {
       alert(error.response?.data?.error || 'Erro ao concluir processo')
@@ -47,7 +50,11 @@ export default function ModalConcluir({ processoId, onClose, onSuccess }) {
             <label className="block text-sm font-semibold text-ink-700 mb-2">
               Despacho Final *
             </label>
-            <textarea
+            <CampoSugerido
+              campo="processo.concluir.despacho"
+              rotulo="Despacho final de conclusão do processo (resultado e encerramento)"
+              contexto={contextoProcesso(processo)}
+              registrarNoEnvio={false}
               name="despachoFinal"
               required
               minLength={10}

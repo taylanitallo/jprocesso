@@ -1,3 +1,5 @@
+import CampoSugerido from '../components/ui/CampoSugerido'
+import { contextoFormulario } from '../utils/sugestaoAyla'
 import { useState } from 'react'
 import { usePode } from '../utils/permissions'
 import { RefreshCw, PackageX } from 'lucide-react'
@@ -113,11 +115,11 @@ export default function PatBaixa({ bem, onSuccess, onCancel }) {
         </div>
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-ink-700 mb-1">Descrição da Ocorrência</label>
-          <textarea className={`${base} resize-none`} rows={3} value={form.descricao_ocorrencia} onChange={e => set('descricao_ocorrencia', e.target.value)} placeholder="Descreva as circunstâncias da baixa, estado do bem, etc." />
+          <CampoSugerido campo="patrimonio.baixa.descricao" rotulo="Descrição da ocorrência da baixa do bem patrimonial (circunstâncias e estado do bem)" contexto={contextoFormulario(form)} quando="focar" className={`${base} resize-none`} rows={3} value={form.descricao_ocorrencia} onChange={e => set('descricao_ocorrencia', e.target.value)} placeholder="Descreva as circunstâncias da baixa, estado do bem, etc." />
         </div>
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-ink-700 mb-1">Observações</label>
-          <textarea className={`${base} resize-none`} rows={2} value={form.observacoes} onChange={e => set('observacoes', e.target.value)} />
+          <CampoSugerido campo="patrimonio.baixa.observacoes" rotulo="Observações da baixa do bem patrimonial" contexto={contextoFormulario(form)} quando="focar" className={`${base} resize-none`} rows={2} value={form.observacoes} onChange={e => set('observacoes', e.target.value)} />
         </div>
       </div>
 

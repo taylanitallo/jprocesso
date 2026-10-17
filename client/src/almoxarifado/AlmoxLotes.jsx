@@ -1,3 +1,5 @@
+import CampoSugerido from '../components/ui/CampoSugerido'
+import { contextoFormulario, registrarTextoUsado } from '../utils/sugestaoAyla'
 import { useState, useEffect, useCallback } from 'react'
 import { usePode } from '../utils/permissions'
 import {
@@ -475,7 +477,11 @@ function NovaEntradaModal({ itens, onClose, onSave, saving, erro }) {
         {/* Observação */}
         <div>
           <label className="block text-sm font-medium text-ink-700 mb-1">Observação</label>
-          <textarea
+          <CampoSugerido
+            campo="almox.lote.observacao" registrarNoEnvio={false}
+            rotulo="Observação da entrada de lote no almoxarifado (nota fiscal, conferência, armazenagem)"
+            contexto={contextoFormulario(form, { item: itemSelecionado?.nome, unidade: itemSelecionado?.unidade })}
+            pronto={!!form.item_id} quando="focar"
             value={form.observacao}
             onChange={e => set('observacao', e.target.value)}
             rows={2}
@@ -547,7 +553,7 @@ function NovaEntradaModal({ itens, onClose, onSave, saving, erro }) {
         <div className="flex justify-end gap-3 pt-2">
           <button onClick={onClose} className="btn-secondary text-sm">Cancelar</button>
           <button
-            onClick={() => onSave(form)}
+            onClick={() => { registrarTextoUsado('almox.lote.observacao', form.observacao, contextoFormulario(form, { item: itemSelecionado?.nome })); onSave(form) }}
             disabled={
               saving || !podeEntrar ||
               (form._saldo_item != null && parseFloat(form.quantidade) > form._saldo_item) ||

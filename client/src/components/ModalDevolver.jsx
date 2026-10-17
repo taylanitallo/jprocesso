@@ -1,9 +1,11 @@
+import { contextoProcesso, registrarTextoUsado } from '../utils/sugestaoAyla'
 import { ArrowLeftCircle, ArrowRight, User, Building2, LayoutGrid } from 'lucide-react'
 import { useState } from 'react'
 import api from '../services/api'
 import { useAssinatura } from './assinatura/AssinaturaProvider'
+import CampoSugerido from './ui/CampoSugerido'
 
-export default function ModalDevolver({ processoId, destinoDevolucao, onClose, onSuccess }) {
+export default function ModalDevolver({ processoId, processo, destinoDevolucao, onClose, onSuccess }) {
   const { assinar } = useAssinatura()
   const [justificativa, setJustificativa] = useState('')
   const [error, setError] = useState('')
@@ -24,6 +26,7 @@ export default function ModalDevolver({ processoId, destinoDevolucao, onClose, o
         executar: (cred) => api.post(`/processos/${processoId}/devolver`, { justificativa, ...cred }),
       })
       if (!r) return // cancelou a assinatura
+      registrarTextoUsado('processo.devolver.motivo', justificativa, contextoProcesso(processo))
       onSuccess('Processo devolvido e assinado eletronicamente!')
     } catch (err) {
       setError(err.response?.data?.error || 'Erro ao devolver processo')
@@ -100,7 +103,11 @@ export default function ModalDevolver({ processoId, destinoDevolucao, onClose, o
             <label className="block text-sm font-semibold text-ink-700 mb-2">
               Justificativa da Devolução *
             </label>
-            <textarea
+            <CampoSugerido
+              campo="processo.devolver.motivo"
+              rotulo="Justificativa da devolução do processo ao setor anterior (no mínimo 20 caracteres)"
+              contexto={{ ...contextoProcesso(processo), devolvendo_para: destinoDevolucao?.setor?.nome }}
+              registrarNoEnvio={false}
               value={justificativa}
               onChange={e => setJustificativa(e.target.value)}
               required

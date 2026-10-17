@@ -1,3 +1,4 @@
+import CampoSugerido from '../../components/ui/CampoSugerido'
 import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import { Pencil, Check, Loader2, RotateCcw, AlertTriangle, X } from 'lucide-react'
 import api from '../../services/api'
@@ -162,7 +163,23 @@ export function UserSelect({ value, onChange, disabled, secretaria }) {
   )
 }
 
-export function Textarea({ value, onChange, placeholder, disabled, rows = 3 }) {
+// sugestao: { campo, rotulo, contexto } — abre o campo em branco já com um texto da Ayla
+export function Textarea({ value, onChange, placeholder, disabled, rows = 3, sugestao }) {
+  if (sugestao) {
+    return (
+      <CampoSugerido
+        campo={sugestao.campo}
+        rotulo={sugestao.rotulo}
+        contexto={sugestao.contexto}
+        rows={rows}
+        value={value ?? ''}
+        onChange={onChange}
+        placeholder={placeholder}
+        disabled={disabled}
+        className={`input-field text-sm resize-none${disabled ? ' opacity-60 cursor-not-allowed bg-ink-50' : ''}`}
+      />
+    )
+  }
   return (
     <textarea
       rows={rows}

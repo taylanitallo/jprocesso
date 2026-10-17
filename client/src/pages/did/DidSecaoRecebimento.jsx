@@ -1,3 +1,4 @@
+import { contextoFormulario } from '../../utils/sugestaoAyla'
 import { ClipboardCheck } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Field, Input, Textarea, Checkbox, SectionCard, SecaoBotoes } from './didShared'
@@ -98,6 +99,7 @@ export default function DidSecaoRecebimento({ form, inp, chk, saving, didId, onS
           onChange={inp('receb_obs')}
           placeholder="Observações sobre o recebimento dos itens..."
           disabled={locked}
+          sugestao={{ campo: 'did.recebimento.observacoes', rotulo: 'Observações do atestado de recebimento dos itens/serviços do DID', contexto: contextoFormulario(form) }}
         />
       </Field>
 

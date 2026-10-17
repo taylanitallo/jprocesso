@@ -1,3 +1,4 @@
+import CampoSugerido from '../../components/ui/CampoSugerido'
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { retanguloEmCss } from '../../utils/escalaTela'
@@ -147,13 +148,14 @@ export function PremiumSelect({ className = '', children, ...props }) {
 }
 
 // ── Textarea Premium ───────────────────────────────────────────────────────────
-export function PremiumTextarea({ className = '', ...props }) {
-  return (
-    <textarea
-      className={`w-full px-3.5 py-3 rounded-xl border border-ink-200 bg-surface text-sm text-ink-800 placeholder-gray-300 focus:outline-hidden focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all resize-none ${className}`}
-      {...props}
-    />
-  )
+// sugestao: { campo, rotulo, contexto, pronto?, quando? } — abre o campo em branco já com um texto da Ayla
+export function PremiumTextarea({ className = '', sugestao, ...props }) {
+  const cls = `w-full px-3.5 py-3 rounded-xl border border-ink-200 bg-surface text-sm text-ink-800 placeholder-gray-300 focus:outline-hidden focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all resize-none ${className}`
+  if (sugestao) {
+    return <CampoSugerido campo={sugestao.campo} rotulo={sugestao.rotulo} contexto={sugestao.contexto} pronto={sugestao.pronto ?? true} quando={sugestao.quando}
+      registrarNoEnvio={false} className={cls} {...props} />
+  }
+  return <textarea className={cls} {...props} />
 }
 
 // ── Stepper ───────────────────────────────────────────────────────────────────

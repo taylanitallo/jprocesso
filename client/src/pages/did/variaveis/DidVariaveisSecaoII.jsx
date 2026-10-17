@@ -1,3 +1,4 @@
+import { contextoFormulario } from '../../../utils/sugestaoAyla'
 import { Shield } from 'lucide-react'
 import { useContext } from 'react'
 import { Field, Textarea, SectionCard } from '../didShared'
@@ -18,7 +19,8 @@ export default function DidVariaveisSecaoII({ form, inp, didId }) {
         <ResponsavelEtapa valor={form.ci_responsavel} />
       </Field>
       <Field label="Despacho via C.I.">
-        <Textarea value={form.despacho_ci} onChange={inp('despacho_ci')} disabled={locked} />
+        <Textarea value={form.despacho_ci} onChange={inp('despacho_ci')} disabled={locked}
+          sugestao={{ campo: 'did.controle_interno.despacho', rotulo: 'Despacho do Controle Interno via C.I. sobre o DID (contas variáveis)', contexto: contextoFormulario(form) }} />
       </Field>
     </SectionCard>
   )
