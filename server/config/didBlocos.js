@@ -302,6 +302,9 @@ function validarFluxo(tipo, etapas, setoresValidos) {
     if (!e.id || ids.has(e.id)) erros.push(`${pos}: identificador repetido.`);
     ids.add(e.id);
     if (!e.nome || !String(e.nome).trim()) erros.push(`${pos}: informe o nome.`);
+    if (e.tramitacao && e.tramitacao.todas === false && !(e.tramitacao.secretarias || []).length) {
+      erros.push(`${pos} (${e.nome}): escolha ao menos uma secretaria para onde pode tramitar.`);
+    }
     if (e.bloco === 'personalizada') {
       const campos = e.personalizada?.campos || [];
       if (!campos.length) erros.push(`${pos} (${e.nome}): escolha ao menos um campo.`);

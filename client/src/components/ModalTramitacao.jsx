@@ -4,7 +4,9 @@ import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import { useAssinatura } from './assinatura/AssinaturaProvider'
 
-export default function ModalTramitacao({ processo, onClose, onSuccess }) {
+// tramitacaoDid: regra do fluxo do DID para a etapa atual ({ todas, secretarias: [ids], etapa })
+// — vem de GET /did/processo/:id/etapas; o servidor confere de novo ao tramitar
+export default function ModalTramitacao({ processo, tramitacaoDid, onClose, onSuccess }) {
   const { user } = useAuth()
   const { assinar } = useAssinatura()
   const [secretarias, setSecretarias] = useState([])
@@ -15,7 +17,13 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
   // Operador só pode tramitar dentro da própria secretaria,
   // a menos que tenha sido designado por um gestor neste processo
   const foiDesignadoPorGestor = processo?.usuario_atual_id === user?.id
-  const isOperadorRestrito = user?.tipo === 'operacional' && !foiDesignadoPorGestor
+  // DID com destinos definidos na etapa: eles + sempre a própria secretaria do usuário
+  // (análises/conferências internas antes de ir adiante); valem também para o operador
+  const minhaSecretariaId = user?.secretaria?.id || user?.secretariaId || null
+  const destinosDoFluxo = tramitacaoDid && tramitacaoDid.todas === false
+    ? [...new Set([...(tramitacaoDid.secretarias || []).map(String), ...(minhaSecretariaId ? [String(minhaSecretariaId)] : [])])]
+    : null
+  const isOperadorRestrito = user?.tipo === 'operacional' && !foiDesignadoPorGestor && !destinosDoFluxo
 
   const [formData, setFormData] = useState({
     despacho: '',
@@ -28,8 +36,13 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
   useEffect(() => {
     const fetchSecretarias = async () => {
       try {
-        const { data } = await api.get('/organizacao/secretarias')
-        setSecretarias(data.secretarias.sort((a, b) => a.nome.localeCompare(b.nome)))
+        // Lista pública (todas as secretarias ativas): a rota comum devolve só a própria para não-admin
+        const { data } = await api.get('/organizacao/secretarias/publico')
+        let lista = (data.secretarias || []).sort((a, b) => a.nome.localeCompare(b.nome))
+        if (destinosDoFluxo) lista = lista.filter(s => destinosDoFluxo.includes(String(s.id)))
+        setSecretarias(lista)
+        // Uma só opção: já vem escolhida
+        if (destinosDoFluxo && lista.length === 1) setFormData(p => ({ ...p, destinoSecretariaId: lista[0].id }))
       } catch (err) {
         // erro silencioso no ambiente de produção
       }
@@ -157,6 +170,18 @@ export default function ModalTramitacao({ processo, onClose, onSuccess }) {
                 <strong>Assinatura Eletrônica Obrigatória:</strong> Após preencher os dados, você assinará com sua senha e o código do aplicativo autenticador.
               </div>
             </div>
+
+            {/* DID: destinos definidos no fluxo para esta etapa */}
+            {destinosDoFluxo && (
+              <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-lg p-3 flex items-start space-x-2">
+                <AlertTriangle className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
+                <p className="text-xs text-emerald-800 dark:text-emerald-300">
+                  {tramitacaoDid?.etapa?.titulo ? `${tramitacaoDid.etapa.titulo}: ` : ''}pelo fluxo do DID, este processo pode ser tramitado
+                  dentro da sua secretaria ou para{' '}
+                  <strong>{secretarias.filter(s => String(s.id) !== String(minhaSecretariaId)).map(s => s.sigla || s.nome).join(', ') || 'as secretarias definidas'}</strong>.
+                </p>
+              </div>
+            )}
 
             {/* Aviso para operadores restritos */}
             {isOperadorRestrito && (

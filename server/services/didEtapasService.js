@@ -123,6 +123,7 @@ async function etapasDoDid(req, did) {
   return fluxo.etapas.filter(e => e.ativa !== false).map((e, i) => {
     const naConf = atualConf.etapas.find(x => x.id === e.id);
     const fonteSetor = naConf ? { ...e, setores: naConf.setores, todos: naConf.todos } : e;
+    const tramitacao = (naConf || e).tramitacao || { todas: true, secretarias: [] };
     const bloco = cat.BLOCOS[e.bloco] || {};
     return {
       ...e,
@@ -134,8 +135,24 @@ async function etapasDoDid(req, did) {
       responsavel: bloco.responsavel || null,
       extras: bloco.extras || [],
       setoresEfetivos: setoresDaEtapa(fonteSetor, setores),
+      tramitacao: { todas: tramitacao.todas !== false || !(tramitacao.secretarias || []).length, secretarias: tramitacao.secretarias || [] },
     };
   });
+}
+
+/**
+ * Regra de tramitação que vale agora: a da última etapa concluída pelo setor onde o
+ * processo está (ele acabou de cumprir a etapa e vai enviar adiante); se o setor ainda
+ * não concluiu nenhuma, a da etapa atual. Devolve { todas, secretarias: [ids], etapa }.
+ */
+async function tramitacaoPermitida(req, did, processo) {
+  const etapas = await etapasDoDid(req, did);
+  const estado = estadoEtapas(did, etapas);
+  const doSetor = etapas.filter(e => estado[e.id]?.status === 'concluida' &&
+    (e.setoresEfetivos.todos || e.setoresEfetivos.ids.includes(processo.setor_atual_id)));
+  const etapa = doSetor[doSetor.length - 1] || etapaAtualDe(etapas, estado);
+  if (!etapa) return { todas: true, secretarias: [], etapa: null };
+  return { ...etapa.tramitacao, etapa: { numero: etapa.numero, titulo: etapa.titulo } };
 }
 
 // ── Estado ───────────────────────────────────────────────────────────────────
@@ -254,6 +271,8 @@ async function resumo(req, did, processo) {
       secretaria: usuario.secretaria ? { nome: usuario.secretaria.nome, sigla: usuario.secretaria.sigla } : null,
     },
     processo: processo && { setor_atual: nomeSetor(processo.setor_atual_id) },
+    // Para onde pode tramitar agora (janela de tramitar filtra as secretarias)
+    tramitacao: processo ? await tramitacaoPermitida(req, did, processo) : null,
     etapas: etapas.map(e => ({
       id: e.id,
       bloco: e.bloco,
@@ -501,6 +520,11 @@ function normalizarFluxo(etapas) {
       nome: String(e.nome || '').trim().slice(0, 120),
       todos: !!e.todos,
       setores: Array.isArray(e.setores) ? e.setores.filter(x => typeof x === 'string') : [],
+      // Para onde o processo pode ser tramitado ao sair desta etapa (todas = sem restrição)
+      tramitacao: {
+        todas: e.tramitacao?.todas !== false,
+        secretarias: Array.isArray(e.tramitacao?.secretarias) ? [...new Set(e.tramitacao.secretarias.filter(x => typeof x === 'string'))] : [],
+      },
       obrigatorios: {},
     };
     if (!personalizada && e.obrigatorios && typeof e.obrigatorios === 'object') {
@@ -543,4 +567,5 @@ module.exports = {
   concluir,
   devolver,
   normalizarFluxo,
+  tramitacaoPermitida,
 };
