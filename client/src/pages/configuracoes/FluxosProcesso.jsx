@@ -130,6 +130,13 @@ export default function FluxosProcesso() {
   const arrastando = useRef(null)
 
   const catalogo = useMemo(() => Object.fromEntries((dados?.catalogo || []).map(b => [b.key, b])), [dados])
+  // Secretarias (para a tramitação) a partir dos setores carregados
+  const secretarias = useMemo(() => {
+    const m = new Map()
+    setores.forEach(s => { const sec = s.secretaria; if (sec?.id && !m.has(sec.id)) m.set(sec.id, sec) })
+    return [...m.values()].sort((a, b) => String(a.nome).localeCompare(String(b.nome)))
+  }, [setores])
+  const siglaSecretaria = (id) => { const sec = secretarias.find(x => x.id === id); return sec ? (sec.sigla || sec.nome) : null }
 
   /** Etapa do servidor → rascunho editável (setores da sugestão viram explícitos) */
   const paraRascunho = (etapas, sugestoes) => copia(etapas).map(e => {
@@ -137,7 +144,11 @@ export default function FluxosProcesso() {
       const sug = sugestoes?.[e.bloco]
       if (sug === 'todas') { e.todos = true; e.setores = [] } else { e.setores = sug || []; e.todos = false }
     }
-    return { ...e, setores: e.setores || [], obrigatorios: e.obrigatorios || {} }
+    return {
+      ...e, setores: e.setores || [], obrigatorios: e.obrigatorios || {},
+      // Para onde o processo pode ser tramitado ao sair desta etapa (sem configuração = todas)
+      tramitacao: { todas: e.tramitacao?.todas !== false, secretarias: e.tramitacao?.secretarias || [] },
+    }
   })
 
   const carregar = async () => {
@@ -335,6 +346,14 @@ export default function FluxosProcesso() {
                     )) : (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-danger-50 text-danger-700">Nenhum setor — escolha ao menos um</span>
                     )}
+                    <span className="text-[11px] text-ink-400 ml-1">Tramita para:</span>
+                    {e.tramitacao?.todas !== false ? (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-ink-100 text-ink-600">Todas as secretarias</span>
+                    ) : (e.tramitacao.secretarias || []).filter(siglaSecretaria).length ? e.tramitacao.secretarias.filter(siglaSecretaria).map(id => (
+                      <span key={id} className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">{siglaSecretaria(id)}</span>
+                    )) : (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-danger-50 text-danger-700">Nenhuma secretaria — escolha ao menos uma</span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
@@ -372,6 +391,43 @@ export default function FluxosProcesso() {
                     </label>
                     {!e.todos && <SeletorSetores setores={setores} valor={e.setores} onChange={v => mudarEtapa(i, { setores: v })} />}
                   </div>
+
+                  {/* Para onde pode tramitar ao sair desta etapa (vale também para os DIDs em andamento) */}
+                  {(() => {
+                    const tram = e.tramitacao || { todas: true, secretarias: [] }
+                    const setTram = (t) => mudarEtapa(i, { tramitacao: { ...tram, ...t } })
+                    const marcadas = new Set(tram.secretarias || [])
+                    return (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-ink-600">Tramitação — para onde o processo pode ser enviado ao sair desta etapa</p>
+                        <div className="flex flex-wrap gap-x-5 gap-y-1">
+                          <label className="flex items-center gap-2 text-sm text-ink-700">
+                            <input type="radio" name={`tram-${e.id}`} checked={tram.todas !== false} onChange={() => setTram({ todas: true })} className="accent-brand-600" />
+                            Todas as secretarias
+                          </label>
+                          <label className="flex items-center gap-2 text-sm text-ink-700">
+                            <input type="radio" name={`tram-${e.id}`} checked={tram.todas === false} onChange={() => setTram({ todas: false })} className="accent-brand-600" />
+                            Somente as secretarias selecionadas (uma ou mais)
+                          </label>
+                        </div>
+                        {tram.todas === false && (
+                          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1 rounded-lg border border-ink-200 p-3 max-h-56 overflow-y-auto">
+                            {secretarias.map(sec => (
+                              <label key={sec.id} className="flex items-center gap-2 text-sm text-ink-700">
+                                <input type="checkbox" checked={marcadas.has(sec.id)} className="accent-brand-600"
+                                  onChange={ev => {
+                                    const n = new Set(marcadas)
+                                    ev.target.checked ? n.add(sec.id) : n.delete(sec.id)
+                                    setTram({ secretarias: [...n] })
+                                  }} />
+                                <span className="truncate">{sec.sigla ? `${sec.sigla} — ${sec.nome}` : sec.nome}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
 
                   {e.bloco === 'personalizada' ? (
                     <div className="space-y-2">

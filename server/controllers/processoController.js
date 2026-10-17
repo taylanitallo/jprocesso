@@ -4,6 +4,7 @@ const { Op, Sequelize } = require('sequelize');
 const { registrarLog } = require('../middleware/activityLogger');
 const { getScopeSetorInclude, getScopeSecretariaInclude } = require('../utils/scopeFilter');
 const { situacaoRecebimento } = require('../utils/recebimento');
+const didEtapasSvc = require('../services/didEtapasService');
 const { registrarExclusao } = require('../services/lixeiraService');
 const { masterDb } = require('../config/database');
 const assinaturaService = require('../services/assinaturaService');
@@ -318,7 +319,27 @@ const tramitarProcesso = async (req, res) => {
 
     // Operadores só podem tramitar para setores da própria secretaria
     // EXCETO se foram designados explicitamente por um gestor/admin na última tramitação
-    if (req.user.tipo === 'operacional' && req.user.secretariaId) {
+    // DID: para onde pode tramitar é definido por etapa (Configurações › Fluxos de Processo)
+    let destinoDefinidoNoFluxo = false;
+    if (processo.tipo_processo === 'Did' && req.models.Did) {
+      const did = await req.models.Did.findOne({ where: { processo_id: processo.id }, transaction });
+      if (did) {
+        const regra = await didEtapasSvc.tramitacaoPermitida(req, did, processo);
+        if (!regra.todas) {
+          const dest = await req.models.Setor.findByPk(destinoSetorId, { attributes: ['secretariaId'], transaction });
+          if (!dest || !regra.secretarias.includes(String(dest.secretariaId))) {
+            const nomes = await req.models.Secretaria.findAll({ where: { id: { [Op.in]: regra.secretarias } }, attributes: ['nome', 'sigla'], transaction });
+            await transaction.rollback();
+            return res.status(403).json({
+              error: `${regra.etapa?.titulo || 'Nesta etapa'}: o processo só pode ser tramitado para ${nomes.map(n => n.sigla || n.nome).join(', ') || 'as secretarias definidas no fluxo'}.`,
+            });
+          }
+          destinoDefinidoNoFluxo = true; // destino permitido pelo fluxo vale também para o operador
+        }
+      }
+    }
+
+    if (req.user.tipo === 'operacional' && req.user.secretariaId && !destinoDefinidoNoFluxo) {
       const { Setor } = req.models;
       const destinoSetor = await Setor.findByPk(destinoSetorId, { transaction });
 

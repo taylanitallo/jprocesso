@@ -1233,6 +1233,7 @@ export default function DetalhesProcesso() {
       {showTramitar && (
         <ModalTramitacao
           processo={processo}
+          tramitacaoDid={processo.tipo_processo === 'Did' ? etapasDid?.tramitacao : null}
           onClose={() => setShowTramitar(false)}
           onSuccess={handleTramitacaoSuccess}
         />
