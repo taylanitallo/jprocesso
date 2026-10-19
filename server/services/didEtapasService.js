@@ -207,7 +207,7 @@ function pendencias(etapa, did) {
 async function usuarioCompleto(req, transaction) {
   const { User, Setor, Secretaria } = req.models;
   return User.findByPk(req.user.id, {
-    attributes: ['id', 'nome', 'cpf', 'cargo', 'portaria_nomeacao', 'setorId', 'secretariaId', 'tipo'],
+    attributes: ['id', 'nome', 'email', 'cpf', 'cargo', 'portaria_nomeacao', 'setorId', 'secretariaId', 'tipo'],
     include: [
       { model: Setor, as: 'setor', attributes: ['id', 'nome', 'sigla'] },
       { model: Secretaria, as: 'secretaria', attributes: ['id', 'nome', 'sigla'] },
@@ -216,11 +216,49 @@ async function usuarioCompleto(req, transaction) {
   });
 }
 
+// Seção Tesouraria (DID contas fixas e variáveis): só tesoureiro e auxiliar de tesoureiro
+// (cargo em Organização › Responsáveis, vigente), além de gestor, administrador e Jeos
+const TIPOS_LIVRES_TESOURARIA = ['gestor', 'admin', 'jeos'];
+const semAcento = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
+const soDigitos = (t) => String(t || '').replace(/\D/g, '');
+
+async function ehTesoureiro(req, usuario) {
+  if (!usuario) return false;
+  const secretarias = await req.models.Secretaria.findAll({ attributes: ['responsaveis'] }).catch(() => []);
+  const hoje = new Date().toISOString().slice(0, 10);
+  const tesoureiros = secretarias.flatMap(s => (Array.isArray(s.responsaveis) ? s.responsaveis : []))
+    .filter(r => /tesoureir/i.test(semAcento(r?.cargo)) && (!r.data_inicio || r.data_inicio <= hoje) && (!r.data_fim || r.data_fim >= hoje));
+  if (!tesoureiros.length) return false;
+
+  // Responsável ↔ usuário: pelo CPF ou e-mail do agente vinculado; senão, pelo nome
+  const ids = [...new Set(tesoureiros.map(r => r.agente_id).filter(Boolean).map(String))];
+  const [agentes] = ids.length
+    ? await req.tenantDb.query(`SELECT id::text AS id, nome, cpf, email FROM agentes WHERE id::text IN (:ids)`, { replacements: { ids } }).catch(() => [[]])
+    : [[]];
+  const agente = new Map(agentes.map(a => [a.id, a]));
+  const cpf = soDigitos(usuario.cpf);
+  const email = semAcento(usuario.email);
+  const nome = semAcento(usuario.nome);
+  return tesoureiros.some(r => {
+    const a = agente.get(String(r.agente_id || ''));
+    if (a && cpf && soDigitos(a.cpf) === cpf) return true;
+    if (a && email && semAcento(a.email) === email) return true;
+    return !!nome && (semAcento(r.nome) === nome || (a && semAcento(a.nome) === nome));
+  });
+}
+
 /** Pode o usuário preencher a etapa atual? Devolve o motivo quando não. */
 async function podePreencher(req, { processo, etapaAtual, usuario }) {
   if (!etapaAtual) return { pode: false, motivo: 'Todas as etapas deste DID estão concluídas.', codigo: 'concluido' };
   if (processo && ['concluido', 'arquivado'].includes(processo.status)) {
     return { pode: false, motivo: 'O processo está concluído ou arquivado.', codigo: 'processo_encerrado' };
+  }
+  if (etapaAtual.bloco === 'tesouraria' && !TIPOS_LIVRES_TESOURARIA.includes(usuario?.tipo) && !(await ehTesoureiro(req, usuario))) {
+    return {
+      pode: false,
+      motivo: 'A Tesouraria só pode ser preenchida por tesoureiro ou auxiliar de tesoureiro (Organização › Responsáveis), gestor ou administrador.',
+      codigo: 'tesouraria_cargo',
+    };
   }
   if (!usuario?.setorId || !etapaAtual.setoresEfetivos.ids.includes(usuario.setorId)) {
     return { pode: false, motivo: `${etapaAtual.titulo} é preenchida por outro setor.`, codigo: 'outro_setor' };
