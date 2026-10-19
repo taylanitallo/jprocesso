@@ -1069,6 +1069,24 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
   `);
   await run(`CREATE INDEX IF NOT EXISTS idx_tes_grupos_contas_usuario ON tes_grupos_contas(usuario_id)`);
 
+  // Transferências entre contas bancárias da Tesouraria (saem da origem e entram no destino)
+  await run(`
+    CREATE TABLE IF NOT EXISTS tes_transferencias (
+      id                UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+      data              DATE          NOT NULL,
+      conta_origem_id   UUID          NOT NULL,
+      conta_destino_id  UUID          NOT NULL,
+      valor             NUMERIC(15,2) NOT NULL CHECK (valor > 0),
+      observacao        TEXT,
+      usuario_id        UUID,
+      usuario_nome      VARCHAR(200),
+      created_at        TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+      updated_at        TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+    )
+  `);
+  await run(`CREATE INDEX IF NOT EXISTS idx_tes_transf_origem ON tes_transferencias(conta_origem_id, data)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_tes_transf_destino ON tes_transferencias(conta_destino_id, data)`);
+
   // Textos que o usuário enviou nos campos com sugestão da Ayla — base para as
   // próximas sugestões seguirem o estilo dele (ver /api/ayla/sugerir)
   await run(`

@@ -110,6 +110,8 @@ export const MODULOS = [
     abas: [
       { key: 'contas',     label: 'Contas Bancárias', acoes: CRUD_LIXEIRA },
       { key: 'receitas',   label: 'Receitas',         acoes: CRUD_LIXEIRA },
+      // Transferências entre contas: ver a lista (com quem fez) e registrar uma nova
+      { key: 'transferencias', label: 'Transferências', acoes: [VER, { key: 'criar', label: 'Fazer transferência' }] },
       // Excluídos de Despesas = pagamentos estornados
       { key: 'despesas',   label: 'Despesas',         acoes: CRUD_LIXEIRA },
       { key: 'relatorios', label: 'Relatórios',       acoes: [VER] },

@@ -1,8 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
 //  CAIXA DAS CONTAS BANCÁRIAS — fonte única de saldo, extrato, fluxo e disponível
 //
-//  Entradas: receitas lançadas na Tesouraria.
-//  Saídas:   DID pago → debita o LÍQUIDO na data do pagamento;
+//  Entradas: receitas lançadas na Tesouraria; transferências recebidas de outra conta.
+//  Saídas:   transferências enviadas a outra conta;
+//            DID pago → debita o LÍQUIDO na data do pagamento;
 //            retenções do DID (INSS, ISS, IRRF, consignados…) → debitadas quando a
 //            Tesouraria registra o recolhimento (até lá ficam "a recolher");
 //            pagamentos antigos registrados direto na Tesouraria (tes_despesas) →
@@ -139,6 +140,36 @@ async function movimentos(models, { contaIds = null, de = null, ate = null } = {
         descricao: `Recolhimento de retenções — ${descricao}`,
         valor: centavos(bruto - liquido),
       });
+    }
+  }
+
+  // Transferências entre contas: saída na origem e entrada no destino, na mesma data
+  if (models.TesTransferencia) {
+    const { TesTransferencia, ContaBancaria } = models;
+    const tWhere = {};
+    if (contaIds) tWhere[Op.or] = [{ conta_origem_id: { [Op.in]: contaIds } }, { conta_destino_id: { [Op.in]: contaIds } }];
+    if (de || ate) {
+      tWhere.data = {};
+      if (de) tWhere.data[Op.gte] = de;
+      if (ate) tWhere.data[Op.lte] = ate;
+    }
+    const transfs = await TesTransferencia.findAll({
+      where: tWhere,
+      include: [
+        { model: ContaBancaria, as: 'origem', attributes: ['nome'], required: false },
+        { model: ContaBancaria, as: 'destino', attributes: ['nome'], required: false },
+      ],
+    }).catch(() => []); // tabela ainda não criada neste município
+    const inclui = (id) => !contaIds || contaIds.map(String).includes(String(id));
+    for (const inst of transfs) {
+      const t = inst.toJSON();
+      const base = { origem: 'transferencia', data: t.data, valor: num(t.valor), observacao: t.observacao || null, transferencia_id: t.id };
+      if (inclui(t.conta_origem_id)) {
+        lista.push({ ...base, conta_id: t.conta_origem_id, tipo: 'D', descricao: `Transferência para ${t.destino?.nome || 'outra conta'}` });
+      }
+      if (inclui(t.conta_destino_id)) {
+        lista.push({ ...base, conta_id: t.conta_destino_id, tipo: 'R', descricao: `Transferência de ${t.origem?.nome || 'outra conta'}` });
+      }
     }
   }
 

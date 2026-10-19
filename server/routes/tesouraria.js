@@ -4,6 +4,7 @@ const { listReceitas, createReceita, updateReceita, deleteReceita } = require('.
 const { listDespesas, listRetencoes, recolherRetencoes, desfazerRecolhimento } = require('../controllers/despesasController');
 const { saldoContas, fluxoMensal, extratoConta, disponivelConta } = require('../controllers/relatoriosController');
 const { listGrupos, createGrupo, updateGrupo, deleteGrupo } = require('../controllers/gruposContasController');
+const { listTransferencias, createTransferencia } = require('../controllers/transferenciasController');
 const { authenticate, tenantMiddleware, requireTenant, authorize, requirePermission, requireModulo } = require('../middleware/auth');
 
 // Saldo disponível da conta — usado no DID (Processos), fica fora do acesso à Tesouraria
@@ -18,6 +19,10 @@ router.get('/receitas',        perm('receitas', 'ver'), listReceitas);
 router.post('/receitas',       perm('receitas', 'criar'), createReceita);
 router.put('/receitas/:id',    perm('receitas', 'editar'), updateReceita);
 router.delete('/receitas/:id', authorize('admin', 'gestor'), perm('receitas', 'excluir'), deleteReceita);
+
+// ── Transferências entre contas ───────────────────────────────────────────────
+router.get('/transferencias',  perm('transferencias', 'ver'), listTransferencias);
+router.post('/transferencias', perm('transferencias', 'criar'), createTransferencia);
 
 // ── Despesas (ordens de compra/serviço — o pagamento é feito no DID) ──────────
 router.get('/despesas', perm('despesas', 'ver'), listDespesas);
