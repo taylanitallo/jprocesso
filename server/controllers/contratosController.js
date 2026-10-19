@@ -152,6 +152,10 @@ const updateItem = async (req, res) => {
     const { ContratoItem } = req.models;
     const item = await ContratoItem.findByPk(req.params.id);
     if (!item) return notFound(res, 'Item');
+    // Item ATIVO do banco de itens: só administradores alteram (enquanto o banco é preenchido)
+    if (item.status === 'ATIVO' && !['admin', 'jeos'].includes(req.user?.tipo)) {
+      return res.status(403).json({ error: 'Item ativo só pode ser alterado por administradores.' });
+    }
     // Nunca usa o codigo vindo do frontend — é sempre imutável após setado
     const { codigo: _ignorado, ...rest } = req.body;
     // Se o item ainda não tem código, gera um novo primeiro (antes de calcular o status)
@@ -356,6 +360,59 @@ const conferirItensAtivos = async (models, itens, itensJaNoContrato = []) => {
   return `Item inativo não pode ser vinculado ao contrato (cadastre a especificação no catálogo): ${inativos.map(i => i.descricao).join('; ')}`;
 };
 
+// Descrição do item no contrato = descrição + especificação do banco de itens
+// (mesma regra de client/src/pages/contratos/ContratosShared.jsx › descricaoComEspecificacao)
+const descricaoComEspecificacao = (item) => {
+  const desc = String(item?.descricao || '').trim();
+  const esp = String(item?.especificacao || '').trim();
+  if (!esp || desc.toLowerCase().includes(esp.toLowerCase())) return desc;
+  return desc ? `${desc} - ${esp}` : esp;
+};
+const chaveTexto = (t) => String(t || '').trim().replace(/\s+/g, ' ').toLowerCase();
+
+// Itens do contrato vêm do banco de itens e não podem ser alterados no contrato:
+//  - item novo no contrato: descrição e unidade sempre as do banco de itens;
+//  - item que já estava no contrato: mantém a descrição/unidade gravadas;
+//  - sem vínculo com o banco: só os que já existiam assim (contratos antigos).
+// Devolve { erro } ou { itens } prontos para o syncItens.
+const travarItensNoBanco = async (models, contratoId, itens) => {
+  if (!Array.isArray(itens)) return { itens };
+  const anteriores = contratoId
+    ? await models.ContratoItemVinculo.findAll({ where: { contrato_id: contratoId }, attributes: ['item_id', 'descricao', 'unidade'], raw: true })
+    : [];
+  const porItem = new Map(anteriores.filter(a => a.item_id).map(a => [Number(a.item_id), a]));
+  const semVinculo = new Set(anteriores.filter(a => !a.item_id).map(a => chaveTexto(a.descricao)));
+
+  const ids = [...new Set(itens.map(it => it?.item_id).filter(Boolean).map(Number))].filter(id => !porItem.has(id));
+  const catalogo = ids.length
+    ? await models.ContratoItem.findAll({ where: { id: { [Op.in]: ids } }, attributes: ['id', 'descricao', 'especificacao', 'unidade_medida'], raw: true })
+    : [];
+  const doBanco = new Map(catalogo.map(c => [Number(c.id), c]));
+
+  const fora = [];
+  const prontos = itens
+    .filter(it => it && String(it.descricao || '').trim())
+    .map(it => {
+      const id = it.item_id ? Number(it.item_id) : null;
+      if (id && porItem.has(id)) {
+        const ant = porItem.get(id);
+        return { ...it, descricao: ant.descricao, unidade: ant.unidade };
+      }
+      if (id && doBanco.has(id)) {
+        const c = doBanco.get(id);
+        return { ...it, descricao: descricaoComEspecificacao(c), unidade: c.unidade_medida || it.unidade || null };
+      }
+      if (id) { fora.push(String(it.descricao).trim()); return it; } // vínculo com item que não existe
+      if (semVinculo.has(chaveTexto(it.descricao))) return it;       // item antigo, já estava assim
+      fora.push(String(it.descricao).trim());
+      return it;
+    });
+  if (fora.length) {
+    return { erro: `Escolha o item no banco de itens (não é permitido item digitado à mão): ${fora.slice(0, 5).join('; ')}` };
+  }
+  return { itens: prontos };
+};
+
 const createContrato = async (req, res) => {
   try {
     const { Contrato, ContratoItemVinculo } = req.models;
@@ -365,8 +422,10 @@ const createContrato = async (req, res) => {
     }
     const erroItens = await conferirItensAtivos(req.models, itens);
     if (erroItens) return res.status(400).json({ error: erroItens });
+    const travados = await travarItensNoBanco(req.models, null, itens);
+    if (travados.erro) return res.status(400).json({ error: travados.erro });
     const contrato = await Contrato.create(dados);
-    await syncItens(ContratoItemVinculo, contrato.id, itens);
+    await syncItens(ContratoItemVinculo, contrato.id, travados.itens);
     const itensDoContrato = ContratoItemVinculo ? await ContratoItemVinculo.findAll({ where: { contrato_id: contrato.id }, order: [['ordem', 'ASC']] }) : [];
     res.status(201).json({ ...contrato.toJSON(), itens: itensDoContrato });
     await registrarLog(req, {
@@ -400,8 +459,10 @@ const updateContrato = async (req, res) => {
       const erroItens = await conferirItensAtivos(req.models, itens, jaVinculados);
       if (erroItens) return res.status(400).json({ error: erroItens });
     }
+    const travados = itens !== undefined ? await travarItensNoBanco(req.models, contrato.id, itens) : null;
+    if (travados?.erro) return res.status(400).json({ error: travados.erro });
     await contrato.update(dados);
-    if (itens !== undefined) await syncItens(ContratoItemVinculo, contrato.id, itens);
+    if (itens !== undefined) await syncItens(ContratoItemVinculo, contrato.id, travados.itens);
     const itensDoContrato = ContratoItemVinculo ? await ContratoItemVinculo.findAll({ where: { contrato_id: contrato.id }, order: [['ordem', 'ASC']] }) : [];
     res.json({ ...contrato.toJSON(), itens: itensDoContrato });
   } catch (err) {

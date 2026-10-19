@@ -276,7 +276,11 @@ function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
     distribuicao:   jaDistribuido ? item.distribuicao.map(d => ({ ...d })) : [{ local: '', quantidade: '' }],
     valor_unitario_base: item?.valor_unitario_base || '',
   })
-  const [busca, setBusca] = useState(item?.descricao || '')
+  // A descrição e a unidade vêm do banco de itens e não se alteram no contrato.
+  // Item antigo sem vínculo com o banco (contratos de antes) fica como está, ou troca por um do banco.
+  const itemAntigo = !!item?.descricao && !item?.item_id
+  const [trocando, setTrocando] = useState(!item?.descricao)
+  const [busca, setBusca] = useState('')
   const [drop, setDrop] = useState(false)
   const [dropRef, setDropRef] = useState(null)
   // Sugestões de local: setores cadastrados (o campo aceita texto livre, ex.: "BIBLI.")
@@ -301,12 +305,14 @@ function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
     // Descrição + especificação do catálogo num campo só (segue para ordens e DID)
     const desc = descricaoComEspecificacao(i)
     setForm(p => ({ ...p, item_id: i.id, descricao: desc, unidade: i.unidade_medida || '' }))
-    setBusca(desc)
+    setBusca('')
     setDrop(false)
+    setTrocando(false)
   }
 
   const salvar = () => {
-    if (!form.descricao.trim()) { alert('Informe a descrição do item.'); return }
+    if (!form.item_id && !itemAntigo) { alert('Escolha o item no banco de itens.'); return }
+    if (!form.descricao.trim()) { alert('Escolha o item no banco de itens.'); return }
     const { distribuido, ...resto } = form
     if (distribuido) {
       const linhas = form.distribuicao.filter(d => String(d.local || '').trim() && numBR(d.quantidade) > 0)
@@ -348,23 +354,41 @@ function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
             </div>
           </div>
 
-          {/* Descrição com busca no catálogo */}
+          {/* Descrição: só pelo banco de itens (não se digita nem se altera no contrato) */}
           <div>
-            <label className="block text-xs font-semibold text-ink-500 mb-1.5">Descrição *</label>
+            <label className="block text-xs font-semibold text-ink-500 mb-1.5">Item do banco de itens *</label>
+            {!trocando && form.descricao && (
+              <div className="flex items-start gap-3 rounded-xl border border-ink-200 bg-ink-50 px-3.5 py-2.5">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-ink-900 whitespace-pre-wrap">{form.descricao}</p>
+                  <p className="text-[11px] text-ink-500 mt-0.5">
+                    {form.item_id
+                      ? 'Descrição e unidade do banco de itens — não podem ser alteradas no contrato.'
+                      : 'Item antigo, fora do banco de itens. Escolha o item correspondente no banco para atualizar.'}
+                  </p>
+                </div>
+                <button type="button" onClick={() => setTrocando(true)}
+                  className="shrink-0 text-xs font-semibold text-brand-600 dark:text-info-400 hover:underline">
+                  {form.item_id ? 'Trocar item' : 'Escolher no banco'}
+                </button>
+              </div>
+            )}
+            {trocando && (
             <div className="relative">
               <input
+                autoFocus={!!item?.descricao}
                 value={busca}
-                onChange={e => { setBusca(e.target.value); set('descricao', e.target.value); setDrop(true) }}
+                onChange={e => { setBusca(e.target.value); setDrop(true) }}
                 onFocus={e => { setDrop(true); setDropRef(e.currentTarget.closest('.relative')) }}
                 onBlur={() => setTimeout(() => { setDrop(false); setDropRef(null) }, 150)}
-                placeholder="Buscar no catálogo ou digitar livremente..."
+                placeholder="Buscar no banco de itens pela descrição ou código..."
                 className="w-full h-11 px-3.5 text-sm rounded-xl border border-ink-200 bg-surface focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-hidden text-ink-900 dark:text-white"
               />
               {drop && dropRef && createPortal(
                 <div style={{ position: 'fixed', zIndex: 10001, top: retanguloEmCss(dropRef).bottom + 4, left: retanguloEmCss(dropRef).left, width: retanguloEmCss(dropRef).width }}
                   className="bg-surface border border-ink-200 rounded-xl shadow-2xl max-h-44 overflow-y-auto">
                   {itensFiltrados.length === 0
-                    ? <p className="px-3 py-2 text-xs text-ink-400">Nenhum item do catálogo — descrição livre</p>
+                    ? <p className="px-3 py-2 text-xs text-ink-400">Nenhum item ativo encontrado no banco de itens</p>
                     : itensFiltrados.map(i => (
                       <button key={i.id} type="button" onMouseDown={() => selecionarCatalogo(i)}
                         className="w-full text-left px-3 py-2 text-xs hover:bg-info-50 dark:hover:bg-info-900/20 border-b border-ink-100 last:border-0">
@@ -376,7 +400,12 @@ function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
                 </div>,
                 document.body
               )}
+              {item?.descricao && (
+                <button type="button" onClick={() => { setTrocando(false); setBusca('') }}
+                  className="mt-1 text-xs text-ink-500 hover:text-ink-800">Manter o item atual</button>
+              )}
             </div>
+            )}
           </div>
 
           {/* Distribuído por setor/local */}
@@ -392,7 +421,8 @@ function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-semibold text-ink-500 mb-1.5">Unidade</label>
-              <PremiumInput value={form.unidade} onChange={e => set('unidade', e.target.value)} placeholder={form.distribuido ? 'MÊS' : 'UNID, KG...'} />
+              {/* Unidade do banco de itens: não se altera no contrato */}
+              <PremiumInput value={form.unidade} readOnly disabled title="Unidade do banco de itens" placeholder="—" className="bg-ink-50 cursor-not-allowed" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-ink-500 mb-1.5">Quantidade *</label>
