@@ -2219,6 +2219,9 @@ export default function Secretarias() {
                   <option value="Equipe de planejamento das contratações">Equipe de planejamento das contratações</option>
                   <option value="Agentes de contratações">Agentes de contratações</option>
                   <option value="Gestor de contratos">Gestor de contratos</option>
+                  {/* Tesoureiro e auxiliar preenchem a Seção Tesouraria dos DIDs (didEtapasService › ehTesoureiro) */}
+                  <option value="Tesoureiro">Tesoureiro</option>
+                  <option value="Auxiliar de tesoureiro">Auxiliar de tesoureiro</option>
                 </select>
               </div>
               <div>
