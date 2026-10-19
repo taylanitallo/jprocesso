@@ -1087,7 +1087,10 @@ function TabItens() {
     }
   }
 
-  const abrirEditar = () => { if (itemSelecionado) setModal('editar') }
+  // Item ATIVO: só administradores alteram (enquanto o banco de itens é preenchido;
+  // o servidor confere de novo em contratosController › updateItem)
+  const ativoTravado = !!itemSelecionado && itemSelecionado.status === 'ATIVO' && !isAdmin
+  const abrirEditar = () => { if (itemSelecionado && !ativoTravado) setModal('editar') }
   const abrirExcluir = () => { if (itemSelecionado) setModal('excluir') }
   const abrirVisualizar = () => { if (itemSelecionado) setModal('visualizar') }
   const abrirRelatorio = () => { if (itemSelecionado) setModal('relatorio') }
@@ -1189,7 +1192,8 @@ function TabItens() {
           </button>
         )}
         {pode('editar') && (
-          <button onClick={abrirEditar} disabled={!podeAgir}
+          <button onClick={abrirEditar} disabled={!podeAgir || ativoTravado}
+            title={ativoTravado ? 'Item ativo: só administradores podem alterar' : undefined}
             className="flex items-center gap-1.5 h-7 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
             <Edit3 className="w-3.5 h-3.5" /> Alterar
           </button>
