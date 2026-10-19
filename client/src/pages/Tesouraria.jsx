@@ -10,6 +10,7 @@ import api from '../services/api';
 import { Paginacao, usePaginacao } from '../components/ui';
 import BotaoExcluidos from '../components/lixeira/BotaoExcluidos';
 import { ContaPicker, ContaLink, PeriodoRapido, BotaoLimpar, contaLabel } from '../components/tesouraria/ContaBancaria';
+import ModalTransferencias from '../components/tesouraria/ModalTransferencias';
 import PageHeader from '../components/ui/PageHeader';
 import SectionTitle from '../components/ui/SectionTitle';
 import FilterBar from '../components/ui/FilterBar';
@@ -18,7 +19,7 @@ import {
   Landmark, Plus, Edit2, Trash2, Save, X,
   TrendingUp, TrendingDown, BarChart2,
   Printer, Search, CheckCircle2, Clock, RotateCcw, CreditCard, ShoppingCart,
-  Layers, Settings2, ChevronDown, ChevronUp, Check, AlertTriangle,
+  Layers, Settings2, ChevronDown, ChevronUp, Check, AlertTriangle, ArrowLeftRight,
 } from 'lucide-react';
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
@@ -57,7 +58,9 @@ export default function Tesouraria() {
   const { tab, subdomain } = useParams();
   const navigate = useNavigate();
   const { tenant, user } = useAuth();
-  conferirAbasDoModulo('tesouraria', TABS.map(t => t.permPath[1]));
+  // Transferências não é aba: abre pelo botão do cabeçalho (tela cheia)
+  conferirAbasDoModulo('tesouraria', [...TABS.map(t => t.permPath[1]), 'transferencias']);
+  const [verTransferencias, setVerTransferencias] = useState(false);
   const visibleTabsTes = TABS.filter(t => hasPerm(user, ...t.permPath));
   const [activeTab, setActiveTab] = useState(() => {
     const validKeys = visibleTabsTes.map(t => t.key);
@@ -82,7 +85,14 @@ export default function Tesouraria() {
         icon={Landmark}
         title="Tesouraria"
         subtitle="Gestão financeira e controle de pagamentos do município"
+        actions={hasPerm(user, 'tesouraria', 'transferencias', 'ver') && (
+          <button type="button" onClick={() => setVerTransferencias(true)}
+            className="btn-secondary text-sm px-4 py-2 flex items-center gap-1.5">
+            <ArrowLeftRight className="h-4 w-4" /> Transferências
+          </button>
+        )}
       />
+      {verTransferencias && <ModalTransferencias onClose={() => setVerTransferencias(false)} />}
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-ink-200">

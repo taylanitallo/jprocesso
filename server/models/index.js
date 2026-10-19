@@ -31,6 +31,7 @@ const definePatInventarioModel = require('./PatInventario');
 const definePatInventarioItemModel = require('./PatInventarioItem');
 const defineContaBancariaModel = require('./ContaBancaria');
 const defineTesReceitaModel = require('./TesReceita');
+const defineTesTransferenciaModel = require('./TesTransferencia');
 const defineTesDespesaModel = require('./TesDespesa');
 const defineTesGrupoContaModel = require('./TesGrupoConta');
 const defineLogModel = require('./Log');
@@ -71,6 +72,7 @@ const initTenantModels = (sequelize) => {
   const PatInventarioItem = definePatInventarioItemModel(sequelize);
   const ContaBancaria = defineContaBancariaModel(sequelize);
   const TesReceita = defineTesReceitaModel(sequelize);
+  const TesTransferencia = defineTesTransferenciaModel(sequelize);
   const TesDespesa = defineTesDespesaModel(sequelize);
   const TesGrupoConta = defineTesGrupoContaModel(sequelize);
   const Log = defineLogModel(sequelize);
@@ -201,6 +203,10 @@ const initTenantModels = (sequelize) => {
   TesReceita.belongsTo(ContaBancaria, { foreignKey: 'conta_id', as: 'conta' });
   ContaBancaria.hasMany(TesReceita, { foreignKey: 'conta_id', as: 'receitas' });
 
+  // TesTransferencia associations
+  TesTransferencia.belongsTo(ContaBancaria, { foreignKey: 'conta_origem_id', as: 'origem' });
+  TesTransferencia.belongsTo(ContaBancaria, { foreignKey: 'conta_destino_id', as: 'destino' });
+
   // TesDespesa associations
   TesDespesa.belongsTo(ContaBancaria, { foreignKey: 'conta_id', as: 'conta', constraints: false });
   ContaBancaria.hasMany(TesDespesa, { foreignKey: 'conta_id', as: 'despesas', constraints: false });
@@ -246,6 +252,7 @@ const initTenantModels = (sequelize) => {
     PatInventarioItem,
     ContaBancaria,
     TesReceita,
+    TesTransferencia,
     TesDespesa,
     TesGrupoConta,
     Log,

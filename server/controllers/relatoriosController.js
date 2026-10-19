@@ -102,6 +102,8 @@ const fluxoMensal = async (req, res) => {
 
     const porMes = new Map();
     for (const m of movs) {
+      // Todas as contas juntas: transferência entre elas não é receita nem despesa
+      if (!conta_id && m.origem === 'transferencia') continue;
       const mes = String(m.data).slice(0, 7);
       if (!porMes.has(mes)) porMes.set(mes, { mes, receitas: 0, despesas: 0 });
       porMes.get(mes)[m.tipo === 'R' ? 'receitas' : 'despesas'] += m.valor;
