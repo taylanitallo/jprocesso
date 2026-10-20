@@ -12,6 +12,7 @@ const {
   listOrdens, listOrdemDisponivelDid, getSaldoContrato, getItensContrato, createOrdem, updateOrdem, deleteOrdem,
   excluirOrdemDefinitivo,
 } = require('../controllers/ordensController');
+const { concluirContrato } = require('../controllers/contratoConclusaoController');
 const { authenticate, tenantMiddleware, requireTenant, authorize, requirePermission, requireModulo } = require('../middleware/auth');
 
 // Todos os endpoints exigem autenticação + tenant
@@ -64,6 +65,8 @@ router.delete('/ordens/:id/definitivo',            authorize('admin', 'jeos'), p
 router.post('/',      perm('contratos', 'criar'), createContrato);
 router.put('/:id',    perm('contratos', 'editar'), updateContrato);
 router.delete('/:id', perm('contratos', 'excluir'), deleteContrato);
+// Concluir (assinado). Com saldo sobrando: só gestor/administrador, com justificativa
+router.post('/:id/concluir', perm('contratos', 'concluir'), concluirContrato);
 
 // Sincronização: importa credores dos DIDs existentes para a tabela credores
 router.post('/sync-from-dids', perm('credores', 'criar'), syncFromDids);

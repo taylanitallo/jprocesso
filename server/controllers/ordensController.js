@@ -226,6 +226,7 @@ const createOrdem = async (req, res) => {
     // Verificar contrato
     const contrato = await Contrato.findByPk(body.contrato_id);
     if (!contrato) return notFound(res, 'Contrato');
+    if (contrato.status === 'CONCLUÍDO') return res.status(400).json({ error: 'Contrato concluído não recebe novas ordens.' });
 
     // Calcular valor total da nova ordem
     const valorOrdem = itens.reduce((acc, it) => {

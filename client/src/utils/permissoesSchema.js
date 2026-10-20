@@ -99,7 +99,8 @@ export const MODULOS = [
       { key: 'licitacoes', label: 'Licitação',               acoes: CRUD_LIXEIRA },
       { key: 'credores',   label: 'Credores',                acoes: CRUD_LIXEIRA },
       { key: 'itens',      label: 'Itens',                   acoes: CRUD_LIXEIRA },
-      { key: 'contratos',  label: 'Contratos',               acoes: CRUD_LIXEIRA },
+      // Concluir: contrato utilizado por completo; com saldo, só gestor/administrador (servidor confere)
+      { key: 'contratos',  label: 'Contratos',               acoes: [...CRUD, { key: 'concluir', label: 'Concluir' }, ...LIXEIRA] },
       { key: 'ordens',     label: 'Ordem de Serviço/Compra', acoes: CRUD_LIXEIRA },
       { key: 'relatorios', label: 'Relatórios',              acoes: [VER] },
       { key: 'dashboard',  label: 'Dashboard',               acoes: [VER], escopo: false },

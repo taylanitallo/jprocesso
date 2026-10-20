@@ -1069,6 +1069,9 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
   `);
   await run(`CREATE INDEX IF NOT EXISTS idx_tes_grupos_contas_usuario ON tes_grupos_contas(usuario_id)`);
 
+  // Conclusão do contrato (status CONCLUÍDO), com a assinatura eletrônica de quem concluiu
+  await run(`ALTER TABLE contratos ADD COLUMN IF NOT EXISTS conclusao JSONB`);
+
   // Transferências entre contas bancárias da Tesouraria (saem da origem e entram no destino)
   await run(`
     CREATE TABLE IF NOT EXISTS tes_transferencias (
