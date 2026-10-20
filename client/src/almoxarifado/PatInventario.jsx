@@ -1,3 +1,4 @@
+import NumeroLink from '../components/ui/NumeroLink'
 import { useState, useEffect, useCallback } from 'react'
 import { usePode } from '../utils/permissions'
 import { RefreshCw, Plus, ClipboardList, CheckCircle, AlertCircle, XCircle } from 'lucide-react'
@@ -189,7 +190,9 @@ export default function PatInventario({ userRole }) {
                 const si = statusInfo[inv.status] || { label: inv.status, color: 'bg-ink-100 text-ink-700' }
                 return (
                   <tr key={inv.id} className="hover:bg-ink-50">
-                    <td className="px-4 py-3 font-mono text-xs font-semibold">{inv.numero}</td>
+                    <td className="px-4 py-3 font-mono text-xs font-semibold text-brand-700 dark:text-info-400">
+                      <NumeroLink onClick={() => abrirInventario(inv)}>{inv.numero}</NumeroLink>
+                    </td>
                     <td className="px-4 py-3">{inv.ano_exercicio}</td>
                     <td className="px-4 py-3 hidden sm:table-cell text-ink-500 text-xs">{inv.secretaria?.sigla || 'Todas'}</td>
                     <td className="px-4 py-3">{inv.total_bens}</td>

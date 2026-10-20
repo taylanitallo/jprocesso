@@ -1,3 +1,5 @@
+import NumeroLink from '../../components/ui/NumeroLink'
+import { ContratoModal } from './TabContratos'
 import { useState, useEffect, useRef } from 'react'
 import {
   User, Activity, Building2, Check, X, AlertTriangle, Loader2,
@@ -416,12 +418,14 @@ function ConfirmModalCredor({ credor, onConfirm, onClose }) {
 //  MODAL: CONTRATOS DO CREDOR
 // ══════════════════════════════════════════════════════════════════════════════
 function CredorContratosModal({ credor, onClose }) {
+  // Número do contrato clicado abre a visualização (por cima desta janela)
   const [contratos, setContratos] = useState([])
   useEffect(() => {
     api.get('/contratos').then(r => setContratos(r.data)).catch(() => {})
   }, [])
 
   const vinculados = contratos.filter(c => c.credor_id === credor.id)
+  const [verContrato, setVerContrato] = useState(null)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -471,7 +475,9 @@ function CredorContratosModal({ credor, onClose }) {
               <tbody className="divide-y divide-ink-200">
                 {vinculados.map(c => (
                   <tr key={c.id} className="hover:bg-ink-50 text-xs text-ink-700">
-                    <td className="px-4 py-2 font-mono font-medium text-brand-600">{c.numero_contrato || '—'}</td>
+                    <td className="px-4 py-2 font-mono font-medium text-brand-600">
+                      <NumeroLink onClick={() => setVerContrato(c)}>{c.numero_contrato || '—'}</NumeroLink>
+                    </td>
                     <td className="px-4 py-2 max-w-xs truncate">{c.objeto || '—'}</td>
                     <td className="px-4 py-2">{c.modalidade || '—'}</td>
                     <td className="px-4 py-2 text-right font-semibold">{c.valor ? Number(c.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—'}</td>
@@ -501,6 +507,11 @@ function CredorContratosModal({ credor, onClose }) {
           </button>
         </div>
       </div>
+      {verContrato && (
+        <div className="relative z-[70]">
+          <ContratoModal modo="visualizar" contrato={verContrato} credores={[credor]} onSave={null} onClose={() => setVerContrato(null)} />
+        </div>
+      )}
     </div>
   )
 }

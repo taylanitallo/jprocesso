@@ -1,3 +1,4 @@
+import NumeroLink from '../components/ui/NumeroLink'
 import CampoSugerido from '../components/ui/CampoSugerido'
 import { contextoFormulario, registrarTextoUsado } from '../utils/sugestaoAyla'
 import { useState, useEffect, useRef, Fragment } from 'react';
@@ -1065,6 +1066,8 @@ function TabDespesas() {
 }
 
 function OrdensDespesas() {
+  const { subdomain } = useParams();
+  const navigate = useNavigate();
   const [ordens, setOrdens] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filtros, setFiltros] = useState({ tipo: 'TODOS', pago: 'TODOS', data_de: '', data_ate: '', busca: '', secretaria: '', processo: '' });
@@ -1227,7 +1230,8 @@ function OrdensDespesas() {
                 {pgOrdens.fatia(ordens).map(o => (
                   <tr key={o.id} className="hover:bg-ink-50 group">
                     <td className="px-4 py-3">
-                      <div className="font-mono text-xs text-ink-800">{o.numero}</div>
+                      <NumeroLink onClick={() => navigate(`/${subdomain}/contratos/ordens?ver=${o.id}`)} title="Visualizar a ordem"
+                        className="font-mono text-xs text-brand-700 dark:text-info-400">{o.numero}</NumeroLink>
                       <span className={`inline-block mt-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-sm ${o.tipo === 'COMPRA' ? 'bg-info-100 text-brand-700 dark:bg-info-900/40 dark:text-info-300' : 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'}`}>
                         {o.tipo === 'COMPRA' ? 'OC' : 'OS'}
                       </span>
@@ -1280,6 +1284,8 @@ function OrdensDespesas() {
 // Retenções (INSS, ISS, IRRF, consignados…) dos DIDs pagos: saem da conta quando
 // recolhidas. Até lá aparecem como "a recolher" e reduzem o disponível da conta.
 function RetencoesARecolher() {
+  const { subdomain } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const podeEditar = hasPerm(user, 'tesouraria', 'despesas', 'editar');
   const [situacao, setSituacao] = useState('a_recolher'); // 'a_recolher' | 'recolhidas'
@@ -1429,7 +1435,10 @@ function RetencoesARecolher() {
                       </td>
                     )}
                     <td className="px-3 py-2 whitespace-nowrap">
-                      <div className="font-mono text-ink-800">DID {r.numero_did || '—'}</div>
+                      {r.processo_id
+                        ? <NumeroLink onClick={() => navigate(`/${subdomain}/processos/${r.processo_id}`)} title="Abrir o processo do DID"
+                            className="font-mono text-brand-700 dark:text-info-400">DID {r.numero_did || '—'}</NumeroLink>
+                        : <div className="font-mono text-ink-800">DID {r.numero_did || '—'}</div>}
                       <div className="font-mono text-[10px] text-ink-500">{r.processo || ''}</div>
                     </td>
                     <td className="px-3 py-2 max-w-xs truncate" title={r.credor || ''}>{r.credor || '—'}</td>

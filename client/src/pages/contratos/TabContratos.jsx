@@ -1,3 +1,4 @@
+import NumeroLink from '../../components/ui/NumeroLink'
 import { useState, useEffect, useRef } from 'react'
 import { usePode } from '../../utils/permissions'
 import { createPortal } from 'react-dom'
@@ -1745,7 +1746,9 @@ function TabContratos() {
                     }`}
                   >
                     <td className="px-3 py-2 text-ink-500">{c.tipo_contrato || '—'}</td>
-                    <td className="px-3 py-2 font-mono font-semibold text-brand-600 dark:text-info-400">{c.numero_contrato}</td>
+                    <td className="px-3 py-2 font-mono font-semibold text-brand-600 dark:text-info-400">
+                      <NumeroLink onClick={() => { setSelecionado(c.id); setModal('visualizar') }}>{c.numero_contrato}</NumeroLink>
+                    </td>
                     <td className="px-3 py-2 max-w-[200px] truncate font-medium">{nomeCredor(c.credor_id)}</td>
                     <td className="px-3 py-2 max-w-[200px] truncate">{c.objeto || '—'}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{c.modalidade || '—'}</td>

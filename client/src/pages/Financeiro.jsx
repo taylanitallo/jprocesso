@@ -1,3 +1,4 @@
+import NumeroLink from '../components/ui/NumeroLink'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { timbradoFundoCSS } from '../utils/timbradoStore'
 import { useParams, Link, useNavigate } from 'react-router-dom'
@@ -1681,7 +1682,8 @@ export default function Financeiro() {
                       return (
                         <tr key={p.id} className="hover:bg-ink-50 transition-colors">
                           <td className="py-3 px-4">
-                            <p className="font-mono text-brand-600 dark:text-info-400 font-semibold whitespace-nowrap">{p.numero}</p>
+                            <NumeroLink onClick={() => navigate(`/${subdomain}/processos/${p.id}`)} title="Abrir o processo"
+                              className="font-mono text-brand-600 dark:text-info-400 font-semibold whitespace-nowrap">{p.numero}</NumeroLink>
                             {did?.numero_did && <p className="text-xs text-ink-400">{fmtNumeroDid(did.numero_did)}</p>}
                           </td>
                           <td className="py-3 px-4">
