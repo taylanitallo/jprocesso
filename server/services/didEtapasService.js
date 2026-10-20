@@ -250,6 +250,8 @@ async function ehTesoureiro(req, usuario) {
 /** Pode o usuário preencher a etapa atual? Devolve o motivo quando não. */
 async function podePreencher(req, { processo, etapaAtual, usuario }) {
   if (!etapaAtual) return { pode: false, motivo: 'Todas as etapas deste DID estão concluídas.', codigo: 'concluido' };
+  // Administrador Jeos faz tudo: preenche qualquer etapa, de qualquer setor
+  if ((usuario?.tipo || req.user?.tipo) === 'jeos') return { pode: true };
   if (processo && ['concluido', 'arquivado'].includes(processo.status)) {
     return { pode: false, motivo: 'O processo está concluído ou arquivado.', codigo: 'processo_encerrado' };
   }

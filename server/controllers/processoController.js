@@ -325,7 +325,7 @@ const tramitarProcesso = async (req, res) => {
       const did = await req.models.Did.findOne({ where: { processo_id: processo.id }, transaction });
       if (did) {
         const regra = await didEtapasSvc.tramitacaoPermitida(req, did, processo);
-        if (!regra.todas) {
+        if (!regra.todas && req.user.tipo !== 'jeos') { // Administrador Jeos tramita para qualquer destino
           // Além dos destinos da etapa, sempre pode tramitar dentro da própria secretaria
           // (análises, conferências etc. antes de ir para outra secretaria)
           const dest = await req.models.Setor.findByPk(destinoSetorId, { attributes: ['secretariaId'], transaction });
@@ -672,7 +672,7 @@ const listProcessos = async (req, res) => {
     // Administrador/gestor podem pedir a visão ampla (?todos=1), limitada pelo escopo.
     // Administrador Jeos vê todos os processos do município, sempre
     const visaoAmpla = tipoUsuario === 'jeos' ||
-      (['admin', 'gestor'].includes(tipoUsuario) && ['1', 'true'].includes(String(req.query.todos)));
+      (['admin', 'gestor', 'jeos'].includes(tipoUsuario) && ['1', 'true'].includes(String(req.query.todos)));
     let accessCond = null;
     if (!visaoAmpla) {
       const userInfo = await User.findByPk(req.user.id, { attributes: ['id', 'setorId'] });
@@ -1554,7 +1554,7 @@ const receberProcesso = async (req, res) => {
     const user = await User.findByPk(usuarioId, { transaction });
 
     // Verifica se o usuário é o destinatário (está no setor atual ou é o usuário atual)
-    const isDestinatario =
+    const isDestinatario = req.user?.tipo === 'jeos' ||
       processo.usuario_atual_id === usuarioId ||
       (processo.usuario_atual_id === null && processo.setor_atual_id === user?.setorId);
 

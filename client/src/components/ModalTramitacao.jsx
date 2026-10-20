@@ -22,7 +22,8 @@ export default function ModalTramitacao({ processo, tramitacaoDid, onClose, onSu
   // DID com destinos definidos na etapa: eles + sempre a própria secretaria do usuário
   // (análises/conferências internas antes de ir adiante); valem também para o operador
   const minhaSecretariaId = user?.secretaria?.id || user?.secretariaId || null
-  const destinosDoFluxo = tramitacaoDid && tramitacaoDid.todas === false
+  // (Administrador Jeos tramita para qualquer destino)
+  const destinosDoFluxo = tramitacaoDid && tramitacaoDid.todas === false && user?.tipo !== 'jeos'
     ? [...new Set([...(tramitacaoDid.secretarias || []).map(String), ...(minhaSecretariaId ? [String(minhaSecretariaId)] : [])])]
     : null
   const isOperadorRestrito = user?.tipo === 'operacional' && !foiDesignadoPorGestor && !destinosDoFluxo
