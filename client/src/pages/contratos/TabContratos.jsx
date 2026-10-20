@@ -498,7 +498,8 @@ function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
   )
 }
 
-function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
+// Exportado: Relatórios abre o contrato (modo visualizar) ao clicar no número
+export function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
   const readonly = modo === 'visualizar'
 
   // Catálogo de itens do sistema

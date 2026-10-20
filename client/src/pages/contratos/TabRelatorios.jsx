@@ -8,6 +8,7 @@ import { jsPDF } from 'jspdf'
 import '../../utils/padraoDocumentoOficial' // padrão de documento oficial (preto, grade, cantos arredondados)
 import autoTable from 'jspdf-autotable'
 import api from '../../services/api'
+import { ContratoModal } from './TabContratos'
 import LoadingBar from '../../components/LoadingBar'
 import { applyTimbradoToPage } from '../../utils/timbradoStore'
 import { getMargens } from '../../utils/margensStore'
@@ -92,7 +93,7 @@ async function gerarListaContratoPDF({ titulo, lista, nomeCredor }) {
 }
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
-function ModalContratos({ titulo, lista, nomeCredor, diasAte, onClose }) {
+function ModalContratos({ titulo, lista, nomeCredor, diasAte, onClose, onVer }) {
   const [gerando, setGerando] = useState(false)
 
   const handlePDF = async () => {
@@ -151,7 +152,10 @@ function ModalContratos({ titulo, lista, nomeCredor, diasAte, onClose }) {
                   const dias = diasAte(c.vigencia_fim)
                   return (
                     <tr key={c.id} className="hover:bg-ink-50 transition-colors">
-                      <td className="py-3 px-4 font-mono font-semibold text-brand-600 dark:text-info-400 whitespace-nowrap">{c.numero_contrato || '—'}</td>
+                      <td className="py-3 px-4 font-mono font-semibold text-brand-600 dark:text-info-400 whitespace-nowrap">
+                        <button type="button" onClick={() => onVer?.(c)} title="Visualizar o contrato"
+                          className="hover:underline focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500 rounded-sm">{c.numero_contrato || '—'}</button>
+                      </td>
                       <td className="py-3 px-4 text-ink-700 max-w-[220px]">
                         <span className="line-clamp-2 text-xs leading-tight">{c.objeto || '—'}</span>
                       </td>
@@ -251,6 +255,7 @@ const BarRowR = ({ label, value, extra, pct, bar }) => (
 function TabRelatorios() {
   const [contratos, setContratos] = useState([])
   const [credores,  setCredores]  = useState([])
+  const [verContrato, setVerContrato] = useState(null)
   const [ordens,    setOrdens]    = useState([])
   const [loading,   setLoading]   = useState(true)
   const [modal, setModal]         = useState(null) // { titulo, lista }
@@ -346,7 +351,14 @@ function TabRelatorios() {
           nomeCredor={nomeCredor}
           diasAte={diasAte}
           onClose={() => setModal(null)}
+          onVer={setVerContrato}
         />
+      )}
+      {/* Número do contrato clicado (lista ou quadros de vencimento): abre o contrato */}
+      {verContrato && (
+        <div className="relative z-[70]">
+          <ContratoModal modo="visualizar" contrato={verContrato} credores={credores} onSave={null} onClose={() => setVerContrato(null)} />
+        </div>
       )}
 
       {/* KPIs — os 4 primeiros são clicáveis */}
@@ -373,7 +385,8 @@ function TabRelatorios() {
                   const d = diasAte(c.vigencia_fim)
                   return (
                     <div key={c.id} className="flex items-center gap-2 text-xs">
-                      <span className="font-mono font-bold text-brand-600 dark:text-info-400 w-24 shrink-0 truncate">{c.numero_contrato}</span>
+                      <button type="button" onClick={() => setVerContrato(c)} title="Visualizar o contrato"
+                        className="font-mono font-bold text-brand-600 dark:text-info-400 w-24 shrink-0 truncate text-left hover:underline">{c.numero_contrato}</button>
                       <span className="text-ink-600 flex-1 truncate">{nomeCredor(c.credor_id)}</span>
                       <span className={`font-bold px-2 py-0.5 rounded-full shrink-0 ${d === 0 ? 'bg-danger-100 text-danger-600' : d <= 7 ? 'bg-orange-100 text-orange-600' : 'bg-warning-100 text-warning-700'}`}>{d === 0 ? 'Hoje' : `${d}d`}</span>
                     </div>
@@ -394,7 +407,8 @@ function TabRelatorios() {
                   const d = diasAte(c.vigencia_fim)
                   return (
                     <div key={c.id} className="flex items-center gap-2 text-xs">
-                      <span className="font-mono font-bold text-brand-600 dark:text-info-400 w-24 shrink-0 truncate">{c.numero_contrato}</span>
+                      <button type="button" onClick={() => setVerContrato(c)} title="Visualizar o contrato"
+                        className="font-mono font-bold text-brand-600 dark:text-info-400 w-24 shrink-0 truncate text-left hover:underline">{c.numero_contrato}</button>
                       <span className="text-ink-600 flex-1 truncate">{nomeCredor(c.credor_id)}</span>
                       <span className="font-bold px-2 py-0.5 rounded-full shrink-0 bg-danger-100 text-danger-600">{Math.abs(d)}d atrás</span>
                     </div>
