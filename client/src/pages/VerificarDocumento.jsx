@@ -121,7 +121,9 @@ export default function VerificarDocumento() {
                 ['Data e hora', fmtDataHora(a.assinado_em)],
                 ['Tipo de assinatura', a.metodo === 'senha+email'
                   ? 'Eletrônica avançada — senha + código de uso único enviado ao e-mail do signatário'
-                  : 'Eletrônica avançada — senha + código de verificação (app autenticador)'],
+                  : a.metodo === 'senha'
+                    ? 'Eletrônica — senha do signatário (Administrador Jeos)'
+                    : 'Eletrônica avançada — senha + código de verificação (app autenticador)'],
                 ['Fundamento legal', a.fundamento],
                 ['Código verificador', a.codigo_verificador],
                 ['Código CRC', a.codigo_crc],

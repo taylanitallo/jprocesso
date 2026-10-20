@@ -135,7 +135,8 @@ export default function DetalhesProcesso() {
 
   // Destinatário precisa clicar "Receber" antes de poder agir — vale também para
   // administrador e gestor quando são o destino (servidor: utils/recebimento.js)
-  const precisaReceber = isDestinatarioReal && aguardandoRecebimento &&
+  // (o Administrador Jeos faz tudo: nunca precisa receber antes de agir)
+  const precisaReceber = currentUser?.tipo !== 'jeos' && isDestinatarioReal && aguardandoRecebimento &&
     (ultimaTramitacao?.origem_usuario_id || ultimaTramitacao?.origemUsuario?.id) !== currentUser?.id
 
   const podeAgir      = isResponsavel && !precisaReceber

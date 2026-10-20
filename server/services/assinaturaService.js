@@ -23,6 +23,8 @@ const FUNDAMENTO_LEGAL = 'Lei Federal nº 14.063/2020';
 const NIVEL = 'avancada';
 const METODO = 'senha+totp';
 const METODO_EMAIL = 'senha+email';
+// Administrador Jeos assina só com a senha (sem o 2º fator)
+const METODO_SENHA = 'senha';
 const CODIGO_EMAIL_MINUTOS = 10;
 const CODIGO_EMAIL_TENTATIVAS = 5;
 const CODIGO_EMAIL_INTERVALO_S = 60;
@@ -297,6 +299,8 @@ const validarCredenciais = async ({ db, transaction, usuario, senha, codigo, cod
   if (!(await bcrypt.compare(String(senha), usuario.senha))) {
     throw new AssinaturaError(400, 'SENHA_INVALIDA', 'Senha incorreta. A assinatura eletrônica requer a sua senha.');
   }
+  // Administrador Jeos: dispensado do 2º fator (app autenticador / código por e-mail)
+  if (usuario.tipo === 'jeos') return METODO_SENHA;
   const rows = await db.query(
     `SELECT segredo_cifrado, ativo, ultimo_passo FROM usuario_totp WHERE usuario_id = :id FOR UPDATE`,
     { replacements: { id: usuario.id }, type: QueryTypes.SELECT, transaction }

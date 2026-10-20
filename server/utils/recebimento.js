@@ -17,7 +17,9 @@ async function situacaoRecebimento(req, processo) {
 
   const { Tramitacao, User } = req.models;
   const eu = await User.findByPk(req.user.id, { attributes: ['id', 'setorId'] });
-  const noDestino =
+  // Administrador Jeos faz tudo: nunca fica bloqueado esperando o recebimento
+  const jeos = req.user?.tipo === 'jeos';
+  const noDestino = jeos ||
     processo.usuario_atual_id === req.user.id ||
     (!!eu?.setorId && processo.setor_atual_id === eu.setorId);
   if (!noDestino) return livre;
@@ -31,10 +33,10 @@ async function situacaoRecebimento(req, processo) {
     return livre;
   }
 
-  const podeReceber =
+  const podeReceber = jeos ||
     processo.usuario_atual_id === req.user.id ||
     (processo.usuario_atual_id === null && processo.setor_atual_id === eu?.setorId);
-  return { bloqueado: true, podeReceber, ultima };
+  return { bloqueado: !jeos, podeReceber, ultima };
 }
 
 const MSG_BLOQUEADO = 'Receba o processo para ter acesso ao seu conteúdo.';

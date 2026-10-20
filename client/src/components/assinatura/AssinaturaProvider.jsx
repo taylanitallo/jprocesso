@@ -9,6 +9,7 @@
 //        })
 //        // resultado = resposta do executar, ou null se o usuário cancelou.
 //
+//  Administrador Jeos assina só com a senha (dispensado do código / do app).
 //  Se o usuário ainda não tiver o app autenticador, o cadastro (QR code) é
 //  feito ali mesmo. Erros de senha/código mantêm o modal aberto para corrigir;
 //  qualquer outro erro é repassado a quem chamou.
@@ -16,6 +17,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { ShieldCheck, Smartphone, X, Loader2, AlertTriangle, KeyRound, Mail } from 'lucide-react'
 import api from '../../services/api'
+import { useAuth } from '../../context/AuthContext'
 
 const AssinaturaContext = createContext({ assinar: async () => null, configurarAutenticador: async () => false })
 export const useAssinatura = () => useContext(AssinaturaContext)
@@ -63,6 +65,8 @@ export default function AssinaturaProvider({ children }) {
 
 function ModalAssinatura({ pedido, onSucesso, onCancelar, onErro }) {
   const soCadastro = pedido.modo === 'cadastro'
+  const { user } = useAuth()
+  const semCodigo = user?.tipo === 'jeos' // Administrador Jeos: sem 2º fator
   const [etapa, setEtapa] = useState(soCadastro ? 'cadastro' : 'assinar') // 'assinar' | 'cadastro'
   const [senha, setSenha] = useState('')
   const [codigo, setCodigo] = useState('')
@@ -76,9 +80,9 @@ function ModalAssinatura({ pedido, onSucesso, onCancelar, onErro }) {
   const [esperaReenvio, setEsperaReenvio] = useState(0)
 
   useEffect(() => {
-    if (soCadastro) return
+    if (soCadastro || semCodigo) return
     api.get('/assinaturas/totp', { _silent: true }).then(r => setEmailDisponivel(!!r.data?.email_disponivel)).catch(() => {})
-  }, [soCadastro])
+  }, [soCadastro, semCodigo])
   useEffect(() => {
     if (esperaReenvio <= 0) return
     const t = setTimeout(() => setEsperaReenvio(n => n - 1), 1000)
@@ -125,10 +129,12 @@ function ModalAssinatura({ pedido, onSucesso, onCancelar, onErro }) {
     e.preventDefault()
     setErro('')
     if (!senha) return setErro('Informe sua senha.')
-    if (!/^\d{6}$/.test(codigo)) return setErro(viaEmail ? 'Informe os 6 dígitos enviados para o seu e-mail.' : 'Informe os 6 dígitos do aplicativo autenticador.')
+    if (!semCodigo && !/^\d{6}$/.test(codigo)) return setErro(viaEmail ? 'Informe os 6 dígitos enviados para o seu e-mail.' : 'Informe os 6 dígitos do aplicativo autenticador.')
     setEnviando(true)
     try {
-      const resultado = await pedido.executar(viaEmail
+      const resultado = await pedido.executar(semCodigo
+        ? { senhaConfirmacao: senha }
+        : viaEmail
         ? { senhaConfirmacao: senha, codigoEmail: codigo }
         : { senhaConfirmacao: senha, codigoTotp: codigo })
       onSucesso(resultado)
@@ -192,6 +198,7 @@ function ModalAssinatura({ pedido, onSucesso, onCancelar, onErro }) {
               <input type="password" autoFocus value={senha} onChange={e => setSenha(e.target.value)}
                 placeholder="••••••••" className="input-field" autoComplete="current-password" />
             </div>
+            {!semCodigo && (
             <div>
               <label className="block text-xs font-semibold text-ink-600 mb-1.5 flex items-center gap-1.5">
                 {viaEmail
@@ -219,6 +226,7 @@ function ModalAssinatura({ pedido, onSucesso, onCancelar, onErro }) {
                 </button>
               )}
             </div>
+            )}
             <p className="text-[11px] leading-relaxed text-ink-500">
               Assinatura eletrônica avançada (Lei Federal nº 14.063/2020, art. 4º, II), de uso pessoal e intransferível.
               O ato receberá código verificador para conferência de autenticidade.

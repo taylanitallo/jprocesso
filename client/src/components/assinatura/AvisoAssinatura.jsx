@@ -4,22 +4,25 @@
 import { useEffect, useState } from 'react'
 import { ShieldCheck, X } from 'lucide-react'
 import api from '../../services/api'
+import { useAuth } from '../../context/AuthContext'
 import { useAssinatura } from './AssinaturaProvider'
 
 const CHAVE_ADIAR = 'aviso-assinatura-adiado-ate'
 
 export default function AvisoAssinatura() {
   const { configurarAutenticador } = useAssinatura()
+  const { user } = useAuth()
   const [visivel, setVisivel] = useState(false)
 
   useEffect(() => {
+    if (user?.tipo === 'jeos') return // Administrador Jeos assina sem o app autenticador
     let adiadoAte = 0
     try { adiadoAte = Number(localStorage.getItem(CHAVE_ADIAR)) || 0 } catch { /* sem armazenamento */ }
     if (Date.now() < adiadoAte) return
     api.get('/assinaturas/totp', { _silent: true })
       .then(({ data }) => setVisivel(!data.configurado))
       .catch(() => {})
-  }, [])
+  }, [user?.tipo])
 
   if (!visivel) return null
 
