@@ -1,11 +1,36 @@
 const { Op, fn, col, literal } = require('sequelize');
 const { registrarLog } = require('../middleware/activityLogger');
 const { registrarExclusao } = require('../services/lixeiraService');
+const { applyScopeToWhereByName } = require('../utils/scopeFilter');
 
 // Ordens que não consomem saldo do contrato
 const STATUS_SEM_SALDO = ['CANCELADA', 'EXCLUÍDA'];
 
 const notFound = (res, entity) => res.status(404).json({ error: `${entity} não encontrado(a)` });
+
+// Escopo de secretarias da permissão (Contratos › Ordem de Serviço/Compra): "Só sua sec."
+// vê e mexe só nas ordens da própria secretaria (campo texto ContratoOrdem.secretaria)
+const escopoOrdens = async (req, acao) => {
+  const where = {};
+  await applyScopeToWhereByName(where, req, 'secretaria', 'contratos', 'ordens', acao);
+  return where;
+};
+const ordemNoEscopo = async (req, ordem, acao) => {
+  const escopo = await escopoOrdens(req, acao);
+  if (!Object.keys(escopo).length) return true;
+  return (await req.models.ContratoOrdem.count({ where: { ...escopo, id: ordem.id } })) > 0;
+};
+const secretariaNoEscopo = async (req, nome, acao) => {
+  const escopo = await escopoOrdens(req, acao);
+  if (!Object.keys(escopo).length) return true;
+  const { Op: O } = require('sequelize');
+  const cond = escopo.secretaria;
+  const alvo = String(nome || '').trim().toLowerCase();
+  if (cond?.[O.iLike] !== undefined) return alvo === String(cond[O.iLike]).trim().toLowerCase();
+  if (Array.isArray(cond?.[O.in])) return cond[O.in].some(n => String(n).trim().toLowerCase() === alvo);
+  return false;
+};
+const SEM_ACESSO_SECRETARIA = 'Esta ordem é de outra secretaria — você só tem acesso às ordens da sua secretaria.';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -93,6 +118,8 @@ const listOrdens = async (req, res) => {
         { objeto:  { [Op.iLike]: `%${q}%` } },
       ];
     }
+
+    Object.assign(where, await escopoOrdens(req, 'ver'));
 
     const ordens = await ContratoOrdem.findAll({
       where,
@@ -192,6 +219,9 @@ const createOrdem = async (req, res) => {
     const { itens = [], ...body } = req.body;
     const faltando = camposFaltandoOrdem(body, itens);
     if (faltando.length > 0) return respostaCamposFaltando(res, faltando);
+    if (!(await secretariaNoEscopo(req, body.secretaria, 'criar'))) {
+      return res.status(403).json({ error: 'Você só pode emitir ordens para a sua secretaria.' });
+    }
 
     // Verificar contrato
     const contrato = await Contrato.findByPk(body.contrato_id);
@@ -266,6 +296,10 @@ const updateOrdem = async (req, res) => {
 
     const ordem = await ContratoOrdem.findByPk(req.params.id);
     if (!ordem) return notFound(res, 'Ordem');
+    if (!(await ordemNoEscopo(req, ordem, 'editar'))) return res.status(403).json({ error: SEM_ACESSO_SECRETARIA });
+    if (body.secretaria !== undefined && !(await secretariaNoEscopo(req, body.secretaria, 'editar'))) {
+      return res.status(403).json({ error: 'Você só pode deixar a ordem na sua secretaria.' });
+    }
 
     const faltando = camposFaltandoOrdem(body, itens, { parcial: true, tipoAtual: ordem.tipo });
     if (faltando.length > 0) return respostaCamposFaltando(res, faltando);
@@ -329,6 +363,7 @@ const deleteOrdem = async (req, res) => {
     const { ContratoOrdem, Did, AlmoxLote } = req.models;
     const ordem = await ContratoOrdem.findByPk(req.params.id);
     if (!ordem) return notFound(res, 'Ordem');
+    if (!(await ordemNoEscopo(req, ordem, 'excluir'))) return res.status(403).json({ error: SEM_ACESSO_SECRETARIA });
 
     if (Did) {
       const totalDids = await Did.count({ where: { ordem_compra_id: ordem.id } });
