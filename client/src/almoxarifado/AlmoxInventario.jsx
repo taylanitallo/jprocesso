@@ -1,3 +1,4 @@
+import NumeroLink from '../components/ui/NumeroLink'
 import CampoSugerido from '../components/ui/CampoSugerido'
 import { registrarTextoUsado } from '../utils/sugestaoAyla'
 import React, { useState, useEffect, useCallback } from 'react'
@@ -430,7 +431,9 @@ export default function AlmoxInventario() {
             <tbody className="divide-y divide-ink-100">
               {pgInventarios.fatia(inventarios).map(inv => (
                 <tr key={inv.id} className="hover:bg-ink-50">
-                  <td className="px-4 py-3 font-mono text-xs font-medium text-ink-800">{inv.numero}</td>
+                  <td className="px-4 py-3 font-mono text-xs font-medium text-brand-700 dark:text-info-400">
+                    <NumeroLink onClick={() => setDetalhe(inv)}>{inv.numero}</NumeroLink>
+                  </td>
                   <td className="px-4 py-3 text-xs text-ink-500">
                     {inv.data_inicio ? new Date(inv.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
                   </td>

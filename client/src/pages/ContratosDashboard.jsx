@@ -1,3 +1,5 @@
+import NumeroLink from '../components/ui/NumeroLink'
+import { ContratoModal } from './contratos/TabContratos'
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
@@ -189,6 +191,7 @@ export default function ContratosDashboard() {
 
   const [contratos,  setContratos]  = useState([])
   const [credores,   setCredores]   = useState([])
+  const [verContrato, setVerContrato] = useState(null) // número clicado: abre o contrato
   const [ordens,     setOrdens]     = useState([])
   const [loading,    setLoading]    = useState(true)
   const [lastUpdate, setLastUpdate] = useState(null)
@@ -440,6 +443,11 @@ export default function ContratosDashboard() {
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="space-y-4 animate-fade-in">
+      {verContrato && (
+        <div className="relative z-[70]">
+          <ContratoModal modo="visualizar" contrato={verContrato} credores={credores} onSave={null} onClose={() => setVerContrato(null)} />
+        </div>
+      )}
       <PageHeader
         icon={BarChart3}
         title="Dashboard — Contratos"
@@ -592,7 +600,7 @@ export default function ContratosDashboard() {
                         const d = diasAte(c.vigencia_fim)
                         return (
                           <div key={c.id} className="flex items-center gap-2 text-xs bg-surface/60 rounded-lg px-2.5 py-1.5">
-                            <span className="font-mono font-bold text-brand-600 dark:text-info-400 whitespace-nowrap">{c.numero_contrato}</span>
+                            <NumeroLink onClick={() => setVerContrato(c)} className="font-mono font-bold text-brand-600 dark:text-info-400 whitespace-nowrap">{c.numero_contrato}</NumeroLink>
                             <span className="text-ink-600 truncate flex-1">{c.objeto}</span>
                             <span className={`font-bold whitespace-nowrap shrink-0 px-2 py-0.5 rounded-full ${d === 0 ? 'bg-danger-100 text-danger-600 dark:bg-danger-900/30 dark:text-danger-400' : d <= 7 ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' : 'bg-warning-100 text-warning-700 dark:bg-warning-900/30 dark:text-warning-400'}`}>
                               {d === 0 ? 'Hoje' : `${d}d`}
@@ -889,7 +897,9 @@ export default function ContratosDashboard() {
                           return (
                             <tr key={c.id} className="hover:bg-ink-50 transition-colors">
                               <td className="py-3 px-1 text-xs font-bold text-ink-400">{rank}</td>
-                              <td className="py-3 px-2 font-mono font-semibold text-brand-600 dark:text-info-400 whitespace-nowrap text-xs">{c.numero_contrato}</td>
+                              <td className="py-3 px-2 font-mono font-semibold text-brand-600 dark:text-info-400 whitespace-nowrap text-xs">
+                                <NumeroLink onClick={() => setVerContrato(c)}>{c.numero_contrato}</NumeroLink>
+                              </td>
                               <td className="py-3 px-2 text-ink-600 max-w-[180px] hidden md:table-cell">
                                 <span className="truncate block" title={c.objeto}>{c.objeto || '—'}</span>
                               </td>

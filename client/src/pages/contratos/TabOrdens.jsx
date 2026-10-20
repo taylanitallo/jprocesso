@@ -1,3 +1,5 @@
+import NumeroLink from '../../components/ui/NumeroLink'
+import { useSearchParams } from 'react-router-dom'
 import { registrarTextoUsado } from '../../utils/sugestaoAyla'
 import { useState, useEffect, useCallback } from 'react'
 import { usePode } from '../../utils/permissions'
@@ -1602,6 +1604,16 @@ function TabOrdens() {
     setLoading(false)
   }, [filtros])
 
+  // ?ver=<id> (ex.: número da ordem clicado na Tesouraria): abre a ordem ao carregar
+  const [buscaUrl, setBuscaUrl] = useSearchParams()
+  const verId = buscaUrl.get('ver')
+  useEffect(() => {
+    if (!verId || !ordens.length) return
+    const alvo = ordens.find(o => String(o.id) === String(verId))
+    if (alvo) { setSelecionada(alvo.id); setModal('visualizar') }
+    setBuscaUrl(p => { const n = new URLSearchParams(p); n.delete('ver'); return n }, { replace: true })
+  }, [verId, ordens]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Busca enquanto digita: recarrega ao mudar qualquer filtro (inclusive na abertura)
   useEffect(() => { const t = setTimeout(carregar, 300); return () => clearTimeout(t) }, [carregar])
 
@@ -1798,7 +1810,9 @@ function TabOrdens() {
                         : 'hover:bg-ink-50 text-ink-700'
                     } ${o.status === 'CANCELADA' ? 'opacity-50 line-through' : ''}`}
                   >
-                    <td className="px-3 py-2 font-mono font-semibold text-brand-600 dark:text-info-400">{o.numero}</td>
+                    <td className="px-3 py-2 font-mono font-semibold text-brand-600 dark:text-info-400">
+                      <NumeroLink onClick={() => { setSelecionada(o.id); setModal('visualizar') }}>{o.numero}</NumeroLink>
+                    </td>
                     <td className="px-3 py-2">
                       <div className="flex flex-col gap-1 w-fit">
                         <span className={`flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md w-fit ${

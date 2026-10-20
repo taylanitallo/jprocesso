@@ -1,3 +1,4 @@
+import NumeroLink from '../components/ui/NumeroLink'
 import CampoSugerido from '../components/ui/CampoSugerido'
 import { contextoFormulario, registrarTextoUsado } from '../utils/sugestaoAyla'
 import { useState, useEffect, useCallback } from 'react'
@@ -180,7 +181,7 @@ function SolRow({ r, onSeparar, onAguardandoRetirada, onEntregar, onCancelar, on
   return (
     <tr className="hover:bg-ink-50 transition-colors">
       <td className="px-4 py-3">
-        <p className="font-mono text-xs font-semibold text-brand-700 dark:text-info-400">{r.numero}</p>
+        <NumeroLink onClick={() => onVisualizar(r.id)} className="font-mono text-xs font-semibold text-brand-700 dark:text-info-400">{r.numero}</NumeroLink>
         {priorSt && r.prioridade !== 'NORMAL' && (
           <span className={`inline-flex text-xs font-medium px-1.5 py-0.5 rounded-sm mt-0.5 ${priorSt.color}`}>
             {priorSt.label}

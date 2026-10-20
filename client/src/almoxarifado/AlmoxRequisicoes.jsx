@@ -1,3 +1,4 @@
+import NumeroLink from '../components/ui/NumeroLink'
 import CampoSugerido from '../components/ui/CampoSugerido'
 import { contextoFormulario, registrarTextoUsado } from '../utils/sugestaoAyla'
 import { useState, useEffect, useCallback } from 'react'
@@ -712,7 +713,7 @@ function ReqRow({ r, onAutorizar, onCancelar, onVisualizar, userTipo }) {
   return (
     <tr className="hover:bg-ink-50 transition-colors">
       <td className="px-4 py-3">
-        <p className="font-mono text-xs font-semibold text-brand-700 dark:text-info-400">{r.numero}</p>
+        <NumeroLink onClick={() => onVisualizar(r.id)} className="font-mono text-xs font-semibold text-brand-700 dark:text-info-400">{r.numero}</NumeroLink>
         {priorSt && r.prioridade !== 'NORMAL' && (
           <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-sm text-xs font-medium mt-0.5 ${priorSt.color}`}>
             <Zap className="h-3 w-3" /> {priorSt.label}
