@@ -11,6 +11,8 @@ import {
 } from 'lucide-react'
 import api from '../../services/api'
 import BotaoExcluidos from '../../components/lixeira/BotaoExcluidos'
+import ModalConcluirContrato from './ModalConcluirContrato'
+import { useAuth } from '../../context/AuthContext'
 import { Paginacao, usePorPagina } from '../../components/ui'
 import { retanguloEmCss } from '../../utils/escalaTela'
 import {
@@ -223,7 +225,7 @@ function BuscarItemModal({ catalogoItens, onSelect, onClose }) {
 // ══════════════════════════════════════════════════════════════════════════════
 //  MODAL: FORMULÁRIO DE CONTRATO (Incluir / Alterar / Visualizar)
 // ══════════════════════════════════════════════════════════════════════════════
-const STATUS_CONTRATO  = ['ATIVO','ENCERRADO','SUSPENSO','RESCINDIDO']
+const STATUS_CONTRATO  = ['ATIVO','CONCLUÍDO','ENCERRADO','SUSPENSO','RESCINDIDO']
 const TIPOS_CONTRATO   = ['CONTRATO','ATA DE REGISTRO DE PREÇO','TERMO ADITIVO','CONVÊNIO','ACORDO','OUTRO']
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -814,6 +816,7 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
               <span className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-xs font-semibold border ${
                 form.status === 'ATIVO' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
                 form.status === 'ENCERRADO' ? 'bg-ink-100 text-ink-600 border-ink-200' :
+                form.status === 'CONCLUÍDO' ? 'bg-info-50 text-info-700 border-info-200' :
                 'bg-amber-50 text-amber-700 border-amber-200'
               }`}>{form.status}</span>
             )}
@@ -837,6 +840,25 @@ function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
         <div className="flex-1 overflow-y-auto">
           <div className="p-6">
             <div className="space-y-4">
+              {/* Conclusão assinada (botão Concluir da lista de contratos) */}
+              {contrato?.conclusao && (
+                <div className="rounded-2xl border border-info-200 dark:border-info-800 bg-info-50 dark:bg-info-900/20 px-4 py-3 text-sm">
+                  <p className="font-semibold text-info-800 dark:text-info-200 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4" /> Contrato concluído
+                    {contrato.conclusao.utilizado_completo ? ' — utilizado por completo' : ' — com saldo não utilizado'}
+                  </p>
+                  <p className="text-xs text-ink-600 mt-1">
+                    Por <strong>{contrato.conclusao.usuario_nome}</strong>
+                    {contrato.conclusao.usuario_cargo ? ` (${contrato.conclusao.usuario_cargo})` : ''} em{' '}
+                    {new Date(contrato.conclusao.concluido_em).toLocaleString('pt-BR')} · assinado eletronicamente
+                    {' · '}utilizado {Number(contrato.conclusao.total_utilizado || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    {!contrato.conclusao.utilizado_completo && <> · saldo {Number(contrato.conclusao.saldo_restante || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</>}
+                  </p>
+                  {contrato.conclusao.justificativa && (
+                    <p className="text-xs text-ink-700 mt-1 whitespace-pre-wrap"><strong>Justificativa:</strong> {contrato.conclusao.justificativa}</p>
+                  )}
+                </div>
+              )}
 
               {/* SectionCard — Identificação */}
               <SectionCard icon={FileText} title="Identificação" subtitle="Tipo, número e data de assinatura">
@@ -1522,6 +1544,10 @@ function TabContratos() {
 
   const contratoSelecionado = contratos.find(c => c.id === selecionado)
   const podeAgir = !!contratoSelecionado
+  const podeConcluir = !!contratoSelecionado && contratoSelecionado.status === 'ATIVO'
+  // Concluído (assinado) não se altera — só administradores (servidor confere)
+  const { user } = useAuth()
+  const travadoConcluido = contratoSelecionado?.status === 'CONCLUÍDO' && !['admin', 'jeos'].includes(user?.tipo)
 
   const diasAteVencer = (d) => {
     if (!d) return null
@@ -1576,6 +1602,7 @@ function TabContratos() {
 
   const statusCor = (s) => {
     if (s === 'ATIVO')      return 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400'
+    if (s === 'CONCLUÍDO')  return 'bg-info-100 text-info-700 dark:bg-info-900/30 dark:text-info-300'
     if (s === 'ENCERRADO')  return 'bg-ink-100 text-ink-600'
     if (s === 'SUSPENSO')   return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
     if (s === 'RESCINDIDO') return 'bg-danger-100 text-danger-700 dark:bg-danger-900/30 dark:text-danger-400'
@@ -1645,7 +1672,8 @@ function TabContratos() {
           </button>
         )}
         {pode('editar') && (
-          <button onClick={() => podeAgir && setModal('editar')} disabled={!podeAgir}
+          <button onClick={() => podeAgir && !travadoConcluido && setModal('editar')} disabled={!podeAgir || travadoConcluido}
+            title={travadoConcluido ? 'Contrato concluído não pode ser alterado' : undefined}
             className="flex items-center gap-1.5 h-7 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
             <Edit3 className="w-3.5 h-3.5" /> Alterar
           </button>
@@ -1654,6 +1682,13 @@ function TabContratos() {
           <button onClick={() => podeAgir && setModal('excluir')} disabled={!podeAgir}
             className="flex items-center gap-1.5 h-7 px-3 bg-danger-600 hover:bg-danger-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
             <Trash2 className="w-3.5 h-3.5" /> Excluir
+          </button>
+        )}
+        {pode('concluir') && (
+          <button onClick={() => podeConcluir && setModal('concluir')} disabled={!podeConcluir}
+            title={contratoSelecionado && !podeConcluir ? `Contrato ${contratoSelecionado.status}: só contratos ativos podem ser concluídos` : 'Concluir o contrato (assinado eletronicamente)'}
+            className="flex items-center gap-1.5 h-7 px-3 bg-success-600 hover:bg-success-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+            <CheckCircle2 className="w-3.5 h-3.5" /> Concluir
           </button>
         )}
         <button onClick={() => podeAgir && setModal('visualizar')} disabled={!podeAgir}
@@ -1759,6 +1794,10 @@ function TabContratos() {
       )}
       {modal === 'visualizar' && contratoSelecionado && (
         <ContratoModal modo="visualizar" contrato={contratoSelecionado} credores={credores} onSave={null} onClose={() => setModal(null)} />
+      )}
+      {modal === 'concluir' && contratoSelecionado && (
+        <ModalConcluirContrato contrato={contratoSelecionado} onClose={() => setModal(null)}
+          onConcluido={() => { setModal(null); recarregarContratos() }} />
       )}
       {modal === 'excluir' && contratoSelecionado && (
         <ConfirmModalContrato contrato={contratoSelecionado} onConfirm={excluir} onClose={() => setModal(null)} />

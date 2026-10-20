@@ -24,6 +24,8 @@ module.exports = (sequelize) => {
     observacoes: { type: DataTypes.TEXT },
     status: { type: DataTypes.STRING(20), defaultValue: 'ATIVO' },
     dias_alerta: { type: DataTypes.INTEGER, defaultValue: 30 },
+    // Conclusão assinada (quem, quando, saldo, justificativa, método e hash) — contratoConclusaoController
+    conclusao: { type: DataTypes.JSONB },
   }, {
     tableName: 'contratos',
     timestamps: true,

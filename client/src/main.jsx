@@ -6,6 +6,7 @@ import App from './App'
 import './index.css'
 import { isAdminContext, getPageSubdomain } from './services/api'
 import { aplicarTemaGuardado } from './utils/tema'
+import './utils/dicaTextoCortado' // texto cortado (…) mostra o completo ao passar o mouse
 
 // Tema do município antes do primeiro desenho (evita piscar no azul padrão)
 if (!isAdminContext()) {

@@ -416,7 +416,8 @@ const travarItensNoBanco = async (models, contratoId, itens) => {
 const createContrato = async (req, res) => {
   try {
     const { Contrato, ContratoItemVinculo } = req.models;
-    const { itens, ...dados } = req.body;
+    const { itens, conclusao: _conclusao, ...dados } = req.body;
+    if (dados.status === 'CONCLUÍDO') dados.status = 'ATIVO'; // concluir só pelo botão, assinado
     if (dados.valor != null && typeof dados.valor === 'string') {
       dados.valor = parseFloat(dados.valor.replace(/[^\d,.]/g, '').replace(',', '.')) || null;
     }
@@ -449,7 +450,15 @@ const updateContrato = async (req, res) => {
     const { Contrato, ContratoItemVinculo } = req.models;
     const contrato = await Contrato.findByPk(req.params.id);
     if (!contrato) return notFound(res, 'Contrato');
-    const { itens, ...dados } = req.body;
+    // Contrato concluído (assinado) não se altera — só administradores
+    if (contrato.status === 'CONCLUÍDO' && !['admin', 'jeos'].includes(req.user?.tipo)) {
+      return res.status(403).json({ error: 'Contrato concluído não pode ser alterado.' });
+    }
+    const { itens, conclusao: _conclusao, ...dados } = req.body;
+    // A conclusão só acontece pelo botão Concluir (POST /contratos/:id/concluir), assinada
+    if (dados.status === 'CONCLUÍDO' && contrato.status !== 'CONCLUÍDO') {
+      return res.status(400).json({ error: 'Use o botão Concluir para concluir o contrato (com assinatura eletrônica).' });
+    }
     if (dados.valor != null && typeof dados.valor === 'string') {
       dados.valor = parseFloat(dados.valor.replace(/[^\d,.]/g, '').replace(',', '.')) || null;
     }
