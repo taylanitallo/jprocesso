@@ -1,6 +1,6 @@
 import { Banknote, Pencil } from 'lucide-react'
 import { useState, useEffect, useRef, useContext } from 'react'
-import { Field, Input, Checkbox, SectionCard, ConfirmModal } from '../didShared'
+import { Field, Input, Checkbox, SectionCard, ConfirmModal, CertidoesComAnexo } from '../didShared'
 import { EtapaDidContext, ResponsavelEtapa, RecebidoEmEtapa } from '../EtapasDid'
 import { BANCOS } from '../bancosBrasil'
 import api from '../../../services/api'
@@ -79,7 +79,7 @@ function ContaSelect({ value, onChange, disabled, onSelect }) {
   )
 }
 
-export default function DidVariaveisSecaoXI({ form, inp, chk, vliq, didId }) {
+export default function DidVariaveisSecaoXI({ form, inp, set, chk, vliq, didId, processoId }) {
   // Editável só na etapa atual, para quem pode preenchê-la (fluxo por etapas)
   const { editavel, titulo } = useContext(EtapaDidContext)
   const locked = !editavel
@@ -190,13 +190,13 @@ export default function DidVariaveisSecaoXI({ form, inp, chk, vliq, didId }) {
       {/* Certidões Tesouraria */}
       <div className="col-span-2">
         <label className="block text-xs font-medium text-ink-500 mb-2">Certidões</label>
-        <div className="flex flex-wrap gap-4">
-          <Checkbox label="Unificada" checked={form.cert_teso_cnd} onChange={chk('cert_teso_cnd')} disabled={locked} />
-          <Checkbox label="FGTS" checked={form.cert_teso_fgts} onChange={chk('cert_teso_fgts')} disabled={locked} />
-          <Checkbox label="Estadual" checked={form.cert_teso_estadual} onChange={chk('cert_teso_estadual')} disabled={locked} />
-          <Checkbox label="Trabalhista" checked={form.cert_teso_trabalhista} onChange={chk('cert_teso_trabalhista')} disabled={locked} />
-          <Checkbox label="Municipal" checked={form.cert_teso_municipal} onChange={chk('cert_teso_municipal')} disabled={locked} />
-        </div>
+        <CertidoesComAnexo form={form} set={set} chk={chk} locked={locked} processoId={processoId} itens={[
+          { campo: 'cert_teso_cnd',         certKey: 'teso_cnd',         label: 'Unificada' },
+          { campo: 'cert_teso_fgts',        certKey: 'teso_fgts',        label: 'FGTS' },
+          { campo: 'cert_teso_estadual',    certKey: 'teso_estadual',    label: 'Estadual' },
+          { campo: 'cert_teso_trabalhista', certKey: 'teso_trabalhista', label: 'Trabalhista' },
+          { campo: 'cert_teso_municipal',   certKey: 'teso_municipal',   label: 'Municipal' },
+        ]} />
       </div>
 
       {/* Demonstrativo de Descontos */}

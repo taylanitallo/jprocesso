@@ -831,7 +831,7 @@ export default function FormularioDid() {
           return blocoEtapa(e.numero, <EtapaPersonalizada etapa={e} form={form} set={set} />)
         }
         const Tela = telaDoBloco(e.bloco, tipoDid)
-        return Tela ? blocoEtapa(e.numero, <Tela form={form} inp={inp} set={set} chk={chk} vliq={vliq} didId={did?.id} />) : null
+        return Tela ? blocoEtapa(e.numero, <Tela form={form} inp={inp} set={set} chk={chk} vliq={vliq} didId={did?.id} processoId={processoId} />) : null
       })}
 
       {/* Salvar bottom */}

@@ -202,6 +202,73 @@ export function alertarPendencias(pendencias, secaoLabel) {
   return false
 }
 
+// Certidões com arquivo (Tesouraria): marca a certidão e anexa o PDF/imagem. O arquivo
+// fica no DID (cert_sec1_arquivos, chave certKey) e entra nos Documentos Anexados do processo.
+export function CertidoesComAnexo({ itens, form, set, chk, locked, processoId }) {
+  const [enviando, setEnviando] = useState({})
+  const refs = useRef({})
+  const arquivos = form.cert_sec1_arquivos || {}
+  const semProcesso = !processoId || processoId === 'novo'
+
+  const enviar = async (certKey, file) => {
+    if (semProcesso) { alert('Salve o DID antes de anexar arquivos.'); return }
+    setEnviando(p => ({ ...p, [certKey]: true }))
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const { data } = await api.post(`/did/processo/${processoId}/certidao/${certKey}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      set('cert_sec1_arquivos', data.cert_sec1_arquivos)
+    } catch (err) { alert(err?.response?.data?.error || 'Erro ao fazer upload do arquivo.') }
+    finally { setEnviando(p => ({ ...p, [certKey]: false })) }
+  }
+  const ver = async (certKey) => {
+    try {
+      const { data } = await api.get(`/did/processo/${processoId}/certidao/${certKey}/url`)
+      window.open(data.url, '_blank')
+    } catch { alert('Erro ao abrir arquivo.') }
+  }
+  const remover = async (certKey) => {
+    if (!confirm('Remover o arquivo desta certidão? Ele também sai dos Documentos Anexados do processo.')) return
+    try {
+      const { data } = await api.delete(`/did/processo/${processoId}/certidao/${certKey}`)
+      set('cert_sec1_arquivos', data.cert_sec1_arquivos)
+    } catch (err) { alert(err?.response?.data?.error || 'Erro ao remover arquivo.') }
+  }
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+      {itens.map(({ campo, certKey, label }) => {
+        const arq = arquivos[certKey]
+        return (
+          <div key={campo} className={`rounded-lg border p-2.5 ${form[campo] ? 'border-success-300 dark:border-success-700 bg-success-50 dark:bg-success-900/15' : 'border-ink-200 bg-surface'}`}>
+            <div className="mb-2"><Checkbox label={label} checked={form[campo]} onChange={chk(campo)} disabled={locked} /></div>
+            {arq ? (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-ink-600 truncate flex-1 min-w-0" title={arq.nome}>{arq.nome}</span>
+                <button type="button" onClick={() => ver(certKey)} className="text-[11px] font-semibold text-info-600 hover:underline shrink-0">Ver</button>
+                {!locked && (
+                  <button type="button" onClick={() => remover(certKey)} title="Remover arquivo" className="p-0.5 rounded-sm text-danger-400 hover:bg-danger-50 shrink-0">
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            ) : (
+              <>
+                <input ref={el => { refs.current[certKey] = el }} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) { enviar(certKey, f); e.target.value = '' } }} />
+                <button type="button" disabled={locked || enviando[certKey]} onClick={() => refs.current[certKey]?.click()}
+                  className="text-xs text-ink-500 hover:text-brand-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                  {enviando[certKey] ? 'Enviando...' : '+ Anexar arquivo'}
+                </button>
+              </>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export function Checkbox({ label, checked, onChange, disabled }) {
   return (
     <label className={`flex items-center gap-2 text-sm text-ink-700${disabled ? ' opacity-60 cursor-not-allowed' : ' cursor-pointer'}`}>
