@@ -228,10 +228,11 @@ export function CertidoesComAnexo({ itens, form, set, chk, locked, processoId })
     } catch { alert('Erro ao abrir arquivo.') }
   }
   const remover = async (certKey) => {
-    if (!confirm('Remover o arquivo desta certidão? Ele também sai dos Documentos Anexados do processo.')) return
+    if (!confirm('Remover o arquivo desta certidão? Ela fica desmarcada e o arquivo sai dos Documentos Anexados do processo.')) return
     try {
       const { data } = await api.delete(`/did/processo/${processoId}/certidao/${certKey}`)
       set('cert_sec1_arquivos', data.cert_sec1_arquivos)
+      if (data.campo) set(data.campo, false) // sem o arquivo, a certidão fica desmarcada
     } catch (err) { alert(err?.response?.data?.error || 'Erro ao remover arquivo.') }
   }
 

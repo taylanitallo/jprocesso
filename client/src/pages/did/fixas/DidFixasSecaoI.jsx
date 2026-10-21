@@ -475,6 +475,7 @@ export default function DidFixasSecaoI({
     try {
       const { data } = await api.delete(`/did/processo/${processoId}/certidao/${certKey}`)
       set('cert_sec1_arquivos', data.cert_sec1_arquivos)
+      if (data.campo) set(data.campo, false) // sem o arquivo, a certidão fica desmarcada
       setConfirmarRemoverCertidao(null)
     } catch { alert('Erro ao remover arquivo.') }
   }
@@ -1240,7 +1241,7 @@ export default function DidFixasSecaoI({
       {confirmarRemoverCertidao && (
         <ConfirmModal
           title="Remover arquivo da certidão?"
-          message="O arquivo anexado será removido permanentemente."
+          message="A certidão fica desmarcada e o arquivo sai dos Documentos Anexados do processo (vai para os Excluídos)."
           confirmLabel="Remover"
           onConfirm={() => removerCertidao(confirmarRemoverCertidao)}
           onClose={() => setConfirmarRemoverCertidao(null)}

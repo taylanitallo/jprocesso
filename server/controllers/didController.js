@@ -3,6 +3,7 @@ const path = require('path');
 const crypto = require('crypto');
 const storage = require('../services/storageService');
 const { excluir } = require('../services/lixeiraService');
+const { campoDaCertidao } = require('../utils/certidoesDid');
 const etapasSvc = require('../services/didEtapasService');
 const blocos = require('../config/didBlocos');
 const { registrarLog } = require('../middleware/activityLogger');
@@ -566,8 +567,25 @@ async function documentoDaCertidao(req, { processoId, certKey, nome, storagePath
 // Certidões anexadas antes de irem para o processo: cria o documento delas (uma vez)
 async function sincronizarCertidoesNoProcesso(req, did) {
   const arquivos = did?.cert_sec1_arquivos || {};
+  if (!did?.processo_id || !req.user?.id) return;
+  // Documento já excluído no processo: a certidão perde o arquivo e a marcação
+  const ligados = Object.entries(arquivos).filter(([, a]) => a?.documento_id);
+  if (ligados.length) {
+    const ativos = new Set((await req.models.Documento.findAll({
+      where: { id: { [Op.in]: ligados.map(([, a]) => a.documento_id) } }, attributes: ['id'], raw: true,
+    })).map(d => d.id));
+    const excluidos = ligados.filter(([, a]) => !ativos.has(a.documento_id));
+    if (excluidos.length) {
+      const restantes = { ...arquivos };
+      excluidos.forEach(([k]) => { delete restantes[k]; did[campoDaCertidao(k)] = false; });
+      did.cert_sec1_arquivos = restantes;
+      did.changed('cert_sec1_arquivos', true);
+      await did.save();
+      return sincronizarCertidoesNoProcesso(req, did);
+    }
+  }
   const pendentes = Object.entries(arquivos).filter(([k, a]) => a?.path && !a.documento_id && CERT_KEYS.includes(k));
-  if (!pendentes.length || !did.processo_id || !req.user?.id) return;
+  if (!pendentes.length) return;
   const novos = { ...arquivos };
   for (const [certKey, arq] of pendentes) {
     try {
@@ -659,12 +677,14 @@ async function deleteCertidao(req, res) {
     const did = await Did.findOne({ where: { processo_id: processoId } });
     if (!did) return res.status(404).json({ error: 'DID não encontrado.' });
 
+    // Sem o arquivo, a certidão fica desmarcada e o documento sai do processo
     const arquivos = { ...(did.cert_sec1_arquivos || {}) };
     await retirarDocumentoDaCertidao(req, arquivos[certKey]);
     delete arquivos[certKey];
-    await did.update({ cert_sec1_arquivos: arquivos });
+    const campo = campoDaCertidao(certKey);
+    await did.update({ cert_sec1_arquivos: arquivos, ...(campo in did.dataValues ? { [campo]: false } : {}) });
 
-    res.json({ cert_sec1_arquivos: arquivos });
+    res.json({ cert_sec1_arquivos: arquivos, campo, [campo]: false });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

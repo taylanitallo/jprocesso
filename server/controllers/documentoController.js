@@ -6,6 +6,7 @@ const { PDFDocument } = require('pdf-lib');
 const storage = require('../services/storageService');
 const { situacaoRecebimento, MSG_BLOQUEADO } = require('../utils/recebimento');
 const { excluir } = require('../services/lixeiraService');
+const { desvincularCertidaoDoDocumento } = require('../utils/certidoesDid');
 const { usuarioTemPermissao } = require('../middleware/auth');
 
 // Documentos de processo ainda não recebido pelo destino ficam inacessíveis a ele
@@ -196,6 +197,8 @@ const deleteDocumento = async (req, res) => {
     // Vai para os Excluídos com o arquivo intacto; o arquivo só sai do storage
     // quando o documento for apagado de vez (lixeiraService)
     await excluir(req, 'documentos', documento);
+    // Era o arquivo de uma certidão do DID: a certidão perde o arquivo e a marcação
+    try { await desvincularCertidaoDoDocumento(req, documento); } catch (err) { console.warn('[documentos] desvincular certidão do DID:', err.message); }
     res.json({ message: 'Documento excluído com sucesso' });
   } catch (error) {
     console.error('Erro ao excluir documento:', error);
