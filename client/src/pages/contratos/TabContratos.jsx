@@ -264,7 +264,7 @@ const calcularItem = (f) => {
   return { valor_unitario: f.valor_unitario, valor_total: qtd && vun ? (qtd * vun).toFixed(2) : '' }
 }
 
-function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
+function ItemContratoModal({ item, catalogoItens, secretariaId, onSave, onClose }) {
   const jaDistribuido = Array.isArray(item?.distribuicao) && item.distribuicao.length > 0
   const [form, setForm] = useState({
     lote:           item?.lote           || '',
@@ -286,11 +286,13 @@ function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
   const [busca, setBusca] = useState('')
   const [drop, setDrop] = useState(false)
   const [dropRef, setDropRef] = useState(null)
-  // Setores cadastrados: o local só pode ser um deles (não se digita)
+  // Setores cadastrados: o local só pode ser um deles (não se digita). Com secretaria
+  // no contrato, só os setores dela (mesmo para o administrador); sem, todos.
   const [setoresSug, setSetoresSug] = useState([])
   useEffect(() => {
-    api.get('/organizacao/setores').then(r => setSetoresSug((r.data?.setores || r.data || []).map(s => s.nome).filter(Boolean))).catch(() => {})
-  }, [])
+    api.get('/organizacao/setores', { params: secretariaId ? { secretariaId } : {} })
+      .then(r => setSetoresSug((r.data?.setores || r.data || []).map(s => s.nome).filter(Boolean))).catch(() => {})
+  }, [secretariaId])
   const atualizar = (fn) => setForm(p => { const next = fn(p); return { ...next, ...calcularItem(next) } })
   const set = (k, v) => atualizar(p => ({ ...p, [k]: v }))
   const setDist = (i, k, v) => atualizar(p => ({ ...p, distribuicao: p.distribuicao.map((d, j) => j === i ? { ...d, [k]: v } : d) }))
@@ -1150,7 +1152,7 @@ export function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                                 <p className="truncate text-ink-800 font-medium">{it.descricao || '—'}</p>
                                 {Array.isArray(it.distribuicao) && it.distribuicao.length > 0 && (
                                   <p className="text-[11px] text-ink-500 mt-0.5">
-                                    {it.distribuicao.map(d => `: `).join(' · ')} <span className="text-ink-400">(total {totalDistribuido(it.distribuicao)})</span>
+                                    {it.distribuicao.map(d => `${d.local}: ${d.quantidade}`).join(' · ')} <span className="text-ink-400">(total {totalDistribuido(it.distribuicao)})</span>
                                   </p>
                                 )}
                               </td>
@@ -1222,6 +1224,7 @@ export function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                 <ItemContratoModal
                   item={itemContratoModal.data}
                   catalogoItens={catalogoItens}
+                  secretariaId={secSel?.id}
                   onSave={saved => {
                     const { idx } = itemContratoModal
                     if (idx === null) {
@@ -1248,7 +1251,7 @@ export function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                       ['Descrição', itemContratoModal.data.descricao],
                       ['Unidade', itemContratoModal.data.unidade],
                       ['Quantidade', itemContratoModal.data.quantidade],
-                      ['Distribuição', itemContratoModal.data.distribuicao?.length ? itemContratoModal.data.distribuicao.map(d => `: `).join(' · ') : null],
+                      ['Distribuição', itemContratoModal.data.distribuicao?.length ? itemContratoModal.data.distribuicao.map(d => `${d.local}: ${d.quantidade}`).join(' · ') : null],
                       ['Valor de cada', itemContratoModal.data.distribuicao?.length && itemContratoModal.data.valor_unitario_base ? `R$ ${parseFloat(itemContratoModal.data.valor_unitario_base).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : null],
                       [itemContratoModal.data.distribuicao?.length ? 'Média mensal' : 'Valor Unitário', itemContratoModal.data.valor_unitario ? `R$ ${parseFloat(itemContratoModal.data.valor_unitario).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : null],
                       ['Valor Total', itemContratoModal.data.valor_total ? `R$ ${parseFloat(itemContratoModal.data.valor_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : null],

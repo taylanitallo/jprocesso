@@ -363,8 +363,10 @@ const conferirItensAtivos = async (models, itens, itensJaNoContrato = []) => {
 // Item distribuído por setor: o local tem de ser um setor ativo cadastrado e a soma das
 // quantidades dos setores não pode passar a quantidade do item. Locais que o contrato já
 // tinha (digitados antes dessa regra) continuam valendo, para a edição não travar.
+// Com secretaria no contrato, só valem os setores dela.
 // Devolve a mensagem de erro, ou null.
-const conferirDistribuicao = async (models, contratoId, itens) => {
+const chaveSecretaria = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
+const conferirDistribuicao = async (models, contratoId, itens, secretaria) => {
   const num = (v) => (v === undefined || v === null || v === '') ? 0 : (parseFloat(String(v).replace(',', '.')) || 0);
   const comDist = (Array.isArray(itens) ? itens : []).map(it => ({
     it,
@@ -381,14 +383,25 @@ const conferirDistribuicao = async (models, contratoId, itens) => {
     }
   }
 
-  const setores = await models.Setor.findAll({ where: { ativo: true }, attributes: ['nome'], raw: true });
+  // Contratos gravam o nome ou a sigla da secretaria ("Secretaria de…" ou "SECRETARIA DE…")
+  let sec = null;
+  if (chaveSecretaria(secretaria)) {
+    const secretarias = await models.Secretaria.findAll({ attributes: ['id', 'nome', 'sigla'], raw: true });
+    sec = secretarias.find(s => chaveSecretaria(s.sigla) === chaveSecretaria(secretaria) || chaveSecretaria(s.nome) === chaveSecretaria(secretaria)) || null;
+  }
+  const whereSetor = sec ? { ativo: true, secretaria_id: sec.id } : { ativo: true };
+  const setores = await models.Setor.findAll({ where: whereSetor, attributes: ['nome'], raw: true });
   const validos = new Set(setores.map(s => String(s.nome || '').trim()));
   if (contratoId) {
     const anteriores = await models.ContratoItemVinculo.findAll({ where: { contrato_id: contratoId }, attributes: ['distribuicao'], raw: true });
     anteriores.forEach(v => (Array.isArray(v.distribuicao) ? v.distribuicao : []).forEach(d => validos.add(String(d?.local || '').trim())));
   }
   const fora = [...new Set(comDist.flatMap(x => x.linhas.map(d => d.local)).filter(l => !validos.has(l)))];
-  if (fora.length) return `Escolha setores cadastrados no sistema. Não cadastrado: ${fora.join(', ')}`;
+  if (fora.length) {
+    return sec
+      ? `Escolha setores da secretaria do contrato (${sec.nome}). Fora dela: ${fora.join(', ')}`
+      : `Escolha setores cadastrados no sistema. Não cadastrado: ${fora.join(', ')}`;
+  }
   return null;
 };
 
@@ -455,7 +468,7 @@ const createContrato = async (req, res) => {
     }
     const erroItens = await conferirItensAtivos(req.models, itens);
     if (erroItens) return res.status(400).json({ error: erroItens });
-    const erroDist = await conferirDistribuicao(req.models, null, itens);
+    const erroDist = await conferirDistribuicao(req.models, null, itens, dados.secretaria);
     if (erroDist) return res.status(400).json({ error: erroDist });
     const travados = await travarItensNoBanco(req.models, null, itens);
     if (travados.erro) return res.status(400).json({ error: travados.erro });
@@ -501,7 +514,7 @@ const updateContrato = async (req, res) => {
         .map(v => Number(v.item_id)).filter(Boolean);
       const erroItens = await conferirItensAtivos(req.models, itens, jaVinculados);
       if (erroItens) return res.status(400).json({ error: erroItens });
-      const erroDist = await conferirDistribuicao(req.models, contrato.id, itens);
+      const erroDist = await conferirDistribuicao(req.models, contrato.id, itens, dados.secretaria !== undefined ? dados.secretaria : contrato.secretaria);
       if (erroDist) return res.status(400).json({ error: erroDist });
     }
     const travados = itens !== undefined ? await travarItensNoBanco(req.models, contrato.id, itens) : null;
