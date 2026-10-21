@@ -1,6 +1,7 @@
 import { useState, useEffect, useContext, useMemo, useRef } from 'react'
 import { FileText, Plus, Trash2, Search, X, Check, CheckCircle, Pencil, Loader2, ListPlus, Lock, ClipboardList, RotateCcw, Paperclip, ExternalLink } from 'lucide-react'
 import { Field, Input, Textarea, SectionCard, DidReadOnlyContext, alertarPendencias } from '../didShared'
+import { rotuloCota } from '../../contratos/ContratosShared'
 import { ConfirmModal } from '../../../components/ui'
 import api from '../../../services/api'
 
@@ -95,6 +96,7 @@ function ModalOrdemCompra({ onConfirm, onClose }) {
                     className="cursor-pointer hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors">
                     <td className="px-3 py-2.5 font-mono font-bold text-orange-700 dark:text-orange-400">
                       {o.numero}
+                      {o.cota && <span className="block text-[10px] font-sans font-semibold text-info-600" title={rotuloCota(o.cota)}>Cota {o.cota.nome}</span>}
                     </td>
                     <td className="px-3 py-2.5 text-center">
                       <span className={`px-1.5 py-0.5 rounded-sm text-xs font-semibold ${
@@ -343,6 +345,7 @@ export default function DidVariaveisSecaoI({
   secDidObj, responsaveisDid, dataRefDid,
   secretariaNome,
   didId,
+  ordemCota,
   processoId,
   onSaveSecaoI,
   saving,
@@ -770,6 +773,13 @@ export default function DidVariaveisSecaoI({
               </span>
               {ordemSel?.objeto && (
                 <span className="text-ink-500 text-xs truncate">{ordemSel.objeto.slice(0, 50)}</span>
+              )}
+{/* Contrato com cotas: unidade e dotação de onde a ordem saiu */}
+              {(ordemSel ? ordemSel.cota : ordemCota) && (
+                <span className="shrink-0 text-[11px] font-semibold px-1.5 py-0.5 rounded-sm bg-info-100 text-info-700 dark:bg-info-900/30 dark:text-info-300"
+                  title={rotuloCota(ordemSel ? ordemSel.cota : ordemCota)}>
+                  Cota {(ordemSel ? ordemSel.cota : ordemCota).nome}{(ordemSel ? ordemSel.cota : ordemCota).dotacao ? ` · dotação ${(ordemSel ? ordemSel.cota : ordemCota).dotacao}` : ''}
+                </span>
               )}
               {ordemSel?.valor_total && (
                 <span className="ml-auto text-xs font-semibold text-ink-600 shrink-0">

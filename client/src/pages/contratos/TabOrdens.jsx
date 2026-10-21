@@ -21,7 +21,7 @@ import { setPDFLoading } from '../../utils/pdfLoadingStore'
 import { applyTimbradoToPage } from '../../utils/timbradoStore'
 import { getMargens } from '../../utils/margensStore'
 import {
-  SectionCard, PremiumInput, PremiumTextarea, descricaoComEspecificacao,
+  SectionCard, PremiumInput, PremiumTextarea, descricaoComEspecificacao, cotaDaOrdem, rotuloCota,
 } from './ContratosShared'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -484,7 +484,7 @@ function SelecionarItemModal({ contrato_id, cotaId, itensBase = [], onSelect, on
 }
 
 // ── Barra de Saldo ─────────────────────────────────────────────────────────────
-function SaldoBar({ saldo }) {
+function SaldoBar({ saldo, cotaId }) {
   if (!saldo) return null
   const pct = Math.min(100, saldo.percentual_usado || 0)
   const livre = 100 - pct
@@ -517,6 +517,27 @@ function SaldoBar({ saldo }) {
       {!saldo.sem_saldo && saldo.alerta_baixo && (
         <div className="flex items-center gap-1.5 text-xs text-amber-600 font-semibold">
           <AlertTriangle className="w-3.5 h-3.5" /> Saldo abaixo de 10% — atenção!
+        </div>
+      )}
+      {/* Contrato com cotas: saldo de cada unidade/dotação */}
+      {Array.isArray(saldo.cotas) && saldo.cotas.length > 0 && (
+        <div className="pt-2 mt-1 border-t border-ink-100 space-y-1.5">
+          <p className="text-[10px] font-bold text-ink-500 uppercase tracking-wide">Saldo por cota</p>
+          {saldo.cotas.map(c => (
+            <div key={c.id} className={`rounded-lg px-2 py-1.5 ${c.id === cotaId ? 'bg-info-50 dark:bg-info-900/20 ring-1 ring-info-300' : ''}`}>
+              <div className="flex items-center justify-between text-xs gap-2">
+                <span className="font-semibold text-ink-700 truncate" title={rotuloCota(c)}>{c.nome}{c.dotacao && <span className="font-normal text-ink-400"> · {c.dotacao}</span>}</span>
+                <span className={`font-bold whitespace-nowrap ${c.saldo <= 0 ? 'text-danger-600' : 'text-emerald-600'}`}>{fmtBRL(c.saldo)}</span>
+              </div>
+              <div className="w-full h-1.5 bg-ink-100 rounded-full overflow-hidden mt-1">
+                <div className={`h-full rounded-full ${c.saldo <= 0 ? 'bg-danger-500' : 'bg-emerald-500'}`} style={{ width: `${c.percentual_usado || 0}%` }} />
+              </div>
+              <div className="flex justify-between text-[10px] text-ink-400 mt-0.5">
+                <span>Usado: {fmtBRL(c.valor_usado)}</span>
+                <span>Total: {fmtBRL(c.valor_contratado)}</span>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -1026,7 +1047,7 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
                     <RefreshCw className="w-3 h-3 animate-spin" /> Calculando saldo...
                   </div>
                 )}
-                {saldo && <SaldoBar saldo={saldo} />}
+                {saldo && <SaldoBar saldo={saldo} cotaId={form.cota_id} />}
                 {cotasContrato.length > 0 && (
                   <div>
                     <label className="block text-xs font-semibold text-ink-500 mb-1.5">Cota (unidade/dotação) *</label>
@@ -1415,6 +1436,8 @@ async function gerarPdf(ordemRaw, contratos = []) {
     y += Math.max(6, campo(label, value, M, larguraUtil, y) + 1.4)
   }
 
+  // Contrato com cotas: unidade e dotação de onde a ordem sai
+  textField('Cota (unidade/dotação)', rotuloCota(cotaDaOrdem(ordemRaw, contratos)))
   textField('Objeto', ordem.objeto || '—')
   textField('Justificativa', ordem.justificativa || '—')
   textField(ordem.tipo === 'COMPRA' ? 'Local de Entrega' : 'Local de Execu\u00e7\u00e3o', ordem.local_entrega)
@@ -1864,7 +1887,14 @@ function TabOrdens() {
                         )}
                       </div>
                     </td>
-                    <td className="px-3 py-2 whitespace-nowrap font-medium">{o.contrato?.numero_contrato || '—'}</td>
+                    <td className="px-3 py-2 whitespace-nowrap font-medium">
+                      {o.contrato?.numero_contrato || '—'}
+                      {cotaDaOrdem(o, contratos) && (
+                        <span className="block text-[10px] font-semibold text-info-600 dark:text-info-400" title={rotuloCota(cotaDaOrdem(o, contratos))}>
+                          Cota: {cotaDaOrdem(o, contratos).nome}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-3 py-2 max-w-[220px] truncate">{o.objeto}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{fmtData(o.data_emissao)}</td>
                     <td className="px-3 py-2 text-right font-semibold whitespace-nowrap">{fmtBRL(o.valor_total)}</td>

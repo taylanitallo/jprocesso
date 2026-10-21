@@ -817,6 +817,7 @@ export default function FormularioDid() {
                     dataRefDid={dataRefDid}
                     secretariaNome={secretariaNome}
                     didId={did?.id}
+                    ordemCota={did?.ordem_cota || null}
                     processoId={processoId}
                     onSaveSecaoI={handleSaveSecaoI}
                     saving={saving}

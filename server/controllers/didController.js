@@ -4,6 +4,7 @@ const storage = require('../services/storageService');
 const etapasSvc = require('../services/didEtapasService');
 const blocos = require('../config/didBlocos');
 const { registrarLog } = require('../middleware/activityLogger');
+const { anexarCota } = require('../utils/cotasContrato');
 const { AssinaturaError } = require('../services/assinaturaService');
 // Mesma assinatura eletrônica dos atos de tramitação
 const { validarAssinante, assinarTramitacao, responderErroAssinatura } = require('./processoController');
@@ -45,9 +46,14 @@ const getByProcesso = async (req, res) => {
       try {
         const { ContratoOrdem } = req.models;
         const ordem = await ContratoOrdem.findByPk(did.ordem_compra_id, {
-          attributes: ['id', 'numero', 'valor_total'],
+          attributes: ['id', 'numero', 'valor_total', 'contrato_id', 'cota_id'],
         });
         if (ordem) did.dataValues.ordem_valor_total = parseFloat(ordem.valor_total) || 0;
+        // Contrato com cotas: unidade/dotação de onde a ordem saiu
+        if (ordem?.cota_id) {
+          await anexarCota(req.models, ordem);
+          did.dataValues.ordem_cota = ordem.dataValues.cota || null;
+        }
       } catch (_) {}
     }
 

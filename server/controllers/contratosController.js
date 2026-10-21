@@ -248,7 +248,7 @@ const getDnaItem = async (req, res) => {
         include: [{
           model: Contrato,
           as: 'contrato',
-          attributes: ['id', 'numero_contrato', 'secretaria'],
+          attributes: ['id', 'numero_contrato', 'secretaria', 'cotas'],
         }],
       }],
     });

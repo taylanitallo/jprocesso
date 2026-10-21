@@ -5,6 +5,7 @@ const nfseService = require('../services/nfseService');
 const { registrarLog } = require('../middleware/activityLogger');
 const { applyScopeToWhere, getScope, ensurePermissoes } = require('../utils/scopeFilter');
 const { excluir } = require('../services/lixeiraService');
+const { anexarCota } = require('../utils/cotasContrato');
 
 // â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -569,6 +570,7 @@ const listOrdensCompraDisponiveis = async (req, res) => {
 
     // Só entram ordens cujo DID vinculado teve o recebimento confirmado (Seção de Recebimento)
     const recebidas = await idsOrdensRecebidasNoDid(Did, ordens.map(o => o.id));
+    await anexarCota(req.models, ordens); // cota (unidade/dotação) de onde a ordem saiu
 
     const result = [];
     for (const ordem of ordens) {
@@ -613,6 +615,7 @@ const getOrdemByNumero = async (req, res) => {
     }
 
     const recebidas = await idsOrdensRecebidasNoDid(Did, [ordem.id]);
+    await anexarCota(req.models, ordem);
     if (!recebidas.has(ordem.id)) {
       return res.status(404).json({ error: 'Esta ordem ainda não foi confirmada como recebida no DID (Seção de Recebimento)' });
     }

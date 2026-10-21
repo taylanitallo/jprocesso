@@ -1125,7 +1125,10 @@ export async function gerarDnaItemPDF(item, dna, imprimir = false) {
           s(v.contrato?.credor?.nome_fantasia || v.contrato?.credor?.razao_social),
           s(v.contrato?.secretaria),
           s(v.contrato?.status),
-          fmtQtd(v.quantidade),
+          // Contrato com cotas: quantidade de cada unidade/dotação abaixo do total
+          fmtQtd(v.quantidade) + (Array.isArray(v.contrato?.cotas) && v.cotas_qtd
+            ? '\n' + v.contrato.cotas.filter(c => v.cotas_qtd[c.id]).map(c => `${c.nome}: ${fmtQtd(v.cotas_qtd[c.id])}`).join(' · ')
+            : ''),
           fmtMoeda(v.valor_unitario),
           fmtMoeda(v.valor_total),
         ]),
@@ -1168,7 +1171,10 @@ export async function gerarDnaItemPDF(item, dna, imprimir = false) {
           return [
             s(ordem?.numero),
             s(ordem?.tipo),
-            s(ordem?.contrato?.numero_contrato),
+            s(ordem?.contrato?.numero_contrato) + (() => {
+              const cota = ordem?.cota_id && (ordem?.contrato?.cotas || []).find(c => c.id === ordem.cota_id)
+              return cota ? `\nCota ${cota.nome}` : ''
+            })(),
             s(ordem?.contrato?.secretaria || ordem?.secretaria),
             fmtData(ordem?.data_emissao),
             s(ordem?.status),

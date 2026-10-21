@@ -397,6 +397,22 @@ export default function ContratosDashboard() {
     return Object.entries(map).map(([label, v]) => ({ label, ...v })).sort((a, b) => b.valor - a.valor).slice(0, 6)
   }, [ordensFiltradas])
 
+  // Cotas por unidade/dotação (ex.: SEC e CAPECI): contratado × emitido em ordens
+  const execucaoPorCota = useMemo(() => {
+    const lista = []
+    contratosFiltrados.filter(c => Array.isArray(c.cotas) && c.cotas.length).forEach(c => {
+      c.cotas.forEach(k => {
+        const contratado = (c.itens || []).reduce((s, it) => s + (parseFloat(it.cotas_qtd?.[k.id]) || 0) * parseValor(it.valor_unitario), 0)
+        const doCota = ordens.filter(o => o.contrato_id === c.id && o.cota_id === k.id && !['CANCELADA', 'EXCLUÍDA'].includes(o.status))
+        lista.push({
+          label: `${c.numero_contrato} › ${k.nome}${k.dotacao ? ` (dotação ${k.dotacao})` : ''}`,
+          contratado, emitido: doCota.reduce((s, o) => s + parseValor(o.valor_total), 0), qtd: doCota.length,
+        })
+      })
+    })
+    return lista
+  }, [contratosFiltrados, ordens])
+
   // ─── Maiores contratos (todos, paginados) ─────────────────────────────────
   const todosComValor = useMemo(() =>
     [...contratosFiltrados]
@@ -1008,6 +1024,25 @@ export default function ContratosDashboard() {
                       }
                     </div>
                   </div>
+
+                  {/* Execução por cota (unidade/dotação) */}
+                  {execucaoPorCota.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-ink-500 uppercase tracking-wider mb-3">Execução por Cota (unidade/dotação)</p>
+                      <div className="space-y-2.5">
+                        {execucaoPorCota.map((item, i) => (
+                          <BarRow
+                            key={item.label}
+                            label={item.label}
+                            value={`${fmtMoeda(item.emitido)} de ${fmtMoeda(item.contratado)}`}
+                            pct={item.contratado > 0 ? Math.min(100, (item.emitido / item.contratado) * 100) : 0}
+                            color={MODAL_CORES[(i + 2) % MODAL_CORES.length]}
+                            extra={`${item.qtd} ordem(ns) · saldo ${fmtMoeda(Math.max(0, item.contratado - item.emitido))}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Status das ordens */}
                   <div>
