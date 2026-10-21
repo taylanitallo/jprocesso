@@ -1,6 +1,9 @@
 const { Op } = require('sequelize');
 const path = require('path');
+const crypto = require('crypto');
 const storage = require('../services/storageService');
+const { excluir } = require('../services/lixeiraService');
+const { campoDaCertidao } = require('../utils/certidoesDid');
 const etapasSvc = require('../services/didEtapasService');
 const blocos = require('../config/didBlocos');
 const { registrarLog } = require('../middleware/activityLogger');
@@ -56,6 +59,9 @@ const getByProcesso = async (req, res) => {
         }
       } catch (_) {}
     }
+
+    // Certidões anexadas antes de irem para o processo: entram nos Documentos Anexados
+    try { await sincronizarCertidoesNoProcesso(req, did); } catch (err) { console.warn('[did] sincronizar certidões:', err.message); }
 
     // Retroativamente atribui numero_did para registros antigos com o campo nulo
     if (!did.numero_did) {
@@ -526,7 +532,87 @@ async function getProximoNumero(req, res) {
   }
 }
 
-const CERT_KEYS = ['municipal', 'trabalhista', 'fgts', 'estadual', 'federal', 'simples_nac'];
+// Seção I (municipal…simples_nac) e Tesouraria (teso_*): os arquivos ficam todos em
+// cert_sec1_arquivos, e cada um também aparece nos Documentos Anexados do processo
+const CERT_ROTULOS = {
+  municipal: 'Municipal', trabalhista: 'Trabalhista', fgts: 'FGTS', estadual: 'Estadual',
+  federal: 'Federal', simples_nac: 'Simples Nacional',
+  teso_cnd: 'Unificada (Tesouraria)', teso_fgts: 'FGTS (Tesouraria)', teso_estadual: 'Estadual (Tesouraria)',
+  teso_trabalhista: 'Trabalhista (Tesouraria)', teso_municipal: 'Municipal (Tesouraria)',
+  teso_federal: 'Federal (Tesouraria)', teso_simples_nac: 'Simples Nacional (Tesouraria)',
+};
+const CERT_KEYS = Object.keys(CERT_ROTULOS);
+
+// Cria o documento do processo para a certidão (mesmo arquivo no storage). Devolve o id.
+async function documentoDaCertidao(req, { processoId, certKey, nome, storagePath, buffer, mime, tamanho }) {
+  const { Documento } = req.models;
+  const ordem = await Documento.count({ where: { processo_id: processoId } });
+  const doc = await Documento.create({
+    processo_id:   processoId,
+    tipo_origem:   'anexo',
+    nome_sistema:  path.basename(storagePath),
+    nome_arquivo:  `Certidão ${CERT_ROTULOS[certKey] || certKey} - ${nome}`,
+    descricao:     `Certidão ${CERT_ROTULOS[certKey] || certKey} anexada no DID`,
+    tipo_mime:     mime || 'application/octet-stream',
+    tamanho_bytes: tamanho || buffer.length,
+    url_arquivo:   storagePath,
+    hash_md5:      crypto.createHash('md5').update(buffer).digest('hex'),
+    hash_sha256:   crypto.createHash('sha256').update(buffer).digest('hex'),
+    upload_por_id: req.user.id,
+    ordem,
+  });
+  return doc.id;
+}
+
+// Certidões anexadas antes de irem para o processo: cria o documento delas (uma vez)
+async function sincronizarCertidoesNoProcesso(req, did) {
+  const arquivos = did?.cert_sec1_arquivos || {};
+  if (!did?.processo_id || !req.user?.id) return;
+  // Documento já excluído no processo: a certidão perde o arquivo e a marcação
+  const ligados = Object.entries(arquivos).filter(([, a]) => a?.documento_id);
+  if (ligados.length) {
+    const ativos = new Set((await req.models.Documento.findAll({
+      where: { id: { [Op.in]: ligados.map(([, a]) => a.documento_id) } }, attributes: ['id'], raw: true,
+    })).map(d => d.id));
+    const excluidos = ligados.filter(([, a]) => !ativos.has(a.documento_id));
+    if (excluidos.length) {
+      const restantes = { ...arquivos };
+      excluidos.forEach(([k]) => { delete restantes[k]; did[campoDaCertidao(k)] = false; });
+      did.cert_sec1_arquivos = restantes;
+      did.changed('cert_sec1_arquivos', true);
+      await did.save();
+      return sincronizarCertidoesNoProcesso(req, did);
+    }
+  }
+  const pendentes = Object.entries(arquivos).filter(([k, a]) => a?.path && !a.documento_id && CERT_KEYS.includes(k));
+  if (!pendentes.length) return;
+  const novos = { ...arquivos };
+  for (const [certKey, arq] of pendentes) {
+    try {
+      const buffer = await storage.downloadDocumento(arq.path);
+      const ext = path.extname(arq.path).toLowerCase();
+      const mime = ext === '.pdf' ? 'application/pdf' : ext === '.png' ? 'image/png' : ['.jpg', '.jpeg'].includes(ext) ? 'image/jpeg' : null;
+      novos[certKey] = { ...arq, documento_id: await documentoDaCertidao(req, { processoId: did.processo_id, certKey, nome: arq.nome, storagePath: arq.path, buffer, mime }) };
+    } catch (err) {
+      console.warn(`[did] certidão ${certKey} do DID ${did.id} não foi para o processo:`, err.message);
+    }
+  }
+  did.cert_sec1_arquivos = novos;
+  did.changed('cert_sec1_arquivos', true);
+  await did.save();
+}
+
+// Tira do processo o documento da certidão (vai para os Excluídos, com o arquivo intacto).
+// Certidão antiga, sem documento: apaga o arquivo do storage, como antes.
+async function retirarDocumentoDaCertidao(req, arq) {
+  if (!arq) return;
+  if (arq.documento_id) {
+    const doc = await req.models.Documento.findByPk(arq.documento_id);
+    if (doc) await excluir(req, 'documentos', doc);
+    return;
+  }
+  if (arq.path) { try { await storage.deleteDocumento(arq.path); } catch (_) {} }
+}
 
 async function uploadCertidao(req, res) {
   try {
@@ -538,17 +624,24 @@ async function uploadCertidao(req, res) {
     const did = await Did.findOne({ where: { processo_id: processoId } });
     if (!did) return res.status(404).json({ error: 'DID não encontrado.' });
 
+    // Nome único por envio: o arquivo antigo continua com o documento dele (nos Excluídos)
     const ext = path.extname(req.file.originalname);
-    const storagePath = `${req.tenant.schema}/dids/${did.id}/cert_${certKey}${ext}`;
+    const storagePath = `${req.tenant.schema}/dids/${did.id}/cert_${certKey}_${crypto.randomBytes(6).toString('hex')}${ext}`;
 
-    // upsert: true para permitir re-upload da mesma certidão
     await storage.uploadArquivo({
       buffer: req.file.buffer,
       path: storagePath,
       contentType: req.file.mimetype,
     });
 
-    const arquivos = { ...(did.cert_sec1_arquivos || {}), [certKey]: { nome: req.file.originalname, path: storagePath } };
+    // Troca de arquivo: o documento anterior sai do processo
+    await retirarDocumentoDaCertidao(req, (did.cert_sec1_arquivos || {})[certKey]);
+    const documento_id = await documentoDaCertidao(req, {
+      processoId, certKey, nome: req.file.originalname, storagePath,
+      buffer: req.file.buffer, mime: req.file.mimetype, tamanho: req.file.size,
+    });
+
+    const arquivos = { ...(did.cert_sec1_arquivos || {}), [certKey]: { nome: req.file.originalname, path: storagePath, documento_id } };
     // Forçar detecção da mudança no campo JSONB pelo Sequelize
     did.cert_sec1_arquivos = arquivos;
     did.changed('cert_sec1_arquivos', true);
@@ -584,15 +677,14 @@ async function deleteCertidao(req, res) {
     const did = await Did.findOne({ where: { processo_id: processoId } });
     if (!did) return res.status(404).json({ error: 'DID não encontrado.' });
 
+    // Sem o arquivo, a certidão fica desmarcada e o documento sai do processo
     const arquivos = { ...(did.cert_sec1_arquivos || {}) };
-    const arq = arquivos[certKey];
-    if (arq?.path) {
-      try { await storage.deleteDocumento(arq.path); } catch (_) {}
-    }
+    await retirarDocumentoDaCertidao(req, arquivos[certKey]);
     delete arquivos[certKey];
-    await did.update({ cert_sec1_arquivos: arquivos });
+    const campo = campoDaCertidao(certKey);
+    await did.update({ cert_sec1_arquivos: arquivos, ...(campo in did.dataValues ? { [campo]: false } : {}) });
 
-    res.json({ cert_sec1_arquivos: arquivos });
+    res.json({ cert_sec1_arquivos: arquivos, campo, [campo]: false });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
