@@ -309,14 +309,53 @@ const listContratos = async (req, res) => {
   }
 };
 
+// Cotas do contrato por unidade/dotação (ex.: SEDUC › SEC e CAPECI): [{ id, nome, dotacao, setor }]
+const normalizarCotas = (cotas) => {
+  const vistos = new Set();
+  return (Array.isArray(cotas) ? cotas : [])
+    .map(c => ({
+      id:      String(c?.id || '').trim().slice(0, 40),
+      nome:    String(c?.nome || '').trim().toUpperCase().slice(0, 80),
+      dotacao: String(c?.dotacao || '').trim().slice(0, 200),
+      setor:   String(c?.setor || '').trim().slice(0, 120),
+    }))
+    .filter(c => c.id && c.nome && !vistos.has(c.id) && vistos.add(c.id));
+};
+
+// Quantidade de cada cota no item: { [cotaId]: quantidade } (só cotas do contrato, > 0)
+const qtdPorCota = (it, cotas) => {
+  const num = (v) => (v === undefined || v === null || v === '') ? 0 : (parseFloat(String(v).replace(',', '.')) || 0);
+  const out = {};
+  cotas.forEach(c => { const q = num(it?.cotas_qtd?.[c.id]); if (q > 0) out[c.id] = q; });
+  return out;
+};
+
 // Salva/substitui os itens vinculados ao contrato
-const syncItens = async (ContratoItemVinculo, contratoId, itens) => {
+const syncItens = async (ContratoItemVinculo, contratoId, itens, cotas = []) => {
   await ContratoItemVinculo.destroy({ where: { contrato_id: contratoId } });
   if (!Array.isArray(itens) || itens.length === 0) return;
   const num = (v) => (v === undefined || v === null || v === '') ? null : parseFloat(String(v).replace(',', '.'));
   const rows = itens
     .filter(it => it.descricao && String(it.descricao).trim())
     .map((it, idx) => {
+      // Contrato com cotas: a quantidade do item é a soma das cotas (sem distribuição por setor)
+      if (cotas.length) {
+        const porCota = qtdPorCota(it, cotas);
+        return {
+          contrato_id:    contratoId,
+          item_id:        it.item_id || null,
+          lote:           it.lote || null,
+          codigo_item:    it.codigo_item || null,
+          descricao:      String(it.descricao).trim(),
+          unidade:        it.unidade || null,
+          quantidade:     Object.values(porCota).reduce((s, q) => s + q, 0),
+          valor_unitario: num(it.valor_unitario),
+          distribuicao:        null,
+          valor_unitario_base: null,
+          cotas_qtd:      porCota,
+          ordem:          idx,
+        };
+      }
       // Distribuição por setor: só linhas com local e quantidade > 0
       const distribuicao = Array.isArray(it.distribuicao)
         ? it.distribuicao
@@ -339,6 +378,7 @@ const syncItens = async (ContratoItemVinculo, contratoId, itens) => {
         valor_unitario: comDistribuicao ? Math.round(base * totalDistribuido * 100) / 100 : num(it.valor_unitario),
         distribuicao:        comDistribuicao ? distribuicao : null,
         valor_unitario_base: comDistribuicao ? base : null,
+        cotas_qtd:      null,
         // valor_total é GENERATED ALWAYS (quantidade * valor_unitario) — não incluir no INSERT
         ordem:          idx,
       };
@@ -363,8 +403,10 @@ const conferirItensAtivos = async (models, itens, itensJaNoContrato = []) => {
 // Item distribuído por setor: o local tem de ser um setor ativo cadastrado e a soma das
 // quantidades dos setores não pode passar a quantidade do item. Locais que o contrato já
 // tinha (digitados antes dessa regra) continuam valendo, para a edição não travar.
+// Com secretaria no contrato, só valem os setores dela.
 // Devolve a mensagem de erro, ou null.
-const conferirDistribuicao = async (models, contratoId, itens) => {
+const chaveSecretaria = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
+const conferirDistribuicao = async (models, contratoId, itens, secretaria) => {
   const num = (v) => (v === undefined || v === null || v === '') ? 0 : (parseFloat(String(v).replace(',', '.')) || 0);
   const comDist = (Array.isArray(itens) ? itens : []).map(it => ({
     it,
@@ -381,14 +423,107 @@ const conferirDistribuicao = async (models, contratoId, itens) => {
     }
   }
 
-  const setores = await models.Setor.findAll({ where: { ativo: true }, attributes: ['nome'], raw: true });
+  // Contratos gravam o nome ou a sigla da secretaria ("Secretaria de…" ou "SECRETARIA DE…")
+  let sec = null;
+  if (chaveSecretaria(secretaria)) {
+    const secretarias = await models.Secretaria.findAll({ attributes: ['id', 'nome', 'sigla'], raw: true });
+    sec = secretarias.find(s => chaveSecretaria(s.sigla) === chaveSecretaria(secretaria) || chaveSecretaria(s.nome) === chaveSecretaria(secretaria)) || null;
+  }
+  const whereSetor = sec ? { ativo: true, secretaria_id: sec.id } : { ativo: true };
+  const setores = await models.Setor.findAll({ where: whereSetor, attributes: ['nome'], raw: true });
   const validos = new Set(setores.map(s => String(s.nome || '').trim()));
   if (contratoId) {
     const anteriores = await models.ContratoItemVinculo.findAll({ where: { contrato_id: contratoId }, attributes: ['distribuicao'], raw: true });
     anteriores.forEach(v => (Array.isArray(v.distribuicao) ? v.distribuicao : []).forEach(d => validos.add(String(d?.local || '').trim())));
   }
   const fora = [...new Set(comDist.flatMap(x => x.linhas.map(d => d.local)).filter(l => !validos.has(l)))];
-  if (fora.length) return `Escolha setores cadastrados no sistema. Não cadastrado: ${fora.join(', ')}`;
+  if (fora.length) {
+    return sec
+      ? `Escolha setores da secretaria do contrato (${sec.nome}). Fora dela: ${fora.join(', ')}`
+      : `Escolha setores cadastrados no sistema. Não cadastrado: ${fora.join(', ')}`;
+  }
+  return null;
+};
+
+// Cotas do contrato (já normalizadas): nomes sem repetir, dotação das cadastradas na
+// secretaria do contrato, todo item com quantidade em alguma cota e sem distribuição por
+// setor, e — ao editar — nenhuma cota abaixo do que já saiu em ordens.
+// Devolve a mensagem de erro, ou null.
+const conferirCotas = async (models, contratoId, cotas, itens, secretaria) => {
+  const anteriores = contratoId
+    ? ((await models.Contrato.findByPk(contratoId, { attributes: ['cotas'], raw: true }))?.cotas || [])
+    : [];
+  // Ordens que já saíram de cotas que deixariam de existir
+  const removidas = anteriores.filter(a => !cotas.some(c => c.id === a.id));
+  if (contratoId && removidas.length) {
+    const comOrdem = await models.ContratoOrdem.findAll({
+      where: { contrato_id: contratoId, cota_id: { [Op.in]: removidas.map(r => r.id) }, status: { [Op.notIn]: ['CANCELADA', 'EXCLUÍDA'] } },
+      attributes: ['cota_id'], raw: true,
+    });
+    const nomes = [...new Set(comOrdem.map(o => removidas.find(r => r.id === o.cota_id)?.nome))].filter(Boolean);
+    if (nomes.length) return `A cota ${nomes.join(', ')} já tem ordens emitidas e não pode ser removida.`;
+  }
+  if (!cotas.length) return null;
+
+  const nomes = cotas.map(c => c.nome);
+  const repetido = nomes.find((n, i) => nomes.indexOf(n) !== i);
+  if (repetido) return `Cota repetida no contrato: ${repetido}`;
+
+  // Nada digitado à mão: a cota é um setor ativo cadastrado (da secretaria do contrato,
+  // se houver) e a dotação é uma das cadastradas na secretaria (Organização › Secretarias).
+  // O que o contrato já tinha gravado continua valendo, para a edição não travar.
+  let sec = null;
+  if (chaveSecretaria(secretaria)) {
+    const secretarias = await models.Secretaria.findAll({ attributes: ['id', 'nome', 'sigla', 'dotacoes'], raw: true });
+    sec = secretarias.find(s => chaveSecretaria(s.sigla) === chaveSecretaria(secretaria) || chaveSecretaria(s.nome) === chaveSecretaria(secretaria)) || null;
+  }
+  const jaGravada = (c, campo) => anteriores.some(a => a.id === c.id && String(a[campo] || '').trim().toUpperCase() === String(c[campo] || '').trim().toUpperCase());
+
+  const setores = await models.Setor.findAll({ where: sec ? { ativo: true, secretaria_id: sec.id } : { ativo: true }, attributes: ['nome'], raw: true });
+  const setoresValidos = new Set(setores.map(s => String(s.nome || '').trim().toUpperCase()));
+  const foraSetor = cotas.filter(c => !setoresValidos.has(c.nome) && !jaGravada(c, 'nome'));
+  if (foraSetor.length) {
+    return `A cota tem de ser um setor cadastrado${sec ? ` na secretaria do contrato (${sec.nome})` : ''}. Não cadastrado: ${foraSetor.map(c => c.nome).join(', ')}`;
+  }
+
+  const dotacoesValidas = new Set((Array.isArray(sec?.dotacoes) ? sec.dotacoes : []).map(d => String(d?.codigo || d?.descricao || '').trim()).filter(Boolean));
+  const foraDotacao = cotas.filter(c => c.dotacao && !dotacoesValidas.has(c.dotacao) && !jaGravada(c, 'dotacao'));
+  if (foraDotacao.length) {
+    return `Escolha dotações cadastradas na secretaria do contrato${sec ? ` (${sec.nome})` : ''}. Fora dela: ${foraDotacao.map(c => `${c.nome} (${c.dotacao})`).join(', ')}`;
+  }
+
+  const lista = (Array.isArray(itens) ? itens : []).filter(it => it?.descricao && String(it.descricao).trim());
+  for (const it of lista) {
+    const desc = String(it.descricao).trim().slice(0, 80);
+    if (Array.isArray(it.distribuicao) && it.distribuicao.some(d => String(d?.local || '').trim())) {
+      return `Contrato com cotas não usa distribuição por setor no item: ${desc}`;
+    }
+    if (!Object.keys(qtdPorCota(it, cotas)).length) return `Informe a quantidade de ao menos uma cota no item: ${desc}`;
+  }
+
+  // Editando: a cota de cada item não pode ficar abaixo do já pedido em ordens dela
+  if (contratoId) {
+    const ordens = await models.ContratoOrdem.findAll({
+      where: { contrato_id: contratoId, cota_id: { [Op.ne]: null }, status: { [Op.notIn]: ['CANCELADA', 'EXCLUÍDA'] } },
+      attributes: ['id', 'cota_id'], raw: true,
+    });
+    if (ordens.length) {
+      const cotaDaOrdem = Object.fromEntries(ordens.map(o => [o.id, o.cota_id]));
+      const usados = await models.ContratoOrdemItem.findAll({ where: { ordem_id: { [Op.in]: ordens.map(o => o.id) } }, attributes: ['ordem_id', 'item_id', 'quantidade'], raw: true });
+      const uso = {}; // `${cotaId}|${itemId}` → quantidade
+      usados.forEach(u => { if (!u.item_id) return; const k = `${cotaDaOrdem[u.ordem_id]}|${u.item_id}`; uso[k] = (uso[k] || 0) + (parseFloat(u.quantidade) || 0); });
+      for (const it of lista) {
+        if (!it.item_id) continue;
+        const porCota = qtdPorCota(it, cotas);
+        for (const c of cotas) {
+          const usado = uso[`${c.id}|${it.item_id}`] || 0;
+          if (usado > (porCota[c.id] || 0)) {
+            return `A cota ${c.nome} do item "${String(it.descricao).trim().slice(0, 60)}" não pode ficar abaixo do já pedido em ordens (${usado}).`;
+          }
+        }
+      }
+    }
+  }
   return null;
 };
 
@@ -455,12 +590,15 @@ const createContrato = async (req, res) => {
     }
     const erroItens = await conferirItensAtivos(req.models, itens);
     if (erroItens) return res.status(400).json({ error: erroItens });
-    const erroDist = await conferirDistribuicao(req.models, null, itens);
+    dados.cotas = normalizarCotas(dados.cotas);
+    const erroCotas = await conferirCotas(req.models, null, dados.cotas, itens, dados.secretaria);
+    if (erroCotas) return res.status(400).json({ error: erroCotas });
+    const erroDist = await conferirDistribuicao(req.models, null, itens, dados.secretaria);
     if (erroDist) return res.status(400).json({ error: erroDist });
     const travados = await travarItensNoBanco(req.models, null, itens);
     if (travados.erro) return res.status(400).json({ error: travados.erro });
     const contrato = await Contrato.create(dados);
-    await syncItens(ContratoItemVinculo, contrato.id, travados.itens);
+    await syncItens(ContratoItemVinculo, contrato.id, travados.itens, dados.cotas);
     const itensDoContrato = ContratoItemVinculo ? await ContratoItemVinculo.findAll({ where: { contrato_id: contrato.id }, order: [['ordem', 'ASC']] }) : [];
     res.status(201).json({ ...contrato.toJSON(), itens: itensDoContrato });
     await registrarLog(req, {
@@ -496,18 +634,23 @@ const updateContrato = async (req, res) => {
     if (dados.valor != null && typeof dados.valor === 'string') {
       dados.valor = parseFloat(dados.valor.replace(/[^\d,.]/g, '').replace(',', '.')) || null;
     }
+    // Cotas só mudam junto com os itens (a quantidade de cada item depende delas)
+    if (itens === undefined) delete dados.cotas;
+    else dados.cotas = dados.cotas !== undefined ? normalizarCotas(dados.cotas) : normalizarCotas(contrato.cotas);
     if (itens !== undefined) {
       const jaVinculados = (await ContratoItemVinculo.findAll({ where: { contrato_id: contrato.id }, attributes: ['item_id'], raw: true }))
         .map(v => Number(v.item_id)).filter(Boolean);
       const erroItens = await conferirItensAtivos(req.models, itens, jaVinculados);
       if (erroItens) return res.status(400).json({ error: erroItens });
-      const erroDist = await conferirDistribuicao(req.models, contrato.id, itens);
+      const erroCotas = await conferirCotas(req.models, contrato.id, dados.cotas, itens, dados.secretaria !== undefined ? dados.secretaria : contrato.secretaria);
+      if (erroCotas) return res.status(400).json({ error: erroCotas });
+      const erroDist = await conferirDistribuicao(req.models, contrato.id, itens, dados.secretaria !== undefined ? dados.secretaria : contrato.secretaria);
       if (erroDist) return res.status(400).json({ error: erroDist });
     }
     const travados = itens !== undefined ? await travarItensNoBanco(req.models, contrato.id, itens) : null;
     if (travados?.erro) return res.status(400).json({ error: travados.erro });
     await contrato.update(dados);
-    if (itens !== undefined) await syncItens(ContratoItemVinculo, contrato.id, travados.itens);
+    if (itens !== undefined) await syncItens(ContratoItemVinculo, contrato.id, travados.itens, dados.cotas);
     const itensDoContrato = ContratoItemVinculo ? await ContratoItemVinculo.findAll({ where: { contrato_id: contrato.id }, order: [['ordem', 'ASC']] }) : [];
     res.json({ ...contrato.toJSON(), itens: itensDoContrato });
   } catch (err) {

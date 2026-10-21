@@ -17,6 +17,8 @@ module.exports = (sequelize) => {
     // valor_unitario = valor_unitario_base × soma das quantidades (média mensal)
     distribuicao:        { type: DataTypes.JSONB },
     valor_unitario_base: { type: DataTypes.DECIMAL(15, 2) },
+    // Contrato com cotas: { [cotaId]: quantidade } — quantidade = soma das cotas
+    cotas_qtd:           { type: DataTypes.JSONB },
     ordem:          { type: DataTypes.INTEGER, defaultValue: 0 },
   }, {
     tableName: 'contratos_itens_vinculo',
