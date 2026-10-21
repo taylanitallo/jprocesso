@@ -17,7 +17,7 @@ import { useAuth } from '../../context/AuthContext'
 import { Paginacao, usePorPagina } from '../../components/ui'
 import { retanguloEmCss } from '../../utils/escalaTela'
 import {
-  MODALIDADES, TIPOS_OBJETO,
+  MODALIDADES, MODALIDADES_ANTIGAS, TIPOS_OBJETO,
   VigenciaProgress, SectionCard, ModalStepper, PremiumInput,
   PremiumSelect, PremiumTextarea, ViewField, PortalDropdown, descricaoComEspecificacao
 } from './ContratosShared'
@@ -825,6 +825,15 @@ export function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
       return { ...it, cotas_qtd: resto, quantidade, valor_total: quantidade && vun ? (quantidade * vun).toFixed(2) : '' }
     }))
   }
+  // A cota é um setor cadastrado: da secretaria do contrato, ou todos se não houver secretaria
+  const [setoresCota, setSetoresCota] = useState([])
+  useEffect(() => {
+    if (readonly) return
+    api.get('/organizacao/setores', { params: secSel?.id ? { secretariaId: secSel.id } : {} })
+      .then(r => setSetoresCota((r.data?.setores || r.data || []).map(s => String(s.nome || '').trim().toUpperCase()).filter(Boolean)))
+      .catch(() => {})
+  }, [secSel?.id, readonly])
+  const setCotaSetor = (id, nome) => setCotas(p => p.map(c => c.id === id ? { ...c, nome, setor: nome } : c))
   // Dotações cadastradas na secretaria do contrato (Organização › Secretarias)
   const dotacoesSecretaria = (Array.isArray(secSel?.dotacoes) ? secSel.dotacoes : [])
     .map(d => ({ valor: String(d?.codigo || d?.descricao || '').trim(), rotulo: [d?.codigo, d?.descricao].filter(Boolean).join(' — ') }))
@@ -859,7 +868,9 @@ export function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
     const fontesLimpas = fontesRecurso.map(s => s.trim()).filter(Boolean)
     const dotacoesLimpas = dotacoes.map(s => s.trim()).filter(Boolean)
     const cotasLimpas = cotas.map(c => ({ ...c, nome: String(c.nome || '').trim().toUpperCase() }))
-    if (cotasLimpas.some(c => !c.nome)) { alert('Informe o nome de todas as cotas (ex.: SEC, CAPECI).'); return }
+    if (cotasLimpas.some(c => !c.nome)) { alert('Escolha o setor de todas as cotas (ex.: SEC, CAPECI).'); return }
+    const cotasForaDoCadastro = setoresCota.length ? cotasLimpas.filter(c => !setoresCota.includes(c.nome) && !(contrato?.cotas || []).some(a => a.id === c.id && a.nome === c.nome)) : []
+    if (cotasForaDoCadastro.length) { alert(`A cota tem de ser um setor cadastrado${secSel ? ' na secretaria do contrato' : ''}. Não cadastrado: ${cotasForaDoCadastro.map(c => c.nome).join(', ')}`); return }
     const nomesCota = cotasLimpas.map(c => c.nome)
     if (nomesCota.some((n, i) => nomesCota.indexOf(n) !== i)) { alert('Há cotas com o mesmo nome.'); return }
     if (cotasLimpas.length) {
@@ -1009,6 +1020,7 @@ export function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                         <PremiumSelect value={form.modalidade} onChange={e => set('modalidade', e.target.value)}>
                           <option value="">Selecione...</option>
                           {MODALIDADES.map(m => <option key={m} value={m}>{m}</option>)}
+                          {form.modalidade && !MODALIDADES.includes(form.modalidade) && <option value={form.modalidade}>{form.modalidade} (lei antiga)</option>}
                         </PremiumSelect>
                       </div>
                       <div>
@@ -1196,7 +1208,7 @@ export function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold text-ink-700">Quantidades por unidade/dotação (cotas)</p>
-                        <p className="text-xs text-ink-400">Ex.: SEDUC — SEC 5 + CAPECI 3 = 8. Cada cota tem saldo próprio nas ordens.</p>
+                        <p className="text-xs text-ink-400">Cada cota é um setor cadastrado (ex.: SEDUC — SEC 5 + CAPECI 3 = 8), com dotação e saldo próprios nas ordens.</p>
                       </div>
                       {!readonly && (
                         <button type="button" onClick={adicionarCota}
@@ -1206,19 +1218,20 @@ export function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                       )}
                     </div>
                     {cotas.map(c => (
-                      <div key={c.id} className="grid grid-cols-[160px_1fr_28px] gap-2 items-center">
-                        <input value={c.nome} disabled={readonly} onChange={e => setCotaCampo(c.id, 'nome', e.target.value.toUpperCase())}
-                          placeholder="Nome (ex.: CAPECI)" className="input-field text-sm h-9 uppercase" />
-                        {dotacoesSecretaria.length > 0 ? (
-                          <select value={c.dotacao || ''} disabled={readonly} onChange={e => setCotaCampo(c.id, 'dotacao', e.target.value)} className="input-field text-sm h-9">
-                            <option value="">Dotação…</option>
-                            {c.dotacao && !dotacoesSecretaria.some(d => d.valor === c.dotacao) && <option value={c.dotacao}>{c.dotacao} (fora da secretaria)</option>}
-                            {dotacoesSecretaria.map(d => <option key={d.valor} value={d.valor}>{d.rotulo}</option>)}
-                          </select>
-                        ) : (
-                          <input value={c.dotacao || ''} disabled={readonly} onChange={e => setCotaCampo(c.id, 'dotacao', e.target.value)}
-                            placeholder={secSel ? 'Dotação (a secretaria não tem dotações cadastradas)' : 'Dotação (escolha a secretaria para listar as dela)'} className="input-field text-sm h-9" />
-                        )}
+                      <div key={c.id} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_28px] gap-2 items-center">
+                        {/* A cota é um setor cadastrado (Organização › Setores): não se digita */}
+                        <select value={c.nome} disabled={readonly} onChange={e => setCotaSetor(c.id, e.target.value)} className="input-field text-sm h-9">
+                          <option value="">{secSel ? 'Setor da secretaria…' : 'Setor…'}</option>
+                          {c.nome && !setoresCota.includes(c.nome) && <option value={c.nome}>{c.nome} (não cadastrado)</option>}
+                          {setoresCota.map(n => (
+                            <option key={n} value={n} disabled={n !== c.nome && cotas.some(o => o.nome === n)}>{n}</option>
+                          ))}
+                        </select>
+                        <select value={c.dotacao || ''} disabled={readonly || (!dotacoesSecretaria.length && !c.dotacao)} onChange={e => setCotaCampo(c.id, 'dotacao', e.target.value)} className="input-field text-sm h-9">
+                          <option value="">{dotacoesSecretaria.length ? 'Dotação…' : secSel ? 'Secretaria sem dotações cadastradas' : 'Escolha a secretaria para listar as dotações'}</option>
+                          {c.dotacao && !dotacoesSecretaria.some(d => d.valor === c.dotacao) && <option value={c.dotacao}>{c.dotacao} (fora da secretaria)</option>}
+                          {dotacoesSecretaria.map(d => <option key={d.valor} value={d.valor}>{d.rotulo}</option>)}
+                        </select>
                         {!readonly ? (
                           <button type="button" onClick={() => removerCota(c.id)} className="p-1 rounded-sm text-danger-400 hover:text-danger-600" title="Remover cota">
                             <X className="w-4 h-4" />
@@ -1774,7 +1787,7 @@ function TabContratos() {
             <label className="block text-xs font-medium text-ink-500 mb-1">Modalidade</label>
             <select value={filtros.modalidade} onChange={e => setF('modalidade', e.target.value)} className="input-field text-sm">
               <option value="">Todas</option>
-              {MODALIDADES.map(m => <option key={m} value={m}>{m}</option>)}
+              {[...MODALIDADES, ...MODALIDADES_ANTIGAS].map(m => <option key={m} value={m}>{m}</option>)}
             </select>
           </div>
           <div className="w-36">

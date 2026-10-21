@@ -14,7 +14,24 @@ export const TABS = [
   { key: 'relatorios', label: 'Relatórios',              icon: BarChart2,     emoji: '📊', permPath: ['contratos', 'relatorios','ver'] },
 ]
 
-export const UNIDADES      = ['UNIDADE','MÊS','SERVIÇO','SERVIÇOS','CONJUNTO','KG','LITRO','METRO','HORA','DIA','PACOTE','RESMA','CAIXA','PAR','AMPOLA','COMPRIMIDO','FRASCO']
+// Unidades de medida do banco de itens (compras, serviços, obras, saúde e publicidade)
+export const UNIDADES      = ['UNIDADE',
+  // Contagem e embalagens
+  'AMPOLA','BALDE','BANDEJA','BARRA','BISNAGA','BLOCO','BOBINA','BOLSA','BOMBONA','CAIXA','CÁPSULA','CARTELA','CARTUCHO',
+  'CENTO','CHAPA','CILINDRO','COMPRIMIDO','CONJUNTO','DRÁGEA','DÚZIA','ENVELOPE','EXEMPLAR','FARDO','FOLHA','FRASCO','GALÃO',
+  'GARRAFA','GARRAFÃO','JOGO','KIT','LATA','MAÇO','MILHEIRO','PACOTE','PAR','PEÇA','PLACA','POTE','REFIL','RESMA','ROLO',
+  'SACHÊ','SACO','TABLETE','TAMBOR','TUBO','VIDRO','VOLUME',
+  // Peso, volume e medidas
+  'MG','G','KG','ARROBA','TONELADA','ML','LITRO','M³','MM','CM','METRO','METRO LINEAR','M²','KM','KM RODADO',
+  // Publicidade
+  'CM POR COLUNA','INSERÇÃO','SEGUNDO','MINUTO','PALAVRA','CARACTERE','LAUDA','PÁGINA','VEICULAÇÃO',
+  // Tempo e serviços
+  'HORA','HORA/MÁQUINA','HORA TÉCNICA','DIA','DIÁRIA','SEMANA','QUINZENA','MÊS','BIMESTRE','TRIMESTRE','SEMESTRE','ANO',
+  'SERVIÇO','SERVIÇOS','EVENTO','SESSÃO','VISITA','ATENDIMENTO','CONSULTA','EXAME','PROCEDIMENTO','PLANTÃO','PESSOA',
+  'ALUNO','REFEIÇÃO','KIT REFEIÇÃO','VIAGEM','TRECHO','FRETE','LICENÇA','ASSINATURA','ACESSO','USUÁRIO','PONTO',
+  // Obras
+  'VERBA','GLOBAL','ETAPA','MEDIÇÃO','PARCELA','LOTE',
+]
 export const CATEGORIAS    = ['COMPRAS','SERVIÇOS']
 export const STATUS_ITEM   = ['ATIVO','INATIVO']
 
@@ -26,7 +43,12 @@ export function descricaoComEspecificacao(item) {
   return desc ? `${desc} - ${esp}` : esp
 }
 export const ESTADOS_BR    = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
-export const MODALIDADES   = ['Pregão Eletrônico','Pregão Presencial','Concorrência','Tomada de Preços','Convite','Dispensa','Inexigibilidade','RDC','Concurso','Leilão']
+// Lei 14.133/2021: modalidades (art. 28), contratação direta (arts. 72-75) e adesão a ata
+// de registro de preços (art. 86, "carona"). Os nomes já gravados (Concorrência, Dispensa…) se mantêm.
+export const MODALIDADES   = ['Pregão Eletrônico','Pregão Presencial','Concorrência','Concurso','Leilão','Diálogo Competitivo',
+  'Dispensa','Inexigibilidade','Credenciamento','Adesão a Ata de Registro de Preços']
+// Lei 8.666/1993 e RDC: só aparecem em contratos/licitações antigos que já usam
+export const MODALIDADES_ANTIGAS = ['Tomada de Preços','Convite','RDC']
 export const TIPOS_OBJETO  = ['Material','Serviço','Obra','Locação de Imóveis','Locação de Veículos','Consultoria','Tecnologia da Informação','Manutenção','Outros']
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

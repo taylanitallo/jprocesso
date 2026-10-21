@@ -469,15 +469,27 @@ const conferirCotas = async (models, contratoId, cotas, itens, secretaria) => {
   const repetido = nomes.find((n, i) => nomes.indexOf(n) !== i);
   if (repetido) return `Cota repetida no contrato: ${repetido}`;
 
-  // Dotação da cota: das cadastradas na secretaria do contrato (Organização › Secretarias)
-  if (chaveSecretaria(secretaria) && cotas.some(c => c.dotacao)) {
+  // Nada digitado à mão: a cota é um setor ativo cadastrado (da secretaria do contrato,
+  // se houver) e a dotação é uma das cadastradas na secretaria (Organização › Secretarias).
+  // O que o contrato já tinha gravado continua valendo, para a edição não travar.
+  let sec = null;
+  if (chaveSecretaria(secretaria)) {
     const secretarias = await models.Secretaria.findAll({ attributes: ['id', 'nome', 'sigla', 'dotacoes'], raw: true });
-    const sec = secretarias.find(s => chaveSecretaria(s.sigla) === chaveSecretaria(secretaria) || chaveSecretaria(s.nome) === chaveSecretaria(secretaria));
-    const validas = new Set((Array.isArray(sec?.dotacoes) ? sec.dotacoes : []).map(d => String(d?.codigo || d?.descricao || '').trim()).filter(Boolean));
-    if (sec && validas.size) {
-      const fora = cotas.filter(c => c.dotacao && !validas.has(c.dotacao));
-      if (fora.length) return `Escolha dotações cadastradas na secretaria do contrato (${sec.nome}). Fora dela: ${fora.map(c => `${c.nome} (${c.dotacao})`).join(', ')}`;
-    }
+    sec = secretarias.find(s => chaveSecretaria(s.sigla) === chaveSecretaria(secretaria) || chaveSecretaria(s.nome) === chaveSecretaria(secretaria)) || null;
+  }
+  const jaGravada = (c, campo) => anteriores.some(a => a.id === c.id && String(a[campo] || '').trim().toUpperCase() === String(c[campo] || '').trim().toUpperCase());
+
+  const setores = await models.Setor.findAll({ where: sec ? { ativo: true, secretaria_id: sec.id } : { ativo: true }, attributes: ['nome'], raw: true });
+  const setoresValidos = new Set(setores.map(s => String(s.nome || '').trim().toUpperCase()));
+  const foraSetor = cotas.filter(c => !setoresValidos.has(c.nome) && !jaGravada(c, 'nome'));
+  if (foraSetor.length) {
+    return `A cota tem de ser um setor cadastrado${sec ? ` na secretaria do contrato (${sec.nome})` : ''}. Não cadastrado: ${foraSetor.map(c => c.nome).join(', ')}`;
+  }
+
+  const dotacoesValidas = new Set((Array.isArray(sec?.dotacoes) ? sec.dotacoes : []).map(d => String(d?.codigo || d?.descricao || '').trim()).filter(Boolean));
+  const foraDotacao = cotas.filter(c => c.dotacao && !dotacoesValidas.has(c.dotacao) && !jaGravada(c, 'dotacao'));
+  if (foraDotacao.length) {
+    return `Escolha dotações cadastradas na secretaria do contrato${sec ? ` (${sec.nome})` : ''}. Fora dela: ${foraDotacao.map(c => `${c.nome} (${c.dotacao})`).join(', ')}`;
   }
 
   const lista = (Array.isArray(itens) ? itens : []).filter(it => it?.descricao && String(it.descricao).trim());

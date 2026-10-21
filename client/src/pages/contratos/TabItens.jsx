@@ -133,6 +133,7 @@ function ItemModal({ modo, item, onSave, onClose }) {
                       : <PremiumSelect value={form.unidade_medida} onChange={e => set('unidade_medida', e.target.value)}>
                           <option value="">Selecione...</option>
                           {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
+                          {form.unidade_medida && !UNIDADES.includes(form.unidade_medida) && <option value={form.unidade_medida}>{form.unidade_medida}</option>}
                         </PremiumSelect>
                     }
                   </div>
