@@ -925,6 +925,12 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
       ADD COLUMN IF NOT EXISTS distribuicao        JSONB,
       ADD COLUMN IF NOT EXISTS valor_unitario_base NUMERIC(15,2)
   `);
+  // Cotas do contrato por unidade/dotação (ex.: SEDUC › SEC 5 + CAPECI 3 = 8): o contrato
+  // lista as cotas [{ id, nome, dotacao, setor }], o item guarda { [cotaId]: quantidade }
+  // (quantidade = soma) e a ordem sai de uma cota, com saldo próprio
+  await run(`ALTER TABLE contratos ADD COLUMN IF NOT EXISTS cotas JSONB NOT NULL DEFAULT '[]'::jsonb`);
+  await run(`ALTER TABLE contratos_itens_vinculo ADD COLUMN IF NOT EXISTS cotas_qtd JSONB`);
+  await run(`ALTER TABLE contratos_ordens ADD COLUMN IF NOT EXISTS cota_id VARCHAR(40)`);
   // Credores: o índice único antigo valia também para os excluídos ("CNPJ já cadastrado"
   // sem nenhum credor visível). Fica só o parcial, entre os não excluídos.
   await run(`ALTER TABLE credores DROP CONSTRAINT IF EXISTS credores_cnpj_cpf_key`);

@@ -253,7 +253,7 @@ function SelecionarContratoModal({ contratos, tipoOrdem, onSelect, onClose }) {
 }
 
 // ── Modal de Seleção de Item do Contrato ──────────────────────────────────────
-function SelecionarItemModal({ contrato_id, itensBase = [], onSelect, onClose }) {
+function SelecionarItemModal({ contrato_id, cotaId, itensBase = [], onSelect, onClose }) {
   const [uso, setUso] = useState({})  // { [vinculo_id]: { qtd_usada, qtd_disponivel, percentual_uso, esgotado } }
   const [carregando, setCarregando] = useState(true)
   const [busca, setBusca] = useState('')
@@ -262,7 +262,8 @@ function SelecionarItemModal({ contrato_id, itensBase = [], onSelect, onClose })
 
   useEffect(() => {
     // Busca dados de uso via endpoint; mesmo se falhar, mostra os itens base
-    api.get(`/contratos/ordens/itens-contrato/${contrato_id}`)
+    // Contrato com cotas: saldo da cota escolhida na ordem
+    api.get(`/contratos/ordens/itens-contrato/${contrato_id}`, { params: cotaId ? { cota_id: cotaId } : {} })
       .then(r => {
         const map = {}
         r.data.forEach(it => { map[it.id] = it })
@@ -270,12 +271,12 @@ function SelecionarItemModal({ contrato_id, itensBase = [], onSelect, onClose })
       })
       .catch(() => {})
       .finally(() => setCarregando(false))
-  }, [contrato_id])
+  }, [contrato_id, cotaId])
 
   // Monta itens unindo base + dados de uso
   const itens = itensBase.map(v => {
     const u = uso[v.id] || {}
-    const qtd_contratada = parseFloat(v.quantidade || 0)
+    const qtd_contratada = cotaId ? parseFloat(v.cotas_qtd?.[cotaId] || 0) : parseFloat(v.quantidade || 0)
     const qtd_usada      = u.qtd_usada      ?? 0
     const qtd_disponivel = u.qtd_disponivel ?? qtd_contratada
     const percentual_uso = u.percentual_uso ?? (qtd_contratada > 0 ? Math.min(100, (qtd_usada / qtd_contratada) * 100) : 0)
@@ -679,6 +680,7 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
     local_entrega: '',
     observacoes: '',
     status: 'EMITIDA',
+    cota_id: '',
   }
 
   const [form, setForm] = useState(() => ordem ? {
@@ -694,6 +696,7 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
     local_entrega:         ordem.local_entrega || '',
     observacoes:           ordem.observacoes || '',
     status:                ordem.status || 'EMITIDA',
+    cota_id:               ordem.cota_id || '',
   } : FORM_VAZIO)
 
   const [itens, setItens] = useState(() => {
@@ -805,6 +808,7 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
     if (!form.tipo) f.push({ campo: 'tipo', label: 'Tipo de ordem' })
     if (form.tipo === 'SERVICO' && !form.destino_did) f.push({ campo: 'destino_did', label: 'Destino da ordem (Conta Fixa ou Conta Variável)' })
     if (!form.contrato_id) f.push({ campo: 'contrato_id', label: 'Contrato' })
+    if ((contratos.find(c => String(c.id) === String(form.contrato_id))?.cotas || []).length && !form.cota_id) f.push({ campo: 'cota_id', label: 'Cota (unidade/dotação)' })
     if (!form.data_emissao) f.push({ campo: 'data_emissao', label: 'Data de emissão' })
     if (!form.data_entrega_prevista) f.push({ campo: 'data_entrega_prevista', label: form.tipo === 'SERVICO' ? 'Data de conclusão prevista' : 'Data de entrega prevista' })
     if (!form.objeto.trim()) f.push({ campo: 'objeto', label: 'Objeto / descrição' })
@@ -825,10 +829,19 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
     registrarTextoUsado('contratos.ordem.objeto', form.objeto, contextoOrdem)
     registrarTextoUsado('contratos.ordem.justificativa', form.justificativa, contextoOrdem)
     registrarTextoUsado('contratos.ordem.observacoes', form.observacoes, contextoOrdem)
-    onSave({ ...form, destino_did, itens, valor_total: valorTotal })
+    onSave({ ...form, destino_did, cota_id: cotasContrato.length ? form.cota_id : null, itens, valor_total: valorTotal })
   }
 
   const contratoSel = contratos.find(c => String(c.id) === String(form.contrato_id))
+  // Contrato com cotas (ex.: SEC e CAPECI): a ordem sai de uma cota, com saldo próprio
+  const cotasContrato = Array.isArray(contratoSel?.cotas) ? contratoSel.cotas : []
+  const cotaSel = cotasContrato.find(c => c.id === form.cota_id)
+  const trocarCota = (id) => {
+    if (id === form.cota_id) return
+    if (itens.length && !confirm('Trocar a cota remove os itens já escolhidos (o saldo é outro).')) return
+    if (itens.length) { setItens([]); setEditingIdxs(new Set()) }
+    set('cota_id', id)
+  }
 
   // Contexto das sugestões da Ayla (objeto, justificativa, observações)
   const contextoOrdem = {
@@ -999,6 +1012,8 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
                     tipoOrdem={form.tipo}
                     onSelect={c => {
                       set('contrato_id', c.id)
+                      // Uma cota só: já vem escolhida
+                      set('cota_id', Array.isArray(c.cotas) && c.cotas.length === 1 ? c.cotas[0].id : '')
                       if (!form.secretaria && c.secretaria) set('secretaria', resolverNomeSecretaria(c.secretaria))
                       if (!form.fiscal_responsavel && c.fiscal) set('fiscal_responsavel', c.fiscal)
                       setModalContrato(false)
@@ -1012,6 +1027,21 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
                   </div>
                 )}
                 {saldo && <SaldoBar saldo={saldo} />}
+                {cotasContrato.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-semibold text-ink-500 mb-1.5">Cota (unidade/dotação) *</label>
+                    {readonly
+                      ? <p className="text-sm font-medium text-ink-800">{cotaSel ? `${cotaSel.nome}${cotaSel.dotacao ? ` — dotação ${cotaSel.dotacao}` : ''}` : '—'}</p>
+                      : (
+                        <select value={form.cota_id} onChange={e => trocarCota(e.target.value)}
+                          className={`input-field text-sm h-10 ${temErro('cota_id') ? 'border-danger-400 ring-2 ring-danger-200' : ''}`}>
+                          <option value="">Selecione de qual cota a ordem sai...</option>
+                          {cotasContrato.map(c => <option key={c.id} value={c.id}>{c.nome}{c.dotacao ? ` — dotação ${c.dotacao}` : ''}</option>)}
+                        </select>
+                      )}
+                    {temErro('cota_id') && <p className="text-xs text-danger-600 mt-1">Escolha a cota: cada uma tem saldo próprio.</p>}
+                  </div>
+                )}
               </div>
             </SectionCard>
           )}
@@ -1164,8 +1194,9 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
 
                   {!readonly && (
                     <div className="mt-3 flex items-center gap-3">
-                      <button onClick={() => setModalItens(true)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-sm transition-colors">
+                      <button onClick={() => setModalItens(true)} disabled={cotasContrato.length > 0 && !form.cota_id}
+                        title={cotasContrato.length > 0 && !form.cota_id ? 'Escolha a cota da ordem primeiro' : undefined}
+                        className="disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-sm transition-colors">
                         <Search className="w-3.5 h-3.5" /> Buscar item do contrato
                       </button>
                     </div>
@@ -1183,6 +1214,7 @@ function OrdemModal({ modo, ordem, contratos, catalogoItens, onSave, onClose }) 
           {modalItens && (
             <SelecionarItemModal
               contrato_id={form.contrato_id}
+              cotaId={cotasContrato.length ? form.cota_id : null}
               itensBase={contratoSel?.itens || []}
               onSelect={item => {
                 setItens(p => [...p, {

@@ -253,6 +253,7 @@ const nomeacaoCobreVigencia = (r, f) => {
 // das ordens continua contado na unidade do contrato (mês).
 const numBR = (v) => parseFloat(String(v ?? '').replace(',', '.')) || 0
 const brl = (n) => (Number(n) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+const totalCotas = (porCota) => Object.values(porCota || {}).reduce((s, q) => s + numBR(q), 0)
 const totalDistribuido = (dist) => (Array.isArray(dist) ? dist : []).reduce((s, d) => s + numBR(d.quantidade), 0)
 const calcularItem = (f) => {
   const qtd = numBR(f.quantidade)
@@ -264,20 +265,24 @@ const calcularItem = (f) => {
   return { valor_unitario: f.valor_unitario, valor_total: qtd && vun ? (qtd * vun).toFixed(2) : '' }
 }
 
-function ItemContratoModal({ item, catalogoItens, secretariaId, onSave, onClose }) {
-  const jaDistribuido = Array.isArray(item?.distribuicao) && item.distribuicao.length > 0
+function ItemContratoModal({ item, catalogoItens, secretariaId, cotas = [], onSave, onClose }) {
+  // Contrato com cotas (ex.: SEC e CAPECI): quantidade por cota; o total é a soma
+  const comCotas = cotas.length > 0
+  const jaDistribuido = !comCotas && Array.isArray(item?.distribuicao) && item.distribuicao.length > 0
+  const cotasIniciais = Object.fromEntries(cotas.map(c => [c.id, item?.cotas_qtd?.[c.id] ?? '']))
   const [form, setForm] = useState({
     lote:           item?.lote           || '',
     codigo_item:    item?.codigo_item    || '',
     item_id:        item?.item_id        || '',
     descricao:      item?.descricao      || '',
     unidade:        item?.unidade        || '',
-    quantidade:     item?.quantidade     || '',
+    quantidade:     comCotas ? (totalCotas(cotasIniciais) || '') : (item?.quantidade || ''),
     valor_unitario: item?.valor_unitario || '',
     valor_total:    item?.valor_total    || '',
     distribuido:    jaDistribuido,
     distribuicao:   jaDistribuido ? item.distribuicao.map(d => ({ ...d })) : [{ local: '', quantidade: '' }],
     valor_unitario_base: item?.valor_unitario_base || '',
+    cotas_qtd:      cotasIniciais,
   })
   // A descrição e a unidade vêm do banco de itens e não se alteram no contrato.
   // Item antigo sem vínculo com o banco (contratos de antes) fica como está, ou troca por um do banco.
@@ -299,6 +304,10 @@ function ItemContratoModal({ item, catalogoItens, secretariaId, onSave, onClose 
   const addDist = () => atualizar(p => ({ ...p, distribuicao: [...p.distribuicao, { local: '', quantidade: '' }] }))
   const delDist = (i) => atualizar(p => ({ ...p, distribuicao: p.distribuicao.filter((_, j) => j !== i) }))
   const qtdDistribuida = totalDistribuido(form.distribuicao)
+  const setCota = (id, v) => atualizar(p => {
+    const cotas_qtd = { ...p.cotas_qtd, [id]: v }
+    return { ...p, cotas_qtd, quantidade: totalCotas(cotas_qtd) || '' }
+  })
 
   const itensFiltrados = catalogoItens.filter(i => {
     if (i.status !== 'ATIVO') return false
@@ -319,6 +328,12 @@ function ItemContratoModal({ item, catalogoItens, secretariaId, onSave, onClose 
     if (!form.item_id && !itemAntigo) { alert('Escolha o item no banco de itens.'); return }
     if (!form.descricao.trim()) { alert('Escolha o item no banco de itens.'); return }
     const { distribuido, ...resto } = form
+    if (comCotas) {
+      const cotas_qtd = Object.fromEntries(cotas.filter(c => numBR(form.cotas_qtd[c.id]) > 0).map(c => [c.id, numBR(form.cotas_qtd[c.id])]))
+      if (!Object.keys(cotas_qtd).length) { alert('Informe a quantidade de ao menos uma cota.'); return }
+      onSave({ ...resto, quantidade: totalCotas(cotas_qtd), cotas_qtd, distribuicao: null, valor_unitario_base: null, _id: item?._id || (Date.now() + Math.random()) })
+      return
+    }
     if (distribuido) {
       const linhas = form.distribuicao.filter(d => String(d.local || '').trim() && numBR(d.quantidade) > 0)
       if (!linhas.length) { alert('Informe ao menos um setor/local com a quantidade.'); return }
@@ -329,7 +344,7 @@ function ItemContratoModal({ item, catalogoItens, secretariaId, onSave, onClose 
       onSave({ ...resto, distribuicao: linhas.map(d => ({ local: d.local.trim(), quantidade: numBR(d.quantidade) })), _id: item?._id || (Date.now() + Math.random()) })
       return
     }
-    onSave({ ...resto, distribuicao: null, valor_unitario_base: null, _id: item?._id || (Date.now() + Math.random()) })
+    onSave({ ...resto, distribuicao: null, valor_unitario_base: null, cotas_qtd: null, _id: item?._id || (Date.now() + Math.random()) })
   }
 
   return (
@@ -416,7 +431,25 @@ function ItemContratoModal({ item, catalogoItens, secretariaId, onSave, onClose 
             )}
           </div>
 
-          {/* Distribuído por setor/local */}
+          {/* Quantidade por cota (contrato com cotas por unidade/dotação) */}
+          {comCotas && (
+            <div className="rounded-xl border border-ink-200 p-3">
+              <p className="text-[11px] font-semibold text-ink-500 uppercase tracking-wide mb-2">Quantidade por cota</p>
+              <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(cotas.length, 4)}, minmax(0, 1fr))` }}>
+                {cotas.map(c => (
+                  <div key={c.id}>
+                    <label className="block text-xs font-semibold text-ink-600 mb-1 truncate" title={c.dotacao ? `${c.nome} — dotação ${c.dotacao}` : c.nome}>{c.nome}</label>
+                    <input type="number" min={0} value={form.cotas_qtd[c.id]} onChange={e => setCota(c.id, e.target.value)}
+                      placeholder="0" className="input-field text-sm h-9 text-right font-mono" />
+                    {c.dotacao && <p className="text-[10px] text-ink-400 mt-0.5 truncate">{c.dotacao}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Distribuído por setor/local (não se usa com cotas) */}
+          {!comCotas && (
           <label className="flex items-start gap-2 text-sm text-ink-700 cursor-pointer select-none">
             <input type="checkbox" checked={form.distribuido} onChange={e => set('distribuido', e.target.checked)} className="mt-0.5 accent-brand-600" />
             <span>
@@ -424,6 +457,7 @@ function ItemContratoModal({ item, catalogoItens, secretariaId, onSave, onClose 
               <span className="block text-xs text-ink-400">Ex.: locação de 4 impressoras — 3 na Secretaria e 1 na Biblioteca. A quantidade continua sendo a do contrato (ex.: 12 meses).</span>
             </span>
           </label>
+          )}
 
           {/* Unidade + Qtd + V. Unit (ou Valor de cada) */}
           <div className="grid grid-cols-3 gap-3">
@@ -433,8 +467,10 @@ function ItemContratoModal({ item, catalogoItens, secretariaId, onSave, onClose 
               <PremiumInput value={form.unidade} readOnly disabled title="Unidade do banco de itens" placeholder="—" className="bg-ink-50 cursor-not-allowed" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-ink-500 mb-1.5">Quantidade *</label>
-              <PremiumInput type="number" min={0} value={form.quantidade} onChange={e => set('quantidade', e.target.value)} placeholder="0" className="text-right font-mono" />
+              <label className="block text-xs font-semibold text-ink-500 mb-1.5">{comCotas ? 'Quantidade total (soma das cotas)' : 'Quantidade *'}</label>
+              {comCotas
+                ? <PremiumInput value={form.quantidade} readOnly disabled placeholder="0" className="text-right font-mono bg-ink-50 cursor-not-allowed" />
+                : <PremiumInput type="number" min={0} value={form.quantidade} onChange={e => set('quantidade', e.target.value)} placeholder="0" className="text-right font-mono" />}
             </div>
             <div>
               <label className="block text-xs font-semibold text-ink-500 mb-1.5">{form.distribuido ? 'Valor de cada *' : 'V. Unitário *'}</label>
@@ -561,6 +597,9 @@ export function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
     contrato?.itens ? [...contrato.itens] : []
   )
   const [itemContratoModal, setItemContratoModal] = useState(null) // null | { idx: number|null, data: object }
+  // Cotas por unidade/dotação (ex.: SEDUC › SEC e CAPECI): cada item tem quantidade por
+  // cota e cada cota tem saldo próprio nas ordens
+  const [cotas, setCotas] = useState(() => Array.isArray(contrato?.cotas) ? contrato.cotas.map(c => ({ ...c })) : [])
   // estado legado necessário para o modal BuscarItemModal
   const [itemBusca, setItemBusca] = useState({})
   const [itemDrop,  setItemDrop]  = useState(null)
@@ -761,6 +800,36 @@ export function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
     setItemDrop(null)
   }
 
+  const novaCotaId = () => `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+  const adicionarCota = () => {
+    const id = novaCotaId()
+    // Primeira cota: a quantidade que os itens já têm vai para ela (depois se reparte)
+    if (cotas.length === 0) {
+      setItensContrato(p => p.map(it => ({ ...it, distribuicao: null, valor_unitario_base: null, cotas_qtd: { [id]: parseFloat(it.quantidade) || 0 } })))
+    }
+    setCotas(p => [...p, { id, nome: '', dotacao: '', setor: '' }])
+  }
+  const setCotaCampo = (id, k, v) => setCotas(p => p.map(c => c.id === id ? { ...c, [k]: v } : c))
+  const removerCota = (id) => {
+    const nome = cotas.find(c => c.id === id)?.nome || 'esta cota'
+    if (itensContrato.some(it => parseFloat(it.cotas_qtd?.[id]) > 0) &&
+        !confirm(`Remover ${nome}? A quantidade dela sai dos itens.`)) return
+    const restantes = cotas.filter(c => c.id !== id)
+    setCotas(restantes)
+    setItensContrato(p => p.map(it => {
+      if (!it.cotas_qtd) return it
+      const { [id]: _fora, ...resto } = it.cotas_qtd
+      if (!restantes.length) return { ...it, cotas_qtd: null }
+      const quantidade = Object.values(resto).reduce((s, q) => s + (parseFloat(q) || 0), 0)
+      const vun = parseFloat(String(it.valor_unitario || '0').replace(',', '.')) || 0
+      return { ...it, cotas_qtd: resto, quantidade, valor_total: quantidade && vun ? (quantidade * vun).toFixed(2) : '' }
+    }))
+  }
+  // Dotações cadastradas na secretaria do contrato (Organização › Secretarias)
+  const dotacoesSecretaria = (Array.isArray(secSel?.dotacoes) ? secSel.dotacoes : [])
+    .map(d => ({ valor: String(d?.codigo || d?.descricao || '').trim(), rotulo: [d?.codigo, d?.descricao].filter(Boolean).join(' — ') }))
+    .filter(d => d.valor)
+
   // Algum item distribuído por setor: a tabela ganha a coluna V. Mensal
   const temDistribuido = itensContrato.some(it => Array.isArray(it.distribuicao) && it.distribuicao.length > 0)
 
@@ -789,7 +858,15 @@ export function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
       : (form.valor ? parseFloat(String(form.valor).replace(/[^\d,.]/g, '').replace(',', '.')) || null : null)
     const fontesLimpas = fontesRecurso.map(s => s.trim()).filter(Boolean)
     const dotacoesLimpas = dotacoes.map(s => s.trim()).filter(Boolean)
-    onSave({ ...form, valor: valorFinal, itens: itensContrato, fontes_recurso: fontesLimpas, dotacoes: dotacoesLimpas })
+    const cotasLimpas = cotas.map(c => ({ ...c, nome: String(c.nome || '').trim().toUpperCase() }))
+    if (cotasLimpas.some(c => !c.nome)) { alert('Informe o nome de todas as cotas (ex.: SEC, CAPECI).'); return }
+    const nomesCota = cotasLimpas.map(c => c.nome)
+    if (nomesCota.some((n, i) => nomesCota.indexOf(n) !== i)) { alert('Há cotas com o mesmo nome.'); return }
+    if (cotasLimpas.length) {
+      const semCota = itensContrato.find(it => !cotasLimpas.some(c => parseFloat(it.cotas_qtd?.[c.id]) > 0))
+      if (semCota) { alert(`Informe a quantidade por cota do item: ${String(semCota.descricao || '').slice(0, 80)}`); return }
+    }
+    onSave({ ...form, valor: valorFinal, itens: itensContrato, fontes_recurso: fontesLimpas, dotacoes: dotacoesLimpas, cotas: cotasLimpas })
   }
 
   const alertaIcone = alertaVencimento?.tipo === 'vencido'
@@ -1113,6 +1190,44 @@ export function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
 
               {/* SectionCard — Itens do Contrato */}
               <SectionCard icon={ShoppingBag} title="Itens do Contrato" subtitle="Produtos e serviços contratados">
+                {/* Cotas por unidade/dotação: colunas de quantidade (ex.: SEC | CAPECI | QTD TOTAL) */}
+                {(cotas.length > 0 || !readonly) && (
+                  <div className="mb-4 rounded-xl border border-ink-200 p-3 space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-ink-700">Quantidades por unidade/dotação (cotas)</p>
+                        <p className="text-xs text-ink-400">Ex.: SEDUC — SEC 5 + CAPECI 3 = 8. Cada cota tem saldo próprio nas ordens.</p>
+                      </div>
+                      {!readonly && (
+                        <button type="button" onClick={adicionarCota}
+                          className="shrink-0 text-xs font-semibold text-brand-600 dark:text-info-400 flex items-center gap-1">
+                          <Plus className="w-3.5 h-3.5" /> Adicionar cota
+                        </button>
+                      )}
+                    </div>
+                    {cotas.map(c => (
+                      <div key={c.id} className="grid grid-cols-[160px_1fr_28px] gap-2 items-center">
+                        <input value={c.nome} disabled={readonly} onChange={e => setCotaCampo(c.id, 'nome', e.target.value.toUpperCase())}
+                          placeholder="Nome (ex.: CAPECI)" className="input-field text-sm h-9 uppercase" />
+                        {dotacoesSecretaria.length > 0 ? (
+                          <select value={c.dotacao || ''} disabled={readonly} onChange={e => setCotaCampo(c.id, 'dotacao', e.target.value)} className="input-field text-sm h-9">
+                            <option value="">Dotação…</option>
+                            {c.dotacao && !dotacoesSecretaria.some(d => d.valor === c.dotacao) && <option value={c.dotacao}>{c.dotacao} (fora da secretaria)</option>}
+                            {dotacoesSecretaria.map(d => <option key={d.valor} value={d.valor}>{d.rotulo}</option>)}
+                          </select>
+                        ) : (
+                          <input value={c.dotacao || ''} disabled={readonly} onChange={e => setCotaCampo(c.id, 'dotacao', e.target.value)}
+                            placeholder={secSel ? 'Dotação (a secretaria não tem dotações cadastradas)' : 'Dotação (escolha a secretaria para listar as dela)'} className="input-field text-sm h-9" />
+                        )}
+                        {!readonly ? (
+                          <button type="button" onClick={() => removerCota(c.id)} className="p-1 rounded-sm text-danger-400 hover:text-danger-600" title="Remover cota">
+                            <X className="w-4 h-4" />
+                          </button>
+                        ) : <span />}
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {itensContrato.length === 0 ? (
                   <div className="text-center py-6 text-ink-400">
                     <ShoppingBag className="w-8 h-8 mx-auto mb-2 opacity-40" />
@@ -1135,7 +1250,8 @@ export function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                             <th className="px-3 py-2 text-left font-semibold">Nº Item</th>
                             <th className="px-3 py-2 text-left font-semibold">Descrição</th>
                             <th className="px-3 py-2 text-left font-semibold">Unid.</th>
-                            <th className="px-3 py-2 text-right font-semibold">Qtd.</th>
+                            {cotas.map(c => <th key={c.id} className="px-3 py-2 text-right font-semibold" title={c.dotacao ? `Dotação ${c.dotacao}` : undefined}>{c.nome || '—'}</th>)}
+                            <th className="px-3 py-2 text-right font-semibold">{cotas.length ? 'Qtd. Total' : 'Qtd.'}</th>
                             <th className="px-3 py-2 text-right font-semibold">V. Unit.</th>
                             {temDistribuido && <th className="px-3 py-2 text-right font-semibold" title="Itens distribuídos por setor: valor de cada × total distribuído">V. Mensal</th>}
                             <th className="px-3 py-2 text-right font-semibold">V. Total</th>
@@ -1157,6 +1273,7 @@ export function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                                 )}
                               </td>
                               <td className="px-3 py-2 text-ink-500">{it.unidade || '—'}</td>
+                              {cotas.map(c => <td key={c.id} className="px-3 py-2 text-right font-mono text-ink-600">{it.cotas_qtd?.[c.id] || '—'}</td>)}
                               <td className="px-3 py-2 text-right font-mono">{it.quantidade || '—'}</td>
                               <td className="px-3 py-2 text-right font-mono">
                                 {(() => {
@@ -1203,7 +1320,7 @@ export function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                         </tbody>
                         <tfoot className="bg-ink-100 border-t-2 border-ink-200">
                           <tr>
-                            <td colSpan={temDistribuido ? 8 : 7} className="px-3 py-2 text-right text-xs font-bold text-ink-600 uppercase tracking-wide">Total do Contrato:</td>
+                            <td colSpan={(temDistribuido ? 8 : 7) + cotas.length} className="px-3 py-2 text-right text-xs font-bold text-ink-600 uppercase tracking-wide">Total do Contrato:</td>
                             <td className="px-3 py-2 text-right font-bold text-brand-700 dark:text-info-400 font-mono whitespace-nowrap">{fmtBRL(valorTotalItens) || '—'}</td>
                             <td />
                           </tr>
@@ -1225,6 +1342,7 @@ export function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                   item={itemContratoModal.data}
                   catalogoItens={catalogoItens}
                   secretariaId={secSel?.id}
+                  cotas={cotas}
                   onSave={saved => {
                     const { idx } = itemContratoModal
                     if (idx === null) {
@@ -1251,6 +1369,7 @@ export function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                       ['Descrição', itemContratoModal.data.descricao],
                       ['Unidade', itemContratoModal.data.unidade],
                       ['Quantidade', itemContratoModal.data.quantidade],
+                      ['Cotas', cotas.length && itemContratoModal.data.cotas_qtd ? cotas.filter(c => itemContratoModal.data.cotas_qtd[c.id]).map(c => `${c.nome}: ${itemContratoModal.data.cotas_qtd[c.id]}`).join(' · ') : null],
                       ['Distribuição', itemContratoModal.data.distribuicao?.length ? itemContratoModal.data.distribuicao.map(d => `${d.local}: ${d.quantidade}`).join(' · ') : null],
                       ['Valor de cada', itemContratoModal.data.distribuicao?.length && itemContratoModal.data.valor_unitario_base ? `R$ ${parseFloat(itemContratoModal.data.valor_unitario_base).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : null],
                       [itemContratoModal.data.distribuicao?.length ? 'Média mensal' : 'Valor Unitário', itemContratoModal.data.valor_unitario ? `R$ ${parseFloat(itemContratoModal.data.valor_unitario).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : null],

@@ -83,6 +83,50 @@ const respostaCamposFaltando = (res, faltando) => res.status(400).json({
   campos_faltando: faltando,
 });
 
+/**
+ * Quanto cada item já saiu da cota (unidade/dotação) em ordens que consomem saldo:
+ * { [item_id]: quantidade }. ignorarOrdemId: a própria ordem, na edição.
+ */
+const usoDaCota = async (models, contratoId, cotaId, ignorarOrdemId = null) => {
+  const where = { contrato_id: contratoId, cota_id: cotaId, status: { [Op.notIn]: STATUS_SEM_SALDO } };
+  if (ignorarOrdemId) where.id = { [Op.ne]: ignorarOrdemId };
+  const ordens = await models.ContratoOrdem.findAll({ where, attributes: ['id'], raw: true });
+  if (!ordens.length) return {};
+  const usos = await models.ContratoOrdemItem.findAll({
+    attributes: ['item_id', [fn('SUM', col('quantidade')), 'qtd_usada']],
+    where: { ordem_id: { [Op.in]: ordens.map(o => o.id) } },
+    group: ['item_id'],
+    raw: true,
+  });
+  return Object.fromEntries(usos.map(u => [u.item_id, parseFloat(u.qtd_usada || 0)]));
+};
+
+/**
+ * Contrato com cotas: a ordem tem de dizer de qual cota sai, e cada item não pode passar
+ * o saldo daquela cota. Devolve a mensagem de erro, ou null.
+ */
+const conferirCotaDaOrdem = async (models, contrato, cotaId, itens, ignorarOrdemId = null) => {
+  const cotas = Array.isArray(contrato?.cotas) ? contrato.cotas : [];
+  if (!cotas.length) return null;
+  const cota = cotas.find(c => c.id === cotaId);
+  if (!cota) return 'Escolha a cota (unidade/dotação) de onde a ordem sai.';
+  const vinculos = await models.ContratoItemVinculo.findAll({ where: { contrato_id: contrato.id }, attributes: ['item_id', 'descricao', 'cotas_qtd'], raw: true });
+  const uso = await usoDaCota(models, contrato.id, cotaId, ignorarOrdemId);
+  const pedido = {};
+  (Array.isArray(itens) ? itens : []).forEach(it => {
+    if (it.item_id) pedido[it.item_id] = (pedido[it.item_id] || 0) + parseFloat(it.quantidade || 1);
+  });
+  for (const [itemId, qtd] of Object.entries(pedido)) {
+    const v = vinculos.find(x => String(x.item_id) === String(itemId));
+    if (!v) continue;
+    const disponivel = parseFloat(v.cotas_qtd?.[cotaId] || 0) - (uso[itemId] || 0);
+    if (qtd > disponivel + 1e-9) {
+      return `Saldo da cota ${cota.nome} insuficiente para "${String(v.descricao || '').slice(0, 60)}": disponível ${Math.max(0, disponivel)}, pedido ${qtd}.`;
+    }
+  }
+  return null;
+};
+
 /** Calcula saldo disponível de um contrato */
 const calcularSaldo = async (ContratoOrdem, contrato_id, ignorarOrdemId = null) => {
   const { Contrato } = global._tmpModels || {};
@@ -227,6 +271,9 @@ const createOrdem = async (req, res) => {
     const contrato = await Contrato.findByPk(body.contrato_id);
     if (!contrato) return notFound(res, 'Contrato');
     if (contrato.status === 'CONCLUÍDO') return res.status(400).json({ error: 'Contrato concluído não recebe novas ordens.' });
+    const erroCota = await conferirCotaDaOrdem(req.models, contrato, body.cota_id, itens);
+    if (erroCota) return res.status(422).json({ error: erroCota });
+    if (!(contrato.cotas || []).length) body.cota_id = null;
 
     // Calcular valor total da nova ordem
     const valorOrdem = itens.reduce((acc, it) => {
@@ -307,6 +354,16 @@ const updateOrdem = async (req, res) => {
 
     const contrato = await Contrato.findByPk(ordem.contrato_id);
     const valorContrato = parseFloat(contrato?.valor || 0);
+
+    // Contrato com cotas: confere a cota (trocada ou não) contra os itens da ordem
+    if (contrato && (itens !== undefined || body.cota_id !== undefined)) {
+      const cotaId = body.cota_id !== undefined ? body.cota_id : ordem.cota_id;
+      const itensConferir = itens !== undefined
+        ? itens
+        : await ContratoOrdemItem.findAll({ where: { ordem_id: ordem.id }, attributes: ['item_id', 'quantidade'], raw: true });
+      const erroCota = await conferirCotaDaOrdem(req.models, contrato, cotaId, itensConferir, ordem.id);
+      if (erroCota) return res.status(422).json({ error: erroCota });
+    }
 
     // Recalcular valor se itens foram enviados
     let valorOrdem = parseFloat(ordem.valor_total || 0);
@@ -457,6 +514,8 @@ const getItensContrato = async (req, res) => {
   try {
     const { ContratoOrdem, ContratoOrdemItem, ContratoItemVinculo, ContratoItem } = req.models;
     const { contrato_id } = req.params;
+    // Contrato com cotas: ?cota_id= dá o saldo daquela cota (unidade/dotação)
+    const cotaId = req.query.cota_id ? String(req.query.cota_id) : null;
 
     // Busca os vínculos do contrato (itens contratados com qtd e preço)
     const vinculos = await ContratoItemVinculo.findAll({
@@ -467,7 +526,7 @@ const getItensContrato = async (req, res) => {
 
     // Para cada vínculo, soma qtd já usada em ordens não canceladas deste contrato
     const ordens = await ContratoOrdem.findAll({
-      where: { contrato_id, status: { [Op.notIn]: STATUS_SEM_SALDO } },
+      where: { contrato_id, status: { [Op.notIn]: STATUS_SEM_SALDO }, ...(cotaId ? { cota_id: cotaId } : {}) },
       attributes: ['id'],
       raw: true,
     });
@@ -485,7 +544,7 @@ const getItensContrato = async (req, res) => {
     }
 
     const resultado = vinculos.map(v => {
-      const qtd_contratada = parseFloat(v.quantidade || 0);
+      const qtd_contratada = cotaId ? parseFloat(v.cotas_qtd?.[cotaId] || 0) : parseFloat(v.quantidade || 0);
       const qtd_usada = usoPorItem[v.item_id] || 0;
       const qtd_disponivel = Math.max(0, qtd_contratada - qtd_usada);
       return {
@@ -497,6 +556,7 @@ const getItensContrato = async (req, res) => {
         // Item distribuído por setor: valor_unitario já é a média mensal
         distribuicao: v.distribuicao || null,
         valor_unitario_base: v.valor_unitario_base != null ? parseFloat(v.valor_unitario_base) : null,
+        cotas_qtd: v.cotas_qtd || null,
         qtd_contratada,
         qtd_usada,
         qtd_disponivel,

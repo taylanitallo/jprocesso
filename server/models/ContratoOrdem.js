@@ -16,6 +16,7 @@ module.exports = (sequelize) => {
     valor_total:           { type: DataTypes.DECIMAL(15, 2), defaultValue: 0 },
     observacoes:           { type: DataTypes.TEXT },
     status:                { type: DataTypes.STRING(20), defaultValue: 'EMITIDA' }, // EMITIDA | ATENDIDA | CANCELADA
+    cota_id:               { type: DataTypes.STRING(40) }, // contrato com cotas: de qual cota (unidade/dotação) a ordem sai
     destino_did:           { type: DataTypes.STRING(10) }, // FIXA | VARIAVEL — só para tipo SERVICO; NULL = legado (aparece nos dois DIDs)
   }, {
     tableName: 'contratos_ordens',

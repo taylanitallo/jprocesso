@@ -21,6 +21,8 @@ module.exports = (sequelize) => {
     conta: { type: DataTypes.STRING(50) },
     fontes_recurso: { type: DataTypes.ARRAY(DataTypes.TEXT), defaultValue: [] },
     dotacoes: { type: DataTypes.ARRAY(DataTypes.TEXT), defaultValue: [] },
+    // Cotas por unidade/dotação (ex.: SEC e CAPECI): [{ id, nome, dotacao, setor }]
+    cotas: { type: DataTypes.JSONB, defaultValue: [] },
     observacoes: { type: DataTypes.TEXT },
     status: { type: DataTypes.STRING(20), defaultValue: 'ATIVO' },
     dias_alerta: { type: DataTypes.INTEGER, defaultValue: 30 },
