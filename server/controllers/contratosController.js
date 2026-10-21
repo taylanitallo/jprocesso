@@ -360,6 +360,38 @@ const conferirItensAtivos = async (models, itens, itensJaNoContrato = []) => {
   return `Item inativo não pode ser vinculado ao contrato (cadastre a especificação no catálogo): ${inativos.map(i => i.descricao).join('; ')}`;
 };
 
+// Item distribuído por setor: o local tem de ser um setor ativo cadastrado e a soma das
+// quantidades dos setores não pode passar a quantidade do item. Locais que o contrato já
+// tinha (digitados antes dessa regra) continuam valendo, para a edição não travar.
+// Devolve a mensagem de erro, ou null.
+const conferirDistribuicao = async (models, contratoId, itens) => {
+  const num = (v) => (v === undefined || v === null || v === '') ? 0 : (parseFloat(String(v).replace(',', '.')) || 0);
+  const comDist = (Array.isArray(itens) ? itens : []).map(it => ({
+    it,
+    linhas: (Array.isArray(it?.distribuicao) ? it.distribuicao : [])
+      .map(d => ({ local: String(d?.local || '').trim(), quantidade: num(d?.quantidade) }))
+      .filter(d => d.local && d.quantidade > 0),
+  })).filter(x => x.linhas.length);
+  if (!comDist.length) return null;
+
+  for (const { it, linhas } of comDist) {
+    const total = linhas.reduce((s, d) => s + d.quantidade, 0);
+    if (total > num(it.quantidade)) {
+      return `A soma das quantidades dos setores (${total}) não pode passar a quantidade do item (${num(it.quantidade)}): ${String(it.descricao || '').trim().slice(0, 80)}`;
+    }
+  }
+
+  const setores = await models.Setor.findAll({ where: { ativo: true }, attributes: ['nome'], raw: true });
+  const validos = new Set(setores.map(s => String(s.nome || '').trim()));
+  if (contratoId) {
+    const anteriores = await models.ContratoItemVinculo.findAll({ where: { contrato_id: contratoId }, attributes: ['distribuicao'], raw: true });
+    anteriores.forEach(v => (Array.isArray(v.distribuicao) ? v.distribuicao : []).forEach(d => validos.add(String(d?.local || '').trim())));
+  }
+  const fora = [...new Set(comDist.flatMap(x => x.linhas.map(d => d.local)).filter(l => !validos.has(l)))];
+  if (fora.length) return `Escolha setores cadastrados no sistema. Não cadastrado: ${fora.join(', ')}`;
+  return null;
+};
+
 // Descrição do item no contrato = descrição + especificação do banco de itens
 // (mesma regra de client/src/pages/contratos/ContratosShared.jsx › descricaoComEspecificacao)
 const descricaoComEspecificacao = (item) => {
@@ -423,6 +455,8 @@ const createContrato = async (req, res) => {
     }
     const erroItens = await conferirItensAtivos(req.models, itens);
     if (erroItens) return res.status(400).json({ error: erroItens });
+    const erroDist = await conferirDistribuicao(req.models, null, itens);
+    if (erroDist) return res.status(400).json({ error: erroDist });
     const travados = await travarItensNoBanco(req.models, null, itens);
     if (travados.erro) return res.status(400).json({ error: travados.erro });
     const contrato = await Contrato.create(dados);
@@ -467,6 +501,8 @@ const updateContrato = async (req, res) => {
         .map(v => Number(v.item_id)).filter(Boolean);
       const erroItens = await conferirItensAtivos(req.models, itens, jaVinculados);
       if (erroItens) return res.status(400).json({ error: erroItens });
+      const erroDist = await conferirDistribuicao(req.models, contrato.id, itens);
+      if (erroDist) return res.status(400).json({ error: erroDist });
     }
     const travados = itens !== undefined ? await travarItensNoBanco(req.models, contrato.id, itens) : null;
     if (travados?.erro) return res.status(400).json({ error: travados.erro });
