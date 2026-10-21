@@ -286,7 +286,7 @@ function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
   const [busca, setBusca] = useState('')
   const [drop, setDrop] = useState(false)
   const [dropRef, setDropRef] = useState(null)
-  // Sugestões de local: setores cadastrados (o campo aceita texto livre, ex.: "BIBLI.")
+  // Setores cadastrados: o local só pode ser um deles (não se digita)
   const [setoresSug, setSetoresSug] = useState([])
   useEffect(() => {
     api.get('/organizacao/setores').then(r => setSetoresSug((r.data?.setores || r.data || []).map(s => s.nome).filter(Boolean))).catch(() => {})
@@ -320,6 +320,9 @@ function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
     if (distribuido) {
       const linhas = form.distribuicao.filter(d => String(d.local || '').trim() && numBR(d.quantidade) > 0)
       if (!linhas.length) { alert('Informe ao menos um setor/local com a quantidade.'); return }
+      if (totalDistribuido(linhas) > numBR(form.quantidade)) { alert(`A soma das quantidades dos setores (${totalDistribuido(linhas)}) não pode passar a quantidade do item (${numBR(form.quantidade)}).`); return }
+      const foraDoCadastro =linhas.filter(d => !setoresSug.includes(d.local))
+      if (foraDoCadastro.length) { alert(`Escolha setores cadastrados no sistema. Não cadastrado: ${foraDoCadastro.map(d => d.local).join(', ')}`); return }
       if (!numBR(form.valor_unitario_base)) { alert('Informe o valor de cada unidade.'); return }
       onSave({ ...resto, distribuicao: linhas.map(d => ({ local: d.local.trim(), quantidade: numBR(d.quantidade) })), _id: item?._id || (Date.now() + Math.random()) })
       return
@@ -446,8 +449,14 @@ function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
               </div>
               {form.distribuicao.map((d, i) => (
                 <div key={i} className="grid grid-cols-[1fr_96px_28px] gap-2 items-center">
-                  <input list="sugestoes-local-item" value={d.local} onChange={e => setDist(i, 'local', e.target.value)}
-                    placeholder="Ex.: SECRETARIA, BIBLIOTECA" className="input-field text-sm h-9" />
+                  <select value={d.local} onChange={e => setDist(i, 'local', e.target.value)} className="input-field text-sm h-9">
+                    <option value="">Selecione o setor...</option>
+                    {/* Local antigo digitado à mão (fora do cadastro): aparece só para trocar */}
+                    {d.local && !setoresSug.includes(d.local) && <option value={d.local}>{d.local} (não cadastrado)</option>}
+                    {setoresSug.map(n => (
+                      <option key={n} value={n} disabled={n !== d.local && form.distribuicao.some(o => o.local === n)}>{n}</option>
+                    ))}
+                  </select>
                   <input type="number" min={0} value={d.quantidade} onChange={e => setDist(i, 'quantidade', e.target.value)}
                     placeholder="0" className="input-field text-sm h-9 text-right font-mono" />
                   <button type="button" onClick={() => delDist(i)} disabled={form.distribuicao.length === 1}
@@ -456,12 +465,13 @@ function ItemContratoModal({ item, catalogoItens, onSave, onClose }) {
                   </button>
                 </div>
               ))}
-              <datalist id="sugestoes-local-item">{setoresSug.map(n => <option key={n} value={n} />)}</datalist>
               <div className="flex items-center justify-between pt-1">
                 <button type="button" onClick={addDist} className="text-xs font-semibold text-brand-600 dark:text-info-400 flex items-center gap-1">
                   <Plus className="w-3.5 h-3.5" /> Adicionar setor/local
                 </button>
-                <span className="text-xs text-ink-500">Total: <strong className="text-ink-800 font-mono">{qtdDistribuida}</strong></span>
+                {qtdDistribuida > numBR(form.quantidade)
+                  ? <span className="text-xs text-danger-600 font-semibold">Total: <strong className="font-mono">{qtdDistribuida}</strong> — passa da quantidade do item ({numBR(form.quantidade)})</span>
+                  : <span className="text-xs text-ink-500">Total: <strong className="text-ink-800 font-mono">{qtdDistribuida}</strong></span>}
               </div>
             </div>
           )}
