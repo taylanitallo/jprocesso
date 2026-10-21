@@ -52,6 +52,15 @@ export const MODALIDADES_ANTIGAS = ['Tomada de Preços','Convite','RDC']
 export const TIPOS_OBJETO  = ['Material','Serviço','Obra','Locação de Imóveis','Locação de Veículos','Consultoria','Tecnologia da Informação','Manutenção','Outros']
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+// Cota (unidade/dotação) de onde a ordem saiu: vem pronta da API ou do contrato carregado
+export function cotaDaOrdem(o, contratos = []) {
+  if (!o?.cota_id) return null
+  if (o.cota) return o.cota
+  const c = contratos.find(x => String(x.id) === String(o.contrato_id)) || o.contrato
+  return (Array.isArray(c?.cotas) ? c.cotas : []).find(k => k.id === o.cota_id) || null
+}
+export const rotuloCota = (cota) => cota ? `${cota.nome}${cota.dotacao ? ` — dotação ${cota.dotacao}` : ''}` : ''
+
 export function proximoCodigo(itens) {
   if (!itens || itens.length === 0) return '00001'
   const max = itens.reduce((m, item) => {

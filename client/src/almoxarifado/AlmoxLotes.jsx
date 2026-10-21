@@ -96,6 +96,11 @@ function OrdemCompraPickerModal({ onSelect, onClose }) {
                       {ordem.secretaria && (
                         <span className="text-xs bg-info-100 dark:bg-info-900/30 text-brand-700 dark:text-info-300 px-1.5 py-0.5 rounded-sm">{ordem.secretaria}</span>
                       )}
+                      {/* Contrato com cotas: unidade/dotação de onde a ordem saiu */}
+                      {ordem.cota && (
+                        <span className="text-xs bg-info-50 dark:bg-info-900/20 text-info-700 dark:text-info-300 px-1.5 py-0.5 rounded-sm font-semibold"
+                          title={ordem.cota.dotacao ? `Dotação ${ordem.cota.dotacao}` : undefined}>Cota {ordem.cota.nome}</span>
+                      )}
                     </div>
                     <p className="text-xs text-ink-600 mt-0.5 line-clamp-1">{ordem.objeto}</p>
                     {ordem.contrato?.credor && (
@@ -255,6 +260,11 @@ function NovaEntradaModal({ itens, onClose, onSave, saving, erro }) {
               <div>
                 <p className="font-semibold text-success-800 dark:text-success-300 text-sm">{ordemData.numero}</p>
                 <p className="text-xs text-ink-600 line-clamp-1">{ordemData.objeto}</p>
+                {ordemData.cota && (
+                  <p className="text-xs font-semibold text-info-700 dark:text-info-300">
+                    Cota {ordemData.cota.nome}{ordemData.cota.dotacao ? ` · dotação ${ordemData.cota.dotacao}` : ''}
+                  </p>
+                )}
                 {ordemData.contrato?.credor && (
                   <p className="text-xs text-ink-500">
                     Fornecedor: <span className="font-medium">{ordemData.contrato.credor.razao_social}</span>

@@ -12,7 +12,7 @@ import { useAuth } from '../../context/AuthContext'
 import { gerarDnaItemPDF } from '../../utils/gerarDocumentoPDF'
 import {
   CATEGORIAS, UNIDADES, STATUS_ITEM, proximoCodigo,
-  SectionCard, PremiumInput, PremiumSelect, PremiumTextarea, SelectBusca
+  SectionCard, PremiumInput, PremiumSelect, PremiumTextarea, SelectBusca, cotaDaOrdem, rotuloCota
 } from './ContratosShared'
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -364,7 +364,15 @@ function RelatorioModal({ item, onClose }) {
                                 {v.contrato?.status || '—'}
                               </span>
                             </td>
-                            <td className="px-3 py-2 text-right tabular-nums">{fmtQtd(v.quantidade)}</td>
+                            <td className="px-3 py-2 text-right tabular-nums">
+                              {fmtQtd(v.quantidade)}
+                              {/* Contrato com cotas: quanto de cada unidade/dotação */}
+                              {Array.isArray(v.contrato?.cotas) && v.cotas_qtd && (
+                                <span className="block text-[10px] text-ink-500 whitespace-nowrap">
+                                  {v.contrato.cotas.filter(c => v.cotas_qtd[c.id]).map(c => `${c.nome}: ${fmtQtd(v.cotas_qtd[c.id])}`).join(' · ')}
+                                </span>
+                              )}
+                            </td>
                             <td className="px-3 py-2 text-right tabular-nums">{fmt(v.valor_unitario)}</td>
                             <td className="px-3 py-2 text-right font-semibold tabular-nums text-success-700 dark:text-success-400">{fmt(v.valor_total)}</td>
                           </tr>
@@ -409,7 +417,10 @@ function RelatorioModal({ item, onClose }) {
                                   {ordem?.tipo || '—'}
                                 </span>
                               </td>
-                              <td className="px-3 py-2 text-brand-600 dark:text-info-400 font-medium whitespace-nowrap">{ordem?.contrato?.numero_contrato || '—'}</td>
+                              <td className="px-3 py-2 text-brand-600 dark:text-info-400 font-medium whitespace-nowrap">
+                                {ordem?.contrato?.numero_contrato || '—'}
+                                {cotaDaOrdem(ordem) && <span className="block text-[10px] text-info-600" title={rotuloCota(cotaDaOrdem(ordem))}>Cota {cotaDaOrdem(ordem).nome}</span>}
+                              </td>
                               <td className="px-3 py-2 text-ink-600 max-w-[140px] truncate">{ordem?.contrato?.secretaria || ordem?.secretaria || '—'}</td>
                               <td className="px-3 py-2 whitespace-nowrap text-ink-500">{ordem?.data_emissao ? new Date(ordem.data_emissao).toLocaleDateString('pt-BR') : '—'}</td>
                               <td className="px-3 py-2 text-center">

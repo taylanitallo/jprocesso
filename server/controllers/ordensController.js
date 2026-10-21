@@ -2,6 +2,7 @@ const { Op, fn, col, literal } = require('sequelize');
 const { registrarLog } = require('../middleware/activityLogger');
 const { registrarExclusao } = require('../services/lixeiraService');
 const { applyScopeToWhereByName } = require('../utils/scopeFilter');
+const { anexarCota, resumoCotas } = require('../utils/cotasContrato');
 
 // Ordens que não consomem saldo do contrato
 const STATUS_SEM_SALDO = ['CANCELADA', 'EXCLUÍDA'];
@@ -178,6 +179,8 @@ const listOrdens = async (req, res) => {
       ],
       order: [['created_at', 'DESC']],
     });
+    // Contrato com cotas: de qual cota (unidade/dotação) cada ordem saiu
+    await anexarCota(req.models, ordens);
 
     // Calcular saldo de cada contrato associado
     const contratosVistos = new Map();
@@ -232,7 +235,7 @@ const getSaldoContrato = async (req, res) => {
     const { contrato_id } = req.params;
 
     const contrato = await Contrato.findByPk(contrato_id, {
-      attributes: ['id', 'numero_contrato', 'objeto', 'valor', 'status'],
+      attributes: ['id', 'numero_contrato', 'objeto', 'valor', 'status', 'cotas'],
     });
     if (!contrato) return notFound(res, 'Contrato');
 
@@ -248,6 +251,8 @@ const getSaldoContrato = async (req, res) => {
       percentual_usado: valorContrato > 0 ? (totalUsado / valorContrato) * 100 : 0,
       alerta_baixo: valorContrato > 0 && saldo < valorContrato * 0.1,
       sem_saldo: saldo <= 0,
+      // Contrato com cotas: saldo de cada uma (valor e quantidade por item)
+      cotas: await resumoCotas(req.models, contrato),
     });
   } catch (err) {
     console.error('getSaldoContrato:', err);
@@ -660,6 +665,7 @@ const listOrdemDisponivelDid = async (req, res) => {
       order: [['created_at', 'DESC']],
     });
 
+    await anexarCota(req.models, ordens);
     res.json(ordens);
   } catch (err) {
     console.error('listOrdemDisponivelDid:', err);

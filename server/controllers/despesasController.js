@@ -3,6 +3,7 @@ const initializedSchemas = new Set();
 const { applyScopeToWhereByName, ensurePermissoes } = require('../utils/scopeFilter');
 const { registrarLog } = require('../middleware/activityLogger');
 const caixa = require('../services/caixaService');
+const { anexarCota } = require('../utils/cotasContrato');
 
 async function ensureTable(req) {
   const schema = req.tenant?.schema;
@@ -97,6 +98,7 @@ const listDespesas = async (req, res) => {
       : [];
     const contaPorId = Object.fromEntries(contasPag.map(c => [c.id, c]));
 
+    await anexarCota(req.models, result);
     const ordens_final = result.map(o => {
       const j = o.toJSON();
       j.secretaria_sigla = siglaMap[j.secretaria?.toLowerCase()] || j.secretaria || null;

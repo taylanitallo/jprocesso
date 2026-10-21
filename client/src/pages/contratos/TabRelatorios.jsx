@@ -339,6 +339,17 @@ function TabRelatorios() {
   const ordContList   = Object.entries(mapOrdCont).sort((a, b) => b[1].valor - a[1].valor).slice(0, 8)
   const maxOrdContVal = ordContList[0]?.[1]?.valor || 1
 
+  // ── Cotas por unidade/dotação: contratado × emitido em ordens, por contrato e cota ──
+  const cotasLista = []
+  contratos.filter(c => Array.isArray(c.cotas) && c.cotas.length).forEach(c => {
+    c.cotas.forEach(k => {
+      const contratado = (c.itens || []).reduce((s, it) => s + (parseFloat(it.cotas_qtd?.[k.id]) || 0) * parseVal(it.valor_unitario), 0)
+      const doCota = ordens.filter(o => o.contrato_id === c.id && o.cota_id === k.id && !['CANCELADA', 'EXCLUÍDA'].includes(o.status))
+      const emitido = doCota.reduce((s, o) => s + parseVal(o.valor_total), 0)
+      cotasLista.push({ chave: `${c.id}|${k.id}`, contrato: c.numero_contrato, nome: k.nome, dotacao: k.dotacao, contratado, emitido, qtdOrdens: doCota.length })
+    })
+  })
+
   const abrirModal = (titulo, lista) => setModal({ titulo, lista })
 
   return (
@@ -595,6 +606,22 @@ function TabRelatorios() {
               <div className="space-y-2.5">
                 {ordContList.map(([label, v], i) => (
                   <BarRowR key={label} label={label} value={fmtMoeda(v.valor)} extra={`${v.qtd} ordem(ns)`} pct={(v.valor / maxOrdContVal) * 100} bar={CORES[i % CORES.length]} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {cotasLista.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-ink-500 uppercase tracking-wider mb-3">Execução por Cota (unidade/dotação)</p>
+              <div className="space-y-2.5">
+                {cotasLista.map((k, i) => (
+                  <BarRowR key={k.chave}
+                    label={`${k.contrato} › ${k.nome}${k.dotacao ? ` (dotação ${k.dotacao})` : ''}`}
+                    value={`${fmtMoeda(k.emitido)} de ${fmtMoeda(k.contratado)}`}
+                    extra={`${k.qtdOrdens} ordem(ns) · saldo ${fmtMoeda(Math.max(0, k.contratado - k.emitido))}`}
+                    pct={k.contratado > 0 ? Math.min(100, (k.emitido / k.contratado) * 100) : 0}
+                    bar={CORES[(i + 5) % CORES.length]} />
                 ))}
               </div>
             </div>

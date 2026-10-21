@@ -1,6 +1,7 @@
 import { useState, useEffect, useContext, useMemo, useRef } from 'react'
 import { FileText, Plus, Trash2, Search, X, Check, CheckCircle, Pencil, Loader2, Lock, RotateCcw, ClipboardList, Paperclip, ExternalLink } from 'lucide-react'
 import { Field, Input, Textarea, SectionCard, DidReadOnlyContext, alertarPendencias } from '../didShared'
+import { rotuloCota } from '../../contratos/ContratosShared'
 import { ConfirmModal } from '../../../components/ui'
 import api from '../../../services/api'
 
@@ -280,6 +281,7 @@ function ModalOrdemServico({ onConfirm, onClose }) {
                     <td className="px-3 py-2.5 font-mono font-bold text-brand-700 dark:text-info-400">{o.numero}</td>
                     <td className="px-3 py-2.5 font-mono text-ink-700">
                       {o.contrato?.numero_contrato || <span className="text-ink-400">—</span>}
+                      {o.cota && <span className="block text-[10px] font-sans font-semibold text-info-600" title={rotuloCota(o.cota)}>Cota {o.cota.nome}</span>}
                     </td>
                     <td className="px-3 py-2.5 max-w-xs">
                       <p className="truncate text-ink-700 font-medium">{o.objeto || '—'}</p>
@@ -325,6 +327,7 @@ export default function DidFixasSecaoI({
   secDidObj, responsaveisDid, dataRefDid,
   secretariaNome,
   didId,
+  ordemCota,
   processoId,
   onSaveSecaoI,
   saving,
@@ -738,6 +741,13 @@ export default function DidFixasSecaoI({
                 </span>
                 {ordemServicoSel?.objeto && (
                   <span className="text-ink-500 text-xs truncate">{ordemServicoSel.objeto.slice(0, 60)}</span>
+                )}
+{/* Contrato com cotas: unidade e dotação de onde a ordem saiu */}
+                {(ordemServicoSel ? ordemServicoSel.cota : ordemCota) && (
+                  <span className="shrink-0 text-[11px] font-semibold px-1.5 py-0.5 rounded-sm bg-info-100 text-info-700 dark:bg-info-900/30 dark:text-info-300"
+                    title={rotuloCota(ordemServicoSel ? ordemServicoSel.cota : ordemCota)}>
+                    Cota {(ordemServicoSel ? ordemServicoSel.cota : ordemCota).nome}{(ordemServicoSel ? ordemServicoSel.cota : ordemCota).dotacao ? ` · dotação ${(ordemServicoSel ? ordemServicoSel.cota : ordemCota).dotacao}` : ''}
+                  </span>
                 )}
                 {ordemServicoSel?.valor_total && (
                   <span className="ml-auto text-xs font-semibold text-ink-600 shrink-0">

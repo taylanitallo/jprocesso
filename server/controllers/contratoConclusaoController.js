@@ -9,6 +9,7 @@ const { Op, fn, col } = require('sequelize');
 const { registrarLog } = require('../middleware/activityLogger');
 const { applyScopeToWhereByName } = require('../utils/scopeFilter');
 const assinaturaService = require('../services/assinaturaService');
+const { resumoCotas } = require('../utils/cotasContrato');
 
 const STATUS_CONCLUIDO = 'CONCLUÍDO';
 const STATUS_SEM_SALDO = ['CANCELADA', 'EXCLUÍDA'];
@@ -80,6 +81,10 @@ const concluirContrato = async (req, res) => {
       total_utilizado: usado,
       saldo_restante: completo ? 0 : saldo,
       utilizado_completo: completo,
+      // Contrato com cotas: quanto ficou em cada unidade/dotação
+      ...(Array.isArray(contrato.cotas) && contrato.cotas.length
+        ? { cotas: (await resumoCotas(req.models, contrato)).map(c => ({ id: c.id, nome: c.nome, dotacao: c.dotacao || null, valor_contratado: c.valor_contratado, valor_usado: c.valor_usado, saldo: c.saldo })) }
+        : {}),
       justificativa: justificativa || null,
       concluido_em: new Date().toISOString(),
       usuario_id: usuario.id,

@@ -98,6 +98,27 @@ export default function ModalConcluirContrato({ contrato, onClose, onConcluido }
                 ))}
               </div>
 
+              {/* Contrato com cotas: o que sobra em cada unidade/dotação */}
+              {Array.isArray(saldo.cotas) && saldo.cotas.length > 0 && (
+                <div className="rounded-xl border border-ink-200 overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead className="bg-ink-50 text-ink-500">
+                      <tr><th className="px-3 py-1.5 text-left">Cota</th><th className="px-3 py-1.5 text-right">Contratado</th><th className="px-3 py-1.5 text-right">Utilizado</th><th className="px-3 py-1.5 text-right">Saldo</th></tr>
+                    </thead>
+                    <tbody className="divide-y divide-ink-100">
+                      {saldo.cotas.map(c => (
+                        <tr key={c.id}>
+                          <td className="px-3 py-1.5 font-semibold text-ink-700">{c.nome}{c.dotacao && <span className="block font-normal text-[10px] text-ink-400">Dotação {c.dotacao}</span>}</td>
+                          <td className="px-3 py-1.5 text-right tabular-nums">{brl(c.valor_contratado)}</td>
+                          <td className="px-3 py-1.5 text-right tabular-nums">{brl(c.valor_usado)}</td>
+                          <td className={`px-3 py-1.5 text-right tabular-nums font-bold ${c.saldo > 0.004 ? 'text-amber-700' : 'text-success-700'}`}>{brl(Math.max(0, c.saldo))}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
               {completo ? (
                 <p className="text-sm rounded-lg px-3 py-2 bg-success-50 dark:bg-success-900/20 text-success-700 dark:text-success-300 flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" /> Contrato utilizado por completo. Pode ser concluído.

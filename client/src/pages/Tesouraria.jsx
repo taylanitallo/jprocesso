@@ -1243,6 +1243,12 @@ function OrdensDespesas() {
                           {o.contrato.credor?.razao_social || ''}{o.contrato.credor?.razao_social && ' — '}Contrato {o.contrato.numero_contrato}
                         </div>
                       )}
+                      {/* Contrato com cotas: unidade/dotação de onde a ordem saiu */}
+                      {o.cota && (
+                        <div className="text-[10px] font-semibold text-info-600 dark:text-info-400">
+                          Cota {o.cota.nome}{o.cota.dotacao ? ` · dotação ${o.cota.dotacao}` : ''}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-xs text-ink-600 whitespace-nowrap">{o.secretaria_sigla || '—'}</td>
                     <td className="px-4 py-3 text-xs font-mono text-ink-600 whitespace-nowrap">{o.did?.processo?.numero || '—'}</td>
