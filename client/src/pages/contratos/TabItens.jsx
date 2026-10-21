@@ -12,7 +12,7 @@ import { useAuth } from '../../context/AuthContext'
 import { gerarDnaItemPDF } from '../../utils/gerarDocumentoPDF'
 import {
   CATEGORIAS, UNIDADES, STATUS_ITEM, proximoCodigo,
-  SectionCard, PremiumInput, PremiumSelect, PremiumTextarea
+  SectionCard, PremiumInput, PremiumSelect, PremiumTextarea, SelectBusca
 } from './ContratosShared'
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -130,11 +130,8 @@ function ItemModal({ modo, item, onSave, onClose }) {
                     <label className="block text-xs font-semibold text-ink-500 mb-1.5">Unidade de Medida *</label>
                     {readonly
                       ? <p className="text-sm font-medium text-ink-800">{form.unidade_medida || '—'}</p>
-                      : <PremiumSelect value={form.unidade_medida} onChange={e => set('unidade_medida', e.target.value)}>
-                          <option value="">Selecione...</option>
-                          {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
-                          {form.unidade_medida && !UNIDADES.includes(form.unidade_medida) && <option value={form.unidade_medida}>{form.unidade_medida}</option>}
-                        </PremiumSelect>
+                      : <SelectBusca value={form.unidade_medida} onChange={v => set('unidade_medida', v)} opcoes={UNIDADES}
+                          placeholder="Digite a unidade (ex.: CM, CAIXA)..." />
                     }
                   </div>
 
