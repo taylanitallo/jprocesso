@@ -47,8 +47,28 @@ export const ESTADOS_BR    = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA',
 // de registro de preços (art. 86, "carona"). Os nomes já gravados (Concorrência, Dispensa…) se mantêm.
 export const MODALIDADES   = ['Pregão Eletrônico','Pregão Presencial','Concorrência','Concurso','Leilão','Diálogo Competitivo',
   'Dispensa','Inexigibilidade','Credenciamento','Adesão a Ata de Registro de Preços']
-// Lei 8.666/1993 e RDC: só aparecem em contratos/licitações antigos que já usam
-export const MODALIDADES_ANTIGAS = ['Tomada de Preços','Convite','RDC']
+// Regime antigo (Lei 8.666/1993, pregão da Lei 10.520/2002, carona do Decreto 7.892/2013 e RDC),
+// para contratos ainda vigentes. Os nomes que existem nas duas leis levam a lei no texto para
+// distinguir; Tomada de Preços, Convite e RDC já são da lei antiga e ficam como estavam gravados.
+export const MODALIDADES_ANTIGAS = ['Concorrência (Lei 8.666)','Tomada de Preços','Convite','Concurso (Lei 8.666)',
+  'Leilão (Lei 8.666)','Pregão Eletrônico (Lei 10.520)','Pregão Presencial (Lei 10.520)','Dispensa (Lei 8.666)',
+  'Inexigibilidade (Lei 8.666)','Adesão a Ata de Registro de Preços (Decreto 7.892)','RDC']
+
+// <option>s do select de modalidade, agrupados por lei; valor fora das listas continua aparecendo
+export function ModalidadeOptions({ atual }) {
+  const outro = atual && !MODALIDADES.includes(atual) && !MODALIDADES_ANTIGAS.includes(atual)
+  return (
+    <>
+      <optgroup label="Lei 14.133/2021">
+        {MODALIDADES.map(m => <option key={m} value={m}>{m}</option>)}
+      </optgroup>
+      <optgroup label="Lei 8.666/1993 (contratos vigentes da lei antiga)">
+        {MODALIDADES_ANTIGAS.map(m => <option key={m} value={m}>{m}</option>)}
+      </optgroup>
+      {outro && <option value={atual}>{atual}</option>}
+    </>
+  )
+}
 export const TIPOS_OBJETO  = ['Material','Serviço','Obra','Locação de Imóveis','Locação de Veículos','Consultoria','Tecnologia da Informação','Manutenção','Outros']
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

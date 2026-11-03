@@ -17,7 +17,7 @@ import { useAuth } from '../../context/AuthContext'
 import { Paginacao, usePorPagina } from '../../components/ui'
 import { retanguloEmCss } from '../../utils/escalaTela'
 import {
-  MODALIDADES, MODALIDADES_ANTIGAS, TIPOS_OBJETO,
+  MODALIDADES, MODALIDADES_ANTIGAS, ModalidadeOptions, TIPOS_OBJETO,
   VigenciaProgress, SectionCard, ModalStepper, PremiumInput,
   PremiumSelect, PremiumTextarea, ViewField, PortalDropdown, descricaoComEspecificacao
 } from './ContratosShared'
@@ -1019,8 +1019,7 @@ export function ContratoModal({ modo, contrato, credores, onSave, onClose }) {
                         <label className="block text-xs font-medium text-ink-500 mb-1.5">Modalidade</label>
                         <PremiumSelect value={form.modalidade} onChange={e => set('modalidade', e.target.value)}>
                           <option value="">Selecione...</option>
-                          {MODALIDADES.map(m => <option key={m} value={m}>{m}</option>)}
-                          {form.modalidade && !MODALIDADES.includes(form.modalidade) && <option value={form.modalidade}>{form.modalidade} (lei antiga)</option>}
+                          <ModalidadeOptions atual={form.modalidade} />
                         </PremiumSelect>
                       </div>
                       <div>

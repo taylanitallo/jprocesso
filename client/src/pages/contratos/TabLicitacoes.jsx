@@ -6,7 +6,7 @@ import {
 import api from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import { hasPerm } from '../../utils/permissions'
-import { MODALIDADES, MODALIDADES_ANTIGAS, TIPOS_OBJETO, SectionCard, PremiumInput, PremiumSelect, PremiumTextarea, ViewField } from './ContratosShared'
+import { MODALIDADES, MODALIDADES_ANTIGAS, ModalidadeOptions, TIPOS_OBJETO, SectionCard, PremiumInput, PremiumSelect, PremiumTextarea, ViewField } from './ContratosShared'
 import BotaoExcluidos from '../../components/lixeira/BotaoExcluidos'
 import { Paginacao, usePorPagina } from '../../components/ui'
 
@@ -146,8 +146,7 @@ function LicitacaoModal({ modo, licitacao, onSave, onClose }) {
                     {label('Modalidade')}
                     <PremiumSelect value={form.modalidade} onChange={e => set('modalidade', e.target.value)}>
                       <option value="">Selecione...</option>
-                      {MODALIDADES.map(m => <option key={m} value={m}>{m}</option>)}
-                      {form.modalidade && !MODALIDADES.includes(form.modalidade) && <option value={form.modalidade}>{form.modalidade} (lei antiga)</option>}
+                      <ModalidadeOptions atual={form.modalidade} />
                     </PremiumSelect>
                   </div>
                   <div className="col-span-12 sm:col-span-4">
