@@ -971,6 +971,25 @@ const cadastrarPorConvite = async (req, res) => {
 };
 
 // ── Refresh Token ─────────────────────────────────────────────────────────────
+const _logRetomadaSessao = async (tenantDb, schema, models, userId, nome, req) => {
+  const schemaQ = tenantDb.getQueryInterface().quoteIdentifier(schema);
+  const [recente] = await tenantDb.query(
+    `SELECT 1 FROM ${schemaQ}.logs
+      WHERE usuario_id = :userId AND modulo = 'sessao'
+        AND created_at > NOW() - INTERVAL '30 minutes'
+      LIMIT 1`,
+    { replacements: { userId }, type: QueryTypes.SELECT }
+  );
+  if (recente) return;
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || null;
+  await models.Log.create({
+    usuario_id: userId, acao: 'login', modulo: 'sessao',
+    descricao:  `${nome} entrou no sistema (sessão salva)`,
+    ip, user_agent: (req.headers['user-agent'] || '').substring(0, 300),
+    created_at: new Date()
+  });
+};
+
 const refreshToken = async (req, res) => {
   try {
     const adminCtx = _isAdminContext(req);
@@ -1048,6 +1067,14 @@ const refreshToken = async (req, res) => {
             freshPayload.secretariaNome = sec?.nome || null;
             delete freshPayload.trocarSenha;
             if (await lerTrocarSenha(tenantDbForRefresh, tenantForRefresh.schema, decoded.id)) freshPayload.trocarSenha = true;
+
+            // Abriu o sistema pela sessão salva (sem digitar senha): também é um acesso.
+            // Sem isso o Relatório de Acessos só via quem fazia login com senha.
+            // F5/abas em sequência não duplicam: ignora se já houve entrada/saída nos últimos 30 min.
+            if (req.body?.inicio && freshUser.tipo !== 'jeos' && modelsForRefresh.Log) {
+              _logRetomadaSessao(tenantDbForRefresh, tenantForRefresh.schema, modelsForRefresh, decoded.id, freshPayload.nome, req)
+                .catch(() => {});
+            }
           }
         }
       } catch { /* mantém cleanPayload se falhar */ }

@@ -22,6 +22,8 @@ const registrarLog = async (req, { acao, modulo, descricao, referencia_id, refer
 
     const { Log } = req.models;
     const user = req.user;
+    // O registro automático (autoActivityLog) não duplica o que já foi registrado aqui
+    req._logRegistrado = true;
 
     const ip =
       req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||

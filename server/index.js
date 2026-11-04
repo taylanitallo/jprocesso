@@ -185,6 +185,9 @@ app.use('/api/auth/convite/', (req, res, next) => (req.method === 'POST' ? convi
 app.use('/api/auth/primeiro-acesso/', primeiroAcessoLimiter);
 app.use('/api/auth/refresh', refreshLimiter);
 
+// Toda alteração feita por usuário do município vira log (prestação de contas)
+app.use('/api/', require('./middleware/autoActivityLog'));
+
 routes(app);
 
 app.get('/health', (req, res) => {

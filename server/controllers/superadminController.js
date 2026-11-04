@@ -292,6 +292,11 @@ const deleteTenantUser = async (req, res) => {
 
 // ─── Logs do tenant ───────────────────────────────────────────────────────────
 
+// Logs NUNCA são apagados (usados na prestação de contas mensal). Ficam 1 ano na
+// lista; depois disso, ou quando alguém "apaga", vão para os Excluídos (excluido_em),
+// de onde podem ser restaurados. O Relatório de Acessos conta todos, inclusive os excluídos.
+const LOGS_UM_ANO = `created_at < NOW() - INTERVAL '365 days'`;
+
 const listTenantLogs = async (req, res) => {
   try {
     const tenant = await getTenantOrFail(req.params.id, res);
@@ -299,16 +304,16 @@ const listTenantLogs = async (req, res) => {
 
     const schemaQ = qi().quoteIdentifier(tenant.schema);
 
-    // Auto-purge logs com mais de 7 dias
+    // Logs com mais de 1 ano vão para os Excluídos (não são apagados)
     masterDb.query(
-      `DELETE FROM ${schemaQ}.logs WHERE created_at < NOW() - INTERVAL '7 days'`,
-      { type: QueryTypes.DELETE }
+      `UPDATE ${schemaQ}.logs SET excluido_em = NOW() WHERE excluido_em IS NULL AND ${LOGS_UM_ANO}`
     ).catch(() => {});
 
     const { categoria, busca, data_inicio, data_fim, page = 1, limit = 20 } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
+    const excluidos = req.query.excluidos === '1' || req.query.excluidos === 'true';
 
-    const conditions = [];
+    const conditions = [excluidos ? 'l.excluido_em IS NOT NULL' : 'l.excluido_em IS NULL'];
     const replacements = { limit: parseInt(limit), offset };
 
     if (categoria) {
@@ -328,7 +333,7 @@ const listTenantLogs = async (req, res) => {
       replacements.dataFim = data_fim;
     }
 
-    const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+    const where = 'WHERE ' + conditions.join(' AND ');
 
     const [rows, countRows] = await Promise.all([
       masterDb.query(
@@ -336,7 +341,7 @@ const listTenantLogs = async (req, res) => {
          FROM ${schemaQ}.logs l
          LEFT JOIN ${schemaQ}.usuarios u ON l.usuario_id = u.id
          ${where}
-         ORDER BY l.created_at DESC
+         ORDER BY ${excluidos ? 'l.excluido_em DESC, ' : ''}l.created_at DESC
          LIMIT :limit OFFSET :offset`,
         { replacements, type: QueryTypes.SELECT }
       ),
@@ -359,30 +364,48 @@ const listTenantLogs = async (req, res) => {
   }
 };
 
-// ─── Limpar logs do tenant ────────────────────────────────────────────────────
+// ─── "Apagar" logs do tenant = mover para os Excluídos ───────────────────────
 
 const clearTenantLogs = async (req, res) => {
   try {
     const tenant = await getTenantOrFail(req.params.id, res);
     if (!tenant) return;
 
-    const { modo = 'antigos' } = req.body; // 'antigos' | 'todos'
+    const { modo = 'antigos' } = req.body; // 'antigos' (mais de 1 ano) | 'todos'
     const schemaQ = qi().quoteIdentifier(tenant.schema);
 
-    let sql;
-    if (modo === 'todos') {
-      sql = `DELETE FROM ${schemaQ}.logs`;
-    } else {
-      sql = `DELETE FROM ${schemaQ}.logs WHERE created_at < NOW() - INTERVAL '7 days'`;
-    }
-
-    const [, meta] = await masterDb.query(sql);
+    const filtro = modo === 'todos' ? '' : ` AND ${LOGS_UM_ANO}`;
+    const [, meta] = await masterDb.query(
+      `UPDATE ${schemaQ}.logs SET excluido_em = NOW() WHERE excluido_em IS NULL${filtro}`
+    );
     const removidos = meta?.rowCount ?? 0;
 
     res.json({ success: true, removidos });
   } catch (error) {
-    console.error('Erro ao limpar logs:', error);
-    res.status(500).json({ error: 'Erro ao limpar logs' });
+    console.error('Erro ao mover logs para os Excluídos:', error);
+    res.status(500).json({ error: 'Erro ao mover logs para os Excluídos' });
+  }
+};
+
+// Restaura dos Excluídos: um log (body.id) ou todos (body.todos = true)
+const restoreTenantLogs = async (req, res) => {
+  try {
+    const tenant = await getTenantOrFail(req.params.id, res);
+    if (!tenant) return;
+
+    const { id, todos } = req.body || {};
+    if (!id && !todos) return res.status(400).json({ error: 'Informe o log ou "todos"' });
+    const schemaQ = qi().quoteIdentifier(tenant.schema);
+
+    const [, meta] = await masterDb.query(
+      `UPDATE ${schemaQ}.logs SET excluido_em = NULL
+        WHERE excluido_em IS NOT NULL${id ? ' AND id = :id' : ''}`,
+      { replacements: id ? { id } : {} }
+    );
+    res.json({ success: true, restaurados: meta?.rowCount ?? 0 });
+  } catch (error) {
+    console.error('Erro ao restaurar logs:', error);
+    res.status(500).json({ error: 'Erro ao restaurar logs' });
   }
 };
 
@@ -393,19 +416,26 @@ const listAccessReport = async (req, res) => {
     const tenant = await getTenantOrFail(req.params.id, res);
     if (!tenant) return;
 
-    const { busca, status, data_inicio, data_fim, page = 1, limit = 50 } = req.query;
-    const offset  = (parseInt(page) - 1) * parseInt(limit);
+    const { busca, status, modulo, data_inicio, data_fim, page = 1 } = req.query;
+    // Todos os tipos de log (entradas/saídas, processos, contratos, ...). A tela pagina;
+    // o CSV/PDF pedem o período inteiro (limite alto). Inclui os que estão nos Excluídos.
+    const limit   = Math.min(Math.max(parseInt(req.query.limit) || 50, 1), 100000);
+    const offset  = (Math.max(parseInt(page) || 1, 1) - 1) * limit;
     const schemaQ = qi().quoteIdentifier(tenant.schema);
 
-    const conditions = [`l.modulo = 'sessao'`, `(u.tipo IS NULL OR u.tipo != 'jeos')`];
-    const replacements = { limit: parseInt(limit), offset };
+    const conditions = [`(u.tipo IS NULL OR u.tipo != 'jeos')`];
+    const replacements = { limit, offset };
 
+    if (modulo) {
+      conditions.push('l.modulo = :modulo');
+      replacements.modulo = modulo;
+    }
     if (status && status !== 'todos') {
       conditions.push('l.acao = :status');
       replacements.status = status; // 'login' | 'logout'
     }
     if (busca) {
-      conditions.push('u.nome ILIKE :busca');
+      conditions.push(`(u.nome ILIKE :busca OR l.descricao ILIKE :busca OR l.referencia_numero ILIKE :busca)`);
       replacements.busca = `%${busca}%`;
     }
     if (data_inicio) {
@@ -419,9 +449,9 @@ const listAccessReport = async (req, res) => {
 
     const where = 'WHERE ' + conditions.join(' AND ');
 
-    const [rows, countRows, activeRows] = await Promise.all([
+    const [rows, countRows, activeRows, modRows] = await Promise.all([
       masterDb.query(
-        `SELECT l.id, l.acao, l.descricao, l.ip, l.user_agent, l.created_at,
+        `SELECT l.id, l.acao, l.modulo, l.descricao, l.referencia_numero, l.ip, l.user_agent, l.created_at,
                 u.nome AS usuario_nome, u.tipo AS usuario_tipo, u.email AS usuario_email
          FROM ${schemaQ}.logs l
          LEFT JOIN ${schemaQ}.usuarios u ON l.usuario_id = u.id
@@ -446,7 +476,11 @@ const listAccessReport = async (req, res) => {
            AND u.ativo = true
            AND u.tipo NOT IN ('jeos', 'admin')`,
         { type: QueryTypes.SELECT }
-      ).catch(() => [{ ativos: 0 }])
+      ).catch(() => [{ ativos: 0 }]),
+      masterDb.query(
+        `SELECT DISTINCT modulo FROM ${schemaQ}.logs WHERE modulo IS NOT NULL ORDER BY modulo`,
+        { type: QueryTypes.SELECT }
+      ).catch(() => [])
     ]);
 
     res.json({
@@ -454,8 +488,9 @@ const listAccessReport = async (req, res) => {
       logs:    rows,
       total:   parseInt(countRows[0]?.total || 0),
       ativos:  parseInt(activeRows[0]?.ativos || 0),
-      page:    parseInt(page),
-      limit:   parseInt(limit)
+      modulos: modRows.map(r => r.modulo),
+      page:    Math.max(parseInt(page) || 1, 1),
+      limit
     });
   } catch (error) {
     console.error('Erro ao buscar relatório de acessos:', error);
@@ -926,6 +961,7 @@ module.exports = {
   getTenantUsers: listTenantUsers,
   listTenantLogs, clearTenantLogs, getTenantLogs: listTenantLogs,
   listAccessReport,
+  restoreTenantLogs,
   listBackups, createBackup, downloadBackup, deleteBackup, clearBackupHistory,
   getSchedule, updateSchedule, runBackupNow,
   restoreTenant, restoreBackup: restoreTenant,

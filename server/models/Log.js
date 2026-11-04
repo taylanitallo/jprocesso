@@ -66,6 +66,11 @@ const defineLogModel = (sequelize) => {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
       field: 'created_at'
+    },
+    excluido_em: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: 'Movido para os Excluídos (o log nunca é apagado de verdade)'
     }
   }, {
     tableName: 'logs',

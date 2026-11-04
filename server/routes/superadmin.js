@@ -11,7 +11,7 @@ const {
   listTenantUsers, listTenantSecretarias, createTenantUser, updateTenantUser, deleteTenantUser,
 
   // Logs
-  listTenantLogs, clearTenantLogs, listAccessReport,
+  listTenantLogs, clearTenantLogs, restoreTenantLogs, listAccessReport,
 
   // Backup
   listBackups, createBackup, downloadBackup, deleteBackup, clearBackupHistory,
@@ -64,7 +64,8 @@ router.delete('/tenants/:id/users/:userId',    ...sa, deleteTenantUser);
 
 // ─── Logs ─────────────────────────────────────────────────────────────────────
 router.get   ('/tenants/:id/logs',          ...sa, listTenantLogs);
-router.delete('/tenants/:id/logs',          ...sa, clearTenantLogs);
+router.delete('/tenants/:id/logs',          ...sa, clearTenantLogs);   // move para os Excluídos (nunca apaga)
+router.post  ('/tenants/:id/logs/restaurar', ...sa, restoreTenantLogs);
 router.get   ('/tenants/:id/access-report', ...sa, listAccessReport);
 
 // ─── Backup ───────────────────────────────────────────────────────────────────

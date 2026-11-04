@@ -48,7 +48,8 @@ export default function AuthProvider({ children }) {
     // Restaurar sessão via refresh token (httpOnly cookie) — sem tocar localStorage.
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 4000)
-    api.post('/auth/refresh', {}, { signal: controller.signal })
+    // inicio: true → o servidor registra o acesso no Relatório de acessos (sessão retomada)
+    api.post('/auth/refresh', { inicio: true }, { signal: controller.signal })
       .then(({ data }) => {
         setAccessToken(data.token)
         // Buscar usuário e tenant em paralelo com o novo token em memória
