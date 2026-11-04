@@ -22,7 +22,7 @@ const listLogs = async (req, res) => {
       limit = 50
     } = req.query;
 
-    const where = {};
+    const where = { excluido_em: null }; // os Excluídos só aparecem no superadmin
 
     if (modulo)       where.modulo    = modulo;
     if (acao)         where.acao      = { [Op.iLike]: `%${acao}%` };

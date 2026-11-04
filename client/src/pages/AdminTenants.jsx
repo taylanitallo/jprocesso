@@ -114,6 +114,21 @@ function validateCPF(cpf) {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
+// Relatório de acessos/atividades: nome do módulo e da ação para exibir
+const REL_MODULO = {
+  sessao: 'Entrada/saída', processos: 'Processos', contratos: 'Contratos', almoxarifado: 'Almoxarifado',
+  tesouraria: 'Tesouraria', financeiro: 'Financeiro', patrimonio: 'Patrimônio', usuarios: 'Usuários',
+  configuracoes: 'Configurações', sistema: 'Sistema', organizacao: 'Organização',
+  importacao: 'Importação', excluidos: 'Excluídos',
+};
+const relModulo = (m) => REL_MODULO[m] || (m ? m.charAt(0).toUpperCase() + m.slice(1) : 'Sistema');
+const relAcao = (a) => {
+  if (a === 'login') return 'Login';
+  if (a === 'logout') return 'Logout';
+  const t = String(a || '').replace(/_/g, ' ');
+  return t.charAt(0).toUpperCase() + t.slice(1);
+};
+
 function Badge({ children, color = 'gray' }) {
   const colors = {
     green:  'bg-success-100 text-success-700 dark:bg-success-900/40 dark:text-success-300',
@@ -484,12 +499,15 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
   const [logPage, setLogPage]           = useState(1);
   const [LOG_LIMIT, setLogLimit] = usePorPagina('superadmin-logs', 20);
   const [clearLogsModal, setClearLogsModal] = useState({ open: false, modo: 'antigos', loading: false });
+  const [logExcluidos, setLogExcluidos] = useState(false); // vendo os Excluídos (logs nunca são apagados)
 
   const [relBusca,      setRelBusca]      = useState('');
   const [relStatus,     setRelStatus]     = useState('todos');
   const [relUsuario,    setRelUsuario]    = useState('');
   const [relDataInicio, setRelDataInicio] = useState('');
   const [relDataFim,    setRelDataFim]    = useState('');
+  const [relPage,       setRelPage]       = useState(1);
+  const [REL_LIMIT, setRelLimit] = usePorPagina('superadmin-relatorio', 50);
 
   const [backupLoading, setBackupLoading] = useState(false);
   const [showSchedule, setShowSchedule]   = useState(false);
@@ -555,9 +573,9 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
     { ...Q_OPTS, enabled: tab === 'usuarios', staleTime: 60000 }
   );
   const { data: logsData,    refetch: refetchLogs    } = useQuery(
-    ['sa-logs', tenant.id, logCategoria, logBusca, logPage, LOG_LIMIT],
+    ['sa-logs', tenant.id, logCategoria, logBusca, logPage, LOG_LIMIT, logExcluidos],
     () => api.get(`/superadmin/tenants/${tenant.id}/logs`, {
-      params: { categoria: logCategoria || undefined, busca: logBusca || undefined, page: logPage, limit: LOG_LIMIT }
+      params: { categoria: logCategoria || undefined, busca: logBusca || undefined, page: logPage, limit: LOG_LIMIT, excluidos: logExcluidos ? 1 : undefined }
     }).then(r => r.data),
     { ...Q_OPTS, enabled: tab === 'logs', staleTime: 0, keepPreviousData: true }
   );
@@ -566,17 +584,20 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
     () => api.get(`/superadmin/tenants/${tenant.id}/backups`).then(r => r.data),
     { ...Q_OPTS, enabled: tab === 'backup', staleTime: 15000 }
   );
+  // Filtros do Relatório. relStatus: 'todos' | 'login' | 'logout' | 'mod:<módulo>'
+  const relParams = () => ({
+    busca:       relUsuario || relBusca || undefined,
+    status:      relStatus === 'login' || relStatus === 'logout' ? relStatus : undefined,
+    modulo:      relStatus.startsWith('mod:') ? relStatus.slice(4) : undefined,
+    data_inicio: relDataInicio || undefined,
+    data_fim:    relDataFim    || undefined,
+  });
   const { data: relatorioData, refetch: refetchRelatorio } = useQuery(
-    ['sa-relatorio', tenant.id, relBusca, relStatus, relUsuario, relDataInicio, relDataFim],
+    ['sa-relatorio', tenant.id, relBusca, relStatus, relUsuario, relDataInicio, relDataFim, relPage, REL_LIMIT],
     () => api.get(`/superadmin/tenants/${tenant.id}/access-report`, {
-      params: {
-        busca:       relUsuario || relBusca || undefined,
-        status:      relStatus !== 'todos' ? relStatus : undefined,
-        data_inicio: relDataInicio || undefined,
-        data_fim:    relDataFim    || undefined,
-      }
+      params: { ...relParams(), page: relPage, limit: REL_LIMIT }
     }).then(r => r.data),
-    { ...Q_OPTS, enabled: tab === 'relatorio', staleTime: 15000 }
+    { ...Q_OPTS, enabled: tab === 'relatorio', staleTime: 15000, keepPreviousData: true }
   );
 
   const { data: scheduleData, refetch: refetchSchedule } = useQuery(
@@ -716,7 +737,18 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
       refetchLogs();
     } catch (err) {
       setClearLogsModal(s => ({ ...s, loading: false }));
-      alert(err.response?.data?.error || 'Erro ao limpar logs');
+      alert(err.response?.data?.error || 'Erro ao mover logs para os Excluídos');
+    }
+  };
+
+  // Restaura dos Excluídos: um log (id) ou todos
+  const restaurarLogs = async (id) => {
+    if (!id && !window.confirm('Restaurar todos os logs excluídos?')) return;
+    try {
+      await api.post(`/superadmin/tenants/${tenant.id}/logs/restaurar`, id ? { id } : { todos: true });
+      refetchLogs();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao restaurar logs');
     }
   };
 
@@ -1205,20 +1237,45 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                     className="p-1.5 rounded-lg border border-ink-300 hover:bg-ink-50">
                     <RefreshCw className="h-4 w-4 text-ink-500" />
                   </button>
-                  <span className="text-sm text-ink-500 whitespace-nowrap">{logTotal} registros</span>
+                  <span className="text-sm text-ink-500 whitespace-nowrap">{logTotal} {logExcluidos ? 'excluídos' : 'registros'}</span>
                   <button
-                    onClick={() => setClearLogsModal({ open: true, modo: 'antigos', loading: false })}
-                    className="flex items-center gap-1.5 px-3 py-1.5 border border-danger-200 dark:border-danger-800 text-danger-500 dark:text-danger-400 rounded-lg text-sm hover:bg-danger-50 dark:hover:bg-danger-900/20"
+                    onClick={() => { setLogExcluidos(v => !v); setLogPage(1); }}
+                    title={logExcluidos ? 'Voltar aos logs' : 'Logs movidos para os Excluídos (nada é apagado)'}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-sm ${
+                      logExcluidos
+                        ? 'border-brand-400 bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300'
+                        : 'border-ink-300 text-ink-700 hover:bg-ink-50'}`}
                   >
-                    <Trash2 className="h-4 w-4" /> Apagar Logs
+                    <Archive className="h-4 w-4" /> {logExcluidos ? 'Voltar aos logs' : 'Excluídos'}
                   </button>
+                  {logExcluidos ? (
+                    logTotal > 0 && (
+                      <button onClick={() => restaurarLogs()}
+                        className="flex items-center gap-1.5 px-3 py-1.5 border border-success-300 text-success-700 dark:text-success-400 rounded-lg text-sm hover:bg-success-50 dark:hover:bg-success-900/20">
+                        <RotateCcw className="h-4 w-4" /> Restaurar todos
+                      </button>
+                    )
+                  ) : (
+                    <button
+                      onClick={() => setClearLogsModal({ open: true, modo: 'antigos', loading: false })}
+                      className="flex items-center gap-1.5 px-3 py-1.5 border border-danger-200 dark:border-danger-800 text-danger-500 dark:text-danger-400 rounded-lg text-sm hover:bg-danger-50 dark:hover:bg-danger-900/20"
+                    >
+                      <Trash2 className="h-4 w-4" /> Apagar Logs
+                    </button>
+                  )}
                 </div>
+
+                {logExcluidos && (
+                  <p className="text-xs text-ink-500">
+                    Logs excluídos não são apagados: continuam guardados e entram no Relatório de acessos. Podem ser restaurados a qualquer momento.
+                  </p>
+                )}
 
                 {/* Lista de logs */}
                 <div className="space-y-2">
                   {logs.map(l => (
                     <div key={l.id} className="flex items-start gap-3 p-3 border border-ink-200 rounded-xl">
-                      <div className="w-2 h-2 rounded-full bg-success-500 mt-2 shrink-0" />
+                      <div className={`w-2 h-2 rounded-full mt-2 shrink-0 ${logExcluidos ? 'bg-ink-400' : 'bg-success-500'}`} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-ink-900 dark:text-white">{l.acao}</p>
                         <p className="text-xs text-ink-500 truncate">{l.usuario_nome || 'Sistema'} · {l.ip || '—'}</p>
@@ -1227,10 +1284,19 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                       <div className="text-right shrink-0">
                         <Badge color="blue">{l.modulo || 'sistema'}</Badge>
                         <p className="text-xs text-ink-400 mt-1">{fmtDate(l.created_at)}</p>
+                        {logExcluidos && (
+                          <>
+                            {l.excluido_em && <p className="text-[11px] text-ink-400">excluído em {fmtDate(l.excluido_em)}</p>}
+                            <button onClick={() => restaurarLogs(l.id)}
+                              className="mt-1 inline-flex items-center gap-1 text-xs text-success-700 dark:text-success-400 hover:underline">
+                              <RotateCcw className="h-3 w-3" /> Restaurar
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   ))}
-                  {!logs.length && <p className="text-center text-ink-400 py-8 text-sm">Nenhum log encontrado</p>}
+                  {!logs.length && <p className="text-center text-ink-400 py-8 text-sm">{logExcluidos ? 'Nenhum log nos Excluídos' : 'Nenhum log encontrado'}</p>}
                 </div>
 
                 {/* Paginação */}
@@ -1250,8 +1316,8 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
 
                       <div className="space-y-2">
                         {[
-                          { val: 'antigos', label: 'Logs com mais de 7 dias', desc: 'Remove apenas registros mais antigos que 7 dias (regra padrão do sistema)' },
-                          { val: 'todos',   label: 'Todos os logs',           desc: 'Remove completamente o histórico de atividades — ação irreversível' },
+                          { val: 'antigos', label: 'Logs com mais de 1 ano', desc: 'Move para os Excluídos os registros com mais de 1 ano (regra padrão do sistema)' },
+                          { val: 'todos',   label: 'Todos os logs',          desc: 'Move todo o histórico para os Excluídos' },
                         ].map(({ val, label, desc }) => (
                           <label key={val} className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
                             clearLogsModal.modo === val
@@ -1270,6 +1336,10 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                         ))}
                       </div>
 
+                      <p className="text-xs text-ink-500">
+                        Nada é apagado: os logs vão para os <strong>Excluídos</strong>, continuam no Relatório de acessos (prestação de contas) e podem ser restaurados.
+                      </p>
+
                       <div className="flex gap-3 pt-1">
                         <button onClick={() => setClearLogsModal({ open: false, modo: 'antigos', loading: false })}
                           className="flex-1 px-4 py-2 border border-ink-300 rounded-xl text-sm text-ink-700 hover:bg-ink-50">
@@ -1278,7 +1348,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                         <button onClick={confirmClearLogs} disabled={clearLogsModal.loading}
                           className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-danger-600 text-white rounded-xl text-sm hover:bg-danger-700 disabled:opacity-50">
                           {clearLogsModal.loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                          {clearLogsModal.loading ? 'Apagando...' : 'Apagar'}
+                          {clearLogsModal.loading ? 'Movendo...' : 'Mover para Excluídos'}
                         </button>
                       </div>
                     </div>
@@ -1294,20 +1364,38 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
             const relTotal  = relatorioData?.total || 0;
             const relAtivos = relatorioData?.ativos || 0;
 
-            const usuariosUnicos = [...new Map(relLogs.map(l => [l.usuario_nome, l])).values()].map(l => l.usuario_nome).filter(Boolean);
+            const relModulos = relatorioData?.modulos || [];
 
-            const exportCSV = () => {
-              const header = 'Usuário,Ação,Data/Hora,IP\n';
-              const rows   = relLogs.map(l =>
-                `"${l.usuario_nome || ''}","${l.acao || ''}","${fmtDate(l.created_at)}","${l.ip || ''}"`
-              ).join('\n');
-              const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+            // CSV/PDF levam o período inteiro (a tela é paginada)
+            const buscarTodos = async () => {
+              const { data } = await api.get(`/superadmin/tenants/${tenant.id}/access-report`, {
+                params: { ...relParams(), page: 1, limit: 100000 }
+              });
+              return data?.logs || [];
+            };
+            const csvCel = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+
+            const exportCSV = async () => {
+              let todos;
+              try { todos = await buscarTodos(); } catch { alert('Erro ao gerar o CSV'); return; }
+              const header = 'Data/Hora;Usuário;Módulo;Ação;Descrição;Referência;IP\n';
+              const rows   = todos.map(l => [
+                fmtDate(l.created_at), l.usuario_nome || 'Sistema', relModulo(l.modulo), relAcao(l.acao),
+                l.descricao, l.referencia_numero, l.ip,
+              ].map(csvCel).join(';')).join('\n');
+              const blob = new Blob(['﻿' + header + rows], { type: 'text/csv;charset=utf-8;' });
               const url  = URL.createObjectURL(blob);
-              const a    = Object.assign(document.createElement('a'), { href: url, download: `acessos_${tenant.subdominio}.csv` });
+              const a    = Object.assign(document.createElement('a'), { href: url, download: `atividades_${tenant.subdominio}.csv` });
               a.click(); URL.revokeObjectURL(url);
             };
 
             const exportPDF = async () => {
+              // Abre a janela já no clique (depois de um await o navegador bloquearia o pop-up)
+              const win = window.open('', '_blank');
+              if (win) win.document.write('<p style="font-family:Arial;padding:24px">Gerando relatório...</p>');
+              let todos;
+              try { todos = await buscarTodos(); } catch { win?.close(); alert('Erro ao gerar o PDF'); return; }
+              const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
               const hasTimbrado = !!(tenant.configuracoes?.timbrado_path || tenant.configuracoes?.timbrado_url);
 
               // Margens padrão (sem timbrado)
@@ -1418,21 +1506,21 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                 });
               }
 
-              const rows = relLogs.map(l => `
+              const rows = todos.map(l => `
                 <tr>
                   <td>${fmtDate(l.created_at)}</td>
-                  <td>${l.usuario_nome || '—'}</td>
-                  <td class="${l.acao === 'login' ? 'ev-login' : l.acao === 'logout' ? 'ev-logout' : ''}">${
-                    l.acao === 'login' ? 'Login' : l.acao === 'logout' ? 'Logout' : l.acao
-                  }</td>
-                  <td>${l.ip || '—'}</td>
+                  <td>${esc(l.usuario_nome || 'Sistema')}</td>
+                  <td>${esc(relModulo(l.modulo))}</td>
+                  <td class="${l.acao === 'login' ? 'ev-login' : l.acao === 'logout' ? 'ev-logout' : ''}">${esc(relAcao(l.acao))}</td>
+                  <td>${esc(l.descricao || '')}${l.referencia_numero ? ` <span class="ref">(${esc(l.referencia_numero)})</span>` : ''}</td>
+                  <td>${esc(l.ip || '—')}</td>
                 </tr>`).join('');
 
               const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8"/>
-<title>Relatório de Acessos — ${tenant.nome_municipio}</title>
+<title>Relatório de Atividades — ${esc(tenant.nome_municipio)}</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   body{font-family:Arial,sans-serif;background:#e5e7eb}
@@ -1467,6 +1555,7 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
   tbody tr{page-break-inside:avoid}
   .ev-login{color:#16a34a;font-weight:600}
   .ev-logout{color:#dc2626;font-weight:600}
+  .ref{color:#6b7280}
   @media print{
     body{background:white}
     .toolbar{display:none!important}
@@ -1508,10 +1597,12 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
     ${timbradoSrc ? `<img src="${timbradoSrc}" class="timbrado-bg" alt=""/>` : ''}
     <div class="content">
       <div class="report-title">jProcesso - Sistema de Tramitação Digital</div>
-      <div class="report-sub">Relatório de Acessos — ${tenant.nome_municipio}</div>
-      <div class="report-meta">Gerado em ${fmtDate(new Date())} · ${relTotal} registros</div>
+      <div class="report-sub">Relatório de Atividades — ${esc(tenant.nome_municipio)}</div>
+      <div class="report-meta">${relDataInicio || relDataFim
+        ? `Período: ${relDataInicio ? relDataInicio.split('-').reverse().join('/') : '…'} a ${relDataFim ? relDataFim.split('-').reverse().join('/') : '…'} · `
+        : ''}Gerado em ${fmtDate(new Date())} · ${todos.length} registros</div>
       <table>
-        <thead><tr><th>Data/Hora</th><th>Usuário</th><th>Evento</th><th>IP</th></tr></thead>
+        <thead><tr><th>Data/Hora</th><th>Usuário</th><th>Módulo</th><th>Ação</th><th>Descrição</th><th>IP</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
@@ -1520,7 +1611,8 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
 </body>
 </html>`;
 
-              const win = window.open('', '_blank');
+              if (!win) { alert('Permita pop-ups para gerar o PDF'); return; }
+              win.document.open();
               win.document.write(html);
               win.document.close();
             };
@@ -1537,21 +1629,24 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                 <div className="flex flex-wrap gap-2 items-center">
                   <input
                     value={relBusca}
-                    onChange={e => setRelBusca(e.target.value)}
-                    placeholder="Buscar por nome..."
+                    onChange={e => { setRelBusca(e.target.value); setRelPage(1); }}
+                    placeholder="Buscar por nome, descrição ou número..."
                     className="flex-1 min-w-[140px] px-3 py-1.5 border border-ink-300 rounded-lg text-sm bg-surface dark:text-white"
                   />
 
-                  <select value={relStatus} onChange={e => setRelStatus(e.target.value)}
+                  <select value={relStatus} onChange={e => { setRelStatus(e.target.value); setRelPage(1); }}
                     className="px-3 py-1.5 border border-ink-300 rounded-lg text-sm bg-surface dark:text-white">
-                    <option value="todos">Todos</option>
+                    <option value="todos">Todas as atividades</option>
                     <option value="login">Login</option>
                     <option value="logout">Logout</option>
+                    {relModulos.map(m => (
+                      <option key={m} value={`mod:${m}`}>{relModulo(m)}</option>
+                    ))}
                   </select>
 
-                  <input type="date" value={relDataInicio} onChange={e => setRelDataInicio(e.target.value)}
+                  <input type="date" value={relDataInicio} onChange={e => { setRelDataInicio(e.target.value); setRelPage(1); }}
                     className="px-3 py-1.5 border border-ink-300 rounded-lg text-sm bg-surface dark:text-white" />
-                  <input type="date" value={relDataFim} onChange={e => setRelDataFim(e.target.value)}
+                  <input type="date" value={relDataFim} onChange={e => { setRelDataFim(e.target.value); setRelPage(1); }}
                     className="px-3 py-1.5 border border-ink-300 rounded-lg text-sm bg-surface dark:text-white" />
 
                   <button onClick={refetchRelatorio}
@@ -1590,14 +1685,16 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                             {l.usuario_nome || 'Usuário desconhecido'}
                           </p>
                           <p className="text-xs text-ink-500">
-                            {l.descricao || (isLogin ? 'Entrou no sistema' : isLogout ? 'Saiu do sistema' : l.acao)}
+                            {l.descricao || (isLogin ? 'Entrou no sistema' : isLogout ? 'Saiu do sistema' : relAcao(l.acao))}
+                            {l.referencia_numero && <span className="text-ink-400"> · {l.referencia_numero}</span>}
                           </p>
                           {l.ip && <p className="text-xs text-ink-400 font-mono">IP {l.ip}</p>}
                         </div>
                         <div className="shrink-0 text-right">
                           <Badge color={isLogin ? 'green' : isLogout ? 'red' : 'blue'}>
-                            {isLogin ? 'Login' : isLogout ? 'Logout' : 'Ativo'}
+                            {isLogin ? 'Login' : isLogout ? 'Logout' : relModulo(l.modulo)}
                           </Badge>
+                          {!isLogin && !isLogout && <p className="text-[11px] text-ink-500 mt-0.5">{relAcao(l.acao)}</p>}
                           <p className="text-xs text-ink-400 mt-1">{fmtDate(l.created_at)}</p>
                         </div>
                       </div>
@@ -1606,11 +1703,14 @@ function ModalGerenciar({ tenant, initialTab = 'info', onClose, onUpdate }) {
                   {!relLogs.length && (
                     <div className="text-center py-10">
                       <Activity className="h-10 w-10 text-ink-400 mx-auto mb-2" />
-                      <p className="text-ink-400 text-sm">Nenhum acesso registrado</p>
-                      <p className="text-ink-400 text-xs mt-1">Os logins e logouts aparecem aqui</p>
+                      <p className="text-ink-400 text-sm">Nenhuma atividade registrada</p>
+                      <p className="text-ink-400 text-xs mt-1">Entradas, saídas e ações no sistema (processos, contratos, etc.) aparecem aqui</p>
                     </div>
                   )}
                 </div>
+
+                <Paginacao total={relTotal} pagina={relPage} setPagina={setRelPage} porPagina={REL_LIMIT}
+                  setPorPagina={(n) => { setRelLimit(n); setRelPage(1); }} className="border-t border-ink-200" />
               </div>
             );
           })()}

@@ -150,6 +150,8 @@ const runTenantMigrations = async (tenantDb, tenantSchema) => {
       CREATE INDEX IF NOT EXISTS logs_modulo_idx        ON logs (modulo);
       CREATE INDEX IF NOT EXISTS logs_secretaria_id_idx ON logs (secretaria_id);
       CREATE INDEX IF NOT EXISTS logs_created_at_idx    ON logs (created_at DESC);
+      -- Logs nunca são apagados (prestação de contas): "apagar" só move para os Excluídos
+      ALTER TABLE logs ADD COLUMN IF NOT EXISTS excluido_em TIMESTAMP NULL;
     `),
 
     // 0b. Contratos — colunas fontes_recurso e dotacoes (adicionadas no modelo mas não estavam na migration inicial)
